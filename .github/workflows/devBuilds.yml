@@ -86,7 +86,13 @@ jobs:
           fi
 
       - name: Compile
-        run: haxelib run lime build android -release -D ${{inputs.buildFlags}}
+        run: |
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android -release -D $BUILD_FLAGS
+          else
+            haxelib run lime build android -release
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
