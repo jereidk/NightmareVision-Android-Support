@@ -51,9 +51,9 @@ class HealthIcon extends FlxSprite
 	/**
 	 * Attempts to load a new icon by file name
 	 */
-	public function changeIcon(char:String):Void
+	public function changeIcon(char:String):HealthIcon
 	{
-		if (this.characterName == char) return;
+		if (this.characterName == char) return this;
 		
 		this.characterName = char;
 		
@@ -73,8 +73,9 @@ class HealthIcon extends FlxSprite
 		
 		animation.add(char, [for (i in 0...frames.frames.length) i], 0, false, isPlayer);
 		animation.play(char); // i do plan on adding more functionality to icons at a later date
-		
+
 		antialiasing = char.endsWith('-pixel') ? false : ClientPrefs.globalAntialiasing;
+		return this;
 	}
 	
 	override function updateHitbox()

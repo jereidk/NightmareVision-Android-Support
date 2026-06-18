@@ -255,6 +255,11 @@ class ToolKitUtils
 		@:privateAccess if (component._children != null) for (child in component._children)
 			focusIter(child);
 	}
+
+	public static final CONFIRM:String = 'confirm';
+	public static final CANCEL:String = 'cancel';
+
+	public static function playSfx(sfx:Dynamic):Void {}
 }
 
 typedef DropDownItem =

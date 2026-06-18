@@ -196,10 +196,12 @@ class DiscordClient
 	public static inline function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
 		largeImageKey:String = 'icon'):Void {}
 		
+	public static function check():Void {}
+
 	public static function close():Void {}
-	
+
 	public static function init() {}
-	
+
 	static function set_rpcId(value:String):String return (rpcId = value);
 }
 #end

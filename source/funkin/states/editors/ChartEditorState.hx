@@ -238,7 +238,36 @@ class ChartEditorState extends MusicBeatState
 	var curRedoIndex = 0;
 	
 	public static var _song:Song;
-	
+	public static var song(get, set):Song;
+	static inline function get_song():Song return _song;
+	static inline function set_song(v:Song):Song return _song = v;
+
+	public static function getDefaultSong():Song
+	{
+		return {
+			song: 'test', notes: [], events: [], bpm: 150, needsVoices: true,
+			speed: 1.0, keys: 4, lanes: 1, player1: 'bf', player2: 'dad',
+			gfVersion: 'gf', stage: 'stage', arrowSkins: [],
+			allowBFskin: false, allowGFskin: false, allowPet: false
+		};
+	}
+
+	public var bfHitsound:Bool = false;
+	public var dadHitsound:Bool = false;
+	public var shiftStrumlineTransform:Dynamic = null;
+	public var swapStrumlineTransform:Dynamic = null;
+
+	public function updateVolume():Void {}
+	public function copySection():Void {}
+	public function pasteSection():Void {}
+	public function clearSection():Void {}
+	public function cloneSection(n:Dynamic):Void {}
+	public function mirrorNotes(notes:Dynamic, axis:Dynamic):Void {}
+	public function transformNoteStrumlines(notes:Dynamic, transform:Dynamic):Void {}
+	public function getSelectedNotes():Array<Array<Dynamic>> return curSelectedNotes;
+	public function getSelectedEvents():Array<Array<Dynamic>>
+		return [for (n in curSelectedNotes) if (n[2] == null) n];
+
 	/*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
 	**/
@@ -2753,7 +2782,7 @@ class ChartEditorState extends MusicBeatState
 	var waveformPrinted:Bool = true;
 	var wavData:Array<Array<Array<Float>>> = [[[0], [0]], [[0], [0]]];
 	
-	function updateWaveform()
+	function updateWaveform(?forceRegenerate:Bool)
 	{
 		#if desktop
 		if (waveformPrinted)

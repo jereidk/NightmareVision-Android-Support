@@ -15,9 +15,12 @@ import mobile.controls.MobileVirtualPad;
 
 class MusicBeatSubstate extends FlxSubState
 {
+	public static var instance:MusicBeatSubstate;
+
 	public function new()
 	{
 		super();
+		instance = this;
 	}
 	
 	private var curSection:Int = 0;

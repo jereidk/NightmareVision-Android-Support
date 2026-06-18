@@ -26,7 +26,11 @@ import haxe.ui.containers.menus.MenuBar;
 using funkin.states.editors.ui.ToolKitUtils;
 
 @:build(haxe.ui.ComponentBuilder.build("assets/excluded/ui/charEditor/CharacterSettings.xml"))
-class CharacterDialog extends CollapsibleDialog {}
+class CharacterDialog extends CollapsibleDialog {
+	public var afterimagesCheckbox:Dynamic = null;
+	public var pauseMenuTextField:Dynamic = null;
+	public var getPortraitButton:Dynamic = null;
+}
 
 @:build(haxe.ui.ComponentBuilder.build("assets/excluded/ui/charEditor/ToolBar.xml"))
 class ToolBar extends MenuBar {}

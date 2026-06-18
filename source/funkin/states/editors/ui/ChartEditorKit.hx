@@ -233,12 +233,12 @@ class ChartEditorUI extends flixel.group.FlxSpriteContainer
 		inc.onClick = function(event) sustainLengthStep(1);
 		
 		songDialog.mirrorHorizontalButton.onClick = function(event) {
-			charter.mirrorNotes(charter.curSelectedNotes, X);
+			charter.mirrorNotes(charter.curSelectedNotes, "X");
 			
 			charter.updateGrid();
 		}
 		songDialog.mirrorVerticalButton.onClick = function(event) {
-			charter.mirrorNotes(charter.curSelectedNotes, Y);
+			charter.mirrorNotes(charter.curSelectedNotes, "Y");
 			
 			charter.updateGrid();
 		}
@@ -548,7 +548,7 @@ class ChartEditorUI extends flixel.group.FlxSpriteContainer
 			note[0] = Conductor.beatToSeconds((mod < 0 ? Math.ceil : Math.floor)((beat + (step * snapLeniency) * mod) / step) * step);
 		}
 		
-		songDialog.strumTimeStepper.changeSilent(Lambda.fold(charter.curSelectedNotes, (note, r) -> Math.min(note[0], r), Math.POSITIVE_INFINITY));
+		songDialog.strumTimeStepper.value = Lambda.fold(charter.curSelectedNotes, (note, r) -> Math.min(note[0], r), Math.POSITIVE_INFINITY);
 		
 		charter.updateGrid();
 	}
@@ -571,7 +571,7 @@ class ChartEditorUI extends flixel.group.FlxSpriteContainer
 			note[2] = (Conductor.beatToSeconds((mod < 0 ? Math.ceil : Math.floor)((beat + (step * snapLeniency) * mod) / step) * step) - note[0]);
 		}
 		
-		songDialog.sustainLengthStepper.changeSilent(Lambda.fold(notes, (note, r) -> Math.max(note[2], r), 0));
+		songDialog.sustainLengthStepper.value = Lambda.fold(notes, (note, r) -> Math.max(note[2], r), 0);
 		
 		charter.updateGrid();
 	}

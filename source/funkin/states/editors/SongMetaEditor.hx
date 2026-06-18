@@ -20,6 +20,8 @@ class MetaDialog extends Dialog {}
 
 class SongMetaEditor extends UISubState
 {
+	static final CONFIRM = funkin.states.editors.ui.ToolKitUtils.CONFIRM;
+
 	var dialog:MetaDialog;
 	var iconDummy:HealthIcon;
 	
@@ -88,7 +90,7 @@ class SongMetaEditor extends UISubState
 	{
 		dialog.displayNameField.value = '';
 		
-		dialog.iconField.changeSilent('');
+		dialog.iconField.value = '';
 		
 		dialog.difficultyField.value = '';
 		
@@ -151,7 +153,7 @@ class SongMetaEditor extends UISubState
 		
 		dialog.displayNameField.value = meta.displayName ?? '';
 		
-		dialog.iconField.changeSilent(meta.freeplayIcon ?? '');
+		dialog.iconField.value = (meta.freeplayIcon ?? '');
 		
 		var diffs = '';
 		if (meta.difficulties != null) diffs = meta.difficulties.join(',');

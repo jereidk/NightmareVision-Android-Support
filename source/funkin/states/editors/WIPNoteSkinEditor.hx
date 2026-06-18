@@ -474,7 +474,7 @@ class WIPNoteSkinEditor extends UIState
 		}
 		else
 		{
-			field = new PlayField(112 * 3, 112 * 2, uiElements.settingsBox.keycount.value, null, true, false, true, 0, curName, skin);
+			field = new PlayField(112 * 3, 112 * 2, uiElements.settingsBox.keycount.value, null, true, false, true, 0, skin);
 			// field.baseAlpha = 0.8;
 			field.generateReceptors();
 			field.fadeIn(skipTween);

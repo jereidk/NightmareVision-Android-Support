@@ -3025,7 +3025,8 @@ class OLDChartEditorState extends MusicBeatState
 			{
 				stepTime: 0,
 				songTime: 0,
-				bpm: 0
+				bpm: 0,
+				sectionBeats: 4
 			}
 		for (i in 0...Conductor.bpmChangeMap.length)
 		{

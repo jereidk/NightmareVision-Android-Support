@@ -13,7 +13,8 @@ import funkin.data.*;
 class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 {
 	public var intThing:Int = 0;
-	
+	public var lastNote:Dynamic = null;
+
 	public var resetAnim:Float = 0;
 	public var noteData:Int = 0;
 	public var direction:Float = 90;
