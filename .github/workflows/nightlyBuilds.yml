@@ -7,7 +7,7 @@ on:
       buildFlags:
         required: false
         type: string
-        
+
 jobs:
    Android:
     name: Build Android
@@ -34,23 +34,46 @@ jobs:
             libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
             libvulkan-dev pkg-config
 
-      - name: Prepare Android Lime rebuild
-        env:
-          CC: gcc-13
-          CXX: g++-13
+      # ── Cache: Haxe libraries (hxcpp, flixel, openfl, …)
+      - name: Cache Haxe libraries
+        id: haxelibs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/haxelib
+          key: haxelibs-ubuntu-${{ hashFiles('.hxpkg') }}
+
+      # ── Cache: Lime source tree + compiled ndll/Android .so
+      - name: Cache Lime (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
-          set -euo pipefail
-          haxelib setup ~/haxelib
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
           rm -rf .haxelib/lime
           git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
           git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
           git -C .haxelib/lime/git submodule update --init --recursive --force
-          haxelib dev lime .haxelib/lime/git
-          
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
       - name: Rebuild Linux Lime ndll
+        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
@@ -60,7 +83,7 @@ jobs:
             echo "ERROR: Missing Lime ndll"
             exit 1
           fi
-          
+
       - name: Configure Android
         run: |
           haxelib run lime setup android
@@ -70,6 +93,7 @@ jobs:
           haxelib run lime config ANDROID_SETUP true
 
       - name: Rebuild Android Lime so
+        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
@@ -89,6 +113,7 @@ jobs:
           name: NightmareVision (Android)
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
    Windows:
     name: Build Windows
     runs-on: windows-latest
@@ -97,12 +122,29 @@ jobs:
       - uses: actions/checkout@v6.0.2
         with:
           submodules: true
-          
+
       - uses: krdlab/setup-haxe@v2.1.0
         with:
           haxe-version: 4.3.7
 
+      # ── Cache: Haxe libraries
+      - name: Cache Haxe libraries
+        id: haxelibs-cache
+        uses: actions/cache@v4
+        with:
+          path: C:/haxelib
+          key: haxelibs-windows-${{ hashFiles('.hxpkg') }}
+
+      # ── Cache: Lime source + compiled Windows ndll
+      - name: Cache Lime (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache@v4
+        with:
+          path: .haxelib/lime
+          key: lime-windows-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+
       - name: Prepare Windows Lime rebuild
+        if: steps.lime-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           function Run {
@@ -140,6 +182,13 @@ jobs:
           Run haxelib path lime
           Run haxelib run lime rebuild cpp -release
 
+      - name: Setup haxelib + Lime (cache hit)
+        if: steps.lime-cache.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          haxelib setup C:/haxelib
+          haxelib dev lime .haxelib/lime/git
+
       - name: Build Windows
         run: haxelib run lime build windows -D ${{inputs.buildFlags}}
 
@@ -148,6 +197,7 @@ jobs:
         with:
           name: NightmareVision (Windows)
           path: export/release/windows/bin
+
    Linux:
     name: Build Linux
     runs-on: ubuntu-24.04
@@ -174,23 +224,46 @@ jobs:
             libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
             libvulkan-dev pkg-config
 
-      - name: Prepare Linux Lime rebuild
-        env:
-          CC: gcc-13
-          CXX: g++-13
+      # ── Cache: Haxe libraries
+      - name: Cache Haxe libraries
+        id: haxelibs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/haxelib
+          key: haxelibs-ubuntu-${{ hashFiles('.hxpkg') }}
+
+      # ── Cache: Lime source + compiled Linux ndll
+      - name: Cache Lime (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache@v4
+        with:
+          path: .haxelib/lime
+          key: lime-linux-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
-          set -euo pipefail
-          haxelib setup ~/haxelib
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
           rm -rf .haxelib/lime
           git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
           git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
           git -C .haxelib/lime/git submodule update --init --recursive --force
-          haxelib dev lime .haxelib/lime/git
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
 
       - name: Rebuild Linux Lime ndll
+        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
@@ -212,4 +285,3 @@ jobs:
         with:
           name: NightmareVision (Linux)
           path: export/release/linux/bin
-
