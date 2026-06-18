@@ -193,10 +193,14 @@ class OptionsState extends MusicBeatState
 		}
 		
 		super.create();
-		
+
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	override function closeSubState()
 	{
 		if (subState is funkin.backend.BaseTransitionState)

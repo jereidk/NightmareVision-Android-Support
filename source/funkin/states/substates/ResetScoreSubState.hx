@@ -173,8 +173,13 @@ class ResetScoreSubState extends MusicBeatSubstate
 		}
 		
 		new FlxTimer().start(.35, function(_) lockMovement = false);
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	override function update(elapsed:Float)
 	{
 		for (i in 0...alphabetArray.length)

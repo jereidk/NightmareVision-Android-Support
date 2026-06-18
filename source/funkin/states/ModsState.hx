@@ -26,10 +26,14 @@ class ModsState extends MusicBeatState
 		trace(Mods.getModDirectories());
 		
 		changeDir(0);
-		
+
 		super.create();
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	override function update(elapsed:Float)
 	{
 		if (controls.UI_UP_P) changeDir(-1);

@@ -117,8 +117,13 @@ class QuantNotesSubState extends MusicBeatSubstate
 		add(hsbText);
 		
 		changeSelection();
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	var changingNote:Bool = false;
 	
 	override function update(elapsed:Float)

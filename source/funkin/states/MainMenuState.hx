@@ -177,8 +177,12 @@ class MainMenuState extends MusicBeatState
 		for (i => shiny in menuShinies) shiny.visible = (i < shinies);
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	var backpanel:FlxSprite;
 	
 	function buildPanel()

@@ -137,8 +137,13 @@ class ControlsSubState extends MusicBeatSubstate
 		scrollBar.setMetrics(camera.height, optionEndY);
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(UP_DOWN, A_B);
+		#end
 	}
-	
+
 	public function resetGamepadBinds():Void
 	{
 		ClientPrefs.gamepadBinds = ClientPrefs.defaultGamepadBinds.copy();

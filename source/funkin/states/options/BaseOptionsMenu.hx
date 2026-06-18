@@ -176,8 +176,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		scriptGroup.set('titleText', titleObject);
 		scriptGroup.set('descText', descText);
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	public function addOption(option:Option)
 	{
 		if (optionsArray == null || optionsArray.length < 1) optionsArray = [];

@@ -101,6 +101,11 @@ class PauseSubState extends MusicBeatSubstate
 		
 		FlxG.sound.play(Paths.sound('panelAppear'), 0.5);
 		super.create();
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(UP_DOWN, A_B);
+		#end
 	}
 	
 	override function update(elapsed:Float)
