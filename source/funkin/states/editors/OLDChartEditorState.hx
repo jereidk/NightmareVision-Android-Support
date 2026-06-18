@@ -2266,7 +2266,7 @@ class OLDChartEditorState extends MusicBeatState
 			{
 				autosaveSong();
 				toggleMusic(false);
-				openSubState(new ChartingOptionsSubmenuOLD());
+				openSubState(new ChartingOptionsSubmenuOLDv1());
 			}
 			
 			if (FlxG.keys.justPressed.TAB)
@@ -3932,7 +3932,7 @@ class OLDChartEditorState extends MusicBeatState
 // 	}
 // }
 
-class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
+class ChartingOptionsSubmenuOLDv1 extends MusicBeatSubstate
 {
 	var grpMenuShit:FlxTypedGroup<Alphabet>;
 	var menuItems:Array<String> = [
