@@ -26,7 +26,7 @@ processed=0
 skipped=0
 
 while IFS= read -r -d '' file; do
-    size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+    size=$(stat -c%s "$file")
     if [ "$size" -le "$SIZE_THRESHOLD" ]; then
         skipped=$((skipped + 1))
         continue
@@ -42,7 +42,7 @@ while IFS= read -r -d '' file; do
               -ar "$TARGET_RATE" \
               -y -loglevel error \
               "$tmpfile"; then
-        newsize=$(stat -c%s "$tmpfile" 2>/dev/null || stat -f%z "$tmpfile")
+        newsize=$(stat -c%s "$tmpfile")
         newkb=$(( newsize / 1024 ))
         savings=$(( (size - newsize) * 100 / size ))
         mv "$tmpfile" "$file"
