@@ -1,0 +1,8 @@
+:pink:excited:dialogue_pinkwave0
+:bf:neutral:dialogue_pinkwave1
+:pink:happy:dialogue_pinkwave2
+:gf:suspect:dialogue_pinkwave3
+:bf:neutral:dialogue_pinkwave4
+:bf:neutral:dialogue_pinkwave5
+:pink:neutral:dialogue_pinkwave6
+:pink:neutral:dialogue_pinkwave7

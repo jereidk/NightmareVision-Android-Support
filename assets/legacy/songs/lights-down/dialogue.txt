@@ -1,0 +1,9 @@
+:gi:ineutral:dialogue_lights0
+:gf:neutral:dialogue_lights1
+:gi:iupset:dialogue_lights2
+:bf:happy:dialogue_lights3
+:gi:ineutral:dialogue_lights4
+:gi:ineutral:dialogue_lights5
+:gi:ihappy:dialogue_lights6
+:bf:happy:dialogue_lights7
+:gi:iupset:dialogue_lights8

@@ -1,0 +1,10 @@
+:y:happy:dialogue_dlow0
+:bf:neutral:dialogue_dlow1
+:y:neutral:dialogue_dlow2
+:y:happy:dialogue_dlow3
+:gf:suspect:dialogue_dlow4
+:y:neutral:dialogue_dlow5
+:bf:neutral:dialogue_dlow6
+:gf:suspect:dialogue_dlow7
+:bf:happy:dialogue_dlow8
+:y:happy:dialogue_dlow9

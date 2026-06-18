@@ -1,0 +1,13 @@
+:pink:sad:dialogue_heartbeat0
+:pink:neutral:dialogue_heartbeat1
+:bf:happy:dialogue_heartbeat2
+:pink:excited:dialogue_heartbeat3
+:gf:neutral:dialogue_heartbeat4
+:gf:suspect:dialogue_heartbeat5
+:pink:happy:dialogue_heartbeat6
+:bf:neutral:dialogue_heartbeat7
+:pink:happy:dialogue_heartbeat8
+:bf:neutral:dialogue_heartbeat9
+:pink:excited:dialogue_heartbeat10
+:bf:happy:dialogue_heartbeat11
+:pink:excited:dialogue_heartbeat12

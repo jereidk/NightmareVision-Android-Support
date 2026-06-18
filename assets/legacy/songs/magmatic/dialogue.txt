@@ -1,0 +1,6 @@
+:maroon:neutral:dialogue_magma0
+:bf:angry:dialogue_magma1
+:bf:mad:dialogue_magma2
+:maroon:happy:dialogue_magma3
+:bf:angry:dialogue_magma4
+:maroon:neutral:dialogue_magma5

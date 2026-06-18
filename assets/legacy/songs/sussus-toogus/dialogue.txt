@@ -1,0 +1,11 @@
+:bf:neutral:dialogue_toogus0
+:gf:neutral:dialogue_toogus1
+:gc:excite:dialogue_toogus2
+:bf:neutral:dialogue_toogus3
+:gc:excite:dialogue_toogus4
+:gf:suspect:dialogue_toogus5
+:gc:nervous:dialogue_toogus6
+:gc:threat:dialogue_toogus7
+:gc:nervous:dialogue_toogus8
+:bf:happy:dialogue_toogus9
+:gc:happy:dialogue_toogus10

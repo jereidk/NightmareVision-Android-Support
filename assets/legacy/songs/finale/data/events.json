@@ -1,0 +1,121 @@
+{
+	"song": {
+		"events": [
+			[
+				4800,
+				[
+					[
+						"Finale Flashback Change",
+						"moog",
+						""
+					]
+				]
+			],
+			[
+				6000,
+				[
+					[
+						"Finale Flashback Change",
+						"toog",
+						""
+					]
+				]
+			],
+			[
+				7200,
+				[
+					[
+						"Finale Flashback Change",
+						"doog",
+						""
+					]
+				]
+			],
+			[
+				8400,
+				[
+					[
+						"Finale Flashback Change",
+						"flash",
+						""
+					]
+				]
+			],
+			[
+				9600,
+				[
+					[
+						"HUD Fade",
+						"1",
+						""
+					],
+					[
+						"Set Cams",
+						"450,1000,1250,1000",
+						"0.8"
+					]
+				]
+			],
+			[
+				19200,
+				[
+					[
+						"Set Cams",
+						"1400,1050,1400,1050",
+						"1.2"
+					]
+				]
+			],
+			[
+				20100,
+				[
+					[
+						"Set Cam Zoom",
+						"2.4",
+						""
+					]
+				]
+			],
+			[
+				20400,
+				[
+					[
+						"Finale Drop",
+						"",
+						""
+					],
+					[
+						"Change Character",
+						"1",
+						"blackparasite"
+					]
+				]
+			],
+			[
+				146400,
+				[
+					[
+						"camTween",
+						"4",
+						"5.5,quadOut"
+					],
+					[
+						"Camera Follow Pos",
+						"1175",
+						"525"
+					]
+				]
+			],
+			[
+				148800,
+				[
+					[
+						"Finale End",
+						"",
+						""
+					]
+				]
+			]
+		]
+	}
+}

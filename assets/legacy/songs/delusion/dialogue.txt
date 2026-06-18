@@ -1,0 +1,2 @@
+:grey:neutral:dialogue_gray0
+:bf:neutral:dialogue_gray1

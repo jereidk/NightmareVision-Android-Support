@@ -1,0 +1,651 @@
+{
+	"song": {
+		"events": [
+			[
+				37161.2903225807,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				38370.9677419355,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				38903.2258064516,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				39822.5806451613,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				41032.2580645161,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				43354.8387096774,
+				[
+					[
+						"Cam lock in Who",
+						"",
+						""
+					]
+				]
+			],
+			[
+				48774.1935483871,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					],
+					[
+						"Play Animation",
+						"wtf1",
+						"BF"
+					]
+				]
+			],
+			[
+				49548.3870967742,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				51193.5483870968,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				54193.5483870968,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				55741.935483871,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				59225.806451613,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				60967.7419354839,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					],
+					[
+						"Play Animation",
+						"ffs",
+						"BF"
+					]
+				]
+			],
+			[
+				62129.0322580646,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				64064.5161290323,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				66580.6451612904,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					],
+					[
+						"Play Animation",
+						"gettingit",
+						"Dad"
+					]
+				]
+			],
+			[
+				67354.8387096775,
+				[
+					[
+						"Play Animation",
+						"urgonnagetit",
+						"BF"
+					]
+				]
+			],
+			[
+				67412.9032258065,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				68516.1290322581,
+				[
+					[
+						"Cam lock in Who",
+						"",
+						""
+					],
+					[
+						"Play Animation",
+						"woah",
+						"Dad"
+					]
+				]
+			],
+			[
+				68903.2258064517,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				70451.6129032259,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					],
+					[
+						"Alt Idle Animation",
+						"Dad",
+						"-scary"
+					]
+				]
+			],
+			[
+				74322.5806451614,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					],
+					[
+						"Alt Idle Animation",
+						"Dad",
+						""
+					]
+				]
+			],
+			[
+				75870.9677419356,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				76487.9032258065,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				77419.3548387098,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				79161.2903225807,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				79741.9354838711,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				80286.2903225807,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				81621.7741935485,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				82427.4193548388,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				82439.5161290324,
+				[
+					[
+						"Change Character",
+						"1",
+						"bluewho"
+					]
+				]
+			],
+			[
+				83612.9032258066,
+				[
+					[
+						"Cam lock in Who",
+						"",
+						""
+					]
+				]
+			],
+			[
+				84387.0967741936,
+				[
+					[
+						"Play Animation",
+						"wtf2",
+						"BF"
+					]
+				]
+			],
+			[
+				85161.2903225808,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				86709.6774193549,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				87483.870967742,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				88258.0645161291,
+				[
+					[
+						"Cam lock in Who",
+						"",
+						""
+					]
+				]
+			],
+			[
+				88258.0645161291,
+				[
+					[
+						"Change Character",
+						"0",
+						"whitemad"
+					]
+				]
+			],
+			[
+				89419.3548387098,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				89806.4516129033,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				91161.2903225808,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				92903.2258064517,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				94451.6129032259,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				95322.5806451614,
+				[
+					[
+						"Change Character",
+						"0",
+						"whitewho"
+					]
+				]
+			],
+			[
+				95419.3548387098,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				96000.0000000001,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				98903.2258064518,
+				[
+					[
+						"Change Character",
+						"0",
+						"whitemad"
+					]
+				]
+			],
+			[
+				99135.4838709679,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					]
+				]
+			],
+			[
+				100645.161290323,
+				[
+					[
+						"Change Character",
+						"1",
+						"bluewhonormal"
+					]
+				]
+			],
+			[
+				100653.225806452,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				100661.290322581,
+				[
+					[
+						"Play Animation",
+						"yfronts",
+						"Dad"
+					]
+				]
+			],
+			[
+				102096.774193549,
+				[
+					[
+						"Change Character",
+						"0",
+						"whitewho"
+					]
+				]
+			],
+			[
+				102193.548387097,
+				[
+					[
+						"Cam lock in Who",
+						"",
+						""
+					]
+				]
+			],
+			[
+				103741.935483871,
+				[
+					[
+						"Change Character",
+						"BF",
+						"whitefuck"
+					]
+				]
+			],
+			[
+				103747.983870968,
+				[
+					[
+						"Play Animation",
+						"getit",
+						"BF"
+					]
+				]
+			],
+			[
+				105290.322580645,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						""
+					],
+					[
+						"Alt Idle Animation",
+						"Dad",
+						"-scary"
+					]
+				]
+			],
+			[
+				105580.64516129,
+				[
+					[
+						"Change Character",
+						"1",
+						"bluewho"
+					]
+				]
+			],
+			[
+				108387.096774194,
+				[
+					[
+						"Cam lock in Who",
+						"in",
+						"dad"
+					]
+				]
+			],
+			[
+				110612.903225807,
+				[
+					[
+						"Alt Idle Animation",
+						"Dad",
+						""
+					]
+				]
+			],
+			[
+				111483.870967742,
+				[
+					[
+						"",
+						"who buzz",
+						"0"
+					]
+				]
+			],
+			[
+				113032.258064516,
+				[
+					[
+						"",
+						"who buzz",
+						"1"
+					]
+				]
+			]
+		]
+	}
+}

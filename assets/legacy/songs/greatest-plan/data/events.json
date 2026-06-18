@@ -1,0 +1,106 @@
+{
+	"song": {
+		"events": [
+			[
+				2666.66666666667,
+				[
+					[
+						"Legacy",
+						"p1",
+						""
+					]
+				]
+			],
+			[
+				3333.33333333333,
+				[
+					[
+						"Legacy",
+						"bf",
+						""
+					],
+					[
+						"Add Camera Zoom",
+						"0.2",
+						""
+					]
+				]
+			],
+			[
+				3416.66666666667,
+				[
+					[
+						"Legacy",
+						"charles",
+						""
+					],
+					[
+						"Add Camera Zoom",
+						"0.2",
+						""
+					]
+				]
+			],
+			[
+				3750,
+				[
+					[
+						"Legacy",
+						"enter",
+						""
+					]
+				]
+			],
+			[
+				4333.33333333333,
+				[
+					[
+						"Play Animation",
+						"oh",
+						"Dad"
+					],
+					[
+						"Optional Captions",
+						"charles0",
+						""
+					]
+				]
+			],
+			[
+				5333.33333333333,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				68166.6666666667,
+				[
+					[
+						"Play Animation",
+						"perfect",
+						"Dad"
+					],
+					[
+						"Optional Captions",
+						"charles1",
+						""
+					]
+				]
+			],
+			[
+				69333.3333333334,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			]
+		]
+	}
+}

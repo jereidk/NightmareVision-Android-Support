@@ -1,0 +1,236 @@
+{
+	"song": {
+		"events": [
+			[
+				15652.1739130435,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				15782.6086956522,
+				[
+					[
+						"Show Victory Guy",
+						"jelqMid",
+						"show"
+					]
+				]
+			],
+			[
+				16695.652173913,
+				[
+					[
+						"Victory Darkness",
+						"off",
+						""
+					],
+					[
+						"Camera Follow Pos",
+						"",
+						""
+					],
+					[
+						"HUD Fade",
+						"1",
+						"0"
+					]
+				]
+			],
+			[
+				58434.7826086956,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				59739.1304347826,
+				[
+					[
+						"Legacy",
+						"jelq_sesh1",
+						""
+					],
+					[
+						"Change Character",
+						"dad",
+						"jelqer"
+					]
+				]
+			],
+			[
+				60521.7391304348,
+				[
+					[
+						"Victory Darkness",
+						"off",
+						""
+					]
+				]
+			],
+			[
+				93391.3043478261,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				93652.1739130435,
+				[
+					[
+						"Change Character",
+						"dad",
+						"jorsawghost"
+					],
+					[
+						"Legacy",
+						"jorsawsee1",
+						""
+					],
+					[
+						"Legacy",
+						"hide",
+						""
+					]
+				]
+			],
+			[
+				93913.0434782609,
+				[
+					[
+						"Victory Darkness",
+						"off",
+						""
+					]
+				]
+			],
+			[
+				127304.347826087,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				127782.608695652,
+				[
+					[
+						"Change Character",
+						"1",
+						"warchief"
+					],
+					[
+						"Legacy",
+						"warchief2",
+						""
+					]
+				]
+			],
+			[
+				128739.130434783,
+				[
+					[
+						"Legacy",
+						"reveal",
+						""
+					]
+				]
+			],
+			[
+				129391.304347826,
+				[
+					[
+						"Victory Darkness",
+						"",
+						""
+					]
+				]
+			],
+			[
+				137217.391304348,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				137434.782608696,
+				[
+					[
+						"Change Character",
+						"1",
+						"jelqer"
+					],
+					[
+						"Legacy",
+						"jelq_sesh2",
+						""
+					]
+				]
+			],
+			[
+				137739.130434783,
+				[
+					[
+						"Victory Darkness",
+						"",
+						""
+					]
+				]
+			],
+			[
+				145565.217391304,
+				[
+					[
+						"Victory Darkness",
+						"on",
+						""
+					]
+				]
+			],
+			[
+				145826.086956522,
+				[
+					[
+						"Change Character",
+						"1",
+						"jorsawghost"
+					],
+					[
+						"Legacy",
+						"jorsawsee2",
+						""
+					]
+				]
+			],
+			[
+				146086.956521739,
+				[
+					[
+						"Victory Darkness",
+						"",
+						""
+					]
+				]
+			]
+		]
+	}
+}

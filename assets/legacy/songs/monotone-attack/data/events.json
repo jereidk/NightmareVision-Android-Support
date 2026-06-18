@@ -1,0 +1,431 @@
+{
+	"song": {
+		"events": [
+			[
+				0,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					]
+				]
+			],
+			[
+				1621.62162162162,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				4864.86486486487,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"biddle"
+					]
+				]
+			],
+			[
+				6486.48648648649,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				12972.972972973,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					]
+				]
+			],
+			[
+				19459.4594594595,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				25945.9459459459,
+				[
+					[
+						"Set Cam Zoom",
+						"0.6",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"310, -185",
+						"dad"
+					]
+				]
+			],
+			[
+				32432.4324324324,
+				[
+					[
+						"Set Cam Zoom",
+						"0.7",
+						""
+					]
+				]
+			],
+			[
+				38513.5135135135,
+				[
+					[
+						"Set Cam Zoom",
+						"0.9",
+						""
+					],
+					[
+						"Camera Follow Pos",
+						"1000",
+						"900"
+					]
+				]
+			],
+			[
+				38918.9189189189,
+				[
+					[
+						"Attack Events",
+						"orbyy",
+						""
+					],
+					[
+						"Optional Captions",
+						"attack0",
+						"630"
+					]
+				]
+			],
+			[
+				39932.4324324324,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					],
+					[
+						"Camera Follow Pos",
+						"",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"125,-125",
+						"dad"
+					],
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				40135.1351351351,
+				[
+					[
+						"Set Cam Zoom",
+						"0.75",
+						""
+					]
+				]
+			],
+			[
+				53513.5135135135,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				72972.9729729729,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"biddle"
+					]
+				]
+			],
+			[
+				79459.4594594595,
+				[
+					[
+						"Set Cam Zoom",
+						"0.6",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"325,-185",
+						"dad"
+					],
+					[
+						"Set Cam Pos",
+						"-260,-185",
+						"bf"
+					],
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					]
+				]
+			],
+			[
+				85945.945945946,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				92837.8378378379,
+				[
+					[
+						"Set Cam Zoom",
+						"0.7 ",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"310, -185",
+						"dad"
+					]
+				]
+			],
+			[
+				111993.243243243,
+				[
+					[
+						"Set Cam Zoom",
+						"0.6",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"325,-185",
+						"dad"
+					],
+					[
+						"Set Cam Pos",
+						"-260,-185",
+						"bf"
+					]
+				]
+			],
+			[
+				118378.378378379,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					],
+					[
+						"Set Cam Zoom",
+						"0.75",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"125,-125",
+						"dad"
+					],
+					[
+						"Set Cam Pos",
+						"-75,-125",
+						"bf"
+					]
+				]
+			],
+			[
+				124864.864864865,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				131452.702702703,
+				[
+					[
+						"Set Cam Zoom",
+						"0.7",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"310, -185",
+						"dad"
+					]
+				]
+			],
+			[
+				143918.918918919,
+				[
+					[
+						"Set Cam Zoom",
+						"0.9",
+						""
+					],
+					[
+						"Camera Follow Pos",
+						"1000",
+						"900"
+					]
+				]
+			],
+			[
+				144628.378378379,
+				[
+					[
+						"Attack Events",
+						"forehead",
+						""
+					],
+					[
+						"Optional Captions",
+						"attack1",
+						""
+					]
+				]
+			],
+			[
+				145945.945945946,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					],
+					[
+						"Set Cam Zoom",
+						"0.6",
+						""
+					],
+					[
+						"Set Cam Pos",
+						"325,-185",
+						"dad"
+					],
+					[
+						"Set Cam Pos",
+						"-260,-185",
+						"bf"
+					],
+					[
+						"Camera Follow Pos",
+						"",
+						""
+					],
+					[
+						"Attack Events",
+						"forehead after",
+						""
+					]
+				]
+			],
+			[
+				145945.945945946,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				147567.567567568,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				150810.810810811,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"biddle"
+					]
+				]
+			],
+			[
+				152432.432432433,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"fabs"
+					]
+				]
+			],
+			[
+				153243.243243243,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			],
+			[
+				154864.864864865,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						"biddle"
+					]
+				]
+			],
+			[
+				155675.675675676,
+				[
+					[
+						"Attack Events",
+						"force camera",
+						""
+					]
+				]
+			]
+		]
+	}
+}

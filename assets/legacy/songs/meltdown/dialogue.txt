@@ -1,0 +1,11 @@
+:bf:happy:dialogue_meltdown0
+:gf:happy:dialogue_meltdown1
+:red:nervous:dialogue_meltdown2
+:gf:glint:dialogue_meltdown3
+:bf:angry:dialogue_meltdown4
+:red:sad:dialogue_meltdown5
+:red:sad:dialogue_meltdown6
+:bf:happy:dialogue_meltdown7
+:bf:mad:dialogue_meltdown8
+:red:happy:dialogue_meltdown9
+:bf:neutral:dialogue_meltdown10

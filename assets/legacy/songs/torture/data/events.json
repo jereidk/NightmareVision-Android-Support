@@ -1,0 +1,246 @@
+{
+	"song": {
+		"events": [
+			[
+				645.161290322581,
+				[
+					[
+						"Legacy",
+						"intro",
+						""
+					]
+				]
+			],
+			[
+				2016.12903225806,
+				[
+					[
+						"Optional Captions",
+						"torture0",
+						""
+					]
+				]
+			],
+			[
+				3870.96774193548,
+				[
+					[
+						"Optional Captions",
+						"torture1",
+						""
+					]
+				]
+			],
+			[
+				5564.51612903226,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				6129.03225806452,
+				[
+					[
+						"Optional Captions",
+						"torture2",
+						""
+					]
+				]
+			],
+			[
+				7661.29032258064,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				7741.93548387097,
+				[
+					[
+						"Legacy",
+						"why dont we begin",
+						""
+					]
+				]
+			],
+			[
+				10322.5806451613,
+				[
+					[
+						"HUD Fade",
+						"1",
+						""
+					],
+					[
+						"Legacy",
+						"start",
+						""
+					],
+					[
+						"Legacy",
+						"Show Task Song",
+						"info1"
+					]
+				]
+			],
+			[
+				20000,
+				[
+					[
+						"Legacy",
+						"saw",
+						""
+					]
+				]
+			],
+			[
+				41290.3225806452,
+				[
+					[
+						"Legacy",
+						"Show Task Song",
+						"info2"
+					]
+				]
+			],
+			[
+				51612.9032258064,
+				[
+					[
+						"Legacy",
+						"Show Task Song",
+						"info3"
+					]
+				]
+			],
+			[
+				72258.064516129,
+				[
+					[
+						"Legacy",
+						"Show Task Song",
+						"info4"
+					]
+				]
+			],
+			[
+				82580.6451612904,
+				[
+					[
+						"HUD Fade",
+						"0",
+						""
+					],
+					[
+						"Legacy",
+						"rozebud",
+						""
+					],
+					[
+						"Legacy",
+						"Show Task Song",
+						"info5"
+					],
+					[
+						"Play Animation",
+						"ROZEBUD",
+						"bf"
+					]
+				]
+			],
+			[
+				82822.5806451613,
+				[
+					[
+						"Play Animation",
+						"rozebud?",
+						"gf"
+					]
+				]
+			],
+			[
+				83064.5161290323,
+				[
+					[
+						"Optional Captions",
+						"torture3",
+						""
+					]
+				]
+			],
+			[
+				84112.9032258065,
+				[
+					[
+						"Optional Captions",
+						"torture4",
+						""
+					]
+				]
+			],
+			[
+				84274.1935483871,
+				[
+					[
+						"Play Animation",
+						"GETOUT",
+						"dad"
+					]
+				]
+			],
+			[
+				87500.0000000001,
+				[
+					[
+						"HUD Fade",
+						"1",
+						""
+					]
+				]
+			],
+			[
+				87741.935483871,
+				[
+					[
+						"Legacy",
+						"Show Task Song",
+						"info6"
+					],
+					[
+						"Legacy",
+						"bye",
+						""
+					]
+				]
+			],
+			[
+				87741.935483871,
+				[
+					[
+						"Optional Captions",
+						"",
+						""
+					]
+				]
+			],
+			[
+				108387.096774194,
+				[
+					[
+						"Legacy",
+						"Show Task Song",
+						"info7"
+					]
+				]
+			]
+		]
+	}
+}
