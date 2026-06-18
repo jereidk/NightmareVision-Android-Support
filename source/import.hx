@@ -35,6 +35,7 @@ import funkin.utils.CoolUtil;
 import funkin.data.Highscore;
 import funkin.states.*;
 import funkin.objects.BGSprite;
+import funkin.objects.FunkinSprite;
 import funkin.backend.MusicBeatState;
 
 #if mobile
