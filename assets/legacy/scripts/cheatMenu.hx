@@ -49,5 +49,18 @@ function onUpdate()
 	{
 		if (FlxG.keys.pressed.THREE) playbackRate = 2;
 		if (FlxG.keys.released.THREE) playbackRate = 1;
+
+		// Mobile: hold 2+ fingers while debug overlay is open → 2x speed
+		if (dbGroup.visible)
+		{
+			var _touches = FlxG.touches.list;
+			if (_touches != null)
+			{
+				var _held = 0;
+				for (t in _touches) if (t.pressed) _held++;
+				if (_held >= 2) playbackRate = 2;
+				else if (_held == 0) playbackRate = 1;
+			}
+		}
 	}
 }

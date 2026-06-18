@@ -642,6 +642,23 @@ function onUpdate(elapsed:Float):Void
 		{
 			music.time = Math.max(Conductor.beatToSeconds(Math.ceil(curDecBeat / 16 - 1.25) * 16), 0);
 		}
+
+		// Mobile: 2-finger tap — left half = back, right half = forward
+		var _touches = FlxG.touches.list;
+		if (_touches != null)
+		{
+			var _justPressed = [for (t in _touches) if (t.justPressed) t];
+			if (_justPressed.length >= 2)
+			{
+				var _avgX:Float = 0;
+				for (t in _justPressed) _avgX += t.x;
+				_avgX /= _justPressed.length;
+				if (_avgX > FlxG.width / 2)
+					music.time = Conductor.beatToSeconds(Math.floor(curDecBeat / 16 + 1) * 16);
+				else
+					music.time = Math.max(Conductor.beatToSeconds(Math.ceil(curDecBeat / 16 - 1.25) * 16), 0);
+			}
+		}
 	}
 	
 	Conductor.songPosition += (elapsed * 1000);

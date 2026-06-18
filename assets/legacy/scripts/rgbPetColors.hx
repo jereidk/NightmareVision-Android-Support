@@ -56,21 +56,28 @@ function onCreatePost()
 		return;
 	}
 	
-	var frag:String = Paths.getTextFromFile('shaders/amongRgb.frag');
-	petRGB = new FlxRuntimeShader(frag);
-	petRGB.setFloatArray('green', [96 / 255, 208 / 255, 1]);
-	petRGB.setFloat('visor', 1);
-	
-	for (layer in pet.timeline.layers)
+	try
 	{
-		layer.forEachFrame(function(frame) {
-			for (element in frame.elements)
-				element.shader = petRGB;
-		});
+		var frag:String = Paths.getTextFromFile('shaders/amongRgb.frag');
+		petRGB = new FlxRuntimeShader(frag);
+		petRGB.setFloatArray('green', [96 / 255, 208 / 255, 1]);
+		petRGB.setFloat('visor', 1);
+
+		for (layer in pet.timeline.layers)
+		{
+			layer.forEachFrame(function(frame) {
+				for (element in frame.elements)
+					element.shader = petRGB;
+			});
+		}
+		pet.useRenderTexture = true;
+
+		updateRGB(boyfriend);
 	}
-	pet.useRenderTexture = true;
-	
-	updateRGB(boyfriend);
+	catch (e:Dynamic)
+	{
+		trace('RGB pet shader unavailable on this device: ' + e);
+	}
 }
 /**
 	* converts `FlxColor` into an array of `R, G, B` divided by 255 for the shader support

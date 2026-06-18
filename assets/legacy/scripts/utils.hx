@@ -239,6 +239,19 @@ function onUpdate(elapsed)
 		showDevInfo = !showDevInfo;
 		dbGroup.visible = !dbGroup.visible;
 	}
+
+	// Mobile: 3-finger tap → toggle debug overlay (same as TAB)
+	var _touches = FlxG.touches.list;
+	if (_touches != null)
+	{
+		var _justPressed = 0;
+		for (t in _touches) if (t.justPressed) _justPressed++;
+		if (_justPressed >= 3)
+		{
+			showDevInfo = !showDevInfo;
+			dbGroup.visible = !dbGroup.visible;
+		}
+	}
 	
 	if (showDevInfo)
 	{
