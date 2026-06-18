@@ -92,15 +92,24 @@ class FunkinAssets
 	
 	/**
 	 * Retrives a bitmap instance from path.
-	 * 
+	 *
 	 * Will return null in the case it cannot be found.
 	 */
 	public static function getBitmapData(path:String, useCache:Bool = true):Null<BitmapData>
 	{
+		// On Android, try loading a GPU-compressed ASTC override first.
+		// If the device lacks ASTC support, or no .astc file exists at the
+		// mirror path (assets/astc/<...>.astc), this returns null and we
+		// fall through to the normal PNG loading below.
+		#if (mobile && MODS_ALLOWED)
+		var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
+		if (astcBitmap != null) return astcBitmap;
+		#end
+
 		var bitmap:Null<BitmapData> = null;
 		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(path)) bitmap = BitmapData.fromFile(path);
 		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
-		
+
 		return bitmap;
 	}
 	

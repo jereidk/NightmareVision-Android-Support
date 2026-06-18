@@ -18,6 +18,12 @@ class Init extends FlxState
 {
 	override public function create():Void
 	{
+		// Probe GL for ASTC extension support as early as possible.
+		// The GL context is guaranteed to be live by the time Init runs.
+		#if (android && cpp)
+		mobile.backend.AstcSupport.check();
+		#end
+
 		// load settings/save
 		funkin.input.Controls.init();
 		
