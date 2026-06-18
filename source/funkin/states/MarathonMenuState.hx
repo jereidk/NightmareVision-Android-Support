@@ -121,8 +121,12 @@ class MarathonMenuState extends AmongUIState
 		add(addThing);
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		addVirtualPad(NONE, A_B);
+		#end
 	}
-	
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);

@@ -163,8 +163,12 @@ class AwardsState extends AmongUIState
 		refreshCompletionText();
 		refreshPlayTimeText();
 		refreshSelection();
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	function refreshCompletionText():Void
 	{
 		var completionLabel:String = Lang.str('game_completion', 'Completion');

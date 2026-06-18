@@ -75,8 +75,12 @@ class CosmicubeSelectState extends AmongUIState
 		select(0);
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	override function closeSubState():Void
 	{
 		super.closeSubState();

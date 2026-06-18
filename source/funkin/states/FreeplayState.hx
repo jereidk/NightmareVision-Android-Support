@@ -230,8 +230,12 @@ class FreeplayState extends AmongUIState
 		
 		scriptGroup.call('onCreatePost', []);
 		changeSection(0, false);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	function refreshCards()
 	{
 		if (cards == null)

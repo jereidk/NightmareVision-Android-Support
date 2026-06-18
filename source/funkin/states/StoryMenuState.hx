@@ -138,8 +138,12 @@ class StoryMenuState extends AmongUIState
 		FlxG.camera.snapToTarget();
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	public function initStory():Void
 	{
 		var queuedNodeData:Map<String, Array<StoryNode>> = [];
