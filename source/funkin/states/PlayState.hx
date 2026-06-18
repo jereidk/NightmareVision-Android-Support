@@ -475,7 +475,11 @@ class PlayState extends MusicBeatState
 	public var pauseOverwrite(get, set):String;
 	
 	public var pauseOverride:String = '';
-	
+
+	#if mobile
+	private var mobilePauseBtn:FlxSprite;
+	#end
+
 	/**
 	 * Variable that determines whether PlayState will automatically handle Discord RPC.
 	 *
@@ -824,6 +828,20 @@ class PlayState extends MusicBeatState
 		#if mobile
 		addMobileControls(false);
 		hitbox.visible = false;
+
+		mobilePauseBtn = new FlxSprite();
+		mobilePauseBtn.makeGraphic(100, 50, 0x88000000);
+		mobilePauseBtn.screenCenter(X);
+		mobilePauseBtn.y = 5;
+		mobilePauseBtn.scrollFactor.set();
+		mobilePauseBtn.cameras = [camHUD];
+		add(mobilePauseBtn);
+
+		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + 10, 100, 'II', 24);
+		_pauseLabel.setFormat(null, 24, FlxColor.WHITE, FlxTextAlign.CENTER);
+		_pauseLabel.scrollFactor.set();
+		_pauseLabel.cameras = [camHUD];
+		add(_pauseLabel);
 		#end
 
 		scripts.call('preNoteGeneration', []);
@@ -1895,7 +1913,27 @@ class PlayState extends MusicBeatState
 		{
 			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
 		}
-		
+
+		#if mobile
+		if (startedCountdown && canPause)
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					var _tp = touch.getScreenPosition(camHUD);
+					if (mobilePauseBtn.overlapsPoint(_tp, true, camHUD))
+					{
+						_tp.put();
+						if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
+						break;
+					}
+					_tp.put();
+				}
+			}
+		}
+		#end
+
 		if (canAccessEditors && !endingSong && !inCutscene)
 		{
 			if (FlxG.keys.anyJustPressed(debugKeysChart)) openChartEditor();
