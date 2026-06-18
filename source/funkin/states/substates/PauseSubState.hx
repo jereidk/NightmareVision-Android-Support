@@ -78,10 +78,16 @@ class PauseSubState extends MusicBeatSubstate
 		{
 			options.insert(2, 'leavechartingmode');
 		}
-		
+
+		if (ClientPrefs.inDevMode)
+		{
+			options.push('[DEV] debug info');
+			options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
+		}
+
 		for (i in 0...options.length)
 		{
-			var opt = new FlxText(-640, 0, -1, Lang.str(options[i]));
+			var opt = new FlxText(-640, 0, -1, Lang.str(options[i], options[i]));
 			opt.setFormat(Paths.font('liber.ttf'), 48, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			opt.borderSize = 2;
 			opt.y = FlxG.height / 2 + (i * 60) - opt.height;
@@ -248,6 +254,16 @@ class PauseSubState extends MusicBeatSubstate
 				FlxG.switchState(() -> new OptionsState());
 			case 'backtomenu':
 				returnToMain();
+
+			case '[DEV] debug info':
+				PlayState.instance.scriptGroup.call('onToggleDebugInfo');
+				close();
+			case '[DEV] speed: 2x':
+				PlayState.instance.playbackRate = 2;
+				close();
+			case '[DEV] speed: back to 1x':
+				PlayState.instance.playbackRate = 1;
+				close();
 		}
 	}
 	

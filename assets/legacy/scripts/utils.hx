@@ -478,3 +478,10 @@ function onBeatHit()
 		FlxTween.tween(camGame, {x: -twistShit * camTwistIntensity}, Conductor.crochet * 0.001, {ease: FlxEase.linear});
 	}
 }
+
+// Called by PauseSubState dev option (Android-accessible via pause menu)
+function onToggleDebugInfo()
+{
+	showDevInfo = !showDevInfo;
+	dbGroup.visible = !dbGroup.visible;
+}
