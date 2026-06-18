@@ -1,0 +1,179 @@
+{
+    "pausePortrait": "red",
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				70,
+				-279
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "animations/mimpostor idle",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				70,
+				-279
+			],
+			"anim": "idle-loop",
+			"fps": 24,
+			"name": "animations/mimpostor idle",
+			"indices": [
+				11,
+				12,
+				13,
+				14
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				70,
+				-346
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "animations/mimpostor down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				197,
+				-274
+			],
+			"anim": "singLEFT-loop",
+			"fps": 24,
+			"name": "animations/mimposter left",
+			"indices": [
+				6,
+				7,
+				8
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				197,
+				-274
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "animations/mimposter left",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				70,
+				-283
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "animations/mimpostor right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				70,
+				-254
+			],
+			"anim": "singUP-loop",
+			"fps": 24,
+			"name": "animations/mimpostor up",
+			"indices": [
+				6,
+				7,
+				8
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				70,
+				-254
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "animations/mimpostor up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				70,
+				-283
+			],
+			"anim": "singRIGHT-loop",
+			"fps": 24,
+			"name": "animations/mimpostor right",
+			"indices": [
+				5,
+				6,
+				7
+			],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				70,
+				-346
+			],
+			"anim": "singDOWN-loop",
+			"fps": 24,
+			"name": "animations/mimpostor down",
+			"indices": [
+				5,
+				6,
+				7
+			],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/red/red",
+	"position": [
+		0,
+		100
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "red-meltdown",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -4510419,
+	"camera_position": [
+		-130,
+		290
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

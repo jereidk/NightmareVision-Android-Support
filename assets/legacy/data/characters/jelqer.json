@@ -1,0 +1,93 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-3,
+				-153
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "danceLeft",
+			"indices": [],
+			"name": "jelqer dance left"
+		},
+		{
+			"offsets": [
+				-23,
+				-153
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "danceRight",
+			"indices": [],
+			"name": "jelqer dance right"
+		},
+		{
+			"offsets": [
+				-85,
+				-213
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "jelqer down"
+		},
+		{
+			"offsets": [
+				-122,
+				-116
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "jelqer up"
+		},
+		{
+			"offsets": [
+				-67,
+				-188
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "jelqer right"
+		},
+		{
+			"offsets": [
+				30,
+				-150
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "jelqer left"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/jorsawsee/jelqer",
+	"position": [
+		-110,
+		160
+	],
+	"dance_every": 1,
+	"gameover_intial_sound": null,
+	"scalableOffsets": true,
+	"gameover_confirm_sound": null,
+	"healthicon": "thejelqer",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -1461033,
+	"camera_position": [
+		10,
+		230
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1.1,
+	"_editor_isPlayer": false
+}

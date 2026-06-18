@@ -1,0 +1,15 @@
+{
+	"type": "pet",
+	"price": 600,
+	"title": "Fishmogus",
+	"node": {
+		"direction": "north",
+		"parent": "dog"
+	},
+	
+	"color": [
+		111,
+		219,
+		255
+	]
+}

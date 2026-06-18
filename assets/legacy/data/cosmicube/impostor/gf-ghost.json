@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 450,
+	
+	"title": "Ghost GF",
+	"requirement": "A",
+	"week": "week1",
+	
+	"node": {
+		"direction": "west",
+		"parent": "bf-ghost"
+	}
+}

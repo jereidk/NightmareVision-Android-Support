@@ -1,0 +1,17 @@
+{
+    "name": "dialogue_grey",
+    "side": 0,
+    "asset": "grey",
+    "boxColor": "0xFF626579",
+    "boxShadeColor": "0xFF303349", 
+    "icon": "gray",
+    "sound": "grey",
+    "animations": [
+        {
+        "anim": "neutral",
+        "name": "GC neutral",
+        "loop": false,
+        "offsets": [0,30]
+        }
+    ]
+}

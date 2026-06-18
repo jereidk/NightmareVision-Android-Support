@@ -1,0 +1,82 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				-12,
+				-180
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Bf idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-51,
+				-193
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "BF right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-9,
+				-217
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "BF down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				9,
+				-184
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "BF left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-20,
+				-168
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "BF up",
+			"indices": []
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/monotone/boyfriend",
+	"position": [
+		90,
+		150
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		-30,
+		200
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

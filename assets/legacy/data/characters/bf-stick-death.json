@@ -1,0 +1,66 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "firstDeath",
+			"flipX": false,
+			"indices": [],
+			"name": "stick dies0"
+		},
+		{
+			"offsets": [
+				-23,
+				-6
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "deathLoop",
+			"flipX": false,
+			"indices": [],
+			"name": "stick death loop0"
+		},
+		{
+			"offsets": [
+				-23,
+				24
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "deathConfirm",
+			"flipX": false,
+			"indices": [],
+			"name": "stick dea confirm0"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/gameover/stick_bf_death",
+	"position": [
+		39,
+		289
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "stickbf",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		-5,
+		45
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

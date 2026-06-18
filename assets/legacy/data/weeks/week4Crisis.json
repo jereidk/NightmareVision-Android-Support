@@ -1,0 +1,15 @@
+{
+	"songs": [
+		["Identity Crisis", "monotone", [0, 0, 0], "monotone", "Doguy, Vruzzen, Rareblin", ["meltdown", "ejected", "double-kill", "defeat", "boiling-point", "neurotic", "pretender"], 0, true]
+	],
+	
+	"section": "story",
+	
+	"storyName": "",
+	"weekBefore": "",
+	"weekName": "Endgame",
+	
+	"startUnlocked": false,
+	"hideStoryMode": true,
+	"hideFreeplay": false
+}

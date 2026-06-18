@@ -1,0 +1,22 @@
+{
+	"songs": [
+		["Sussy Bussy", "tomongus-pixel", [255, 51, 51], "mech", "Saruky"],
+		["Rivals", "tomongus-pixel", [255, 51, 51], "mech", "Keoni"],
+		["Chewmate", "hamster-pixel", [255, 51, 51], "tomo", "Moonmistt"]
+	],
+	
+	"section": "tomo",
+	
+	"storyName": "Rosy Rival",
+	"weekBefore": "week2",
+	"weekName": "Tomongus",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week2",
+		"direction": "south"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"directory": "",
+	"defaultZoom": 0.7,
+	"isPixelStage": false,
+
+	"boyfriend": [700, 110],
+	"girlfriend": [135, 140],
+	"opponent": [-220, 110],
+	"secondopp": [-60, 210],
+	"camera_boyfriend": [0, -1.5],
+	"camera_opponent": [0, -50],
+	
+	"flags": {
+		"airship": true
+	}
+}

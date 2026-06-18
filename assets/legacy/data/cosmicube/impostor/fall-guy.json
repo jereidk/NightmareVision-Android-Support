@@ -1,0 +1,16 @@
+{
+	"type": "playerSkin",
+	"price": 1000,
+	"title": "Fall Guy",
+	"completionExcluded": true,
+	"requirement": {
+		"type": "completion",
+		"scope": "global",
+		"percent": 100
+	},
+	
+	"node": {
+		"direction": "east",
+		"parent": "blackp"
+	}
+}

@@ -1,0 +1,11 @@
+{
+	"type": "playerSkin",
+	"price": 250,
+	"title": "Green",
+	"week": "week2",
+	
+	"node": {
+		"direction": "east",
+		"parent": "redp"
+	}
+}

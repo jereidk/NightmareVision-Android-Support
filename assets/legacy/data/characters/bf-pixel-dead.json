@@ -1,0 +1,60 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				-30,
+				-12
+			],
+			"fps": 24,
+			"anim": "deathConfirm",
+			"indices": [],
+			"name": "RETRY CONFIRM"
+		},
+		{
+			"loop": true,
+			"offsets": [
+				-30,
+				-12
+			],
+			"fps": 24,
+			"anim": "deathLoop",
+			"indices": [],
+			"name": "Retry Loop"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"fps": 24,
+			"anim": "firstDeath",
+			"indices": [],
+			"name": "BF Dies pixel"
+		}
+	],
+	"no_antialiasing": true,
+	"image": "characters/bf/pixel/bfPixelsDEAD",
+	"position": [
+		183,
+		547
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf-pixel",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -8661258,
+	"camera_position": [
+		140,
+		-110
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 6,
+	"_editor_isPlayer": true
+}

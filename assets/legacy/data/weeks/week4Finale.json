@@ -1,0 +1,15 @@
+{
+	"songs": [
+		["Finale", "black", [179, 0, 255], "blackp", "Vruzzen, punkett", null, 0, true]
+	],
+	
+	"section": "story",
+	
+	"storyName": "FINALE",
+	"weekBefore": "",
+	"weekName": "...",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false
+}

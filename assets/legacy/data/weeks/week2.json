@@ -1,0 +1,23 @@
+{
+	"songs": [
+		["Sussus Toogus", "green-crewmate", [0, 255, 0], "green", "EthanTheDoodler, fabs"],
+		["Lights Down", "green", [0, 255, 0], "green", "Rareblin"],
+		["Reactor", "green", [0, 255, 0], "green", "EthanTheDoodler, Rareblin"],
+		["Ejected", "green-parasite", [0, 255, 0], "greenp", "Rareblin"]
+	],
+	
+	"section": "story",
+	
+	"storyName": "MIRA Mania",
+	"weekBefore": "week1",
+	"weekName": "Week 2",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week1",
+		"direction": "east"
+	}
+}

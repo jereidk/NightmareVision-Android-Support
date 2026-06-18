@@ -1,0 +1,15 @@
+{
+	"songs": [
+		["Sauces Moogus", "chef", [242, 114, 28], "chef", "Saster", ["boiling-point", "neurotic", "pretender"], 0, true]
+	],
+	
+	"section": "tt",
+	
+	"storyName": "",
+	"weekBefore": "week6",
+	"weekName": "Triple Trouble (Bonus)",
+	
+	"startUnlocked": false,
+	"hideStoryMode": true,
+	"hideFreeplay": false
+}

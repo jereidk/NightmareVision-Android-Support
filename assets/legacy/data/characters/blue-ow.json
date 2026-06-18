@@ -1,0 +1,134 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				56,
+				-283
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "blue idle"
+		},
+		{
+			"offsets": [
+				49,
+				-284
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "blue right"
+		},
+		{
+			"offsets": [
+				59,
+				-302
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "blue down"
+		},
+		{
+			"offsets": [
+				80,
+				-284
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "blue left"
+		},
+		{
+			"offsets": [
+				43,
+				-258
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "blue up"
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				60,
+				-302
+			],
+			"anim": "singDOWN-alt",
+			"fps": 24,
+			"name": "hit down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				33,
+				-185
+			],
+			"anim": "singUP-alt",
+			"fps": 24,
+			"name": "hit up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				23,
+				-275
+			],
+			"anim": "singRIGHT-alt",
+			"fps": 24,
+			"name": "hit right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				50,
+				-185
+			],
+			"anim": "singLEFT-alt",
+			"fps": 24,
+			"name": "hit left",
+			"indices": [],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/freeplay/blue_ow",
+	"position": [
+		40,
+		100
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "blue-ow",
+	"gameover_character": "blue-ow-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -15741697,
+	"camera_position": [
+		80,
+		400
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 10,
+	"scale": 0.8,
+	"_editor_isPlayer": true
+}

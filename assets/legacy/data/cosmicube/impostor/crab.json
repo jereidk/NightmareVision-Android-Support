@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Bedcrab",
+	"node": {
+		"direction": "west",
+		"parent": "dripbf"
+	},
+	
+	"color": [
+		206,
+		166,
+		103
+	]
+}

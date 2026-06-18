@@ -1,0 +1,16 @@
+{
+	"animations": [
+		{
+			"fps": 24,
+			"loop": true,
+			"anim": "idle",
+			"name": "idle"
+		}
+	],
+	"flags": {
+		"floating": true,
+		"variants": {
+			"airship": "helicopter-toppat"
+		}
+	}
+}

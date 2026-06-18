@@ -1,0 +1,143 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "fall idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				14,
+				2
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "fall left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-41,
+				-33
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "fall down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-59,
+				206
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "fall up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-130,
+				99
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "fall right",
+			"indices": []
+		},
+		{
+			"offsets": [
+				12,
+				71
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"indices": [],
+			"name": "miss left"
+		},
+		{
+			"offsets": [
+				-126,
+				104
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "miss right"
+		},
+		{
+			"offsets": [
+				-57,
+				207
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "miss up"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-10,
+				130
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "fall hey",
+			"indices": []
+		},
+		{
+			"offsets": [
+				-42,
+				31
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "miss down"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/fall_guy",
+	"position": [
+		-50,
+		330
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "fallguy",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -26164,
+	"camera_position": [
+		80,
+		10
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [-20,60],
+		"finaleHealthBarColor": ["0xFFFF6699", "0xFFFFB999", "0xFFCC3399"]
+	}
+}

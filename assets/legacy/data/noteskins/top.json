@@ -1,0 +1,262 @@
+{
+	"singAnimations": [
+		"singLEFT",
+		"singDOWN",
+		"singUP",
+		"singRIGHT"
+	],
+	"splashesEnabled": true,
+	"noteTexture": "ui/top/notes",
+	"receptorAnimations": [
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowLEFT",
+				"anim": "static"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowLEFT",
+				"anim": "pressed"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowLEFT",
+				"anim": "confirm"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowDOWN",
+				"anim": "static"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowDOWN",
+				"anim": "pressed"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowDOWN",
+				"anim": "confirm"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowUP",
+				"anim": "static"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowUP",
+				"anim": "pressed"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowUP",
+				"anim": "confirm"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowRIGHT",
+				"anim": "static"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowRIGHT",
+				"anim": "pressed"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowRIGHT",
+				"anim": "confirm"
+			}
+		]
+	],
+	"noteSplashAnimations": [
+		[
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 1",
+				"anim": "splash"
+			},
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 2",
+				"anim": "splash-1"
+			}
+		],
+		[
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 1",
+				"anim": "splash"
+			},
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 2",
+				"anim": "splash-1"
+			}
+		],
+		[
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 1",
+				"anim": "splash"
+			},
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 2",
+				"anim": "splash-1"
+			}
+		],
+		[
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 1",
+				"anim": "splash"
+			},
+			{
+				"offsets": [
+					-11,
+					10
+				],
+				"xmlName": "splash 2",
+				"anim": "splash-1"
+			}
+		]
+	],
+	"noteAnimations": [
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowLEFT",
+				"anim": "scroll"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold piece",
+				"anim": "hold"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold end",
+				"anim": "holdend"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowDOWN",
+				"anim": "scroll"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold piece",
+				"anim": "hold"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold end",
+				"anim": "holdend"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowUP",
+				"anim": "scroll"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold piece",
+				"anim": "hold"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold end",
+				"anim": "holdend"
+			}
+		],
+		[
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "arrowRIGHT",
+				"anim": "scroll"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold piece",
+				"anim": "hold"
+			},
+			{
+				"looping": false,
+				"offsets": [0, 0],
+				"xmlName": "hold end",
+				"anim": "holdend"
+			}
+		]
+	],
+	"arrowRGB": [
+		{"r": -3921782, "g": -1, "b": -16777216},
+		{"r": -16521730, "g": -1, "b": -16777216},
+		{"r": -16722686, "g": -1, "b": -16777216},
+		{"r": -1106659, "g": -1, "b": -16777216}
+	],
+	"splashTexture": "noteSplashes",
+	"noteSplashVariants": 2,
+	"antialiasing": true,
+	"inGameColoring": true,
+	"receptorScale": 0.666667,
+	"noteScale": 0.666667,
+	"splashScale": 0.666667,
+	"sustainSplashes": false
+}

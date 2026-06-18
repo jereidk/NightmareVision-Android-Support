@@ -1,0 +1,15 @@
+{
+	"type": "playerSkin",
+	"price": 480,
+	
+	"title": "Mini Grey",
+
+	"song": "delusion",
+	"requirement": "A",
+
+	
+	"node": {
+		"direction": "north",
+		"parent": "blackp"
+	}
+}

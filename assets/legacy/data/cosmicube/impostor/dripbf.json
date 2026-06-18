@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 225,
+	
+	"title": "Drip BF",
+	"requirement": "A",
+	"song": "drippypop",
+	
+	"node": {
+		"direction": "south",
+		"parent": "bfairship"
+	}
+}

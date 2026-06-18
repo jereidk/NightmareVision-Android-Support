@@ -1,0 +1,173 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				15,
+				-468
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "white idle",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				-427
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "white down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				106,
+				-447
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "white left",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-48,
+				-444
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "white right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-11,
+				-438
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "white up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				83,
+				-423
+			],
+			"anim": "scared",
+			"fps": 24,
+			"name": "white scared",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				32,
+				-472
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "white hey",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				-417
+			],
+			"anim": "singDOWNmiss",
+			"fps": 24,
+			"name": "missdown",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-59,
+				-437
+			],
+			"anim": "singRIGHTmiss",
+			"fps": 24,
+			"name": "missright",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-7,
+				-424
+			],
+			"anim": "singUPmiss",
+			"fps": 24,
+			"name": "missup",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				102,
+				-416
+			],
+			"anim": "singLEFTmiss",
+			"fps": 24,
+			"name": "missleft",
+			"indices": [],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/tiny_white",
+	"position": [
+		0,
+		20
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "whitemini",
+	"gameover_character": "genericDeath-white",
+	"vslice_sustains": true,
+	"flip_x": true,
+	"healthbar_colour": -2959878,
+	"camera_position": [
+		318,
+		291
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [-10, -30]
+	}
+}

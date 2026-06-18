@@ -1,0 +1,146 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				102,
+				-257
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "animations/impostor idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				80,
+				-225
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "animations/impostor down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				106,
+				-257
+			],
+			"anim": "ayo",
+			"fps": 24,
+			"name": "animations/red look",
+			"indices": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18,
+				18
+			],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				219,
+				-289
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"flipX": false,
+			"indices": [],
+			"name": "animations/swag impostor left"
+		},
+		{
+			"offsets": [
+				43,
+				-290
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"flipX": false,
+			"indices": [],
+			"name": "animations/swag impostor right"
+		},
+		{
+			"offsets": [
+				-3,
+				-234
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"flipX": false,
+			"indices": [],
+			"name": "animations/impostor up2"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/red/red",
+	"position": [
+		0,
+		100
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"flags": {},
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "red",
+	"afterimages": true,
+	"gameover_character": null,
+	"vslice_sustains": true,
+	"flip_x": false,
+	"healthbar_colour": -4510419,
+	"camera_position": [
+		-130,
+		290
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

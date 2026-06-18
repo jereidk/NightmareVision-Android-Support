@@ -1,0 +1,66 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				18,
+				-3
+			],
+			"anim": "firstDeath",
+			"fps": 24,
+			"name": "BF dies instance 1",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				18,
+				-9
+			],
+			"anim": "deathLoop",
+			"fps": 24,
+			"name": "BF Dead Loop instance 1",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				18,
+				55
+			],
+			"anim": "deathConfirm",
+			"fps": 24,
+			"name": "BF Dead confirm instance 1",
+			"indices": [],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/gameover/bfairshipdeath",
+	"position": [
+		-19,
+		330
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"gameover_character": "bfairship",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		-19,
+		18
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

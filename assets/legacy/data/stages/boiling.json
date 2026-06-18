@@ -1,0 +1,17 @@
+{
+	"directory": "",
+	"defaultZoom": 0.65,
+	"isPixelStage": false,
+    "hide_girlfriend": true,
+    
+	"boyfriend": [1970, 21],
+	"girlfriend": [1500, 80],
+	"opponent": [950, -70],
+	"pet": [1850, 740],
+	"dadZIndex": 1,
+	"bfZIndex": 1,
+	
+	"flags": {
+		"boiling": true
+	}
+}

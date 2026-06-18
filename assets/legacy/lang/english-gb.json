@@ -1,0 +1,26 @@
+{
+    "name": "English (United Kingdom)",
+    // put your name here! or names! if theres more than one of you!
+    "translation_credits": "Lethrial",
+    "lang": {
+        "dialogue_grey": "Gray",
+        "AWARDBIO_lets_be_friends": "Fight Gray in Pretender as Playable Pink.",
+        "AWARDNAME_you_suck": "Absolutely atrocious!",
+        "AWARDNAME_tuesday_morning": "Chewsday Morning",
+        "AWARDHINT_red_handed": "You've got red on you.",
+        "fall-guy_desc": "...You alright?",
+        "minigrey_name": "Mini Gray",
+        "fribbit_desc": "Okay, but imagine if it had a car.",
+        "dialogue_moogus9": "you've got a gun!!!! also a knife !!but only in your up sprite!!!!",
+        "dialogue_moogus13": "(heh.... theyve got no clue im actually the IMPOSTOR...)",
+        "dialogue_meltdown6": "i've got a husband and kids at home....",
+        "dialogue_dlow0": "Wow! T-that was brilliant! I'm well chuffed ^_^",
+        "dialogue_ash1": "i've not even said anything what the hell ",
+        "dialogue_heartbeat5": "Wait.. who are you i've not seen you before",
+        "dialogue_pinkwave3": "guys i just realised.. weve been here for like 10 minutes and not a single person has gotten killed",
+        "victory0":"Who cares? You've already won!",
+        "opt_coloredui": "V4 Coloured UI:",
+        "opt_coloredui_desc": "Colours UI elements based on the opponent's icon colour.\n(Some colours might be hard to read.)",
+        "opt_quants_desc": "Colours notes in-game based on their step value. Helpful for timing your note hits."
+    }
+}

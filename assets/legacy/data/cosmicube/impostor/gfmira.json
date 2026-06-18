@@ -1,0 +1,12 @@
+{
+	"type": "speakerSkin",
+	"price": 250,
+	
+	"title": "MIRA GF",
+	"week": "week7",
+	
+	"node": {
+		"direction": "east",
+		"parent": "bfmira"
+	}
+}

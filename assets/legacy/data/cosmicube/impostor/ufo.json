@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "UFO",
+	"node": {
+		"direction": "west",
+		"parent": "bfairship"
+	},
+	
+	"color": [
+		46,
+		110,
+		190
+	]
+}

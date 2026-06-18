@@ -1,0 +1,82 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				89,
+				-49
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Sidle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				350,
+				-135
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Sleft",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				196,
+				-278
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "Sdown",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				182,
+				-29
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "Sup",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				42,
+				-201
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Sright",
+			"indices": []
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/monotone/monotone",
+	"position": [
+		-150,
+		-40
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "monotone",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -13030327,
+	"camera_position": [
+		-20,
+		190
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

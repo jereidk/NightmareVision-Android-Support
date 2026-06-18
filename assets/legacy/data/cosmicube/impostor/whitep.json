@@ -1,0 +1,14 @@
+{
+	"type": "playerSkin",
+	"price": 200,
+	
+	"title": "White",
+
+	"song": "oversight",
+	"requirement": "A",
+	
+	"node": {
+		"direction": "north",
+		"parent": "yellowplayable"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Frankendog",
+	"node": {
+		"direction": "north",
+		"parent": "gf-ghost"
+	},
+	
+	"color": [
+		125,
+		0,
+		147
+	]
+}

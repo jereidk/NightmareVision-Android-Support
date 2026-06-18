@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Headslug",
+	"node": {
+		"direction": "west",
+		"parent": "crab"
+	},
+	
+	"color": [
+		101,
+		191,
+		65
+	]
+}

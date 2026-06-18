@@ -1,0 +1,140 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				-24,
+				7
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "stick hey",
+			"indices": []
+		},
+		{
+			"offsets": [
+				-5,
+				0
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "stick idle"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				37,
+				8
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "stick note left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				36,
+				78
+			],
+			"anim": "singLEFTmiss",
+			"fps": 24,
+			"name": "note left miss",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-12,
+				-21
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "stick note down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-5,
+				56
+			],
+			"anim": "singDOWNmiss",
+			"fps": 24,
+			"name": "note down miss",
+			"indices": []
+		},
+		{
+			"offsets": [
+				-34,
+				110
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "note up miss"
+		},
+		{
+			"offsets": [
+				-34,
+				16
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "stick note up"
+		},
+		{
+			"offsets": [
+				66,
+				4
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "stick note right"
+		},
+		{
+			"offsets": [
+				-29,
+				88
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "note right miss"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/stick-bf",
+	"position": [
+		40,
+		320
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": "stage/stickbf_Death",
+	"scalableOffsets": false,
+	"gameover_confirm_sound": "stickbf_death_end",
+	"healthicon": "stickbf",
+	"gameover_character": "bf-stick-death",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		0,
+		0
+	],
+	"gameover_loop_sound": "stickbf_death_loop",
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [0, -70]
+	}
+}

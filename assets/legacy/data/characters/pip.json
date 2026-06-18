@@ -1,0 +1,136 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-19,
+				-3
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "export me/Pip Down"
+		},
+		{
+			"offsets": [
+				7,
+				64
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "export me/Pip Up"
+		},
+		{
+			"offsets": [
+				-36,
+				32
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "export me/Pip Left"
+		},
+		{
+			"offsets": [
+				27,
+				20
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "export me/Pip Right"
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				19,
+				20
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "export me/Pip Idle",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				-19,
+				-16
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "export me/MPip Down"
+		},
+		{
+			"offsets": [
+				7,
+				64
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singUPmiss",
+			"loop": false,
+			"name": "export me/MPip Up"
+		},
+		{
+			"offsets": [
+				27,
+				20
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFTmiss",
+			"loop": false,
+			"name": "export me/MPip Right"
+		},
+		{
+			"offsets": [
+				-38,
+				32
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singRIGHTmiss",
+			"loop": false,
+			"name": "export me/MPip Left"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/misc/cvp/pipAtlas",
+	"position": [
+		-100,
+		110
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "pip",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -87481,
+	"camera_position": [
+		0,
+		0
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

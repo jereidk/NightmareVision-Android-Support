@@ -1,0 +1,19 @@
+{
+	"animations": [
+		{
+			"fps": 48,
+			"loop": true,
+			"anim": "idle",
+			"name": "idle"
+		},
+		{
+			"fps": 24,
+			"loop": false,
+			"anim": "death",
+			"name": "death"
+		}
+	],
+	"flags": {
+		"runner": true
+	}
+}

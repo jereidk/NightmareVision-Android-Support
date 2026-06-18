@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 285,
+	
+	"title": "Baller BF",
+
+	"week": "week8",
+	
+	"node": {
+		"direction": "east",
+		"parent": "root"
+	}
+}

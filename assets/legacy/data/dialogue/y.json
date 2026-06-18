@@ -1,0 +1,42 @@
+{
+    "name": "dialogue_yellow",
+    "side": 0,
+    "asset": "yellow",
+    "boxColor": "0xFFFFEB5B",
+    "boxShadeColor": "0xFFD7861A", 
+    "icon": "yellow",
+    "sound": "yellow",
+    "animations": [
+        {
+            "anim": "happy",
+            "name": "Y happy",
+            "loop": false,
+            "offsets": [0,50]
+        },
+        {
+            "anim": "neutral",
+            "name": "Y neutral",
+            "loop": false,
+            "offsets": [0,50]
+        },
+        {
+            "anim": "skeptical",
+            "name": "Y skeptical",
+            "loop": false,
+            "offsets": [0,50]
+        },
+        {
+            "anim": "dead",
+            "name": "Y died",
+            "loop": false,
+            "offsets": [0,50]
+        },
+        {
+            "anim": "what",
+            "name": "Y what",
+            "reset": false,
+            "loop": false,
+            "offsets": [0,50]
+        }
+    ]
+}

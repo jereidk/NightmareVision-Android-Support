@@ -1,0 +1,12 @@
+{
+	"type": "playerSkin",
+	"price": 400,
+	"song": "finale",
+	
+	"title": "Crewmate BF",
+
+	"node": {
+		"direction": "south",
+		"parent": "blackp"
+	}
+}

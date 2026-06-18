@@ -1,0 +1,15 @@
+{
+	"directory": "",
+	"defaultZoom": 0.45,
+	"isPixelStage": false,
+
+	"boyfriend": [1008.6, 504],
+	"girlfriend": [114.4, 78.45],
+	"opponent": [-1225.75, 440],
+	"secondopp": [-60, 210],
+	"pet": [1600, 800],
+	
+	"flags": {
+		"falling": true
+	}
+}

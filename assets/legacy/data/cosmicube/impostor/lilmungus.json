@@ -1,0 +1,17 @@
+{
+	"type": "pet",
+	"price": 350,
+	"title": "Lil' Mungus",
+	"song": "turbulence",
+	"requirement": "A",
+	"node": {
+		"direction": "east",
+		"parent": "bfballer"
+	},
+	
+	"color": [
+		237,
+		12,
+		24
+	]
+}

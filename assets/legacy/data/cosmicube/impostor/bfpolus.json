@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 175,
+	
+	"title": "Polus BF",
+
+	"week": "week5",
+	
+	"node": {
+		"direction": "south",
+		"parent": "root"
+	}
+}

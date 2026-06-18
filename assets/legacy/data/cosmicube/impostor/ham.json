@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+
+	"title": "Hammy",
+	"node": {
+		"direction": "east",
+		"parent": "bfsauce"
+	},
+	
+	"color": [
+		84,
+		25,
+		29
+	]
+}

@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 450,
+	
+	"title": "Unused MIRA GF",
+	"requirement": "A",
+	"song": "sussus-toogus",
+	
+	"node": {
+		"direction": "west",
+		"parent": "gf-ghost"
+	}
+}

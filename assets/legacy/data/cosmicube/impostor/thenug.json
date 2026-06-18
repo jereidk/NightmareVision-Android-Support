@@ -1,0 +1,17 @@
+{
+	"type": "pet",
+	"price": 4200,
+	
+	"title": "The Nug",
+
+	"node": {
+		"direction": "south",
+		"parent": "bfsauce"
+	},
+	
+	"color": [
+		203,
+		116,
+		48
+	]
+}

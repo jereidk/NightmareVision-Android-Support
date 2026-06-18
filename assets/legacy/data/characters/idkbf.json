@@ -1,0 +1,82 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				30,
+				-291
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				26,
+				-290
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				32,
+				-293
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				31,
+				-291
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				26,
+				-291
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "up",
+			"indices": []
+		}
+	],
+	"no_antialiasing": true,
+	"image": "characters/bf/idkbf",
+	"position": [
+		40,
+		100
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": "stage/idk_death",
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "idkbf",
+	"gameover_character": "idkbf-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -16735512,
+	"camera_position": [
+		-80,
+		390
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 10,
+	"scale": 0.8,
+	"_editor_isPlayer": true
+}

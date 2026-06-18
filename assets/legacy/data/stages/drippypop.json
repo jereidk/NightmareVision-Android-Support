@@ -1,0 +1,14 @@
+{
+	"directory": "",
+	"defaultZoom": 0.9,
+	"isPixelStage": false,
+
+	"boyfriend": [1375, 225],
+	"girlfriend": [950, 270],
+	"opponent": [700, 235],
+    "pet": [1800, 1030],
+	
+	"flags": {
+		"airship": true
+	}
+}

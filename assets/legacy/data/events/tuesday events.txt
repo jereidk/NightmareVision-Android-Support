@@ -1,0 +1,2 @@
+call light out
+if value1 is 1 then dont work if flashingLights is off

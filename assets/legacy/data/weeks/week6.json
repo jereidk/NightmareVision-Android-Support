@@ -1,0 +1,22 @@
+{
+	"songs": [
+		["Delusion", "gray", [139, 157, 168], "grey", "fluffyhairs"],
+		["Blackout", "gray", [139, 157, 168], "grey", "Cval"],
+		["Neurotic", "gray", [139, 157, 168], "grey", "Nii-san"]
+	],
+	
+	"section": "tt",
+	
+	"storyName": "Deadly Delusion",
+	"weekBefore": "week5",
+	"weekName": "Week 6",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week5",
+		"direction": "west"
+	}
+}

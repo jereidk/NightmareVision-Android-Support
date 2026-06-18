@@ -1,0 +1,9 @@
+{
+	"flags": {
+		"variants": {
+			"running": "minicrewmaterun",
+			"falling": "minicrewmatefall",
+			"chef": "fatogus"
+		}
+	}
+}

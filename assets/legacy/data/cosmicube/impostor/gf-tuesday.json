@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 390,
+	
+	"title": "Tuesday GF",
+	"requirement": "A",
+	"song": "tomongus-tuesday",
+	
+	"node": {
+		"direction": "west",
+		"parent": "bfsusreal"
+	}
+}

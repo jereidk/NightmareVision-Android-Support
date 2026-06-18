@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 350,
+	
+	"title": "Snowmate",
+	"node": {
+		"direction": "west",
+		"parent": "snowball"
+	},
+	
+	"color": [
+		231,
+		248,
+		250
+	]
+}

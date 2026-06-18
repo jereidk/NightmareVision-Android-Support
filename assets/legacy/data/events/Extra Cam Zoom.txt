@@ -1,0 +1,4 @@
+an addition to camera zoom without actually
+setting camera zoom or accounting for it
+basically just:
+defaultCamZoom + extraCamZoom

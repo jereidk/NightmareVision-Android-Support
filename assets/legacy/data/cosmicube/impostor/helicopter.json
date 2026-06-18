@@ -1,0 +1,15 @@
+{
+	"type": "pet",
+	"price": 350,
+	"title": "Charles Chopper",
+	"node": {
+		"direction": "west",
+		"parent": "elliepet"
+	},
+	
+	"color": [
+		57,
+		104,
+		68
+	]
+}

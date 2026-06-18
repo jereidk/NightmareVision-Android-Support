@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 500,
+	
+	"title": "Fribbit",
+	"node": {
+		"direction": "east",
+		"parent": "amongGf"
+	},
+	
+	"color": [
+		147,
+		235,
+		255
+	]
+}

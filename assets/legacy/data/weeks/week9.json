@@ -1,0 +1,23 @@
+{
+	"songs": [
+		["Titular", "henry", [255, 127, 0], "henry", "EthanTheDoodler"],
+		["Greatest Plan", "charles", [255, 0, 0], "charles", "EthanTheDoodler"],
+		["Reinforcements", "reinforcements", [255, 127, 0], "ellie", "EthanTheDoodler, Philiplol"],
+		["Armed", "armed", [254, 192, 40], "rhm", "EthanTheDoodler, punkett"]
+	],
+	
+	"section": "henry",
+	
+	"storyName": "Battling the Boyfriend",
+	"weekBefore": "idk",
+	"weekName": "HENRY",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week3",
+		"direction": "south"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"songs": [
+		["Chippin", "cvp", [255, 60, 38], "cval", "ziffyclumper", [], 300],
+		["Chipping", "cvp", [255, 60, 38], "cval", "ziffyclumper", [], 300],
+		["Torture", "ziffy", [188, 106, 223], "torture", "Team TORTURE", ["chippin", "chipping"], 0, true]
+	],
+	
+	"section": "cvp",
+	
+	"storyName": "Cval vs. Pip",
+	"weekName": "Cval vs. Pip",
+	
+	"startUnlocked": true,
+	"hideStoryMode": false,
+	"hideFreeplay": false
+}

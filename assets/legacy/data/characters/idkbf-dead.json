@@ -1,0 +1,72 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-25,
+				-282
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "firstDeath",
+			"flipX": false,
+			"indices": [],
+			"name": "first death"
+		},
+		{
+			"offsets": [
+				-25,
+				-282
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "deathConfirm",
+			"flipX": false,
+			"indices": [
+				16,
+				17
+			],
+			"name": "first death"
+		},
+		{
+			"offsets": [
+				-25,
+				-282
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "deathLoop",
+			"flipX": false,
+			"indices": [
+				16,
+				17
+			],
+			"name": "first death"
+		}
+	],
+	"no_antialiasing": true,
+	"image": "characters/gameover/idk_bf_dead",
+	"position": [
+		52,
+		98
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "idkbf",
+	"gameover_character": "",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -16735512,
+	"camera_position": [
+		-111,
+		422
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 10,
+	"scale": 0.8,
+	"_editor_isPlayer": true
+}

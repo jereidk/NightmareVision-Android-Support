@@ -1,0 +1,23 @@
+{
+	"songs": [
+		["Lemon Lime", "jads", [102, 255, 102], "jads", "Rozebud"],
+		["Chlorophyll", "jads", [102, 255, 102], "jads", "JADS"],
+		["Inflorescence", "jads", [102, 255, 102], "jads", "Rozebud"],
+		["Stargazer", "jads", [102, 255, 102], "jads", "Punkett"]
+	],
+	
+	"section": "jads",
+	
+	"storyName": "LIME GREEN JADSPOSTOR",
+	"weekBefore": "week2",
+	"weekName": "JADS",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week2",
+		"direction": "north"
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"songs": [
+		["O2", "jorsawsee", [38, 127, 230], "jorsawsee", "punkett"],
+		["Voting Time", "votingtime", [153, 67, 196], "voting", "punkett, JADS"],
+		["Turbulence", "redmungus", [255, 0, 0], "mungusp", "Keegan"],
+		["Victory", "victory", [153, 67, 196], "voting", "punkett"]
+	],
+	
+	"section": "jams",
+	
+	"storyName": "Jorsawsee's Jams",
+	"weekBefore": "",
+	"weekName": "Week J",
+	
+	"startUnlocked": true,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "root",
+		"direction": "north"
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"note": [
+		["song name", "icon name", "color array", "portrait name", "composers", "?songs to complete array", "?beans cost", "?gold lock bool"]
+	],
+	
+	"songs": [
+		["Sussus Moogus", "red", [255, 0, 0], "red", "EthanTheDoodler"],
+		["Sabotage", "red", [255, 0, 0], "red", "EthanTheDoodler"],
+		["Meltdown", "red", [255, 0, 0], "red", "punkett"]
+	],
+	
+	"section": "story",
+	
+	"storyName": "Polus Problems",
+	"weekBefore": "Week 0",
+	"weekName": "Week 1",
+
+	"startUnlocked": true,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "root",
+		"direction": "east"
+	}
+}

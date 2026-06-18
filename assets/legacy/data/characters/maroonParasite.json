@@ -1,0 +1,83 @@
+{
+    "pausePortrait": "maroonp",
+	"animations": [
+		{
+			"loop": true,
+			"offsets": [
+				249,
+				40
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				243,
+				72
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				294,
+				248
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				313,
+				73
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				513,
+				350
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "up",
+			"indices": []
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/triple/maroon/maroonParasite",
+	"position": [
+		150,
+		50
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "maroon-parasite",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -9695438,
+	"camera_position": [
+		-210,
+		260
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1.2,
+	"_editor_isPlayer": false
+}

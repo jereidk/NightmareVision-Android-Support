@@ -1,0 +1,22 @@
+{
+	"songs": [
+		["Heartbeat", "pink", [255, 0, 222], "pink", "Saster"],
+		["Pinkwave", "pink", [255, 0, 222], "pink", "fluffyhairs"],
+		["Pretender", "pretender", [255, 0, 100], "pretender", "EthanTheDoodler"]
+	],
+	
+	"section": "tt",
+	
+	"storyName": "Humane Heartbeat",
+	"weekBefore": "week6",
+	"weekName": "Week 7",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week6",
+		"direction": "west"
+	}
+}

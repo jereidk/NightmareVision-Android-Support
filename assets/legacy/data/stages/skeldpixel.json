@@ -1,0 +1,24 @@
+{
+	"directory": "",
+	"defaultZoom": 1,
+	"isPixelStage": true,
+
+	"boyfriend": [921, 22],
+	"girlfriend": [382, 61],
+	"opponent": [99, 104],
+	"hide_girlfriend": false,
+
+	"camera_boyfriend": [0, -25],
+	"camera_opponent": [110, 50],
+	"camera_girlfriend": [0, 0],
+	"camera_speed": 1,
+	
+	"petZIndex": 12,
+	"bfZIndex": 9,
+	"dadZIndex": 6,
+	"gfZIndex": 3,
+	
+	"flags": {
+		"pixel": true
+	}
+}

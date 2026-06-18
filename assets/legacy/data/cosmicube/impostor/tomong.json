@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Mini Tomongus",
+    "week": "week10",
+
+	"node": {
+		"direction": "west",
+		"parent": "minicrewmate"
+	},
+	
+	"color": [
+		235,
+		86,
+		116
+	]
+}

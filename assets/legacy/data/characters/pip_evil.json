@@ -1,0 +1,144 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-19,
+				-3
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "export me/EPip Down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				27,
+				20
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "export me/EPip Right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-15,
+				32
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "export me/EPip Left",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				7,
+				64
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "export me/EPip Up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				19,
+				20
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "export me/EPip Idle",
+			"indices": [],
+			"flipX": false
+		},
+        {
+			"offsets": [
+				-19,
+				-16
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "export me/MPip Down"
+		},
+		{
+			"offsets": [
+				7,
+				64
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singUPmiss",
+			"loop": false,
+			"name": "export me/MPip Up"
+		},
+		{
+			"offsets": [
+				27,
+				20
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFTmiss",
+			"loop": false,
+			"name": "export me/MPip Right"
+		},
+		{
+			"offsets": [
+				-38,
+				32
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singRIGHTmiss",
+			"loop": false,
+			"name": "export me/MPip Left"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/misc/cvp/pipAtlas",
+	"position": [
+		-100,
+		110
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "pip",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -87481,
+	"camera_position": [
+		0,
+		0
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

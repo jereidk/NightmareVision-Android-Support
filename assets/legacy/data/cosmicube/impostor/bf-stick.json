@@ -1,0 +1,12 @@
+{
+	"type": "playerSkin",
+	"price": 375,
+	
+	"title": "Stickmin BF",
+	"week": "week9",
+	
+	"node": {
+		"direction": "west",
+		"parent": "root"
+	}
+}

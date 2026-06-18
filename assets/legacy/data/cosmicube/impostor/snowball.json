@@ -1,0 +1,17 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Snowball",
+
+	"node": {
+		"direction": "south",
+		"parent": "gfpolus"
+	},
+	
+	"color": [
+		231,
+		248,
+		250
+	]
+}

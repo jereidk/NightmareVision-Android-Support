@@ -1,0 +1,14 @@
+{
+	"type": "playerSkin",
+	"price": 250,
+	
+	"title": "Chef BF",
+
+	"requirement": "A",
+	"song": "sauces-moogus",
+	
+	"node": {
+		"direction": "south",
+		"parent": "bfmira"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Doggy",
+	"node": {
+		"direction": "north",
+		"parent": "bf-ghost"
+	},
+	
+	"color": [
+		78,
+		219,
+		214
+	]
+}

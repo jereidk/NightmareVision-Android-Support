@@ -1,0 +1,170 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				591,
+				-18
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "black left",
+			"indices": []
+		},
+		{
+			"loop": true,
+			"offsets": [
+				365,
+				29
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "black idle remast",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				352,
+				-27
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "black right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				571,
+				280
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "black down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				641,
+				41
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "black up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				725,
+				398
+			],
+			"anim": "kill",
+			"fps": 24,
+			"name": "kill1",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				723,
+				400
+			],
+			"anim": "kill2",
+			"fps": 24,
+			"name": "kill2",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				591,
+				-18
+			],
+			"anim": "singLEFT-alt",
+			"fps": 24,
+			"name": "black left",
+			"indices": [
+				2,3,4
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				352,
+				-27
+			],
+			"anim": "singRIGHT-alt",
+			"fps": 24,
+			"name": "black right",
+			"indices": [
+				2,3,4
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				641,
+				41
+			],
+			"anim": "singUP-alt",
+			"fps": 24,
+			"name": "black up",
+			"indices": [
+				2,3,4
+			],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				571,
+				280
+			],
+			"anim": "singDOWN-alt",
+			"fps": 24,
+			"name": "black down",
+			"indices": [
+				2,3,4
+			],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/black/black",
+	"position": [
+		180,
+		70
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"flags": {},
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "black",
+	"afterimages": true,
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -65536,
+	"camera_position": [
+		-880,
+		-100
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

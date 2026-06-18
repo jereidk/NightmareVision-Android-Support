@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 250,
+	"name": "Hampton",
+    "song": "chewmate",
+	"requirement": "A",
+
+	"node": {
+		"direction": "north",
+		"parent": "bfsusreal"
+	},
+	
+	"color": [
+		184,
+		177,
+		119
+	]
+}

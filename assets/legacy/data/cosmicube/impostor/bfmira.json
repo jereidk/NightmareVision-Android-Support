@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 225,
+	
+	"title": "MIRA BF",
+
+	"week": "week7",
+	
+	"node": {
+		"direction": "east",
+		"parent": "bfpolus"
+	}
+}

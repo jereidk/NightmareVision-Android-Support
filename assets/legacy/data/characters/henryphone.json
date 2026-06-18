@@ -1,0 +1,137 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				172,
+				-58
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "Henry Down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				154,
+				-48
+			],
+			"anim": "singDOWNmiss",
+			"fps": 24,
+			"name": "Henry Miss Down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				54,
+				87
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "Henry Up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				179,
+				62
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Henry Left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				83,
+				20
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Henry Right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				10,
+				90
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Henry Idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				192,
+				0
+			],
+			"anim": "singLEFTmiss",
+			"fps": 24,
+			"name": "Henry Miss Left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				68,
+				-32
+			],
+			"anim": "singRIGHTmiss",
+			"fps": 24,
+			"name": "Henry Miss Right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				55,
+				83
+			],
+			"anim": "singUPmiss",
+			"fps": 24,
+			"name": "Henry Miss Up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				4,
+				313
+			],
+			"anim": "intro",
+			"fps": 24,
+			"name": "Henry Greatest Plan Intro",
+			"indices": []
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/henry/henry_i_phone",
+	"position": [
+		0,
+		134
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": "stage/stickbf_Death",
+	"scalableOffsets": false,
+	"gameover_confirm_sound": "stickbf_death_end",
+	"healthicon": "henry",
+	"gameover_character": "henryphone-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -4335656,
+	"camera_position": [
+		0,
+		0
+	],
+	"gameover_loop_sound": "stickbf_death_loop",
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

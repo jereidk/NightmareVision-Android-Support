@@ -1,0 +1,195 @@
+{
+    "awards": [
+        {
+            "id": "week1",
+            "img": "week1",
+            "name": "Problem Solved",
+            "desc": "Beat Week 1.",
+            "weeks": "week1"
+        },
+        {
+            "id": "week2",
+            "img": "week2",
+            "name": "MIRA Maniac",
+            "desc": "Beat Week 2.",
+            "weeks": "week2"
+        },
+        {
+            "id": "week3",
+            "img": "week3",
+            "name": "Airship Infiltrator",
+            "desc": "Beat Week 3.",
+            "weeks": "week3"
+        },
+        {
+            "id": "week4",
+            "img": "week4",
+            "name": "The End..?",
+            "desc": "Beat Defeat.",
+            "songs": "defeat"
+        },
+        
+        {
+            "id": "week5",
+            "img": "week5",
+            "name": "Boiled Alive",
+            "desc": "Beat Magmatic Monstrosity.",
+            "weeks": "week5"
+        },
+        {
+            "id": "week6",
+            "img": "week6",
+            "name": "Insane",
+            "desc": "Beat Deadly Delusion.",
+            "weeks": "week6"
+        },
+        {
+            "id": "week7",
+            "img": "week7",
+            "name": "Mistrustful",
+            "desc": "Beat Humane Heartbeat.",
+            "weeks": "week7"
+        },
+        {
+            "id": "finale",
+            "img": "finale",
+            "name": "The End.",
+            "desc": "Complete the Main Story.",
+            "songs": "finale"
+        },
+        {
+            "id": "week8",
+            "img": "week8",
+            "name": "Fuck it we Ball",
+            "desc": "Beat Jorsawsee's Jams.",
+            "weeks": "week8"
+        },
+        {
+            "id": "week9",
+            "img": "week9",
+            "name": "The Greatest Plan",
+            "desc": "Beat Battling the Boyfriend.",
+            "weeks": "week9"
+        },
+        {
+            "id": "week10",
+            "img": "week10",
+            "name": "Awww...",
+            "desc": "Beat Rosy Rival.",
+            "weeks": "week10"
+        },
+        {
+            "id": "week11",
+            "img": "week11",
+            "name": "Ring Racer",
+            "desc": "Beat LIME GREEN JADSPOSTOR.",
+            "weeks": "week11"
+        },
+        
+        {
+            "id": "all_four",
+            "img": "mtd",
+            "name": "Quadruple Quarrel",
+            "desc": "Beat Monotone Attack as each character once."
+        },
+        {
+            "id": "oh_hey_there",
+            "img": "oht",
+            "name": "Oh Hey There",
+            "desc": "Find White's hiding place."
+        },
+        {
+            "id": "double_trouble",
+            "img": "dt",
+            "name": "Double Trouble",
+            "desc": "Use a skin in Identity Crisis."
+        },
+        {
+            "id": "lets_be_friends",
+            "img": "ltb",
+            "name": "Let's be friends!",
+            "desc": "Fight Grey in Pretender as Playable Pink."
+        },
+        {
+            "id": "revenge",
+            "img": "revenge",
+            "name": "Revenge",
+            "desc": "Play Oversight as Dead Yellow.",
+            "hint": "Give your killer a piece of your mind."
+        },
+        {
+            "id": "impostor_trouble",
+            "img": "it",
+            "name": "Impostor Trouble",
+            "desc": "Complete Double Trouble.",
+            "hint": "Beat the long-lost song.",
+            "songs": "double trouble"
+        },
+        {
+            "id": "you_suck",
+            "img": "loser",
+            "name": "You suck!",
+            "desc": "Get 0% Accuracy in Victory."
+        },
+        {
+            "id": "tuesday_morning",
+            "img": "tm",
+            "name": "Tuesday Morning",
+            "desc": "Play Tomongus Tuesday on a Tuesday.",
+            "hint": "Is it that day of the week yet?"
+        },
+        {
+            "id": "red_handed",
+            "img": "rh",
+            "name": "Red Handed",
+            "desc": "Play as Red, against Red, with a Red pet.",
+            "hint": "Whoops! All Red."
+        },
+        {
+            "id": "no_miss_finale",
+            "img": "no_miss_finale",
+            "name": "Defeated",
+            "desc": "Beat Finale without missing a single note."
+        },
+        {
+            "id": "im_hungry",
+            "img": "im_hungry",
+            "name": "I'm Hungry!",
+            "desc": "Bring the Mini Crewmate to the Chef's kitchen.",
+            "hint": "I think your mini crewmate is hungry..."
+        },
+
+        {
+            "id": "five_s_ranks",
+            "img": "five_s_ranks",
+            "name": "High Scorer",
+            "desc": "Earn an S rank or higher on 5 different songs."
+        },
+        {
+            "id": "first_p",
+            "img": "first_p",
+            "name": "Perfectionist",
+            "desc": "Earn a P rank on any song."
+        },
+        {
+            "id": "cosmi_collector",
+            "img": "cosmi_collector",
+            "name": "Cosmi-Collector",
+            "desc": "Reach 100% completion on the VS Impostor Cosmicube."
+        },
+        {
+            "id": "completionist",
+            "img": "completionist",
+            "name": "The True Finale",
+            "desc": "Beat every song.",
+            "songs": "defeat,finale",
+            "weeks": "week1,week2,week3,week5,week6,week7,week8,week9,week10,week11"
+        },
+        {
+            "id": "the_hundred",
+            "img": "the_hundred",
+            "name": "100%",
+            "desc": "Earn every award, unlock every skin and pet, and beat every song."
+        }
+    ]
+}

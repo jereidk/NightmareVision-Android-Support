@@ -1,0 +1,318 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				98,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"flipX": false,
+			"indices": [],
+			"name": "singLEFT"
+		},
+		{
+			"offsets": [
+				98,
+				198
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singLEFT-loop",
+			"flipX": false,
+			"indices": [
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			],
+			"name": "singLEFT"
+		},
+		{
+			"offsets": [
+				86,
+				198
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singRIGHT-loop",
+			"flipX": false,
+			"indices": [
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			],
+			"name": "singRIGHT"
+		},
+		{
+			"offsets": [
+				86,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"flipX": false,
+			"indices": [],
+			"name": "singRIGHT"
+		},
+		{
+			"offsets": [
+				97,
+				197
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singUP-loop",
+			"flipX": false,
+			"indices": [
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			],
+			"name": "singUP"
+		},
+		{
+			"offsets": [
+				97,
+				197
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"flipX": false,
+			"indices": [],
+			"name": "singUP"
+		},
+		{
+			"offsets": [
+				93,
+				197
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singDOWN-loop",
+			"flipX": false,
+			"indices": [
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			],
+			"name": "singDOWN"
+		},
+		{
+			"offsets": [
+				93,
+				197
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"flipX": false,
+			"indices": [],
+			"name": "singDOWN"
+		},
+		{
+			"offsets": [
+				89,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "hey",
+			"flipX": false,
+			"indices": [],
+			"name": "hey"
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				93,
+				198
+			],
+			"anim": "idle-loop",
+			"fps": 24,
+			"name": "Idle",
+			"indices": [
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22
+			],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				93,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"flipX": false,
+			"indices": [
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13
+			],
+			"name": "Idle"
+		},
+		{
+			"offsets": [
+				-34,
+				104
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "scared",
+			"flipX": false,
+			"indices": [],
+			"name": "scared"
+		},
+		{
+			"offsets": [
+				95,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "singDOWN-miss"
+		},
+		{
+			"offsets": [
+				93,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "singRIGHT-miss"
+		},
+		{
+			"offsets": [
+				97,
+				194
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "singUP-miss"
+		},
+		{
+			"offsets": [
+				93,
+				198
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "singLEFT-miss"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/upboy",
+	"position": [
+		-20,
+		360
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": true,
+	"gameover_confirm_sound": "updogGameoverEnd",
+	"healthicon": "upbf",
+	"gameover_character": null,
+	"vslice_sustains": true,
+	"flip_x": true,
+	"healthbar_colour": -7617319,
+	"camera_position": [
+		168,
+		-123
+	],
+	"gameover_loop_sound": "updogGameoverLoop",
+	"sing_duration": 4,
+	"scale": 0.94,
+	"_editor_isPlayer": true
+}

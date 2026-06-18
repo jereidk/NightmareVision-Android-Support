@@ -1,0 +1,12 @@
+{
+	"type": "playerSkin",
+	"price": 255,
+	"title": "Sus BF",
+	"requirement": "A",
+	"song": "tomongus-tuesday",
+	
+	"node": {
+		"direction": "west",
+		"parent": "tomong"
+	}
+}

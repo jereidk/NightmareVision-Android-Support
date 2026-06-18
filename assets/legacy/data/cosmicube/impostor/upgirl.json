@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 800,
+	"completionExcluded": true,
+	
+	"title": "UPDOG GF",
+    "requirement": "updogSave",
+	
+	"node": {
+		"direction": "east",
+		"parent": "upboy"
+	}
+}

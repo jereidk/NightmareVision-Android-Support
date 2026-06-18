@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 250,
+	
+	"title": "Maroon",
+	"requirement": "A",
+	"song": "boiling-point",
+
+	"node": {
+		"direction": "north",
+		"parent": "greenp"
+	}
+}

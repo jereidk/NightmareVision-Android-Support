@@ -1,0 +1,190 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-18,
+				47
+			],
+			"loop": true,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "note idle"
+		},
+		{
+			"offsets": [
+				130,
+				109
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "note left"
+		},
+		{
+			"offsets": [
+				-30,
+				95
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "note down"
+		},
+		{
+			"offsets": [
+				40,
+				150
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "note up"
+		},
+		{
+			"offsets": [
+				-148,
+				119
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "note right"
+		},
+		{
+			"offsets": [
+				113,
+				105
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"indices": [],
+			"name": "miss left"
+		},
+		{
+			"offsets": [
+				-22,
+				95
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"indices": [],
+			"name": "miss down"
+		},
+		{
+			"offsets": [
+				-10,
+				153
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "miss up"
+		},
+		{
+			"offsets": [
+				-143,
+				102
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "miss right"
+		},
+		{
+			"offsets": [
+				-14,
+				119
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "firstDeath",
+			"indices": [],
+			"name": "BF dies"
+		},
+		{
+			"offsets": [
+				-15,
+				103
+			],
+			"loop": true,
+			"fps": 24,
+			"anim": "deathLoop",
+			"indices": [],
+			"name": "BF Dead Loop"
+		},
+		{
+			"offsets": [
+				-15,
+				176
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "deathConfirm",
+			"indices": [],
+			"name": "BF Dead confirm"
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-59,
+				64
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "note hey",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				-74,
+				48
+			],
+			"anim": "scared",
+			"fps": 24,
+			"name": "note scared",
+			"indices": [],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/mini_black",
+	"position": [
+		-20,
+		510
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "blackmini",
+	"gameover_character": "genericDeath-black",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -12969117,
+	"camera_position": [
+		548,
+		-291
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1.2,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [-90, -90],
+		"backlit": true,
+		"finaleHealthBarColor": ["0xFF381B51", "0xFF5539A0", "0xFF200A1E"]
+	}
+}

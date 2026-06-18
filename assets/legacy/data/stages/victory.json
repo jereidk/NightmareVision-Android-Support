@@ -1,0 +1,19 @@
+{
+	"directory": "",
+	"defaultZoom": 0.6,
+	"isPixelStage": false,
+
+    "hide_girlfriend": true,
+	"boyfriend": [1040, 110],
+	"girlfriend": [400, 130],
+	"opponent": [-30, 110],
+	"secondopp": [-60, 210],
+	
+	"bfZIndex": 3,
+	"dadZIndex": 3,
+	
+	"flags": {
+		"alive": true,
+		"airship": true
+	}
+}

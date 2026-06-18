@@ -1,0 +1,24 @@
+{
+	"songs": [
+		["Mando", "yellow", [255, 218, 67], "yellow", "emihead, Rareblin"],
+		["D'low", "yellow", [255, 218, 67], "yellow", "punkett, Rareblin"],
+		["Oversight", "white", [255, 255, 255], "white", "emihead, Rareblin"],
+		["Danger", "black", [179, 0, 255], "black", "Rareblin"],
+		["Double Kill", "double-kill", [179, 0, 255], "doublekill", "Rareblin"]
+	],
+	
+	"section": "story",
+	
+	"storyName": "Airship Atrocities",
+	"weekBefore": "week2",
+	"weekName": "Week 3",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week2",
+		"direction": "east"
+	}
+}

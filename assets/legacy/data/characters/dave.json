@@ -1,0 +1,93 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				160,
+				0
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "idle",
+			"indices": [],
+			"name": "Dave Idle"
+		},
+		{
+			"offsets": [
+				159,
+				3
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "Dave Right"
+		},
+		{
+			"offsets": [
+				156,
+				1
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "Dave Left"
+		},
+		{
+			"offsets": [
+				160,
+				5
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "singUP",
+			"indices": [],
+			"name": "Dave Up"
+		},
+		{
+			"offsets": [
+				163,
+				1
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "Dave Down"
+		},
+		{
+			"offsets": [
+				159,
+				-3
+			],
+			"loop": false,
+			"fps": 12,
+			"anim": "die",
+			"indices": [],
+			"name": "Dave Death"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/freeplay/Dave",
+	"position": [
+		0,
+		0
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "dave",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"flip_x": false,
+	"healthbar_colour": -11775563,
+	"camera_position": [
+		-300,
+		160
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 0.9,
+	"_editor_isPlayer": false
+}

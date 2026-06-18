@@ -1,0 +1,159 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				199,
+				-94
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "Idle"
+		},
+		{
+			"offsets": [
+				200,
+				-96
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "Down"
+		},
+		{
+			"offsets": [
+				181,
+				-91
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "Up"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				198,
+				-96
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				192,
+				-93
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Right",
+			"indices": []
+		},
+		{
+			"offsets": [
+				201,
+				-91
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"indices": [],
+			"name": "mleft"
+		},
+		{
+			"offsets": [
+				196,
+				-94
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "mright"
+		},
+		{
+			"offsets": [
+				204,
+				-94
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"indices": [],
+			"name": "mdown"
+		},
+		{
+			"offsets": [
+				190,
+				-90
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "mup"
+		},
+		{
+			"offsets": [
+				208,
+				-90
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "firstDeath",
+			"indices": [],
+			"name": "pink dies"
+		},
+		{
+			"offsets": [
+				207,
+				-90
+			],
+			"loop": true,
+			"fps": 24,
+			"anim": "deathLoop",
+			"indices": [],
+			"name": "death loop"
+		},
+		{
+			"offsets": [
+				208,
+				-90
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "deathConfirm",
+			"indices": [],
+			"name": "death confirm"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/triple/pink/pretender",
+	"position": [
+		-500,
+		100
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "pretenderpink",
+	"gameover_character": "pretender",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -1153844,
+	"camera_position": [
+		237,
+		-102
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 0.9,
+	"_editor_isPlayer": true
+}

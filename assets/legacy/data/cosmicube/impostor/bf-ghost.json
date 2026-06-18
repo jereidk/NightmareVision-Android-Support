@@ -1,0 +1,14 @@
+{
+	"type": "playerSkin",
+	"price": 200,
+	
+	"title": "Ghost BF",
+
+	"requirement": "A",
+	"week": "week1",
+	
+	"node": {
+		"direction": "north",
+		"parent": "redp"
+	}
+}

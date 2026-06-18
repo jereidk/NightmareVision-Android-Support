@@ -1,0 +1,185 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-5,
+				0
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "BF idle dance"
+		},
+		{
+			"offsets": [
+				-21,
+				63
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "BF NOTE UP MISS"
+		},
+		{
+			"offsets": [
+				-46,
+				15
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "BF NOTE RIGHT MISS"
+		},
+		{
+			"offsets": [
+				-2,
+				65
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "hey",
+			"flipX": false,
+			"indices": [],
+			"name": "Hey"
+		},
+		{
+			"offsets": [
+				-3,
+				64
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"flipX": false,
+			"indices": [],
+			"name": "Left"
+		},
+		{
+			"offsets": [
+				-3,
+				64
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFTmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "Left Miss"
+		},
+		{
+			"offsets": [
+				-14,
+				63
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"flipX": false,
+			"indices": [],
+			"name": "Down"
+		},
+		{
+			"offsets": [
+				-14,
+				63
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "Down Miss"
+		},
+		{
+			"offsets": [
+				-2,
+				64
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"flipX": false,
+			"indices": [],
+			"name": "Up"
+		},
+		{
+			"offsets": [
+				-2,
+				64
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"flipX": false,
+			"indices": [],
+			"name": "Right"
+		},
+		{
+			"offsets": [
+				-2,
+				64
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "scared",
+			"flipX": false,
+			"indices": [],
+			"name": "Scared"
+		},
+		{
+			"loop": true,
+			"flipY": false,
+			"offsets": [
+				-2,
+				64
+			],
+			"anim": "idle-scared",
+			"fps": 24,
+			"name": "Scared",
+			"indices": [
+				6,
+				7,
+				8,
+				9
+			],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/BOYFRIEND",
+	"position": [
+		-12,
+		342
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"gameover_character": "bf-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		0,
+		0
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+    "flags": {
+        
+    },
+	"_editor_isPlayer": true
+}

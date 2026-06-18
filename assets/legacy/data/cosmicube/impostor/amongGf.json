@@ -1,0 +1,12 @@
+{
+	"type": "speakerSkin",
+	"price": 450,
+	
+	"title": "Crewmate GF",
+
+	
+	"node": {
+		"direction": "south",
+		"parent": "amongbf"
+	}
+}

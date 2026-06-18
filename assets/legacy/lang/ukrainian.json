@@ -1,0 +1,667 @@
+    {
+    "name": "Ukrainian",
+    // Переклад підготовлений та зроблений повністю ギ (G) / The translation was prepared and done entirely by ギ (G)
+    "translation_credits": "ギ (G)",
+    "lang": {
+
+        // ui game
+        "score": "Рахунок",
+        "misses": "Промахи",
+        "rank": "Ранг",
+        "accuracy": "Точність",
+        "options": "Налашт.",
+        "resumesong": "Продовжити",
+        "restartsong": "Перезапустити",
+        "backtomenu": "Назад в Меню",
+        "video_skip": "BACKSPACE щоб пропустити",
+
+        // names
+        "innersloth": "Innersloth",
+        "motorfrog": "MOTORFROG",
+
+        // menus text
+        "storymode": "Кампанія", 
+        "freeplay": "Вільна Гра",
+        "cosmi": "Космокуб",
+        "awards": "Нагороди",
+        "awards_counter": "Розблоковано: @",
+        "cosmicube_completed": "@% Відкрито",
+        "miss_defeat": "@ ПРОМАХІВ",
+        "highscore": "РЕКОРД",
+        "game_completion": "Прогрес",
+        "game_totalplaytime": "Всього в Грі",
+        // SKIN menu
+        "shop_equip": "ОДЯГНУТИ",
+        "shop_equipped": "ОДЯГНУТО",
+        "shop_locked": "ЗАКРИТО",
+        "shop_playerSkin": "СКІН ГРАВЦЯ",
+        "shop_speakerSkin": "СКІН КОЛОНОК",
+        "shop_pet": "УЛЮБЛЕНЕЦЬ",
+
+        // characters dialogue names
+        "dialogue_bf": "Бойфренд", // Not translating name of character to "Хлопець"
+        "dialogue_gf": "Ґьорлфренд", // Not translating name of character to "Дівчина"
+        "dialogue_red": "Червоний",
+        "dialogue_green": "Зелений",
+        "dialogue_yellow": "Жовта",
+        "dialogue_white": "Білий",
+        "dialogue_maroon": "Бордовий",
+        "dialogue_grey": "Сірий",
+        "dialogue_pink": "Рожева",
+
+        // misc skin menu
+        "rand": "Випадково",
+        "reset":"Скинути",
+        "select":"Вибрати",
+        "back":"Назад",
+        "conf":"Підтвердити",
+        "locker":"Скіни",
+
+        // achievements/awards
+        // weeks
+        "AWARDNAME_week1": "Кінець Проблеми",
+        "AWARDBIO_week1": "Пройдіть 1-ий Тиждень.",
+
+        "AWARDNAME_week2": "Маніяк MIRA",
+        "AWARDBIO_week2": "Пройдіть 2-ий Тиждень.",
+
+        "AWARDNAME_week3": "Корабель, що згорнув не туди",
+        "AWARDBIO_week3": "Пройдіть 3-ій Тиждень.",
+
+        "AWARDNAME_week4": "Що, кінець..?",
+        "AWARDBIO_week4": "Пройдіть Defeat.",
+
+        "AWARDNAME_week5": "Живцем зварений",
+        "AWARDBIO_week5": "Пройдіть Magmatic Monstrosity.",
+
+        "AWARDNAME_week6": "Божевільний",
+        "AWARDBIO_week6": "Пройдіть Deadly Delusion.",
+
+        "AWARDNAME_week7": "Довірі - НІ", // At first I made it "Які усі добрі!" which means "How kind everyone is!" but it was too different.
+        "AWARDBIO_week7": "Пройдіть Humane Heartbeat.",
+
+        "AWARDNAME_week8": "Їбашимо в Баскет", // Most accurate name to "Fuck it we ball"
+        "AWARDBIO_week8": "Пройдіть Jorsawsee's Jams.",
+
+        "AWARDNAME_week9": "Найкращий План",
+        "AWARDBIO_week9": "Пройдіть Battling the Boyfriend.",
+        "AWARDHINT_week9": "Знайдіть Телепортер!",
+
+        "AWARDNAME_week10": "Уті-путі...", // Also most accurate phrase to "awww" I could find
+        "AWARDBIO_week10": "Пройдіть Rosy Rival.",
+
+        "AWARDNAME_week11": "Лаймовий Сік",
+        "AWARDBIO_week11": "Пройдіть LIME GREEN JADSPOSTOR.",
+
+        "AWARDNAME_finale": "Кінець.",
+        "AWARDBIO_finale": "Пройдіть Головну Сюжетну Кампанію.",
+        // special
+        "AWARDNAME_all_four": "Четвірка Кращих", // lwk best thing i could come up with
+        "AWARDBIO_all_four": "Зіграйте Monotone Attack за кожного з персонажів.",
+//        "AWARDHINT_all_four": "Може побачеш це з мого зору?",
+
+        "AWARDNAME_oh_hey_there": "О, Ти Теж Тут",
+        "AWARDBIO_oh_hey_there": "Знайдіть таємне місце Білого.",
+//        "AWARDHINT_oh_hey_there": "На дирижаблі є місто розслідування паранормальних явищ?",
+
+        "AWARDNAME_double_trouble": "Подвійна Біль",
+        "AWARDBIO_double_trouble": "Зіграйте пісню Identity Crisis зі скіном.",
+//        "AWARDHINT_double_trouble": "Подивись на справжнього себе.",
+
+        "AWARDNAME_lets_be_friends": "Будемо друзями!",
+        "AWARDBIO_lets_be_friends": "Зіткніться з Сірим у Pretender зі скіном Грабельної Рожевої.",
+//        "AWARDHINT_lets_be_friends": "Не найкраща пара.",
+
+        "AWARDNAME_revenge": "Помста",
+        "AWARDBIO_revenge": "Зіграйте Oversight зі скіном Мертвої Жовтої.",
+        "AWARDHINT_revenge": "Там, де Жовті сумували.",
+
+        "AWARDNAME_impostor_trouble": "Зрадницька Проблема",
+        "AWARDBIO_impostor_trouble": "Пройдіть Double Trouble.",
+        "AWARDHINT_impostor_trouble": "Пройдіть довгу, та втрачену пісню.",
+
+//        "AWARDNAME_panic_button": "Я цього не бачив",
+//        "AWARDBIO_panic_button": "Нажміть телепорт після смерті Жовтої.",
+//        "AWARDHINT_panic_button": "Коли побачиш щось недобре - ЖМІ!.",
+
+        "AWARDNAME_you_suck": "Ти нікчемність",
+        "AWARDBIO_you_suck": "Зіграйте Victory на 0% точністі.",
+        "AWARDHINT_you_suck": "Просто не жмакай нічого.",
+
+        "AWARDNAME_tuesday_morning": "Вранці Вівторку",
+        "AWARDBIO_tuesday_morning": "Зіграйте Tomongus Tuesday у Вівторок.",
+        "AWARDHINT_tuesday_morning": "Треба день в день.",
+
+        "AWARDNAME_red_handed": "Червоне, Червоне... Червоне!",
+        "AWARDBIO_red_handed": "Зіграйте за Червоного, проти Червоного, з Червоним улюбленцем.",
+        "AWARDHINT_red_handed": "Червонуха.",
+
+        "AWARDNAME_five_s_ranks": "Рекордсмен",
+        "AWARDBIO_five_s_ranks": "Отримайте ранг S або вище у 5 різних піснях.",
+
+        "AWARDNAME_first_p": "Ідеаліст",
+        "AWARDBIO_first_p": "Отримайте ранг P на будь-якій пісні.",
+
+        "AWARDNAME_cosmi_collector": "Космо-Колекціонер",
+        "AWARDBIO_cosmi_collector": "Завершіть на 100% Космокуб VS Impostor.",
+
+        "AWARDNAME_completionist": "Справжній Фінал",
+        "AWARDBIO_completionist": "Пройдіть кожну пісню.",
+
+        "AWARDNAME_no_miss_finale": "Повалений",
+        "AWARDBIO_no_miss_finale": "Пройдіть Finale без жодного промаху.",
+
+        "AWARDNAME_im_hungry": "Я голодний!",
+        "AWARDBIO_im_hungry": "Візьміть Малюка Екіпажа на кухню до Шефа.",
+        "AWARDHINT_im_hungry": "Я думаю твій малий екіпажник голодний...",
+
+        "AWARDNAME_the_hundred": "100%",
+        "AWARDBIO_the_hundred": "Отримайте кожну нагороду, скін, улюбленця, і пройдіть кожну пісню.",
+
+        // SKINS BF
+        "amongbf_name": "Бойфренд Екіпаж",
+        "amongbf_hint": "Відкривається після проходження Основної Кампанії.",
+        "amongbf_desc": "Той самий, рідний Хлопець, що серед нас.",
+
+        "bfairship_name": "Дирижабельний Бойфренд",
+        "bfairship_hint": "Відкривається після проходження Deadly Delusion.",
+        "bfairship_desc": "Емоціональна травма входить в набір.",
+
+        "bfballer_name": "Баскетбольщик Бойфренд",
+        "bfballer_hint": "Відкривається після проходження Jorsawsee's Jams",
+        "bfballer_desc": "Він так сіяє...",
+
+        "bf-ghost_name": "Привид Бойфренд",
+        "bf-ghost_hint": "Відкривається після проходження пісень Polus Problems на ранг А або вище.",
+        "bf-ghost_desc": "Мікрофон теж помер..?",
+
+        "bfmira_name": "MIRA Бойфренд",
+        "bfmira_hint": "Відкривається після проходження Humane Heartbeat.",
+        "bfmira_desc": "Безпека найперше!",
+
+        "bfpolus_name": "Полюсний Бойфренд",
+        "bfpolus_hint": "Відкривається після проходження Magmatic Monstrosity.",
+        "bfpolus_desc": "Найбезпечніший спосіб для пірнань у лаву.",
+
+        "bfsauce_name": "Бойфренд Шеф",
+        "bfsauce_hint": "Відкривається після проходження пісні Sauces Moogus на ранг А або вище.",
+        "bfsauce_desc": "Замовлення готове!",
+
+        "bf-stick_name": "Бойфренд Стікмін",
+        "bf-stick_hint": "Знайдіть Телепортер!",
+        "bf-stick_desc": "Що ти як тюбік...",
+
+        "bfsusreal_name": "Підозрілий Бойфренд", // at first wanted to make it "Мутний Бойфренд" which basically means same thing, but in end just made straight up "suspective" translation
+        "bfsusreal_hint": "Відкривається після проходження пісні Tomongus Tuesday на ранг А або вище.",
+        "bfsusreal_desc": "У нього ніж! Та пушка! Але тількі на позі вгору!",
+
+        "dripbf_name": "Флексовий Бойфренд", // made it "Flex BF" which is closest thing to DRIP term, but can do just straight up "Drip", the problem is lwk no one ever using term DRIP in Ukrainian, so imo better localise it more clearly and fitting to language
+        "dripbf_hint": "Відкривається після проходження пісні Drippypop на ранг А або вище.",
+        "dripbf_desc": "Фіолетовий)",
+
+        "upboy_name": "UPDOG Бойфренд",
+        "upboy_hint": "Зіграйте в VS IMPOSTOR (2025)!",
+        "upboy_desc": "Нова ера.",
+
+        "fall-guy_name": "Фолл Гай",
+        "fall-guy_hint": "Відкривається після 100% проходження.",
+        "fall-guy_desc": "А йому норм..?",
+
+        "redp_name": "Червоний",
+        "redp_hint": "Відкривається після завершення Polus Problems.",
+        "redp_desc": "Один на весь світ, чи ні?.",
+
+        "greenp_name": "Зелений",
+        "greenp_hint": "Відкривається після завершення MIRA Mania.",
+        "greenp_desc": "Подвійна заноза для усіх.",
+
+        "blackp_name": "Чорний",
+        "blackp_hint": "Відкривається після завершення Defeat.",
+        "blackp_desc": "...",
+
+        "yellowplayable_name": "Жовта..?",
+        "yellowplayable_hint": "Відкривається після завершення Airship Atrocities.",
+        "yellowplayable_desc": "Буде ще боліти!",
+
+        "whitep_name": "Білий",
+        "whitep_hint": "Відкривається після проходження пісні Oversight на ранг А або вище.",
+        "whitep_desc": "Ангел Диявола.",
+
+        "minigrey_name": "Малий Сірий",
+        "minigrey_hint": "Відкривається після проходження пісні Delusion на ранг А або вище.",
+        "minigrey_desc": "Не чіпай!",
+
+        "pinkplayable_name": "Рожева",
+        "pinkplayable_hint": "Відкривається після проходження пісні Pretender на ранг А або вище.",
+        "pinkplayable_desc": "Брехлива надія.",
+
+        "maroonplayable_name": "Бордовий",
+        "maroonplayable_hint": "Відкривається після проходження пісні Boiling Point на ранг А або вище.",
+        "maroonplayable_desc": "Ну що?!? У РОЗНІС і з ЖАРОООЮ!?!??!?!",
+
+        // SKINS GF
+        "gf-ghost_name": "Привид Ґьорлфренд",
+        "gf-ghost_hint": "Відкривається після проходження пісень Polus Problems на ранг А або вище.",
+        "gf-ghost_desc": "Любов до труни.",
+
+        "gfmira_name": "MIRA Ґьорлфренд",
+        "gfmira_hint": "Відкривається після проходження Humane Heartbeat.",
+        "gfmira_desc": "Ділова дівчина!",
+
+        "gfmira2_name": "Альтернативна MIRA Ґьорлфренд",
+        "gfmira2_hint": "Відкривається після проходження пісні Sussus Toogus на ранг А або вище.",
+        "gfmira2_desc": "Не прям вже ділова дівчина.",
+
+        "gfpolus_name": "Полюсна Ґьорлфренд",
+        "gfpolus_hint": "Відкривається після проходження Magmatic Monstrosity.",
+        "gfpolus_desc": "Тут так темно.",
+
+        "gf-stick_name": "Стікмін Ґьорлфренд",
+        "gf-stick_hint": "Знайдіть Телепортер!",
+        "gf-stick_desc": "Які чоботи... Шма....",
+
+        "gf-tuesday_name": "Вівторкова Ґьорлфренд",
+        "gf-tuesday_hint": "Відкривається після проходження пісні Tomongus Tuesday на ранг А або вище.",
+        "gf-tuesday_desc": "Тут тільки селера.",
+
+        "upgirl_name": "UPDOG Ґьорлфренд",
+        "upgirl_hint": "Зіграйте в VS IMPOSTOR (2025)!",
+        "upgirl_desc": "Нова ера.",
+
+        "amongGf_name": "Ґьорлфренд Екіпаж",
+        "amongGf_hint": "Відкривається після проходження Основної Кампанії.",
+        "amongGf_desc": "Абетка дівчини Among Us!",
+
+        // PETS
+        "crab_name": "Панокраб",
+        "crab_hint": "Дивись угору.",
+        "crab_desc": "Остерігайся, Фрімен!!",
+
+        "dog_name": "Песик",
+        "dog_hint": "Погладь його!",
+        "dog_desc": "Найкращий друг людини!",
+
+        "frankendog_name": "Франкенпесик",
+        "frankendog_hint": "Якось вже страшно його гладити, але можна.",
+        "frankendog_desc": "Найкращий друг чудовиська!",
+        
+        "stickmin_name": "Г. Стікмін",
+        "stickmin_hint": "Знайдіть Телепортер!",
+        "stickmin_desc": "Основна фігура сюжета, або лінія?", // Henry being a Stickman joke which wasn't in original text
+
+        "elliepet_name": "Е. Роуз",
+        "elliepet_hint": "Знайдіть Телепортер!",
+        "elliepet_desc": "Ми з Генрі найкраща команда!",
+
+        "helicopter_name": "Вертик Чарльза",
+        "helicopter_hint": "Знайдіть Телепортер!",
+        "helicopter_desc": "Це ж найркащий питомец!",
+
+        "ham_name": "Окіст",
+        "ham_hint": "Їжа не биває живою!.",
+        "ham_desc": "Окіст на ніжках.",
+
+        "hampton_name": "Хом'яч",
+        "hampton_hint": "Відкривається після проходження пісні Chewmate на ранг А або вище.",
+        "hampton_desc": "Хом'яча тяга!",
+
+        "minicrewmate_name": "Малий Екіпажний",
+        "minicrewmate_hint": "Чому б не забрати його?",
+        "minicrewmate_desc": "Мам! Давай візьмемо його!", // pretty much gag and not even close to original text
+
+        "slugmate_name": "Слизокіпаж",
+        "slugmate_hint": "Зроблений із любов'ю.",
+        "slugmate_desc": "Цей гомункул живий взагалі..?",
+
+        "slug_name": "Мозгослизень",
+        "slug_hint": "Липкий.",
+        "slug_desc": "Не одягай його на голову.",
+
+        "snowball_name": "Сніговик",
+        "snowball_hint": "Сніг вже повсюду.",
+        "snowball_desc": "Давай зробимо одного?",
+
+        "snowmate_name": "Снігопаж",
+        "snowmate_hint": "Не живий.",
+        "snowmate_desc": "Не живий же?",
+
+        "tomong_name": "Малий Томонгус",
+        "tomong_hint": "Відкривається після проходження Rosy Rival.",
+        "tomong_desc": "Джонсон Селері Томонгус-молодший такий милий!",
+
+        "ufo_name": "НЛО",
+        "ufo_hint": "Чи не столова тарілка.",
+        "ufo_desc": "Хочеться вірити, але віриться насилу...", // reference and gag, completely different from original text
+
+        "fishus_name": "Рибокіпаж",
+        "fishus_hint": "Запахло... Рибою?",
+        "fishus_desc": "А як воно дихає?",
+
+        "squig_name": "Мілюск",
+        "squig_hint": "Йому нуль років.",
+        "squig_desc": "Який пухнастий!!!",
+
+        "thenug_name": "Хрумко",
+        "thenug_hint": "Найдорожча їжа",
+        "thenug_desc": "На аукціон!",
+
+        "lilmungus_name": "Малий Мунгус",
+        "lilmungus_hint": "Відкривається після проходження пісні Turbulence на ранг А або вище.",
+        "lilmungus_desc": "Сьогодні його день народження!",
+
+        "nuclearbomb_name": "Термоядерна Бомба",
+        "nuclearbomb_hint": "Небезпечна вибухова штука!",
+        "nuclearbomb_desc": "Цей пранк буде божевільним.", // "This prank is gonna be crazy"
+
+        "magmate_name": "Магматик",
+        "magmate_hint": "Відкривається після проходження пісні Magmatic на ранг А або вище.",
+        "magmate_desc": "Тримайся подалі...",
+
+        "fribbit_name": "Фрібіт",
+        "fribbit_hint": "Переможець КОНКУРСУ ВАРТІВЦІВ БЕРЕЗНЯ 2026 РОКУ. Автор - MikeyGuy",
+        "fribbit_desc": "А тепер уяви, якби в нього ще була машина.",
+        
+        // identity crisis song text
+        "identity0": "ТВІЙ ЧАС ЗАКІНЧУЄТЬСЯ",
+        "identity1": "БО",
+        "identity2": "БО Я",
+        "identity3": "БО Я ЙОГО",
+        "identity4": "БО Я ЙОГО ЗАВЕРШУ", // Whole line translated as "Your time is running out, cause I will end it"
+
+        // etc texts
+        "charles0": "О, Генрі!",
+        "charles1": "В мене є найкращий план.",
+
+        "rhm": "Я бачу тебе, Генрі.",
+
+        "attack0": "Всім роти на замки!",
+        "attack1": "Еее, лоб.",
+
+        "torture0": "Хт-хт--хто?",
+        "torture1": "Де--щ... Де я?",
+        "torture2": "Чому не починаємо?",
+        "torture3": "Можу допомогти?",
+        "torture4": "(сваряться)",
+
+        // DIALOGUES
+        // week 1 (red)
+        "dialogue_moogus0": "взагалі це було боляче :(",
+        "dialogue_moogus1": "ой сорі",
+        "dialogue_moogus2": "бойфренд будь обережнішим!!",
+        "dialogue_moogus3": "погодь цей чувак якись....",
+        "dialogue_moogus4": "..мутний......",
+        "dialogue_moogus5": "взагалі так ти сказала про це... він правда якийсь......",
+        "dialogue_moogus6": "дивний..",
+        "dialogue_moogus7": "друзі що я зробив :(( я просто екіпажник :( шо ви :((((",
+        "dialogue_moogus8": "емм.. друже",
+        "dialogue_moogus9": "у тебе ніж!! та пушка!! але тількі на позі вгору !!!!",
+        "dialogue_moogus10": "вау :( не треба бути такими йобаинми мудаками :(",
+        "dialogue_moogus11": "та пох! давай реп батлити!",
+        "dialogue_moogus12": "добре !",
+        "dialogue_moogus13": "(хех.... вони і поняття не мають що я ЗРАДНИК...)",
+        "dialogue_moogus14": "надто гучно балакаєш",
+
+        "dialogue_sabotage0": "ха!!! ти дебіл!!!!!",
+        "dialogue_sabotage1": "ти реально повірив!! весь цей час я був зрадником!!!! ",
+        "dialogue_sabotage2": "т..ти....",
+        "dialogue_sabotage3": "Ґьорлфренд .... ти.....",
+        "dialogue_sabotage4": "як ти міг??!!",
+        "dialogue_sabotage5": "чому вона ??!!",
+        "dialogue_sabotage6": "краще якщо б мене вбив !!!",
+        "dialogue_sabotage7": "Ти шматок ЛАЙНА!!!! мені НЕ ВАРТО було тобі довіряти!!!",
+        "dialogue_sabotage8": "ТИ ПОПЛАТИШСЯ ЗА ЦЕ",
+        "dialogue_sabotage9": "ТИ ПОЖАЛКУЄШ ЩО ВЗАГАЛІ ВИЛІЗ З ВИТРАБИ",
+        "dialogue_sabotage10": "хник..... я помщуся за тебе дітка.....",
+        "dialogue_sabotage11": "закінчив?",
+        "dialogue_sabotage12": "ага",
+
+        "dialogue_meltdown0": "ууууууу я привиддд",
+        "dialogue_meltdown1": "я тееееж уууу УУУУУУУ",
+        "dialogue_meltdown2": "ЧЗХ ЦЕ СТРАШНО ",
+        "dialogue_meltdown3": "так... >:)",
+        "dialogue_meltdown4": "що робитимеш тепер СУЧКА!!",
+        "dialogue_meltdown5": "м...мені так шкода.. просто.. не чіпайте мене..",
+        "dialogue_meltdown6": "на мене вдома чекає сім'я....",
+        "dialogue_meltdown7": "знаєш що.. звичайно. давай забудемо про розбіжності.",
+        "dialogue_meltdown8": "після того як ти ВБИВ МЕНЕ??? ЩО ТИ КУРИШ???",
+        "dialogue_meltdown9": "гашиш",
+        "dialogue_meltdown10": "а ну тоді логічно",
+
+        // week 2 (green)
+        "dialogue_toogus0": "фух, та сутичка з червоним була жорсткою добре що ми вижили",
+        "dialogue_toogus1": "ми буквально померли",
+        "dialogue_toogus2": "Здоровенькі були, друзі!",
+        "dialogue_toogus3": "... ти хто",
+        "dialogue_toogus4": "Я просто нешкідливий і працьовитий член екіпажу, що виконує свої невеликі завдання!",
+        "dialogue_toogus5": "хммм я йому щось не дуже довіряю бойфренд...",
+        "dialogue_toogus6": "Ну друзі! Друзі друзііііі ну що ви друзі",
+        "dialogue_toogus7": "Що ви.",
+        "dialogue_toogus8": "Ви себе чуєте? Ви ось ПРАВДА ЧУЄТЕ СЕБЕ, ТАК?",
+        "dialogue_toogus9": "як скажеш",
+        "dialogue_toogus10": "Круто, а тепер давай співати, друже :)",
+
+        "dialogue_lights0": "ВАААУ добре, ДОБРЕ... я і є зрадник.",
+        "dialogue_lights1": "ми знаємо",
+        "dialogue_lights2": "ви просто любите псувати плани усіх..",
+        "dialogue_lights3": "ну та лол, відсмокчи хуяку", // very QUESTIONABLE line
+        "dialogue_lights4": "ну що ж, ви не можете нічого зробити до зборів",
+        "dialogue_lights5": "а ви судячи з усього навіть не збираєтесь якось допомагати іншим, вам би лише поспівати",
+        "dialogue_lights6": "так що вважаю найлегша для найвеличнішого",
+        "dialogue_lights7": "я співаю краще тебе",
+        "dialogue_lights8": "ДИВЛЮСЬ ТИ ВИРІШИВ ПОСПЕРЕЧАТИСЯ, ДУРЕНЬ",
+
+        // week 3 (airship)
+        "dialogue_mando0": "божечки, привіт друзі!!",
+        "dialogue_mando1": "е.. привіт?",
+        "dialogue_mando2": "дароу??",
+        "dialogue_mando3": "мені так весело грати в Among Us!",
+        "dialogue_mando4": "ну.. добре?",
+        "dialogue_mando5": "чому ви так ставитеся до мене, що я зробила? :(",
+        "dialogue_mando6": "ну, до того всі з ким ми контактували намагалися нас вбити....",
+        "dialogue_mando7": "оу. ",
+        "dialogue_mando8": "ну не все ж такі",
+        "dialogue_mando9": "не кожен тут серед нас однаковий",
+        "dialogue_mando10": "лан, так, ти маєш рацію",
+        "dialogue_mando11": "то які у вас завдання?",
+        "dialogue_mando12": "еееее тут написано Заспівайте \"Mando\" від Rareblin",
+        "dialogue_mando13": "а також emihead",
+        "dialogue_mando14": "вааауу в мене теж!!",
+        "dialogue_mando15": "ну, тоді давай",
+
+        "dialogue_dlow0": "Вау! Ц-Це було дуже весело! ^_^",
+        "dialogue_dlow1": "благаю говори нормально",
+        "dialogue_dlow2": "сорян",
+        "dialogue_dlow3": "це була дуже крута пісня!",
+        "dialogue_dlow4": "а зараз ти нас вб'єш?",
+        "dialogue_dlow5": "вбивати вас?? ні в якому разі, я б ніколи не зробила такий напад",
+        "dialogue_dlow6": "то ти правда не зрадник..?",
+        "dialogue_dlow7": "ну, я думаю була б вона такою вже б реально давно вбила нас",
+        "dialogue_dlow8": "як же ти маєш рацію дитинко, саме тому я дозволяю тобі витворяти зі мною в ліжку що заманеться",
+        "dialogue_dlow9": "будь ласка, наступна пісня!",
+
+        "dialogue_white0": "ось момент коли цей голубок подихає",
+        "dialogue_white1": "це навіть дуже грубо",
+        "dialogue_white2": "багато кажеш, мені поїбати що це грубо",
+        "dialogue_white3": "господи, ну не можна ставитися до всіх навколо з добротою хоча б раз",
+        "dialogue_white4": "внатурі, білий, го дружити?",
+        "dialogue_white5": "чекай, правда?",
+        "dialogue_white6": "ні звичайно, динахуй",
+        "dialogue_white7": "вау як скажеш",
+
+        // week 5 (maroon)
+        "dialogue_ash0": "ти чмо",
+        "dialogue_ash1": "я навіть сказати нічого не встиг якого біса",
+        "dialogue_ash2": "я відчуваю запах чмоні від тебеееее !!",
+        "dialogue_ash3": "будь чемним із моїм хлопцем.",
+        "dialogue_ash4": "будь чемним із моїми ЯЙЦЯМИ!!!!",
+        "dialogue_ash5": "бляяяя який ж ти вже нестерпний",
+        "dialogue_ash6": "Ви готови почути, як я вас РОЗНЕСУ цією ЖАРОООЮ?!?!?!",
+        "dialogue_ash7": "і тоді ти відчепишся від нас?",
+        "dialogue_ash8": "ні",
+
+        "dialogue_magma0": "так ви ПРАВДА лошки",
+        "dialogue_magma1": "друже ЗАКРИЙ СВОЮ ХЛІБОРІЗКУ",
+        "dialogue_magma2": "легше застрелитися ніж знову розбиратися з цим зрадницьким лайном",
+        "dialogue_magma3": "може краще якщо я пірну тебе ножем у морду?",
+        "dialogue_magma4": "ні, я тобі і шансу не дам",
+        "dialogue_magma5": "звичайно-звичайно",
+
+        // week 6 (gray)
+        "dialogue_gray0": " ",
+        "dialogue_gray1": "господи",
+
+        // week 7 (pink) 
+        "dialogue_heartbeat0": "бооооже, у цій теплиці так самотньо і нудно (ігноруйте тих, хто позаду)",
+        "dialogue_heartbeat1": "цікаво коли я заведу тут друзів....",
+        "dialogue_heartbeat2": "ну таааа ахпза і тоді я короч кажу-",
+        "dialogue_heartbeat3": "БОЖЕЧКИИ!!!! привііііітттттт!! махає махаєєє",
+        "dialogue_heartbeat4": "оу е я не з тобою спілкуюсь",
+        "dialogue_heartbeat5": "чекай.. ти хтось взагалі? я тебе вперше бачу",
+        "dialogue_heartbeat6": "привіт давай будемо друзямииии будь ласкаапбудь ласка будьуласкплдівоп",
+        "dialogue_heartbeat7": "еееее",
+        "dialogue_heartbeat8": ":)",
+        "dialogue_heartbeat9": "ну ееее",
+        "dialogue_heartbeat10": "<:)",
+        "dialogue_heartbeat11": "добре",
+        "dialogue_heartbeat12": "УРЯЯЯЯ!!!",
+
+        "dialogue_pinkwave0": "знову знову знову! мені так ця пісня подобається, чи можна знову її?",
+        "dialogue_pinkwave1": "ми змінюємо треки по черзі, це працює трохи інакше подруга",
+        "dialogue_pinkwave2": "ох! сподіваюся вона буде такою ж гарною :)",
+        "dialogue_pinkwave3": "дітлах, я тільки зрозуміла ми тут вже хвилин 10 і нікого досі не вбили",
+        "dialogue_pinkwave4": "у натурі.. та вона і не виглядає як зрадник",
+        "dialogue_pinkwave5": "може тут навколо таких і немає",
+        "dialogue_pinkwave6": "ну.... гадаю правда немає! хаха",
+        "dialogue_pinkwave7": "...",
+
+        // weird route
+        "weirdroute0": "Кімната охорони Скелда, так?.",
+        "weirdroute1": "Ця кімната віяла мурашки на екіпаж... Комп'ютер сам по собі вмикається та вимикається...",
+        "weirdroute2": "Що ж, не те, щоб комусь ще займатися цією роботою, крім мене... Подивимося.",
+        "weirdroute3": "Чорт, не можу їх звинувачувати за страх цієї кімнати. Світло тут і в правду не те щоб гостинне...",
+        "weirdroute4": "Час робити те, що у мене виходить найкраще.",
+        "weirdroute5": "Червоний. Завжди знав, що з цим хлопцем щось не так, але я не зміг його зупинити під час... Проте нині він згорів у ямі лави.",
+        "weirdroute6": "Капітан...",
+        "weirdroute7": "ВВЕДІТЬ КОД",
+
+        // double trouble text
+        "doubletrouble0": "Тепер ви можете зіграти Double Trouble.",
+        "doubletrouble1": "(В меню Свободної Гри! Під бонусними піснями!)",
+
+        // victory song text
+        "victory0":"Та начхати! Ти вже виграв!",
+
+
+        // OPTIONS
+        // categories
+        "opt_category_adjustdelay": "Налашт. Затримку",
+
+        "opt_category_controls": "Керування",
+        "opt_category_gameplay": "Гра",
+        "opt_category_graphics": "Графіка",
+        "opt_category_visualsui": "Візуал та UI",
+        "opt_category_language": "Мова",       
+        "opt_category_misc": "Інше",
+        "opt_category_notes": "Стрілки",
+
+        // controls
+        "opt_controllermode": "Режим Контролера",
+        "opt_controllermode_desc": "Включає підтримку контролера.",
+
+        // gameplay
+        "opt_downscroll": "Прокручування вниз",
+        "opt_downscroll_desc": "Включає прокручування вниз.\n (Стрілки будут іти зверху вниз.)",
+
+        "opt_ghosttapping": "Фантомні Натискання",
+        "opt_ghosttapping_desc": "Включає фантомні натискання.\n(Натискання поки немає стрілок не зараховуватимуться як промахи.)",
+
+        "opt_sustainsasonenote": "Довгі Стрілки як Одна Нота",
+        "opt_sustainsasonenote_desc": "Якщо довгу стрілку відпустити занадто рано, вона буде анульована і зараховується тільки як один пропуск.\nВідключіть для старої системи вводу.", // i feel like this may be a little confusing... maybe reword?
+
+        "opt_disableresetbutton": "Вимкнути Кнопку Перезапуску",
+        "opt_disableresetbutton_desc": "Відключає кнопку перезапуску у піснях.",
+
+        "opt_laneunderlay": "Затемнення під Стрілками",
+        "opt_laneunderlay_desc": "Додає затемнення ззаду стрілок, що дозволяє краще їх бачити.",
+
+        "opt_hitsoundvolume": "Гучність Натискань",
+        "opt_hitsoundvolume_desc": "Додає звук удару для кожної натиснутої ноти.",
+
+        // graphics
+        "opt_gpucaching": "GPU Кешування",
+        "opt_gpucaching_desc": "Увімкнення GPU Кешування.",
+
+        "opt_lowquality": "Низька Якість",
+        "opt_lowquality_desc": "Вимикає деякі фонові деталі,\nДозволяє грі працювати більш стабільно та швидше на слабких комп'ютерах.",
+
+        "opt_shaders": "Шейдери",
+        "opt_shaders_desc": "Вмикає шейдери.",
+
+        "opt_antialiasing": "Згладжування",
+        "opt_antialiasing_desc": "Вмикає згладжування.",
+
+        // visuals and ui
+        "opt_debugdisplaytype": "Тип Налагоджувального Відображення",
+        "opt_debugdisplaytype_desc": "Змінює відображену інформацію налагодження у левому кутку екрана.\nSimple відображає FPS та пам'ять, в Advanced також налагоджувальна інформація гри.\nDisabled повністю відключає відображення.",
+
+        "opt_framerate": "Частота кадрів",
+        "opt_framerate_desc": "Змінює максимальне значення частоти кадрів.",
+
+        "opt_hidehud": "Приховати Інтерфейс",
+        "opt_hidehud_desc": "Прибирає більшу частину інтерфейсу.",
+
+        "opt_timebar": "Шкала Часу",
+        "opt_timebar_desc": "Відображає час до кінця пісні.",
+
+        "opt_hudrankdisplay": "Відображення рангу в Інтерфейсі",
+        "opt_hudrankdisplay_desc": "Відображає поточний ранг проходження у піснях.",
+
+        "opt_coloredui": "Колір UI з V4",
+        "opt_coloredui_desc": "Кольори UI змінюються під кольори персонажів.\n(Деякі кольори можуть бути важко читабельними.)",
+
+//        "opt_photosensitive": "Фоточутливість",
+//        "opt_photosensitive_desc": "Включає спалахи та інші різкі зображення, які можуть бути шкідливими або для людей з підвищеною світлочутливістю. Якщо вимкнено, всі спалахи зникнуть.",
+
+        "opt_photosensitivemode": "Фоточутливість",
+        "opt_photosensitivemode_desc": "Включає спалахи та інші різкі зображення (наприклад рухливі задні фони).\nУвімкніть, якщо у вас є будь-який вид епілепсії або фоточутливості.",
+
+        "opt_camerazooms": "Наближення Камери у Такт",
+        "opt_camerazooms_desc": "Включає наближення камери до такту музики. Вимкнення прибирає цю функцію.",
+
+        "opt_scoretextzoom": "Наближення Тексту Рахунку",
+        "opt_scoretextzoom_desc": "Текст рахунку наближається при кожному успішному натисканні на стрілку.",
+
+        "opt_afterimages": "Силуети",
+        "opt_afterimages_desc": "Показує силуети персонажів при натисканні подвійних стрілок у чарті.",
+
+        "opt_splashscreen": "NMV Початковий Екран",
+        "opt_splashscreen_desc": "Якщо не вибрано, то початковий екран NMV не буде відображатися під час запуску.",
+
+        // language
+        "opt_language": "Мова",
+        "opt_language_desc": "Оберіть свою мову! Примітка: Усі мови, окрім Англійської (Сполучені Штати), перекладені спільнотою!",
+
+        // misc
+        "opt_devmode": "Режим Розробника",
+        "opt_devmode_desc": "Відображає показники гри, а також хоткеї розробників стають доступними.",
+
+        "opt_streamedsongfiles": "Потокове Відтворення Музики",
+        "opt_streamedsongfiles_desc": "Музичні файли, що відтворюються, будуть передаватися побайтно, а не завантажуватися все відразу. Це значно скорочує час завантаження, однак функція ЕКСПЕРИМЕНТАЛЬНА і схильна до помилок.",
+
+        "opt_autopause": "Автопауза",
+        "opt_autopause_desc": "Гра автоматично ставиться на паузу, якщо налаштування вибрано, зупиняє всі звукові та візуальні ефекти. Якщо ж параметр не вибрано, гра продовжиться у звичайному режимі.",
+
+        // credits
+        "opt_category_credits": "Титри",
+
+        // notes
+        "opt_quants": "Кольори Стрілок",
+        "opt_quants_desc": "Ноти змінюють колір залежно від їхнього положення, допомагає в грі щоб краще тримати ритм візуально.", // i got no idea how this actually works in game
+
+        "opt_notesplashes": "Бризги",
+        "opt_notesplashes_desc": "Натискаючи \"Sick!\" або \"Sussy!\" супроводжується анімацією бризку.",
+
+        "opt_opponentnotes": "Стрілки Опонента",
+        "opt_opponentnotes_desc": "Відображає стрілки опонента."
+    }
+}

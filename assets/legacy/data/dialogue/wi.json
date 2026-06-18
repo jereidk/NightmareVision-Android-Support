@@ -1,0 +1,41 @@
+{
+    "name": "dialogue_white",
+    "side": 0,
+    "asset": "white",
+    "boxColor": "0xFFD3D7EB",
+    "boxShadeColor": "0xFF6F71C4", 
+    "icon": "white",
+    "sound": "yellow",
+    "animations": [
+        {
+        "anim": "happy",
+        "name": "WI happy",
+        "loop": false,
+        "offsets": [0,30]
+        },
+        {
+        "anim": "excite",
+        "name": "WI excited",
+        "loop": false,
+        "offsets": [0,30]
+        },
+        {
+        "anim": "disap",
+        "name": "WI disappointed",
+        "loop": false,
+        "offsets": [0,30]
+        },
+        {
+        "anim": "insane",
+        "name": "WI insanity",
+        "loop": false,
+        "offsets": [0,30]
+        },
+        {
+        "anim": "pissed",
+        "name": "WI pissed",
+        "loop": false,
+        "offsets": [0,30]
+        }
+    ]
+}

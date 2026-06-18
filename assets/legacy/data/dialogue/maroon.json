@@ -1,0 +1,35 @@
+{
+    "name": "dialogue_maroon",
+    "side": 0,
+    "asset": "maroon",
+    "boxColor": "0xFF6B2B3C",
+    "boxShadeColor": "0xFF440D37", 
+    "icon": "maroon",
+    "sound": "maroon",
+    "animations": [
+        {
+        "anim": "happy",
+        "name": "MI happy",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "threat",
+        "name": "MI threatening",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "neutral",
+        "name": "MI neutral",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "sad",
+        "name": "MI sad",
+        "loop": false,
+        "offsets": [0,0]
+        }
+    ]
+}

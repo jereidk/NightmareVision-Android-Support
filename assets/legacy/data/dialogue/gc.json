@@ -1,0 +1,53 @@
+{
+    "name": "dialogue_green",
+    "side": 0,
+    "asset": "green",
+    "boxColor": "0xFF00791C",
+    "boxShadeColor": "0xFF00393E", 
+    "icon": "green-crewmate",
+    "sound": "gi",
+    "animations": [
+       {
+        "anim": "happy",
+        "name": "GC happy",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "threat",
+        "name": "GC threatening",
+        "loop": true,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "excite",
+        "name": "GC excited",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "nervous",
+        "name": "GC nervous",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "ihappy",
+        "name": "GI happy",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "ineutral",
+        "name": "GI neutral",
+        "loop": false,
+        "offsets": [0,0]
+        },
+        {
+        "anim": "iupset",
+        "name": "GI upset",
+        "loop": false,
+        "offsets": [0,0]
+        }
+    ]
+}

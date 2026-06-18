@@ -1,0 +1,188 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				35,
+				104
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Gidle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				42,
+				92
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Gleft",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				16,
+				93
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "Gdown",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				28,
+				232
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "Gup",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-2,
+				138
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Gright",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				35,
+				173
+			],
+			"anim": "singLEFTmiss",
+			"fps": 24,
+			"name": "Gmiss left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				22,
+				143
+			],
+			"anim": "singDOWNmiss",
+			"fps": 24,
+			"name": "Gmiss down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				10,
+				195
+			],
+			"anim": "singUPmiss",
+			"fps": 24,
+			"name": "Gmiss up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-11,
+				171
+			],
+			"anim": "singRIGHTmiss",
+			"fps": 24,
+			"name": "Gmiss right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-14,
+				119
+			],
+			"anim": "firstDeath",
+			"fps": 24,
+			"name": "BF dies",
+			"indices": []
+		},
+		{
+			"loop": true,
+			"offsets": [
+				-15,
+				103
+			],
+			"anim": "deathLoop",
+			"fps": 24,
+			"name": "BF Dead Loop",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-15,
+				176
+			],
+			"anim": "deathConfirm",
+			"fps": 24,
+			"name": "BF Dead confirm",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				26,
+				152
+			],
+			"anim": "scared",
+			"fps": 24,
+			"name": "Gscared",
+			"indices": [],
+			"flipX": true
+		},
+		{
+			"offsets": [
+				14,
+				174
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "hey",
+			"flipX": false,
+			"indices": [],
+			"name": "Ghey"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/green_stuffs",
+	"position": [
+		-40,
+		600
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "greenmini",
+	"gameover_character": null,
+	"vslice_sustains": true,
+	"flip_x": true,
+	"healthbar_colour": -13395610,
+	"camera_position": [
+		248,
+		-254
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"finaleHealthBarColor": ["0xFF1E4824", "0xFF4C683C", "0xFF00221F"]
+	}
+}

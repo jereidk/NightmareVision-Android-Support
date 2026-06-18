@@ -1,0 +1,97 @@
+{
+    "pausePortrait": "black",
+	"animations": [
+		{
+			"offsets": [
+				59,
+				-79
+			],
+			"loop": true,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "BLACK IDLE"
+		},
+		{
+			"offsets": [
+				-172,
+				-74
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "BLACK RIGHT"
+		},
+		{
+			"offsets": [
+				89,
+				-120
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "BLACK DOWN"
+		},
+		{
+			"offsets": [
+				176,
+				-70
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "BLACK LEFT"
+		},
+		{
+			"offsets": [
+				100,
+				50
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "BLACK UP"
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				329,
+				142
+			],
+			"anim": "death",
+			"fps": 24,
+			"name": "BLACK DEATH",
+			"indices": [],
+			"flipX": false
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/story/black/retro",
+	"position": [
+		-340,
+		-30
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "blackOG",
+	"gameover_character": null,
+	"vslice_sustains": false,
+	"afterimages": false,
+	"flip_x": false,
+	"healthbar_colour": -65536,
+	"camera_position": [
+		-253,
+		140
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": false
+}

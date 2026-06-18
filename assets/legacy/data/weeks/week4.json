@@ -1,0 +1,20 @@
+{
+	"songs": [
+		["Defeat", "black", [179, 0, 255], "black", "Rareblin"]
+	],
+	
+	"section": "story",
+	
+	"storyName": "Defeat",
+	"weekBefore": "week3",
+	"weekName": "...",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	
+	"node": {
+		"parent": "week3",
+		"direction": "east"
+	}
+}

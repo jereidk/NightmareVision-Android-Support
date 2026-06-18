@@ -1,0 +1,66 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-66,
+				72
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "firstDeath",
+			"flipX": false,
+			"indices": [],
+			"name": "Dies"
+		},
+		{
+			"offsets": [
+				27,
+				70
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "deathLoop",
+			"flipX": false,
+			"indices": [],
+			"name": "Loop"
+		},
+		{
+			"offsets": [
+				261,
+				71
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "deathConfirm",
+			"flipX": false,
+			"indices": [],
+			"name": "Confirm"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/gameover/GenericDeathPink",
+	"position": [
+		-580,
+		300
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"gameover_character": "amongbf",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		-106,
+		86
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 4,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

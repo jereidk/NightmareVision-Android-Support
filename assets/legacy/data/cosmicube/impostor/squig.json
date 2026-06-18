@@ -1,0 +1,16 @@
+{
+	"type": "pet",
+	"price": 300,
+	
+	"title": "Squig",
+	"node": {
+		"direction": "west",
+		"parent": "ufo"
+	},
+	
+	"color": [
+		159,
+		67,
+		126
+	]
+}

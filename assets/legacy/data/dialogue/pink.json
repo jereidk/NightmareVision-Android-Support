@@ -1,0 +1,37 @@
+{
+    "name": "dialogue_pink",
+    "side": 0,
+    "asset": "pink",
+    "boxColor": "0xFFFD42AD",
+    "boxShadeColor": "0xFF9D00B9", 
+    "icon": "pink",
+    "sound": "pink",
+    "animations": [
+        {
+            "anim": "happy",
+            "name": "PC happy",
+            "loop": false,
+            "offsets": [0,75] 
+        },
+        {
+            "anim": "sad",
+            "name": "PC sad",
+            "loop": false,
+            "offsets": [0,75] 
+        },
+        {
+            "anim": "excited",
+            "name": "PC excited",
+            "loop": false,
+            "offsets": [0,75] 
+        },
+        {
+            "anim": "neutral",
+            "name": "PC neutral",
+            "loop": false,
+            "offsets": [0,75] 
+        }
+    ]
+}
+
+
