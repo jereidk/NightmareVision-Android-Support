@@ -1,9 +1,6 @@
 name: Dev Builds
 
 on:
-  push:
-    branches:
-      - claude/impostor-legacy-android-79u6sz
   workflow_dispatch:
   workflow_call:
     inputs:
