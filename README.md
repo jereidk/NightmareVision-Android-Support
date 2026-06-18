@@ -1,67 +1,62 @@
-Havee fun with NightmareVision V1! (***[follow me on twitter](https://twitter.com/DuskieWhy)***)
+# VS Impostor Legacy — Android Port
 
-![](https://github.com/NMVTeam/NightmareVision/blob/dev/assets/game/images/branding/watermarks/NMV.png)
+Unofficial Android port of the **VS Impostor Legacy** mod, built on the [NightmareVision engine](https://github.com/NMVTeam/NightmareVision).
 
+> APKs are generated automatically via GitHub Actions on every push.
 
-## 🛠️ Credits Mobile Port to...
-* FNF BR (LumiCoder)
-* StarNovaBR (StarNova)
-
-## 🌟 Special thanks to...
-
-* ShadowMario and Co. for [Psych engine](https://github.com/ShadowMario/FNF-PsychEngine)
-* Nebula_Zorua for the [specific Psych fork](https://github.com/nebulazorua/exe-psych-fork) NMV is built off and for the Modchart backend
-* Rozebud for the chart editor little buddies ([Check out their engine too](https://github.com/ThatRozebudDude/FPS-Plus-Public))
-* Cne crew for camera rotation support ([Check out codename engine](https://github.com/CodenameCrew/CodenameEngine))
-* FunkinCrew for their [Lime](https://github.com/FunkinCrew/lime), [Openfl](https://github.com/FunkinCrew/openfl), [Hxcpp](https://github.com/FunkinCrew/hxcpp) forks
-* MaybeMaru for [MoonChart](https://github.com/MaybeMaru/moonchart) and [Flixel-Animate](https://github.com/MaybeMaru/flixel-animate)
-  
 ---
 
-## 🛠️ How to compile NMV Engine
+## Credits
 
-### Quick Note
-* Haxe 4.3.6 and Haxelib 4.2.0 or newer is expected
-* This engine ENFORCES the use of local libraries with hxpkg/hmm to prevent issues in relation to `hxvlc`
-* The expected library versions are listed within the .hxpkg file.
-* if compilation errors arise, Ensure your Haxe version is correct and your haxelibs match what is listed in the .hxpkg file
+**Mod (VS Impostor Legacy)**
+* inky03 / motorfrog — original mod creator
 
-## 1. Download the prerequisites
-***
-**For Both Platforms:**
-* [Haxe](https://haxe.org/download/)
+**Android Port**
+* jereidk — port maintainer
+
+**NightmareVision Engine**
+* NMVTeam — engine authors
+* FNF BR (LumiCoder) — original mobile port base
+* StarNovaBR (StarNova) — mobile port contributions
+
+**Engine upstream credits**
+* ShadowMario and Co. — [Psych Engine](https://github.com/ShadowMario/FNF-PsychEngine)
+* Nebula_Zorua — [Psych fork NMV is built off](https://github.com/nebulazorua/exe-psych-fork) and Modchart backend
+* Rozebud — chart editor ([FPS Plus](https://github.com/ThatRozebudDude/FPS-Plus-Public))
+* Codename Engine crew — camera rotation support
+* FunkinCrew — [Lime](https://github.com/FunkinCrew/lime), [OpenFL](https://github.com/FunkinCrew/openfl), [hxcpp](https://github.com/FunkinCrew/hxcpp) forks
+* MaybeMaru — [MoonChart](https://github.com/MaybeMaru/moonchart) and [flixel-animate](https://github.com/MaybeMaru/flixel-animate)
+
+---
+
+## How to compile locally
+
+### Prerequisites
+
+**All platforms:**
+* [Haxe 4.3.6+](https://haxe.org/download/) and Haxelib 4.2.0+
 * [Git](https://git-scm.com/downloads)
-* [Android Studio](https://developer.android.com/studio?hl=pt-br)
 
-**For PC (Windows) Compilation:**
-* [VS Community Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe)
-* within the VS Community Installer, download `Desktop development with c++`
+**Windows (PC build):**
+* [VS Community Build Tools](https://aka.ms/vs/17/release/vs_BuildTools.exe) — install `Desktop development with C++`
 
-To get the correct SDK and NDK, open **Android Studio** and go to the **SDK Manager** (Settings > Languages & Frameworks > Android SDK).
+**Android build:**
+* [Android Studio](https://developer.android.com/studio) — for SDK/NDK setup
 
-In the **SDK Platforms** tab, make sure you have a recent Android API version installed to build the app:
-![SDK Platforms](docs/image1.png)
-
-Then, switch to the **SDK Tools** tab. Here you must check the boxes for **Android SDK Build-Tools**, **NDK (Side by side)** (you can check "Show Package Details" to select the r21e version), and **Android SDK Platform-Tools**. Click Apply to download them:
-![SDK Tools](docs/image.png)
+> [!NOTE]
+> This project uses **hxpkg** to manage library versions. The expected versions are listed in `.hxpkg`.
 
 ---
 
-### 2. Download the projects required libraries
-***
-#### Recommended Method (Slower)
-In a cmd within the project directory, in order run...
+### 1. Install libraries
 
 ```sh
 haxelib git hxpkg https://github.com/ADA-Funni/hxpkg add-hmm-compatibility
 haxelib run hxpkg install
 ```
 
-#### Advanced Method (Faster)
-> [!IMPORTANT]
-> This requires [Rust](https://rust-lang.org/tools/install/) to be installed!
-
-In a cmd within the project directory, in order run...
+<details>
+<summary>Faster method (requires Rust)</summary>
 
 ```sh
 haxelib git hxpkg https://github.com/ADA-Funni/hxpkg add-hmm-compatibility
@@ -79,31 +74,37 @@ haxelib run hmm reinstall grig.audio
 
 haxelib fixrepo
 ```
+</details>
+
 ---
 
-## 3. Setup Lime & Compile
+### 2. Compile
 
-#### 💻 For Windows (PC)
-After that is complete, run `haxelib run lime rebuild cpp -release`
+#### Windows
+```sh
+haxelib run lime rebuild cpp -release
+haxelib run lime build windows -release
+```
 
-Then, run `haxelib run lime test windows -release` and you should be compiling
+#### Android
 
-If you get errors related to lime, run limeFixer and try again
-
-#### 📱 For Android (Mobile)
-First, set up your Android environment by running:
+First, configure your SDK/NDK paths:
 ```sh
 lime setup android
 ```
+Provide absolute paths to your Android SDK, NDK, and JDK. Leave Apache Ant blank.
 
-When prompted, provide your exact absolute paths ex:
-* **Absolute path to Android SDK:** `C:\Path\to\your\sdk`
-* **Absolute path to Android NDK:** `C:\Path\to\your\ndk`
-* **Absolute path to Java JDK:** `C:\Path\to\your\jdk`
-*(Leave the Apache Ant path blank and press Enter).*
+Then go to **Android Studio → SDK Manager → SDK Tools** and install:
+- Android SDK Build-Tools
+- NDK (Side by side) — r21e recommended
+- Android SDK Platform-Tools
 
-After setting up the paths, run the following command to compile:
+Then build:
 ```sh
-haxelib lime build android -release
+haxelib run lime build android -release
 ```
-*(Use `test android` instead if your device is plugged in via USB Debugging and you want it to install automatically).*
+
+To install directly on a connected device via USB debugging:
+```sh
+haxelib run lime test android -release
+```
