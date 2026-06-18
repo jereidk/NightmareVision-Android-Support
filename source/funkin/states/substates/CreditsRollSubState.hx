@@ -28,6 +28,11 @@ class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
 		camCredits.bgColor = 0;
 		
 		initStateScript();
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(NONE, A_B);
+		#end
 	}
 	
 	public override function update(elapsed:Float):Void
