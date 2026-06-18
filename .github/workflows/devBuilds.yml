@@ -78,6 +78,13 @@ jobs:
       - name: Register Lime dev lib
         run: haxelib dev lime .haxelib/lime/git
 
+      # hxcpp is needed by `lime rebuild`. When the haxelibs cache is a hit
+      # the install step is skipped, but if the lime cache is a miss we still
+      # need hxcpp available — install it unconditionally in that case.
+      - name: Ensure hxcpp for Lime rebuild
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: haxelib install hxcpp > /dev/null --quiet
+
       - name: Rebuild Linux Lime ndll
         if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
@@ -285,6 +292,10 @@ jobs:
 
       - name: Register Lime dev lib
         run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: haxelib install hxcpp > /dev/null --quiet
 
       - name: Rebuild Linux Lime ndll
         if: steps.lime-cache.outputs.cache-hit != 'true'
