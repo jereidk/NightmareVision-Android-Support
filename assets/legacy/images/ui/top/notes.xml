@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Tex-Packer-EX v0.7.1 https://kitzsh.github.io/tex-packer-ex
+-->
+<TextureAtlas imagePath="top" width="174" height="831">
+  <SubTexture name="arrowLEFT0000" x="2" y="176"  width="170" height="170" frameX="-0" frameY="-0" frameWidth="170" frameHeight="170"/>
+  <SubTexture name="arrowDOWN0000" x="2" y="2"  width="170" height="170" frameX="-0" frameY="-0" frameWidth="170" frameHeight="170"/>
+  <SubTexture name="arrowUP0000" x="2" y="524"  width="170" height="170" frameX="-0" frameY="-0" frameWidth="170" frameHeight="170"/>
+  <SubTexture name="arrowRIGHT0000" x="2" y="350"  width="170" height="170" frameX="-0" frameY="-0" frameWidth="170" frameHeight="170"/>
+  <SubTexture name="hold end0000" x="2" y="766" width="21" height="63" rotated="true"  frameX="-0" frameY="-0" frameWidth="63" frameHeight="21"/>
+  <SubTexture name="hold piece0000" x="2" y="698" width="44" height="64" rotated="true"  frameX="-0" frameY="-0" frameWidth="64" frameHeight="44"/>
+</TextureAtlas>

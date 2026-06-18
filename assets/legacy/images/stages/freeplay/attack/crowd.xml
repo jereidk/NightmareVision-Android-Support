@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="crowd.png" width="3298" height="211">
+	<SubTexture name="tess n gus fring instance 10000" x="1" y="1" width="657" height="202" frameX="-4" frameY="-6" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10001" x="1" y="1" width="657" height="202" frameX="-4" frameY="-6" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10002" x="663" y="1" width="658" height="205" frameX="-0" frameY="-4" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10003" x="663" y="1" width="658" height="205" frameX="-0" frameY="-4" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10004" x="1326" y="1" width="655" height="206" frameX="-2" frameY="-3" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10005" x="1326" y="1" width="655" height="206" frameX="-2" frameY="-3" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10006" x="1986" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10007" x="1986" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10008" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10009" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10010" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10011" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10012" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+	<SubTexture name="tess n gus fring instance 10013" x="2644" y="1" width="653" height="209" frameX="-4" frameY="-0" frameWidth="661" frameHeight="209"/>
+</TextureAtlas>

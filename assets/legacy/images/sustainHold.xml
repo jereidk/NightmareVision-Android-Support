@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="sustainHold.png">
+	<!-- Created with Adobe Animate 23.0.0.407. Symbol timeline mod by emi3 -->
+	<SubTexture name="hold splash start0000" x="3" y="274" width="167" height="104" frameX="-34" frameY="-90" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash start0001" x="891" y="241" width="124" height="163" frameX="-35" frameY="-83" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash start0002" x="241" y="269" width="159" height="124" frameX="-39" frameY="-83" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash loop0000" x="403" y="269" width="63" height="164" frameX="-34" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash loop0001" x="403" y="269" width="63" height="164" frameX="-34" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash loop0002" x="173" y="274" width="63" height="159" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash loop0003" x="173" y="274" width="63" height="159" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash loop0004" x="469" y="274" width="157" height="63" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash loop0005" x="469" y="274" width="157" height="63" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash loop0006" x="629" y="274" width="63" height="157" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash loop0007" x="629" y="274" width="63" height="157" frameX="-37" frameY="-111" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash end0000" x="916" y="3" width="91" height="131" frameX="-51" frameY="-98" frameWidth="238" frameHeight="272" rotated="true"/>
+	<SubTexture name="hold splash end0001" x="707" y="241" width="181" height="179" frameX="-30" frameY="-43" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash end0002" x="707" y="3" width="206" height="235" frameX="-19" frameY="-23" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash end0003" x="482" y="3" width="222" height="268" frameX="-6" frameY="0" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash end0004" x="3" y="3" width="235" height="268" frameX="0" frameY="0" frameWidth="238" frameHeight="272"/>
+	<SubTexture name="hold splash end0005" x="241" y="3" width="238" height="263" frameX="0" frameY="-9" frameWidth="238" frameHeight="272"/>
+</TextureAtlas>

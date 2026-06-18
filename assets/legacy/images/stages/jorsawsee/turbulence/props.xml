@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="props.png">
+	<!-- Created with Adobe Animate version 23.0.0.407 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="balloon0000" x="1449" y="3" width="242" height="323"/>
+	<SubTexture name="balloon0001" x="1449" y="3" width="242" height="323"/>
+	<SubTexture name="balloon0002" x="1449" y="3" width="242" height="323"/>
+	<SubTexture name="balloon0003" x="1449" y="3" width="242" height="323"/>
+	<SubTexture name="balloon0004" x="1449" y="3" width="242" height="323"/>
+	<SubTexture name="balloon0005" x="1449" y="329" width="241" height="323" frameX="0" frameY="0" frameWidth="242" frameHeight="323"/>
+	<SubTexture name="balloon0006" x="1449" y="329" width="241" height="323" frameX="0" frameY="0" frameWidth="242" frameHeight="323"/>
+	<SubTexture name="balloon0007" x="1449" y="329" width="241" height="323" frameX="0" frameY="0" frameWidth="242" frameHeight="323"/>
+	<SubTexture name="balloon0008" x="1449" y="329" width="241" height="323" frameX="0" frameY="0" frameWidth="242" frameHeight="323"/>
+	<SubTexture name="balloon0009" x="1449" y="329" width="241" height="323" frameX="0" frameY="0" frameWidth="242" frameHeight="323"/>
+	<SubTexture name="balloon copy0000" x="1694" y="3" width="226" height="323" frameX="0" frameY="0" frameWidth="227" frameHeight="323"/>
+	<SubTexture name="balloon copy0001" x="1694" y="3" width="226" height="323" frameX="0" frameY="0" frameWidth="227" frameHeight="323"/>
+	<SubTexture name="balloon copy0002" x="1694" y="3" width="226" height="323" frameX="0" frameY="0" frameWidth="227" frameHeight="323"/>
+	<SubTexture name="balloon copy0003" x="1694" y="3" width="226" height="323" frameX="0" frameY="0" frameWidth="227" frameHeight="323"/>
+	<SubTexture name="balloon copy0004" x="1694" y="3" width="226" height="323" frameX="0" frameY="0" frameWidth="227" frameHeight="323"/>
+	<SubTexture name="balloon copy0005" x="1693" y="329" width="227" height="323"/>
+	<SubTexture name="balloon copy0006" x="1693" y="329" width="227" height="323"/>
+	<SubTexture name="balloon copy0007" x="1693" y="329" width="227" height="323"/>
+	<SubTexture name="balloon copy0008" x="1693" y="329" width="227" height="323"/>
+	<SubTexture name="balloon copy0009" x="1693" y="329" width="227" height="323"/>
+	<SubTexture name="pink0000" x="3" y="3" width="720" height="696"/>
+	<SubTexture name="pink0001" x="3" y="3" width="720" height="696"/>
+	<SubTexture name="pink0002" x="3" y="3" width="720" height="696"/>
+	<SubTexture name="pink0003" x="3" y="3" width="720" height="696"/>
+	<SubTexture name="pink0004" x="3" y="3" width="720" height="696"/>
+	<SubTexture name="pink0005" x="726" y="3" width="720" height="696"/>
+	<SubTexture name="pink0006" x="726" y="3" width="720" height="696"/>
+	<SubTexture name="pink0007" x="726" y="3" width="720" height="696"/>
+	<SubTexture name="pink0008" x="726" y="3" width="720" height="696"/>
+	<SubTexture name="pink0009" x="726" y="3" width="720" height="696"/>
+</TextureAtlas>

@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="dangerboards.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="cart0000" x="5" y="5" width="474" height="236" frameX="-17" frameY="0" frameWidth="492" frameHeight="237"/>
+	<SubTexture name="cart0001" x="484" y="5" width="492" height="235" frameX="0" frameY="-2" frameWidth="492" frameHeight="237"/>
+	<SubTexture name="skateboard0000" x="5" y="246" width="480" height="169" frameX="-2" frameY="0" frameWidth="484" frameHeight="169"/>
+	<SubTexture name="skateboard0001" x="490" y="246" width="484" height="166" frameX="0" frameY="-2" frameWidth="484" frameHeight="169"/>
+	<SubTexture name="speakerwheel0000" x="5" y="420" width="696" height="86" frameX="0" frameY="0" frameWidth="696" frameHeight="87"/>
+	<SubTexture name="speakerwheel0001" x="5" y="511" width="696" height="87"/>
+</TextureAtlas>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="snow_particles.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="snow10000" x="10" y="10" width="28" height="24"/>
+	<SubTexture name="snow20000" x="48" y="10" width="21" height="22"/>
+	<SubTexture name="snow30000" x="79" y="10" width="16" height="15"/>
+	<SubTexture name="snow40000" x="10" y="44" width="20" height="22"/>
+	<SubTexture name="snow50000" x="40" y="44" width="23" height="16"/>
+	<SubTexture name="snow60000" x="73" y="44" width="21" height="27"/>
+	<SubTexture name="snow70000" x="10" y="81" width="26" height="24"/>
+	<SubTexture name="snow80000" x="46" y="81" width="11" height="13"/>
+</TextureAtlas>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TextureAtlas imagePath="gf_reactor.png" width="2336" height="2093">
+	<SubTexture name="gf cry0000" x="1939" y="1679" width="376" height="412" frameX="-3" frameY="-3" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0001" x="1" y="1680" width="379" height="412" frameX="-0" frameY="-3" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0002" x="1568" y="419" width="380" height="415" frameX="-0" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0003" x="1175" y="1674" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0004" x="1557" y="1674" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0005" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0006" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0007" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0008" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0009" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0010" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0011" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0012" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0013" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0014" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0015" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0016" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0017" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0018" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0019" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0020" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0021" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0022" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0023" x="1953" y="419" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0024" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0025" x="1939" y="1259" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0026" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0027" x="1954" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0028" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf cry0029" x="1572" y="839" width="377" height="415" frameX="-3" frameY="-0" frameWidth="380" frameHeight="415"/>
+	<SubTexture name="gf dance left0000" x="1184" y="838" width="379" height="411" frameX="-3" frameY="-9" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0001" x="394" y="1679" width="382" height="411" frameX="-0" frameY="-9" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0002" x="787" y="1670" width="383" height="411" frameX="-0" frameY="-9" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0003" x="1955" y="1" width="380" height="411" frameX="-3" frameY="-9" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0004" x="1181" y="420" width="382" height="413" frameX="-3" frameY="-7" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0005" x="1568" y="1" width="382" height="413" frameX="-3" frameY="-7" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0006" x="1183" y="1254" width="384" height="415" frameX="-3" frameY="-5" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0007" x="785" y="1" width="386" height="418" frameX="-3" frameY="-2" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0008" x="785" y="1" width="386" height="418" frameX="-3" frameY="-2" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0009" x="785" y="1" width="386" height="418" frameX="-3" frameY="-2" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0010" x="1" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0011" x="1" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0012" x="1" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0013" x="393" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance left0014" x="393" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="390" frameHeight="420"/>
+	<SubTexture name="gf dance right0000" x="790" y="839" width="389" height="410" frameX="-3" frameY="-10" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0001" x="393" y="849" width="392" height="410" frameX="-0" frameY="-10" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0002" x="785" y="424" width="391" height="410" frameX="-0" frameY="-10" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0003" x="394" y="1264" width="388" height="410" frameX="-3" frameY="-10" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0004" x="790" y="1254" width="388" height="411" frameX="-3" frameY="-9" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0005" x="1" y="1264" width="388" height="411" frameX="-3" frameY="-9" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0006" x="1176" y="1" width="387" height="414" frameX="-3" frameY="-6" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0007" x="393" y="426" width="387" height="418" frameX="-3" frameY="-2" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0008" x="393" y="426" width="387" height="418" frameX="-3" frameY="-2" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0009" x="393" y="426" width="387" height="418" frameX="-3" frameY="-2" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0010" x="1" y="426" width="387" height="419" frameX="-3" frameY="-1" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0011" x="1" y="426" width="387" height="419" frameX="-3" frameY="-1" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0012" x="1" y="426" width="387" height="419" frameX="-3" frameY="-1" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0013" x="393" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="392" frameHeight="420"/>
+	<SubTexture name="gf dance right0014" x="393" y="1" width="387" height="420" frameX="-3" frameY="-0" frameWidth="392" frameHeight="420"/>
+</TextureAtlas>

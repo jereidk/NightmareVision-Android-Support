@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Free texture packer v0.6.7 http://free-tex-packer.com
+-->
+<TextureAtlas imagePath="longus.png" width="2349" height="1996">
+  <SubTexture name="longus anim0092" x="3" y="3" width="139" height="1019" rotated="true"  frameX="-75" frameY="-269" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0091" x="3" y="1028" width="159" height="940" rotated="true"  frameX="-119" frameY="-250" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0090" x="148" y="3" width="125" height="787" rotated="true"  frameX="-224" frameY="-272" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus0013" x="168" y="796"  width="265" height="530" frameX="-11" frameY="-0" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0009" x="168" y="1332"  width="265" height="530" frameX="-10" frameY="-0" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0011" x="279" y="3"  width="265" height="530" frameX="-11" frameY="-0" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0007" x="439" y="539"  width="269" height="528" frameX="-6" frameY="-2" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus anim0058" x="550" y="3"  width="282" height="527" frameX="-482" frameY="-0" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0062" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0071" x="714" y="536"  width="281" height="523" frameX="-485" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0073" x="838" y="3"  width="286" height="523" frameX="-480" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0060" x="439" y="1602" width="523" height="293" rotated="true"  frameX="-473" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0077" x="740" y="1065"  width="280" height="522" frameX="-486" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus0005" x="1001" y="532"  width="273" height="522" frameX="-2" frameY="-8" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus anim0079" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0078" x="968" y="1593" width="522" height="280" rotated="true"  frameX="-486" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0041" x="1026" y="1060"  width="272" height="521" frameX="-475" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0001" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0043" x="1416" y="3"  width="271" height="521" frameX="-472" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0046" x="1304" y="1058"  width="296" height="521" frameX="-445" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0048" x="1558" y="530"  width="294" height="521" frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus0001" x="1693" y="3"  width="274" height="521" frameX="-2" frameY="-9" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus anim0050" x="1496" y="1585" width="521" height="294" rotated="true"  frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus0003" x="1606" y="1057"  width="276" height="519" frameX="-0" frameY="-11" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus anim0075" x="1858" y="530"  width="285" height="516" frameX="-481" frameY="-10" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0076" x="1973" y="3"  width="285" height="513" frameX="-481" frameY="-13" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0055" x="1888" y="1052"  width="321" height="506" frameX="-429" frameY="-20" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0088" x="2023" y="1564"  width="323" height="429" frameX="-465" frameY="-97" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0002" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0003" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0004" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0005" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0006" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0007" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0008" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0009" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0010" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0011" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0012" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0013" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0014" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0015" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0016" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0017" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0018" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0019" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0020" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0021" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0022" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0023" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0024" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0025" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0026" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0027" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0028" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0029" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0030" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0031" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0032" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0033" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0034" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0035" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0036" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0037" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0038" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0039" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0040" x="1280" y="531"  width="272" height="521" frameX="-480" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0042" x="1026" y="1060"  width="272" height="521" frameX="-475" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0044" x="1416" y="3"  width="271" height="521" frameX="-472" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0045" x="1416" y="3"  width="271" height="521" frameX="-472" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0047" x="1304" y="1058"  width="296" height="521" frameX="-445" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0049" x="1558" y="530"  width="294" height="521" frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0051" x="1496" y="1585" width="521" height="294" rotated="true"  frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0052" x="1496" y="1585" width="521" height="294" rotated="true"  frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0053" x="1496" y="1585" width="521" height="294" rotated="true"  frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0054" x="1496" y="1585" width="521" height="294" rotated="true"  frameX="-447" frameY="-5" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0056" x="1888" y="1052"  width="321" height="506" frameX="-429" frameY="-20" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0057" x="1888" y="1052"  width="321" height="506" frameX="-429" frameY="-20" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0059" x="550" y="3"  width="282" height="527" frameX="-482" frameY="-0" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0061" x="439" y="1602" width="523" height="293" rotated="true"  frameX="-473" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0063" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0064" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0065" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0066" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0067" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0068" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0069" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0070" x="439" y="1073"  width="295" height="523" frameX="-471" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0072" x="714" y="536"  width="281" height="523" frameX="-485" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0074" x="838" y="3"  width="286" height="523" frameX="-480" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0080" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0081" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0082" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0083" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0084" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0085" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0086" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0087" x="1130" y="3"  width="280" height="522" frameX="-487" frameY="-4" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus anim0089" x="2023" y="1564"  width="323" height="429" frameX="-465" frameY="-97" frameWidth="1226" frameHeight="530"/>
+  <SubTexture name="longus0002" x="1693" y="3"  width="274" height="521" frameX="-2" frameY="-9" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0004" x="1606" y="1057"  width="276" height="519" frameX="-0" frameY="-11" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0006" x="1001" y="532"  width="273" height="522" frameX="-2" frameY="-8" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0008" x="439" y="539"  width="269" height="528" frameX="-6" frameY="-2" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0010" x="168" y="1332"  width="265" height="530" frameX="-10" frameY="-0" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0012" x="279" y="3"  width="265" height="530" frameX="-11" frameY="-0" frameWidth="276" frameHeight="530"/>
+  <SubTexture name="longus0014" x="168" y="796"  width="265" height="530" frameX="-11" frameY="-0" frameWidth="276" frameHeight="530"/>
+</TextureAtlas>

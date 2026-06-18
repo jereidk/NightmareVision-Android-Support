@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="black.png" width="2717" height="514">
+	<SubTexture name="black0000" x="1" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0001" x="545" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0002" x="1089" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0003" x="1633" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0004" x="2177" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0005" x="2177" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0006" x="1" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0007" x="545" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+	<SubTexture name="black0008" x="1089" y="1" width="539" height="512" frameX="-59" frameY="-0" frameWidth="602" frameHeight="515"/>
+</TextureAtlas>

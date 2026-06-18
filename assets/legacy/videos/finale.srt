@@ -1,0 +1,43 @@
+1
+00:00:08,500 --> 00:00:09,500
+cutscene_finale0
+
+2
+00:00:09,500 --> 00:00:09,900
+cutscene_finalegibberish
+
+3
+00:00:09,900 --> 00:00:10,300
+cutscene_finale0
+
+4
+00:00:10,300 --> 00:00:10,520
+cutscene_finalegibberish2
+
+5
+00:00:10,520 --> 00:00:12,100
+cutscene_finale0
+
+6
+00:00:14,700 --> 00:00:18,100
+cutscene_finale1
+
+7
+00:00:23,000 --> 00:00:26,420
+cutscene_finale2
+
+8
+00:00:26,420 --> 00:00:28,100
+cutscene_finale3
+
+9
+00:00:28,100 --> 00:00:29,000
+cutscene_finale4
+
+10
+00:00:29,000 --> 00:00:29,860
+cutscene_finale5
+
+11
+00:00:29,860 --> 00:00:30,700
+cutscene_finale6

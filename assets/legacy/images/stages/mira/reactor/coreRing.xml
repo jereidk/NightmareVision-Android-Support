@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="coreField.png">
+	<SubTexture name="reactor core ring0000" x="3" y="1155" width="585" height="581" frameX="-18" frameY="0" frameWidth="605" frameHeight="586"/>
+	<SubTexture name="reactor core ring0001" x="3" y="3" width="602" height="566" frameX="0" frameY="-2" frameWidth="605" frameHeight="586"/>
+	<SubTexture name="reactor core ring0002" x="3" y="572" width="587" height="580" frameX="-18" frameY="-2" frameWidth="605" frameHeight="586"/>
+	<SubTexture name="reactor core ring0003" x="608" y="3" width="571" height="594" frameX="-11" frameY="-5" frameWidth="605" frameHeight="586" rotated="true"/>
+	<SubTexture name="reactor core ring0004" x="593" y="600" width="582" height="581" frameX="-15" frameY="-4" frameWidth="605" frameHeight="586" rotated="true"/>
+</TextureAtlas>

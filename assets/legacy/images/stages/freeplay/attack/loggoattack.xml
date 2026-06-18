@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="loggoattack.png" width="512" height="5949">
+	<SubTexture name="loggfriend0000" x="1" y="3619" width="510" height="581" frameX="-0" frameY="-21" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0001" x="1" y="4205" width="510" height="581" frameX="-0" frameY="-21" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0002" x="1" y="4791" width="510" height="576" frameX="-0" frameY="-26" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0003" x="1" y="5372" width="510" height="576" frameX="-0" frameY="-26" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0004" x="1" y="2423" width="510" height="593" frameX="-0" frameY="-9" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0005" x="1" y="3021" width="510" height="593" frameX="-0" frameY="-9" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0006" x="1" y="1215" width="510" height="599" frameX="-0" frameY="-3" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0007" x="1" y="1819" width="510" height="599" frameX="-0" frameY="-3" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0008" x="1" y="1" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0009" x="1" y="608" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0010" x="1" y="1" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0011" x="1" y="608" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0012" x="1" y="1" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+	<SubTexture name="loggfriend0013" x="1" y="608" width="510" height="602" frameX="-0" frameY="-0" frameWidth="510" frameHeight="602"/>
+</TextureAtlas>

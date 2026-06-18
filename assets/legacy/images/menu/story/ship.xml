@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="ship.png" width="161" height="857">
+	<SubTexture name="down0000" x="1" y="1" width="159" height="210" frameX="-0" frameY="-0" frameWidth="159" frameHeight="210"/>
+	<SubTexture name="left0000" x="1" y="216" width="159" height="210" rotated="true" frameX="-0" frameY="-0" frameWidth="210" frameHeight="159"/>
+	<SubTexture name="right0000" x="1" y="431" width="159" height="210" rotated="true" frameX="-0" frameY="-0" frameWidth="210" frameHeight="159"/>
+	<SubTexture name="up0000" x="1" y="646" width="159" height="210" frameX="-0" frameY="-0" frameWidth="159" frameHeight="210"/>
+</TextureAtlas>

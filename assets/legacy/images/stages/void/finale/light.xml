@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="light.png" width="5552" height="394">
+	<SubTexture name="light0000" x="2015" y="1" width="502" height="392" frameX="-44" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0001" x="2520" y="1" width="503" height="392" frameX="-43" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0002" x="3026" y="1" width="503" height="392" frameX="-43" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0003" x="3532" y="1" width="503" height="392" frameX="-43" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0004" x="4038" y="1" width="502" height="392" frameX="-44" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0005" x="4543" y="1" width="502" height="392" frameX="-44" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0006" x="5048" y="1" width="503" height="392" frameX="-43" frameY="-23" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0007" x="499" y="1" width="503" height="391" frameX="-43" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0008" x="1005" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0009" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0010" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0011" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0012" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0013" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0014" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0015" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0016" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0017" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0018" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0019" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0020" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0021" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0022" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0023" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0024" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0025" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0026" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0027" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0028" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0029" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0030" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0031" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0032" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0033" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0034" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0035" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0036" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0037" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0038" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0039" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0040" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0041" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0042" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0043" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0044" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0045" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0046" x="1" y="1" width="495" height="383" frameX="-47" frameY="-26" frameWidth="588" frameHeight="445"/>
+	<SubTexture name="light0047" x="1510" y="1" width="502" height="391" frameX="-44" frameY="-24" frameWidth="588" frameHeight="445"/>
+</TextureAtlas>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="spritesheet.png">
+	<SubTexture name="start0000" x="1" y="1" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="start0001" x="23" y="1" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="loop0000" x="45" y="1" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="loop0001" x="67" y="1" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="loop0002" x="1" y="21" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="loop0003" x="23" y="21" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0000" x="1" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0001" x="23" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0002" x="23" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0003" x="45" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0004" x="45" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+	<SubTexture name="end0005" x="67" y="41" width="21" height="19" frameX="-2" frameY="-3" frameWidth="25" frameHeight="25" />
+</TextureAtlas>

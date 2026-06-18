@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="tomatungus.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="tomato idle0000" x="893" y="930" width="450" height="455" frameX="0" frameY="-8" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0001" x="893" y="930" width="450" height="455" frameX="0" frameY="-8" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0002" x="1338" y="465" width="448" height="456" frameX="-2" frameY="-7" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0003" x="1338" y="465" width="448" height="456" frameX="-2" frameY="-7" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0004" x="448" y="0" width="445" height="462" frameX="-3" frameY="-1" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0005" x="448" y="0" width="445" height="462" frameX="-3" frameY="-1" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0006" x="895" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0007" x="895" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0008" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0009" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0010" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0011" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0012" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato idle0013" x="1340" y="0" width="443" height="463" frameX="-4" frameY="0" frameWidth="450" frameHeight="463"/>
+	<SubTexture name="tomato walk0000" x="445" y="481" width="446" height="472" frameX="0" frameY="0" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0001" x="445" y="481" width="446" height="472" frameX="0" frameY="0" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0002" x="0" y="961" width="443" height="476" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0003" x="0" y="961" width="443" height="476" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0004" x="0" y="961" width="443" height="476" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0005" x="445" y="955" width="446" height="460" frameX="0" frameY="-66" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0006" x="445" y="955" width="446" height="460" frameX="0" frameY="-66" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0007" x="893" y="465" width="443" height="463" frameX="-1" frameY="-63" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0008" x="893" y="465" width="443" height="463" frameX="-1" frameY="-63" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0009" x="0" y="0" width="446" height="479" frameX="0" frameY="0" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0010" x="0" y="0" width="446" height="479" frameX="0" frameY="0" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0011" x="0" y="481" width="443" height="478" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0012" x="0" y="481" width="443" height="478" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0013" x="0" y="481" width="443" height="478" frameX="-1" frameY="-12" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0014" x="445" y="955" width="446" height="460" frameX="0" frameY="-66" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0015" x="445" y="955" width="446" height="460" frameX="0" frameY="-66" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0016" x="893" y="465" width="443" height="463" frameX="-1" frameY="-63" frameWidth="446" frameHeight="526"/>
+	<SubTexture name="tomato walk0017" x="893" y="465" width="443" height="463" frameX="-1" frameY="-63" frameWidth="446" frameHeight="526"/>
+</TextureAtlas>

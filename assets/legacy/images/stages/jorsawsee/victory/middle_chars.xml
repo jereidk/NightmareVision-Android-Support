@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="middle_chars.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idlejelqer0000" x="377" y="1160" width="416" height="347" frameX="0" frameY="-5" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0001" x="377" y="1160" width="416" height="347" frameX="0" frameY="-5" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0002" x="822" y="777" width="414" height="349" frameX="-1" frameY="-3" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0003" x="822" y="777" width="414" height="349" frameX="-1" frameY="-3" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0004" x="1207" y="1166" width="411" height="351" frameX="-2" frameY="-1" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0005" x="1207" y="1166" width="411" height="351" frameX="-2" frameY="-1" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0006" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0007" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0008" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0009" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0010" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0011" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0012" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejelqer0013" x="795" y="1160" width="410" height="352" frameX="-2" frameY="0" frameWidth="416" frameHeight="352"/>
+	<SubTexture name="idlejorsawsee0000" x="417" y="0" width="416" height="383" frameX="0" frameY="-6" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0001" x="417" y="0" width="416" height="383" frameX="0" frameY="-6" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0002" x="0" y="0" width="415" height="387" frameX="0" frameY="-2" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0003" x="411" y="773" width="409" height="385" frameX="-6" frameY="-2" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0004" x="830" y="389" width="409" height="386" frameX="-6" frameY="-1" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0005" x="417" y="385" width="411" height="386" frameX="-4" frameY="-1" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0006" x="835" y="0" width="410" height="387" frameX="-4" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0007" x="1247" y="0" width="408" height="387" frameX="-6" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0008" x="1247" y="0" width="408" height="387" frameX="-6" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0009" x="1247" y="0" width="408" height="387" frameX="-6" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0010" x="1247" y="0" width="408" height="387" frameX="-6" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0011" x="0" y="389" width="409" height="387" frameX="-5" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0012" x="0" y="389" width="409" height="387" frameX="-5" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlejorsawsee0013" x="0" y="389" width="409" height="387" frameX="-5" frameY="0" frameWidth="416" frameHeight="389"/>
+	<SubTexture name="idlewarchief0000" x="1238" y="780" width="376" height="384" frameX="0" frameY="-5" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0001" x="1238" y="780" width="376" height="384" frameX="0" frameY="-5" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0002" x="0" y="778" width="375" height="386" frameX="-1" frameY="-3" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0003" x="0" y="778" width="375" height="386" frameX="-1" frameY="-3" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0004" x="0" y="1166" width="372" height="388" frameX="-2" frameY="-1" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0005" x="0" y="1166" width="372" height="388" frameX="-2" frameY="-1" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0006" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0007" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0008" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0009" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0010" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0011" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0012" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+	<SubTexture name="idlewarchief0013" x="1241" y="389" width="372" height="389" frameX="-2" frameY="0" frameWidth="376" frameHeight="389"/>
+</TextureAtlas>

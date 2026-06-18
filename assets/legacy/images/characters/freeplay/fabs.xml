@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="fabs.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481. Symbol timeline mod by emi3 -->
+	<SubTexture name="fabs idle0000" x="1285" y="1264" width="428" height="629" frameX="-130" frameY="-114" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0001" x="1285" y="1264" width="428" height="629" frameX="-130" frameY="-114" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0002" x="854" y="1243" width="428" height="639" frameX="-131" frameY="-104" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0003" x="854" y="1243" width="428" height="639" frameX="-131" frameY="-104" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0004" x="426" y="756" width="425" height="657" frameX="-134" frameY="-86" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0005" x="426" y="756" width="425" height="657" frameX="-134" frameY="-86" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0006" x="1308" y="600" width="423" height="661" frameX="-137" frameY="-82" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0007" x="1308" y="600" width="423" height="661" frameX="-137" frameY="-82" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0008" x="1" y="755" width="422" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0009" x="1" y="755" width="422" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0010" x="882" y="578" width="423" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0011" x="882" y="578" width="423" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0012" x="882" y="578" width="423" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs idle0013" x="882" y="578" width="423" height="662" frameX="-138" frameY="-81" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs left0000" x="882" y="1" width="524" height="574" frameX="0" frameY="-168" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs left0001" x="882" y="1" width="524" height="574" frameX="0" frameY="-168" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs left0002" x="1409" y="1" width="502" height="596" frameX="-3" frameY="-147" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs left0003" x="1409" y="1" width="502" height="596" frameX="-3" frameY="-147" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs down0000" x="845" y="1896" width="481" height="459" frameX="-204" frameY="-287" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs down0001" x="845" y="1896" width="481" height="459" frameX="-204" frameY="-287" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs down0002" x="1329" y="1896" width="474" height="441" frameX="-210" frameY="-303" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs down0003" x="1329" y="1896" width="474" height="441" frameX="-210" frameY="-303" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs up0000" x="1" y="1" width="441" height="751" frameX="-141" frameY="-3" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs up0001" x="1" y="1" width="441" height="751" frameX="-141" frameY="-3" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs up0002" x="445" y="1" width="434" height="752" frameX="-141" frameY="0" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs up0003" x="445" y="1" width="434" height="752" frameX="-141" frameY="0" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs right0000" x="426" y="1416" width="416" height="600" frameX="-281" frameY="-126" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs right0001" x="426" y="1416" width="416" height="600" frameX="-281" frameY="-126" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs right0002" x="1" y="1420" width="404" height="600" frameX="-289" frameY="-125" frameWidth="697" frameHeight="754"/>
+	<SubTexture name="fabs right0003" x="1" y="1420" width="404" height="600" frameX="-289" frameY="-125" frameWidth="697" frameHeight="754"/>
+</TextureAtlas>

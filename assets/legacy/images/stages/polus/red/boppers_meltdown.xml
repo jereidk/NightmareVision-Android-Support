@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="boppers_meltdown.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="BoppersMeltdown0000" x="0" y="0" width="3005" height="862" frameX="0" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0001" x="0" y="0" width="3005" height="862" frameX="0" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0002" x="0" y="1728" width="3001" height="859" frameX="-3" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0003" x="0" y="1728" width="3001" height="859" frameX="-3" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0004" x="0" y="3452" width="2996" height="850" frameX="-5" frameY="-16" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0005" x="0" y="3452" width="2996" height="850" frameX="-5" frameY="-16" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0006" x="0" y="2589" width="2989" height="861" frameX="-9" frameY="-1" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0007" x="0" y="2589" width="2989" height="861" frameX="-9" frameY="-1" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0008" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0009" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0010" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0011" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0012" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0013" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0014" x="0" y="864" width="2992" height="862" frameX="-8" frameY="0" frameWidth="3005" frameHeight="890"/>
+</TextureAtlas>

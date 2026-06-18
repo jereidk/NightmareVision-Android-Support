@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="clouds.png">
+	<!-- Created with Adobe Animate version 23.0.0.407 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="export cloud 10000" x="3" y="616" width="1091" height="540"/>
+	<SubTexture name="export cloud 20000" x="2280" y="3" width="1485" height="731"/>
+	<SubTexture name="export cloud 30000" x="1097" y="616" width="1041" height="499"/>
+	<SubTexture name="export cloud 40000" x="3" y="3" width="2274" height="610"/>
+</TextureAtlas>

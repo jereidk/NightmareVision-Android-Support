@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="finale_bg_assets.png" width="4597" height="4062">
+	<SubTexture name="bg" x="1" y="2020" width="3119" height="2041" frameX="-74" frameY="-49" frameWidth="3267" frameHeight="2090"/>
+	<SubTexture name="dark" x="1" y="1" width="3124" height="2016" frameX="-9" frameY="-8" frameWidth="3148" frameHeight="2034"/>
+	<SubTexture name="dead" x="3123" y="3697" width="668" height="306" rotated="true" frameX="-1" frameY="-0" frameWidth="307" frameHeight="669"/>
+	<SubTexture name="fore" x="3128" y="1" width="1468" height="2690" rotated="true" frameX="-0" frameY="-0" frameWidth="2690" frameHeight="1468"/>
+	<SubTexture name="lamp" x="3123" y="2694" width="307" height="1000" frameX="-0" frameY="-0" frameWidth="307" frameHeight="1000"/>
+	<SubTexture name="splat" x="3433" y="2694" width="907" height="366" frameX="-0" frameY="-0" frameWidth="907" frameHeight="366"/>
+</TextureAtlas>

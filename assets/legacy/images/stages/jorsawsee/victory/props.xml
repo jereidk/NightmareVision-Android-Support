@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="props.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="headlight instance 10000" x="5" y="2686" width="715" height="1192"/>
+	<SubTexture name="smoke1 instance 10000" x="5" y="5" width="426" height="2676" frameX="0" frameY="0" frameWidth="2676" frameHeight="426" rotated="true"/>
+	<SubTexture name="smoke2 instance 10000" x="436" y="5" width="381" height="2426" frameX="0" frameY="0" frameWidth="2426" frameHeight="381" rotated="true"/>
+	<SubTexture name="smoke3 instance 10000" x="725" y="2436" width="265" height="1139" frameX="0" frameY="0" frameWidth="1139" frameHeight="265" rotated="true"/>
+</TextureAtlas>
