@@ -67,7 +67,7 @@ class ModManager implements IFlxDestroyable
 		}
 	}
 	
-	private var state:PlayState;
+	private var state:MusicBeatState;
 	
 	public var lanes:Int = 2;
 	public var keys:Int = 4;
@@ -197,7 +197,7 @@ class ModManager implements IFlxDestroyable
 		}
 	}
 	
-	public function new(state:PlayState)
+	public function new(state:MusicBeatState)
 	{
 		this.state = state;
 	}
@@ -320,7 +320,7 @@ class ModManager implements IFlxDestroyable
 		{
 			final easeFunc = CoolUtil.getEaseFromString(style);
 			
-			timeline.addEvent(new EaseEvent(step, endStep, modName, target, easeFunc, player, this));
+			timeline.addEvent(new EaseEvent(step, endStep, modName, target, easeFunc, player, this, startVal));
 		}
 	}
 	

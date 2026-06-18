@@ -4,11 +4,7 @@ import haxe.Json;
 
 import lime.system.Clipboard;
 
-#if mobile
-import extensions.openfl.net.FileReference;
-#else
 import openfl.net.FileReference;
-#end
 import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileFilter;
@@ -55,7 +51,7 @@ class WeekEditorState extends MusicBeatState
 	override function create()
 	{
 		txtWeekTitle = new FlxText(FlxG.width * 0.7, 10, 0, "", 32);
-		txtWeekTitle.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, RIGHT);
+		txtWeekTitle.setFormat("VCR OSD Mono", 32, FlxColor.WHITE, RIGHT);
 		txtWeekTitle.alpha = 0.7;
 		
 		var ui_tex = Paths.getSparrowAtlas('campaign_menu_UI_assets');
@@ -108,12 +104,8 @@ class WeekEditorState extends MusicBeatState
 		addEditorBox();
 		reloadAllShit();
 		
-		#if mobile
-		addVirtualPad(NONE, B);
-        virtualPad.buttonB.x -= 300;
-		#end
-		
 		FlxG.mouse.visible = true;
+		
 		super.create();
 	}
 	
@@ -285,7 +277,7 @@ class WeekEditorState extends MusicBeatState
 		weekBeforeInputText.text = weekFile.weekBefore;
 		
 		difficultiesInputText.text = '';
-		if (weekFile.difficulties != null) difficultiesInputText.text = weekFile.difficulties.join(',');
+		if (weekFile.difficulties != null) difficultiesInputText.text = weekFile.difficulties;
 		
 		lockedCheckbox.checked = !weekFile.startUnlocked;
 		lock.visible = lockedCheckbox.checked;
@@ -356,9 +348,9 @@ class WeekEditorState extends MusicBeatState
 		var isMissing:Bool = true;
 		if (assetName != null && assetName.length > 0)
 		{
-			if (FunkinAssets.exists(Paths.getPath('images/menus/story/$assetName.png', null, true)))
+			if (FunkinAssets.exists(Paths.getPath('images/storymenu/$assetName.png', null, true)))
 			{
-				weekThing.loadGraphic(Paths.image('menus/story/$assetName'));
+				weekThing.loadGraphic(Paths.image('storymenu/$assetName'));
 				isMissing = false;
 			}
 		}
@@ -367,7 +359,7 @@ class WeekEditorState extends MusicBeatState
 		{
 			weekThing.visible = false;
 			missingFileText.visible = true;
-			missingFileText.text = 'MISSING FILE: images/menus/story/' + assetName + '.png';
+			missingFileText.text = 'MISSING FILE: images/storymenu/' + assetName + '.png';
 		}
 		recalculateStuffPosition();
 		
@@ -442,26 +434,7 @@ class WeekEditorState extends MusicBeatState
 			}
 			else if (sender == difficultiesInputText)
 			{
-				var rawDiffString:String = difficultiesInputText.text.trim();
-				if (rawDiffString != null && rawDiffString.length > 0)
-				{
-					var diffs:Array<String> = rawDiffString.split(',');
-					var i:Int = diffs.length - 1;
-					while (i > 0)
-					{
-						if (diffs[i] != null)
-						{
-							diffs[i] = diffs[i].trim();
-							if (diffs[i].length < 1) diffs.remove(diffs[i]);
-						}
-						--i;
-					}
-					
-					if (diffs.length > 0 && diffs[0].length > 0)
-					{
-						weekFile.difficulties = diffs;
-					}
-				}
+				weekFile.difficulties = difficultiesInputText.text.trim();
 			}
 		}
 	}
@@ -486,8 +459,7 @@ class WeekEditorState extends MusicBeatState
 				FlxG.sound.volumeUpKeys = [];
 				blockInput = true;
 				
-				if (FlxG.keys.justPressed.ENTER) 
-                    inputText.hasFocus = false;
+				if (FlxG.keys.justPressed.ENTER) inputText.hasFocus = false;
 				break;
 			}
 		}
@@ -498,7 +470,7 @@ class WeekEditorState extends MusicBeatState
 			FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
 			FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
 			
-			if (FlxG.keys.justPressed.ESCAPE #if mobile || virtualPad.buttonB.justPressed #end)
+			if (FlxG.keys.justPressed.ESCAPE)
 			{
 				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
 				FunkinSound.playMusic(Paths.music('freakyMenu'));
@@ -521,16 +493,12 @@ class WeekEditorState extends MusicBeatState
 	
 	public static function loadWeek()
 	{
-        #if ios
-        PopUp.showAlert("This function is not implemented yet.", "Sorry!");
-        #else
 		var jsonFilter:FileFilter = new FileFilter('JSON', 'json');
 		_file = new FileReference();
 		_file.addEventListener(Event.SELECT, onLoadComplete);
 		_file.addEventListener(Event.CANCEL, onLoadCancel);
 		_file.addEventListener(IOErrorEvent.IO_ERROR, onLoadError);
 		_file.browse([jsonFilter]);
-        #end
 	}
 	
 	public static var loadedWeek:WeekFile = null;
@@ -541,57 +509,36 @@ class WeekEditorState extends MusicBeatState
 		_file.removeEventListener(Event.SELECT, onLoadComplete);
 		_file.removeEventListener(Event.CANCEL, onLoadCancel);
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onLoadError);
-
-        var rawJson:String = null;
 		
 		#if sys
-        @:privateAccess
-        {
-            var hasPath:Bool = (_file.__path != null && _file.__path != "");
-
-            if (hasPath)
-            {
-                rawJson = File.getContent(_file.__path);
-            }
-            else if (_file.data != null)
-            {
-                rawJson = _file.data.toString();
-            }
-        }
-        #else
-        if (_file.data != null)
-        {
-            rawJson = _file.data.toString();
-        }
-        #end
-
-		if (rawJson != null && rawJson.length > 0)
+		var fullPath:String = null;
+		@:privateAccess
+		if (_file.__path != null) fullPath = _file.__path;
+		
+		if (fullPath != null)
 		{
-			try
+			var rawJson:String = File.getContent(fullPath);
+			if (rawJson != null)
 			{
-				loadedWeek = cast haxe.Json.parse(rawJson);
-
-				if (loadedWeek.weekCharacters != null && loadedWeek.weekName != null)
+				loadedWeek = cast Json.parse(rawJson);
+				if (loadedWeek.weekCharacters != null && loadedWeek.weekName != null) // Make sure it's really a week
 				{
 					var cutName:String = _file.name.substr(0, _file.name.length - 5);
 					trace("Successfully loaded file: " + cutName);
-
 					loadError = false;
+					
 					weekFileName = cutName;
 					_file = null;
 					return;
 				}
 			}
-			catch (e:Dynamic)
-			{
-				trace("Error Parsing JSON: " + e);
-			}
 		}
-
 		loadError = true;
 		loadedWeek = null;
 		_file = null;
-		trace("Error on Loading Week: Invalid File or empty.");
+		#else
+		trace("File couldn't be loaded! You aren't on Desktop, are you?");
+		#end
 	}
 	
 	/**
@@ -623,15 +570,11 @@ class WeekEditorState extends MusicBeatState
 		var data:String = Json.stringify(weekFile, "\t");
 		if (data.length > 0)
 		{
-            #if ios
-			StorageSystem.saveContent(weekFileName, ".json", data.trim());
-			#else
 			_file = new FileReference();
 			_file.addEventListener(Event.COMPLETE, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, weekFileName + ".json");
-            #end
 		}
 	}
 	
@@ -687,7 +630,7 @@ class WeekEditorFreeplayState extends MusicBeatState
 	
 	override function create()
 	{
-		bg = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
+		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		
 		bg.color = FlxColor.WHITE;
 		add(bg);
@@ -716,11 +659,6 @@ class WeekEditorFreeplayState extends MusicBeatState
 		
 		addEditorBox();
 		changeSelection();
-
-        #if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		#end
-
 		super.create();
 	}
 	
@@ -909,7 +847,7 @@ class WeekEditorFreeplayState extends MusicBeatState
 			FlxG.sound.muteKeys = [];
 			FlxG.sound.volumeDownKeys = [];
 			FlxG.sound.volumeUpKeys = [];
-			if (FlxG.keys.justPressed.ENTER #if mobile || virtualPad.buttonA.justPressed #end)
+			if (FlxG.keys.justPressed.ENTER)
 			{
 				iconInputText.hasFocus = false;
 			}
@@ -919,14 +857,14 @@ class WeekEditorFreeplayState extends MusicBeatState
 			FlxG.sound.muteKeys = ClientPrefs.muteKeys;
 			FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
 			FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
-			if (FlxG.keys.justPressed.ESCAPE #if mobile || virtualPad.buttonB.justPressed #end)
+			if (FlxG.keys.justPressed.ESCAPE)
 			{
 				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
 				FunkinSound.playMusic(Paths.music('freakyMenu'));
 			}
 			
-			if (controls.UI_UP_P #if mobile || virtualPad.buttonUp.justPressed #end) changeSelection(-1);
-			if (controls.UI_DOWN_P #if mobile || virtualPad.buttonDown.justPressed #end) changeSelection(1);
+			if (controls.UI_UP_P) changeSelection(-1);
+			if (controls.UI_DOWN_P) changeSelection(1);
 		}
 		super.update(elapsed);
 	}

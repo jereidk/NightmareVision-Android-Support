@@ -1,8 +1,8 @@
 package funkin.data;
 
 import funkin.backend.Difficulty;
-import funkin.data.StageData;
 import funkin.data.Song;
+import funkin.data.StageData;
 
 import haxe.Json;
 
@@ -28,6 +28,7 @@ class Chart
 	 */
 	public static function fromPath(path:String):Song
 	{
+		path = Paths.sanitize(path);
 		if (!FunkinAssets.exists(path))
 		{
 			throw 'couldnt find chart at ($path)';
@@ -46,11 +47,12 @@ class Chart
 	{
 		songName = Paths.sanitize(songName);
 		
-		var path = Paths.json('$songName/charts/${Difficulty.getDifficultyFilePath(difficulty)}');
+		final path = Paths.json('$songName/data/${Difficulty.getDifficultyFilePath(difficulty)}');
 		
-		if (!FunkinAssets.exists(path)) path = Paths.json('$songName/data/${Difficulty.getDifficultyFilePath(difficulty)}');
-		
-		if (!FunkinAssets.exists(path)) throw 'couldnt find chart at ($path)';
+		if (!FunkinAssets.exists(path))
+		{
+			throw 'couldnt find chart at ($path)';
+		}
 		
 		return fromData(FunkinAssets.parseJson(FunkinAssets.getContent(path)));
 	}
@@ -169,7 +171,7 @@ class Chart
 				}
 			}
 			
-			trace('transformed the notes #awesome');
+			#if VERBOSE_LOGS trace('transformed the notes #awesome'); #end
 		}
 		
 		for (section in sectionsData)

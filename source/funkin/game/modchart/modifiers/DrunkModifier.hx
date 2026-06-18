@@ -50,15 +50,13 @@ class DrunkModifier extends NoteModifier
 	override function getSubmods()
 	{
 		return [
+			"tipsy",
+			"bumpy",
 			"drunkSpeed",
 			"drunkOffset",
 			"drunkPeriod",
-			
-			"tipsy",
 			"tipsySpeed",
 			"tipsyOffset",
-			
-			"bumpy",
 			"bumpyOffset",
 			"bumpyPeriod",
 			

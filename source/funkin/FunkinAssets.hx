@@ -109,15 +109,12 @@ class FunkinAssets
 	 */
 	public static function exists(path:String, ?type:AssetType):Bool
 	{
-		var exists:Bool = false;
-		
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(path)) exists = true;
+		if (FileSystem.exists(path)) return true;
 		else
 		#end
-		if (Assets.exists(path, type)) exists = true;
-		
-		return exists;
+		if (Assets.exists(path, type)) return true;
+		else return false;
 	}
 	
 	/**

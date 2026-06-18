@@ -34,5 +34,12 @@ class StoryMeta
 	 */
 	public var misses:Int = 0;
 	
+	/**
+	 * The selected currency
+	 * 
+	 * Only in Freeplay
+	 */
+	public var currency:String = 'beans';
+	
 	public function new() {}
 }

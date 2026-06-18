@@ -2,6 +2,7 @@ package funkin.utils;
 
 import flixel.input.gamepad.FlxGamepad;
 import flixel.input.gamepad.FlxGamepadInputID;
+
 import lime.ui.Gamepad as LimeGamepad;
 import lime.ui.GamepadAxis as LimeGamepadAxis;
 import lime.ui.GamepadButton as LimeGamepadButton;
@@ -19,22 +20,35 @@ class FlxGamepadUtil
 		#else
 		final OFFSET:Int = 0;
 		#end
-
+		
 		var result:FlxGamepadInputID = gamepad.mapping.getID(button + OFFSET);
-		if (result == NONE)
-			return NONE;
+		if (result == NONE) return NONE;
 		return result;
 	}
-
+	
 	public static function getLimeGamepad(input:FlxGamepad):Null<LimeGamepad>
 	{
-		#if FLX_GAMEINPUT_API @:privateAccess
-		return input._device.__gamepad;
+		#if FLX_GAMEINPUT_API
+		@:privateAccess
+		{
+			var inputDevice = input?._device;
+			if (inputDevice == null) return null; // apparenty this can get null ? i dont know tbh but it happened to me
+			
+			return (inputDevice.__gamepad ?? // for some reason this is NEVER DEFINED IN official openfl libary so just look for it in gameinput
+				{
+					for (gamepad => device in openfl.ui.GameInput.__devices) // fuking stupid
+					{
+						if (device == inputDevice) return gamepad;
+					}
+					
+					return null;
+				});
+		}
 		#else
 		return null;
 		#end
 	}
-
+	
 	@:privateAccess
 	public static function getFlxGamepadByLimeGamepad(gamepad:LimeGamepad):FlxGamepad
 	{

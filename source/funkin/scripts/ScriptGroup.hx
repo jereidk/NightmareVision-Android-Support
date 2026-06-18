@@ -8,6 +8,8 @@ import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
 /**
  * Container of `FunkinScript` instances
+ * 
+ * idea from friens static fyr thanks
  */
 @:nullSafety(Strict)
 class ScriptGroup implements IFlxDestroyable
@@ -81,22 +83,18 @@ class ScriptGroup implements IFlxDestroyable
 	public function call(event:String, ?args:Array<Dynamic>, ignoreStops:Bool = false, ?exclusions:Array<String>):Dynamic
 	{
 		exclusions ??= [];
+		
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
+		
 		for (i in members)
 		{
-			if (i == null || !i.exists(event) || exclusions.contains(i.name))
-			{
-				continue;
-			}
+			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
 			
 			var ret:Dynamic = i.call(event, args)?.returnValue;
+			
 			if (ret != null)
 			{
-				if (ret == ScriptConstants.HALT_FUNC)
-				{
-					ret = returnVal;
-					if (!ignoreStops) return returnVal;
-				};
+				if (ScriptConstants.halting(ret) && !ignoreStops) return ret;
 				
 				if (ret != ScriptConstants.CONTINUE_FUNC) returnVal = ret;
 			}

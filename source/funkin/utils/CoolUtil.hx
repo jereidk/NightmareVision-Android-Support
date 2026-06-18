@@ -6,7 +6,7 @@ import flixel.addons.transition.FlxTransitionableState;
 import flixel.FlxG;
 
 /**
-	General Utility class
+	General Utility class for more one off functions
 **/
 @:nullSafety(Strict)
 class CoolUtil
@@ -63,6 +63,35 @@ class CoolUtil
 		}
 		
 		return daList;
+	}
+	
+	/**
+	 * Merges two dynamic objects.
+	 * This operation will directly modify `obj` in place if can be merged, or return `with` otherwise.
+	 * If `obj` and `with` are Json objects, `with` will add and/or overwrite fields.
+	 * 
+	 * @param obj The initial object
+	 * @param with The object to merge `obj` with
+	 */
+	public static function merge(obj:Dynamic, with:Dynamic):Dynamic
+	{
+		// um ,.. yeag
+		
+		if (obj == null || !Reflect.isObject(obj))
+		{
+			return with;
+		}
+		else if (with == null || !Reflect.isObject(with))
+		{
+			return obj;
+		}
+		
+		for (field in Reflect.fields(with))
+		{
+			Reflect.setField(obj, field, merge(Reflect.field(obj, field), Reflect.field(with, field)));
+		}
+		
+		return obj;
 	}
 	
 	/**
@@ -207,12 +236,28 @@ class CoolUtil
 	/**
 	 * Gets a `openfl.display.BlendMode` from a string
 	 */
-	public static function getBlendFromString(?blend:String):BlendMode
+	public static function getBlendFromString(blend:Null<String>):BlendMode
 	{
 		if (blend == null) return BlendMode.NORMAL;
-		
-		@:privateAccess
-		return BlendMode.fromString(blend.toLowerCase().trim()) ?? NORMAL;
+		return switch (blend.toLowerCase().trim())
+		{
+			case 'add': BlendMode.ADD;
+			case 'alpha': BlendMode.ALPHA;
+			case 'darken': BlendMode.DARKEN;
+			case 'difference': BlendMode.DIFFERENCE;
+			case 'erase': BlendMode.ERASE;
+			case 'hardlight': BlendMode.HARDLIGHT;
+			case 'invert': BlendMode.INVERT;
+			case 'layer': BlendMode.LAYER;
+			case 'lighten': BlendMode.LIGHTEN;
+			case 'multiply': BlendMode.MULTIPLY;
+			case 'normal': BlendMode.NORMAL;
+			case 'overlay': BlendMode.OVERLAY;
+			case 'screen': BlendMode.SCREEN;
+			case 'shader': BlendMode.SHADER;
+			case 'subtract': BlendMode.SUBTRACT;
+			default: BlendMode.NORMAL;
+		}
 	}
 	
 	/**

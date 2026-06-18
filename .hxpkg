@@ -28,7 +28,7 @@
             {
                 "name": "hscript-iris",
                 "link": "https://github.com/pisayesiwsi/hscript-iris",
-                "branch": "dev"
+                "branch": "62d828b5f9100867bb30becd5c9fa251b138ba1a"
             },
             {
                 "name": "hxcpp-debug-server",
@@ -86,6 +86,15 @@
             {
                 "name": "json5hx",
                 "version": "1.0.2"
+            },
+            {
+                "name": "json2object",
+                "link": "https://github.com/FunkinCrew/json2object",
+                "branch": "a8c26f18463c98da32f744c214fe02273e1823fa"
+            },
+            {
+                "name": "hxjsonast",
+                "version": "1.1.0"
             },
             {
                 "name": "android-manager",

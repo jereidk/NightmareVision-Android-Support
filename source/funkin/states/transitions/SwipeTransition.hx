@@ -13,6 +13,7 @@ class SwipeTransition extends BaseTransitionState
 {
 	var gradientFill:FlxSprite;
 	var gradient:FlxSprite;
+	var tipText:FlxText;
 	
 	public override function update(elapsed:Float)
 	{
@@ -51,6 +52,13 @@ class SwipeTransition extends BaseTransitionState
 		gradientFill.scrollFactor.set();
 		add(gradientFill);
 		add(gradient);
+		
+		// This would work a lot better but for some reason it creates twice??? weird
+		// and dont work on freeplya for some fuckin reason
+		// tipText = new FlxText(0, FlxG.height, FlxG.width, FlxG.random.getObject(TitleState.funFacts));
+		// tipText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		// tipText.y -= tipText.height;
+		// add(tipText);
 		
 		FlxTween.tween(gradient, {y: yEnd}, duration, {onComplete: Void -> dispatchFinish()});
 		

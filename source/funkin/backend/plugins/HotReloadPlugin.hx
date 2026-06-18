@@ -38,8 +38,6 @@ class HotReloadPlugin extends FlxBasic
 		{
 			FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
 			FlxG.resetState();
-			
-			Mods.applyModConfig();
 		}
 		
 		if (FlxG.keys.justPressed.F6)
@@ -49,11 +47,22 @@ class HotReloadPlugin extends FlxBasic
 				FunkinAssets.cache.clearUnusedMemory();
 			});
 			funkin.scripting.PluginsManager.populate();
-			
+			funkin.data.GameFlags.getAwards(true);
+			funkin.data.Lang.reloadLangFile();
 			FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
 			FlxG.resetState();
 			
-			Mods.applyModConfig();
+			funkin.Mods.loadTopMod();
+		}
+		if (FlxG.keys.justPressed.F7)
+		{
+			funkin.data.Lang.reloadLangFile();
+			FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
+			FlxG.resetState();
+		}
+		if (FlxG.keys.justPressed.F9 && ClientPrefs.inDevMode)
+		{
+			throw 'Triggered a manual crash';
 		}
 	}
 }

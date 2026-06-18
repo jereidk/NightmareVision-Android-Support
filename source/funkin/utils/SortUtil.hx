@@ -9,31 +9,11 @@ import flixel.util.FlxSort;
 class SortUtil
 {
 	/**
-		Sorts by Note time
-	**/
-	public static inline function sortByStrumTime(a:funkin.objects.note.Note, b:funkin.objects.note.Note):Int
-	{
-		if (a == null || b == null) return 0;
-		
-		return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime);
-	}
-	
-	/**
 		Sorts by floats
 	**/
 	public static inline function laserSort(a:Float, b:Float):Int
 	{
 		return FlxSort.byValues(FlxSort.ASCENDING, a, b);
-	}
-	
-	/**
-		Sorts by Event notes time
-	**/
-	public static inline function sortByTime(a:funkin.objects.note.Note.EventNote, b:funkin.objects.note.Note.EventNote):Int
-	{
-		if (a == null || b == null) return 0;
-		
-		return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime);
 	}
 	
 	/**

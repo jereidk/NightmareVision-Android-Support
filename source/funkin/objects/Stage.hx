@@ -15,7 +15,7 @@ import funkin.scripts.FunkinScript;
  * Besides whatever else is added, it contains the characters as well.
  */
 @:nullSafety(Strict)
-class Stage extends FlxTypedContainer<FlxBasic>
+class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 {
 	/**
 	 * Attached script to the stage
@@ -31,6 +31,8 @@ class Stage extends FlxTypedContainer<FlxBasic>
 	 * The json info from the current stage
 	 */
 	public final stageData:StageFile;
+	
+	public var flags:haxe.DynamicAccess<Dynamic>;
 	
 	/**
 	 * Registered objects of the stage.
@@ -60,6 +62,8 @@ class Stage extends FlxTypedContainer<FlxBasic>
 		this.curStage = curStage;
 		
 		stageData = StageData.getStageFile(curStage) ?? funkin.data.StageData.getTemplateStageFile();
+		
+		flags = (stageData.flags ?? {});
 	}
 	
 	/**
@@ -86,7 +90,7 @@ class Stage extends FlxTypedContainer<FlxBasic>
 						{
 							(cast obj : Bopper).loadAtlas(info.asset);
 							
-							if (obj.frames == null) obj.loadGraphic(Paths.image(info.asset));
+							if (obj.frames == null && (cast obj : Bopper).animateAtlas == null) obj.loadGraphic(Paths.image(info.asset));
 						}
 					}
 					else
@@ -143,8 +147,7 @@ class Stage extends FlxTypedContainer<FlxBasic>
 				if (info.id != null)
 				{
 					final objId = info.id ?? ''; // we null checked already but to shut up null safety
-					final objToLower = objId.toLowerCase();
-					if (objects.exists(objId) || objToLower == 'gf' || objToLower == 'dad' || objToLower == 'boyfriend')
+					if (objects.exists(info.id))
 					{
 						Logger.log('Object cannot use id($objId) as it is in use.', WARN, true);
 					}
@@ -322,5 +325,15 @@ class Stage extends FlxTypedContainer<FlxBasic>
 		}
 		
 		return new Bopper();
+	}
+	
+	public function hasFlag(flag:String):Bool
+	{
+		return flags.exists(flag);
+	}
+	
+	public function getFlag(flag:String):Dynamic
+	{
+		return flags.get(flag);
 	}
 }

@@ -1,11 +1,11 @@
 package funkin.video;
 
 // sigh rework coming again soon
-import funkin.input.Controls;
-
 #if VIDEOS_ALLOWED
 import hxvlc.flixel.FlxVideoSprite;
 import hxvlc.util.Location;
+
+import funkin.objects.FunkinCaption;
 
 // with hxvlcs improvements this is less needed but still has its values
 
@@ -30,6 +30,7 @@ import hxvlc.util.Location;
  * 	}
  * ```
  */
+@:access(hxvlc.openfl.Video)
 class FunkinVideoSprite extends FlxVideoSprite
 {
 	/**
@@ -73,69 +74,7 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 */
 	public var tiedToGame:Bool = true;
 	
-	/**
-	 * Bool that decides if the video can be skipped.
-	 */
-	public var canSkip:Bool = false;
-	
-	/**
-	 * The playback speed of the video. 1.0 is normal speed.
-	 */
-	public var playbackRate(default, set):Float = 1.0;
-	
-	function set_playbackRate(value:Float):Float
-	{
-		if (bitmap != null) bitmap.rate = value;
-		
-		return playbackRate = value;
-	}
-	
-	/** Returns whether the video is currently playing. */
-	public var isPlaying(get, never):Bool;
-	
-	inline function get_isPlaying():Bool return bitmap != null && bitmap.isPlaying;
-	
-	/**
-	 * Returns a normalized progress value (`0.0` to `1.0`) representing
-	 * how far through the video playback currently is.
-	 * Returns `0.0` if the video has no duration.
-	 */
-	public var progress(get, never):Float;
-	
-	inline function get_progress():Float
-	{
-		if (bitmap == null || bitmap.length <= 0) return 0.0;
-		return (haxe.Int64.toInt(bitmap.time) : Float) / (haxe.Int64.toInt(bitmap.length) : Float);
-	}
-	
-	/**
-	 * Returns the current playback position in milliseconds.
-	 * Returns `-1` if the bitmap is unavailable.
-	 */
-	public var currentTime(get, never):Int;
-	
-	inline function get_currentTime():Int return bitmap != null ? haxe.Int64.toInt(bitmap.length) : -1;
-	
-	/**
-	 * Returns the total duration of the loaded video in milliseconds.
-	 * Returns `-1` if unavailable or not yet loaded.
-	 */
-	public var duration(get, never):Int;
-	
-	inline function get_duration():Int return bitmap != null ? haxe.Int64.toInt(bitmap.length) : -1;
-	
-	/**
-	 * Sets the volume of the video's audio. Range is `0.0` (silent) to `1.0` (full).
-	 * Values are clamped to this range automatically.
-	 */
-	public var volume(default, set):Float = 1.0;
-	
-	function set_volume(value:Float):Float
-	{
-		value = FlxMath.bound(value, 0.0, 1.0);
-		if (bitmap != null) bitmap.volume = Std.int(value * 100);
-		return volume = value;
-	}
+	public var captions:FunkinCaptionGroup;
 	
 	/**
 	 * Creates a new FunkinVideoSprite
@@ -143,13 +82,15 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 * @param y `y` position
 	 * @param oneTimeUse if `true` on video complete, the video will self destroy
 	 */
-	public function new(x:Float = 0, y:Float = 0, oneTimeUse:Bool = true, isSkippable = false)
+	public function new(x:Float = 0, y:Float = 0, oneTimeUse:Bool = true)
 	{
 		super(x, y);
-		canSkip = isSkippable;
-		if (oneTimeUse) bitmap.onEndReached.add(this.destroy, true, -10);
 		
 		instances.push(this);
+		
+		captions = new FunkinCaptionGroup();
+		
+		if (oneTimeUse) bitmap.onEndReached.add(this.destroy, true, -10);
 	}
 	
 	/**
@@ -160,22 +101,8 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 */
 	public function delayAndStart(delay:Float = 0)
 	{
-		FlxTimer.wait(delay, function() {
-			if (bitmap != null) play();
-		});
+		FlxTimer.wait(delay, play);
 	}
-	
-	// flxvideosprite already contains these 2
-	// /** Pauses the video. */
-	// public function pause()
-	// {
-	// 	if (bitmap != null) bitmap.pause();
-	// }
-	// /** Resumes the video. */
-	// public function resume()
-	// {
-	// 	if (bitmap != null) bitmap.resume();
-	// }
 	
 	/**
 	 * Adds a event to be dispatched when the video reaches its end
@@ -184,7 +111,7 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 */
 	public function onEnd(func:Void->Void, once:Bool = false, priority:Int = 0)
 	{
-		if (bitmap != null) bitmap.onEndReached.add(func, once, priority);
+		bitmap.onEndReached.add(func, once, priority);
 	}
 	
 	/**
@@ -194,43 +121,7 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 */
 	public function onStart(func:Void->Void, once:Bool = false, priority:Int = 0)
 	{
-		if (bitmap != null) bitmap.onOpening.add(func, once, priority);
-	}
-	
-	/**
-	 * Adds a callback to be dispatched when the video is paused.
-	 * 
-	 * @param func The function to call when the video pauses.
-	 * @param once If `true`, the callback fires only once.
-	 * @param priority Signal priority for dispatch ordering.
-	 */
-	public function onPause(func:Void->Void, once:Bool = false, priority:Int = 0)
-	{
-		if (bitmap != null) bitmap.onPaused.add(func, once, priority);
-	}
-	
-	/**
-	 * Adds a callback dispatched when the video is stopped (not paused — fully stopped).
-	 * 
-	 * @param func The function to call on stop.
-	 * @param once If `true`, the callback fires only once.
-	 * @param priority Signal priority for dispatch ordering.
-	 */
-	public function onStop(func:Void->Void, once:Bool = false, priority:Int = 0)
-	{
-		if (bitmap != null) bitmap.onStopped.add(func, once, priority);
-	}
-	
-	/**
-	 * Adds a callback dispatched when an error is encountered during playback or loading.
-	 * 
-	 * @param func The function to call on error. Receives no parameters.
-	 * @param once If `true`, the callback fires only once.
-	 * @param priority Signal priority for dispatch ordering.
-	 */
-	public function onError(func:String->Void, once:Bool = false, priority:Int = 0)
-	{
-		if (bitmap != null) bitmap.onEncounteredError.add(func, once, priority);
+		bitmap.onOpening.add(func, once, priority);
 	}
 	
 	/**
@@ -250,58 +141,81 @@ class FunkinVideoSprite extends FlxVideoSprite
 	 */
 	public function onFormat(func:Void->Void, once:Bool = false, priority:Int = 0)
 	{
-		if (bitmap != null) bitmap.onFormatSetup.add(func, once, priority);
+		bitmap.onFormatSetup.add(func, once, priority);
 	}
 	
-	/**
-	 * Stops the video immediately and triggers the onEndReached event.
-	 * Useful for skipping cutscenes.
-	 */
-	public function skip()
+	var _time:Float = -1;
+	var _lastTime:Float = -1;
+	public var time(get, set):Float;
+	public var length(get, never):Float;
+	public var playing(get, never):Bool;
+	public var percent(get, never):Float;
+	
+	public override function update(elapsed:Float):Void // flxsound reference
 	{
-		if (bitmap != null && bitmap.isPlaying)
+		super.update(elapsed);
+		
+		if (playing) _time += elapsed;
+		
+		final secs:Float = (int64ToFloat(bitmap.time) / 1000);
+		
+		if (Math.abs(secs - _lastTime) > 1 / 60) _time = secs;
+		
+		_lastTime = secs;
+		
+		if (ClientPrefs.subtitles)
 		{
-			bitmap.stop();
+			captions.time = time;
+			
+			captions.update(elapsed);
 		}
 	}
 	
-	/**
-	 * Seeks to a specific time position in the video.
-	 * 
-	 * @param time The time in milliseconds to seek to.
-	 */
-	public function seekTo(time:Int)
+	public override function draw():Void
 	{
-		if (bitmap != null) bitmap.time = time;
-	}
-	
-	/**
-	 * Seeks to a normalized position in the video.
-	 * 
-	 * @param value A value from `0.0` (start) to `1.0` (end).
-	 */
-	public function seekToProgress(value:Float)
-	{
-		if (bitmap != null && bitmap.length > 0) bitmap.time = haxe.Int64.ofInt(Std.int(FlxMath.bound(value, 0.0, 1.0) * haxe.Int64.toInt(bitmap.length)));
-	}
-	
-	override public function update(elapsed:Float)
-	{
-		if (canSkip && Controls.instance.ACCEPT)
+		super.draw();
+		
+		if (ClientPrefs.subtitles)
 		{
-			skip();
+			captions.cameras = cameras;
+			captions.draw();
 		}
 	}
 	
-	/**
-	 * Quickly scales and centers the video to fit the entire screen.
-	 * Best used inside the `onFormat` callback!
-	 */
-	public function fitToScreen()
+	inline function get_time():Float return _time;
+	inline function set_time(secs:Float):Float
 	{
-		setGraphicSize(FlxG.width, FlxG.height);
-		updateHitbox();
-		screenCenter();
+		if (bitmap.mediaPlayer == null) return secs;
+		
+		bitmap.time = haxe.Int64.fromFloat(secs * 1000);
+		return secs;
+	}
+	
+	inline function get_length():Float return (bitmap.length > -1 ? (int64ToFloat(bitmap.length) / 1000) : -1);
+	inline function get_playing():Bool return bitmap.isPlaying;
+	inline function get_percent():Float return bitmap.position;
+	
+	inline function int64ToFloat(int:haxe.Int64):Float return (int.high * 4294967296. + (int.low >>> 0)); // thanks stack overflow
+	
+	public override function load(location:hxvlc.util.Location, ?options:Array<String>):Bool
+	{
+		captions.empty();
+		
+		if (location is String)
+		{
+			final srtPath:String = '${location.withoutExtension()}.srt';
+			
+			if (FunkinAssets.exists(srtPath))
+			{
+				final srt:String = FunkinAssets.getContent(srtPath);
+				
+				captions.preload(FunkinCaption.parseSrt(srt));
+				
+				#if VERBOSE_LOGS trace('loaded srt $srtPath'); #end
+			}
+		}
+		
+		return super.load(location, options);
 	}
 	
 	override function destroy()
@@ -311,10 +225,9 @@ class FunkinVideoSprite extends FlxVideoSprite
 		if (bitmap != null)
 		{
 			bitmap.stop();
+			
 			bitmap.onEndReached.removeAll();
-			
 			bitmap.onFormatSetup.removeAll();
-			
 			bitmap.onOpening.removeAll();
 			
 			if (FlxG.signals.focusGained.has(bitmap.resume)) FlxG.signals.focusGained.remove(bitmap.resume);

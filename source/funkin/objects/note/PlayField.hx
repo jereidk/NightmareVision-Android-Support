@@ -8,21 +8,18 @@ import flixel.tweens.FlxTween;
 import flixel.group.FlxGroup.FlxTypedGroup;
 
 import funkin.objects.Character;
+import funkin.game.Rating;
 import funkin.data.*;
 
 typedef NoteSignal = FlxTypedSignal<(Note, PlayField) -> Void>;
 
 class PlayField extends FlxTypedContainer<StrumNote>
 {
-	public static final UNDERLAY_PADDING:Float = 15;
-	
 	public var _skin:NoteSkin;
 	
-	public var owner(default, set):Character;
+	public var owner(get, set):Character;
 	public var singers:Array<Null<Character>> = [];
 	public var quants(default, set):Bool = ClientPrefs.quants;
-	
-	public var hasChangedSkin:Bool = false;
 	
 	private function set_quants(value:Bool)
 	{
@@ -40,19 +37,22 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		return value;
 	}
 	
-	private function set_owner(value:Character)
+	function set_owner(value:Character)
 	{
-		owner = value;
-		
 		singers.remove(owner);
-		singers.unshift(owner);
+		singers.unshift(value);
 		
 		return value;
 	}
 	
+	function get_owner():Character
+	{
+		return singers[0];
+	}
+	
 	public var onNoteHit:NoteSignal = new NoteSignal();
 	public var onNoteMiss:NoteSignal = new NoteSignal();
-	public var onMissPress:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
+	public var onMissPress:FlxTypedSignal<(Int, PlayField) -> Void> = new FlxTypedSignal<(Int, PlayField) -> Void>();
 	
 	public var playAnims:Bool = true;
 	public var noteSplashes:Bool = false;
@@ -66,6 +66,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	
 	public var notes:Array<Note> = [];
 	public var keyCount(default, set):Int = 0;
+	
+	public var underlay:LaneUnderlay;
 	
 	public var swagWidth(get, never):Float;
 	
@@ -83,8 +85,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public var player:Int = 0;
 	public var alpha(default, set):Float = 1;
 	
-	public var underlaySpr:FlxSprite;
-	public var underlayAlphaMult:Float = 1;
+	public var holdDropLeniency:Float = (1 / 3);
 	
 	public function set_alpha(value:Float)
 	{
@@ -128,8 +129,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	**/
 	public var grpSusSplashes:FlxTypedContainer<SustainSplash>;
 	
-	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default',
-			?_skinInput:Null<NoteSkin> = null)
+	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default')
 	{
 		super();
 		if (playerControls == null) playerControls = isPlayer;
@@ -145,12 +145,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		this.baseY = y;
 		this.keyCount = keyCount;
 		
-		if (_skinInput != null) this._skin = _skinInput;
-		else
-		{
-			this._skin = new NoteSkin(skin, keyCount, player);
-			NoteUtil.noteskins.push(this._skin);
-		}
+		underlay = new LaneUnderlay(this);
+		underlay.baseAlpha = ClientPrefs.laneUnderlayAlpha;
+		
+		this._skin = new NoteSkin(skin, keyCount, player);
+		NoteUtil.noteskins.push(this._skin);
 		
 		splashLayer = new FlxTypedContainer();
 		
@@ -166,75 +165,12 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		grpSusSplashes.add(sus);
 		sus.alpha = 0.0;
 		
-		underlaySpr = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
-		underlaySpr.color = FlxColor.BLACK;
-		underlaySpr.alpha = 0;
-		underlaySpr.scrollFactor.set();
-		
 		splashLayer.add(grpSusSplashes);
 		splashLayer.add(grpNoteSplashes);
 		
 		this.onNoteHit.add(noteHit);
 		this.onNoteMiss.add(noteMiss);
 		this.onMissPress.add(noteMissPress);
-	}
-	
-	override function draw()
-	{
-		if (underlaySpr.exists && ClientPrefs.underlayOpacity > 0 && ClientPrefs.underlayType == FIELD)
-		{
-			var minX:Float = Math.POSITIVE_INFINITY;
-			var maxX:Float = Math.NEGATIVE_INFINITY;
-			
-			for (strum in members)
-			{
-				if (strum != null && strum.exists && strum.visible)
-				{
-					minX = Math.min(minX, strum.x);
-					maxX = Math.max(maxX, strum.x + strum.width);
-				}
-			}
-			
-			forEachAliveNote((daNote:Note) -> {
-				if (daNote.isOnScreen())
-				{
-					minX = Math.min(minX, daNote.x);
-					maxX = Math.max(maxX, daNote.x + daNote.width);
-				}
-			});
-			
-			final targetX = minX - UNDERLAY_PADDING;
-			final targetW = (maxX - minX) + (UNDERLAY_PADDING * 2);
-			
-			underlaySpr.x = targetX;
-			
-			underlaySpr.scale.x = targetW;
-			underlaySpr.scale.y = camera.viewHeight;
-			underlaySpr.screenCenter(Y);
-			underlaySpr.updateHitbox();
-			
-			underlaySpr.camera = getDefaultCamera();
-			underlaySpr.alpha = ClientPrefs.underlayOpacity * underlayAlphaMult;
-			
-			if (PlayState.instance.modManager != null) // temp
-			{
-				final mgr = PlayState.instance.modManager;
-				
-				inline function getMgrVal(mod:String)
-				{
-					var val = mgr.getValue(mod, player);
-					
-					val = 1 - val;
-					return val;
-				}
-				
-				underlaySpr.alpha *= getMgrVal("alpha") * getMgrVal("dark");
-			}
-			
-			underlaySpr.draw();
-		}
-		
-		super.draw();
 	}
 	
 	public function clearReceptors()
@@ -298,12 +234,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public inline function removeNote(note:Note)
 	{
 		notes.remove(note);
+		
 		note.scale.copyFrom(note.baseScale);
 		note.updateHitbox();
 		
 		if (note.playField == this) note.playField = null;
-		
-		if (PlayState.instance != null) PlayState.instance.notes.remove(note, true);
 	}
 	
 	public inline function addNote(note:Note)
@@ -316,16 +251,17 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		note.skin = _skin;
 		note.texture = _skin.noteTexture;
 		note.rgbEnabled = _skin.inEngineColoring;
-		note.rgbGraphics.enabled = note.rgbEnabled;
-		
-		if (hasChangedSkin) note.updateColors();
+		note.rgbShader.enabled = note.rgbEnabled;
 		
 		note.baseScale.copyFrom(note.scale);
 		note.updateHitbox();
+		
 		if (note.playField != this || note.playField == null) note.playField = this;
+		
+		note.strum = members[note.noteData];
 	}
 	
-	public inline function forEachAliveNote(func:Note->Void)
+	public function forEachAliveNote(func:Note->Void)
 	{
 		for (note in notes)
 			if (note != null && note.exists && note.alive) func(note);
@@ -338,7 +274,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		removeNote(note);
 	}
 	
-	public function noteHit(note:Note, field:PlayField):Void
+	public static function noteHit(note:Note, field:PlayField):Void
 	{
 		var scriptFunc:String = '';
 		if (field.playerControls) scriptFunc = 'goodNoteHit';
@@ -348,10 +284,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		
 		PlayState.instance.scripts.call('${scriptFunc}Pre', scriptArgs);
 		
-		final strum:StrumNote = field.members[note.noteData];
+		final strum:StrumNote = note.strum;
+		
 		if (strum != null)
 		{
-			strum.lastNote = note;
+			strum.copyNoteColor(note);
 			strum.playAnim('confirm', true);
 			
 			if (field.autoPlayed)
@@ -366,8 +303,16 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		
 		if (!note.isSustainNote)
 		{
-			for (sustain in note.tail)
-				sustain.blockHit = false; // makes the hold note active when you press the base note
+			for (sustain in note.tail) // makes the hold note active when you press the base note
+			{
+				if (sustain.parent != note) continue; // ignore notes that have already been recycled
+				
+				sustain.blockHit = false;
+			}
+		}
+		else if (strum != null)
+		{
+			strum.coyoteTime = field.holdDropLeniency;
 		}
 		
 		if (field.playerControls)
@@ -382,7 +327,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 				
 				note.wasGoodHit = true;
 				
-				if (!note.isSustainNote) disposeNote(note);
+				if (!note.isSustainNote) field.disposeNote(note);
 				
 				return;
 			}
@@ -390,10 +335,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
 			
 			PlayState.instance.health += note.hitHealth * PlayState.instance.healthGain * susMult;
+			PlayState.instance.missCombo = 0;
 		}
 		
 		var chars:Array<Null<Character>> = note.gfNote ? [PlayState.instance.gf] : field.singers;
-		if (note.owner != null) chars = [note.owner];
+		if (note.owner != null) chars = (note.singers != null && note.singers.length > 0 ? note.singers : [note.owner]);
 		
 		for (char in chars)
 			if (char != null) characterSing(char, note, field.playerControls);
@@ -403,28 +349,38 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		var shouldSplash:Bool = true;
 		if (field.playerControls)
 		{
-			var ratingThing:funkin.game.Rating = funkin.game.Rating.judgeNote(note, Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) / PlayState.instance?.playbackRate);
-			
-			shouldSplash = (ratingThing.name == 'sick' || ratingThing.name == 'epic');
+			shouldSplash = ((note.ratingData = Rating.judgeNote(note, Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) / PlayState.instance?.playbackRate)).ratingMod >= 1);
 		}
 		
 		if (field.noteSplashes && shouldSplash) field.spawnSplash(note);
-		
-		spawnSusSplash(note, field.playerControls);
+		field.spawnSusSplash(note, field.playerControls);
 		
 		final globalScript = PlayState.instance.callNoteTypeScript(note.noteType, 'hit', scriptArgs);
 		
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, scriptFunc, scriptArgs);
 		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, [note.noteType]);
 		
-		if (!note.isSustainNote) disposeNote(note);
+		if (!note.isSustainNote) field.disposeNote(note);
 	}
 	
-	function noteMiss(note:Note, field:PlayField):Void
+	public static function noteMiss(note:Note, field:PlayField):Void
 	{
 		final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
 		
-		PlayState.instance.health -= note.missHealth * PlayState.instance.healthLoss * susMult;
+		if (field.playerControls)
+		{
+			final missMult:Float = (note.missHealth * PlayState.instance.healthLoss);
+			
+			if (!note.isSustainNote)
+			{
+				var combo = (++ PlayState.instance.missCombo);
+				PlayState.instance.health -= (missMult * (combo + 1) / 2);
+			}
+			else
+			{
+				PlayState.instance.health -= (missMult * susMult);
+			}
+		}
 		
 		for (owner in field.singers)
 		{
@@ -438,7 +394,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 					var daAlt = '';
 					if (note.noteType == 'Alt Animation') daAlt = '-alt';
 					
-					var animToPlay:String = _skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss' + daAlt;
+					var animToPlay:String = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss' + daAlt;
 					char.playAnim(animToPlay, true);
 					char.holdTimer = 0;
 				}
@@ -453,43 +409,32 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		// hold note missing stuff, makes the hold unhittable (and kills it, might make it just transparent if i can fix some stuff)
 		if (!note.hitCausesMiss && !note.canMiss)
 		{
-			final tail = (note.isSustainNote ? note.parent.tail : note.tail);
-			for (sustain in tail)
+			note.tailState.missed = true;
+			
+			for (sustain in note.tail)
 			{
+				if (sustain.parent != note.parent) continue; // ignore notes that have already been recycled
+				
+				sustain.tooLate = true;
 				sustain.blockHit = true;
 				sustain.ignoreNote = true;
-				sustain.alphaMod *= 0.3;
+				sustain.copyAlpha = false;
+				sustain.alpha = 0.3;
 			}
 		}
-		
-		// if the sustain splash exists, KILL KIL KILL IT KILL KI L KLLK LSKD:LKLK
-		for (i in grpSusSplashes.members)
-		{
-			if (i.data == note.noteData)
-			{
-				// actually.. no need to kill it.. itll kill itself anwyays
-				i.alpha = 0.0;
-				i.visible = false;
-			}
-		}
-		
-		note.alphaMod *= 0.3;
 	}
 	
-	function noteMissPress(key:Int):Void
+	public static function noteMissPress(key:Int, field:PlayField):Void
 	{
-		if (ClientPrefs.ghostTapping) return;
-		
-		final char = PlayState.instance.playerStrums?.owner ?? PlayState.instance.boyfriend;
-		var gf = PlayState.instance.gf;
-		
-		if (!char.stunned)
+		for (char in field.singers)
 		{
-			PlayState.instance.health -= 0.05 * PlayState.instance.healthLoss;
+			if (char == null) continue;
 			
-			FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
-			
-			if (char.animTimer <= 0) char.playAnim(_skin.singAnimations[Std.int(Math.abs(key))] + 'miss', true);
+			if (char.animTimer <= 0)
+			{
+				char.playAnim(field._skin.singAnimations[Std.int(Math.abs(key))] + 'miss', true);
+				char.holdTimer = 0;
+			}
 		}
 	}
 	
@@ -555,12 +500,10 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			final strum:Null<StrumNote> = note.playField.members[note.noteData];
 			if (strum != null)
 			{
-				final data = note.noteData;
 				final skin:String = _skin.splashTexture;
-				final colors = note.rgbGraphics;
 				
 				var splash:NoteSplash = grpNoteSplashes.recycle(NoteSplash);
-				splash.setupNoteSplash(strum, note, skin, colors, this);
+				splash.setupNoteSplash(strum, note, skin, note.rgbShader, this);
 				grpNoteSplashes.add(splash);
 				
 				PlayState.instance.scripts.call('onSpawnNoteSplash', [splash, note]);
@@ -574,24 +517,18 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	
 	public function spawnSusSplash(note:Note, isPlayer:Bool = false):SustainSplash
 	{
-		if (_skin?.sustainSplashes && note.tail.length > 0)
+		if (_skin?.sustainSplashes && note.tailState.splash == null && note.tail.length > 0)
 		{
 			final strum:Null<StrumNote> = note.playField.members[note.noteData];
 			if (strum != null)
 			{
-				final data = note.noteData;
-				final colors = note.rgbGraphics;
-				
-				// sustain length + step length (all in ms) to time the ending of the sustain covering
-				final time = ((note.sustainLength + (Conductor.stepCrotchet * 1.25)) / 1000);
-				
 				var splash:SustainSplash = grpSusSplashes.recycle(SustainSplash);
-				splash.setupSplash(strum, note, time, isPlayer, colors, this);
+				splash.setupSplash(strum, note, isPlayer, note.rgbShader, this);
 				grpSusSplashes.add(splash);
 				
 				PlayState.instance.scripts.call('onSpawnSustainSplash', [splash, note]);
 				
-				return note.sustainSplash = splash;
+				return note.tailState.splash = note.sustainSplash = splash;
 			}
 		}
 		
@@ -614,73 +551,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		onMissPress.removeAll();
 		onMissPress.destroy();
 		
-		underlaySpr.destroy();
-		
+		underlay.destroy();
 		super.destroy();
-	}
-	
-	public function changeSkin(newSkin:NoteSkin)
-	{
-		_skin = newSkin;
-		NoteUtil.noteskins[player] = newSkin;
-		
-		// that way it checks the colors and re-assigns
-		this.hasChangedSkin = true;
-		
-		forEachAlive((strum) -> {
-			strum.skin = _skin;
-			strum.texture = _skin.noteTexture;
-			strum.useRGBShader = _skin.inEngineColoring;
-			strum.rgbGraphics.enabled = strum.useRGBShader;
-			strum.reloadNote();
-			
-			strum.playAnim('static');
-			strum.resetAnim = 0;
-		});
-		
-		forEachAliveNote((note) -> {
-			note.skin = _skin;
-			note.texture = _skin.noteTexture;
-			note.rgbEnabled = _skin.inEngineColoring;
-			note.rgbGraphics.enabled = note.rgbEnabled;
-			note.loadNoteAnims();
-			
-			note.reloadNote('', note.texture, '');
-			
-			note.scale.set(_skin.noteScale, _skin.noteScale);
-			note.baseScale.copyFrom(note.scale);
-			
-			note.rgbGraphics = NoteUtil.getCurColors(note.noteData, note.quant, note.player);
-		});
-		
-		grpNoteSplashes.forEachAlive((splash) -> {
-			splash.scale.set(_skin.splashScale, _skin.splashScale);
-			splash.baseScale.copyFrom(splash.scale);
-			
-			splash.rgbGraphics.enabled = _skin.inEngineColoring;
-		});
-		grpSusSplashes.forEachAlive((splash) -> {
-			splash.scale.set(_skin.susSplashScale, _skin.susSplashScale);
-			splash.baseScale.copyFrom(splash.scale);
-			
-			splash.rgbGraphics.enabled = _skin.inEngineColoring;
-		});
-	}
-	
-	// just because
-	override public function toString():String
-	{
-		var str = 'keys: $keyCount, pos: [x: $baseX, y: $baseY], skin: ${_skin.name}';
-		
-		if (owner != null && singers.length > 0)
-		{
-			var _singers = [];
-			for (i in singers)
-				_singers.push(i?.curCharacter ?? 'dad');
-				
-			str += ', owner: ${owner?.curCharacter ?? 'dad'}, singers: $_singers';
-		}
-		
-		return '($str)';
 	}
 }

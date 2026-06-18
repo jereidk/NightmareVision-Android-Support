@@ -85,6 +85,8 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		
 		var diff:Float = 0;
 		forEachAlive(snd -> {
+			if (!snd.playing) return;
+			
 			final s = Math.abs(snd.time - time);
 			if (s > diff) diff = s; // get the highest difference
 		});
@@ -101,9 +103,12 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		final time = baseTime ?? getFirstAlive()?.time ?? 0.0;
 		
 		forEachAlive(snd -> {
-			snd.pause();
-			snd.time = time;
-			snd.play(false, time);
+			if (snd.playing && time <= snd.length && Math.abs(snd.time - time) > 1)
+			{
+				snd.pause();
+				snd.time = time;
+				snd.play(false, time);
+			}
 		});
 	}
 	
@@ -144,7 +149,7 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 	
 	function set_time(value:Float):Float
 	{
-		forEachAlive(snd -> snd.time = value);
+		forEachAlive(snd -> if (Math.abs(snd.time - value) > 1) snd.time = Math.min(value, snd.length));
 		return value;
 	}
 	

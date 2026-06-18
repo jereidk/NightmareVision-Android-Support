@@ -16,11 +16,9 @@ using Lambda;
 class ABotVis extends FlxTypedSpriteGroup<FlxSprite>
 {
 	// public var vis:VisShit;
-	public var analyzer:Null<SpectralAnalyzer> = null;
+	var analyzer:Null<SpectralAnalyzer> = null;
 	
 	var volumes:Array<Float> = [];
-	
-	public var startedAnalyzing:Bool = false;
 	
 	public var snd:Null<FlxSound> = null;
 	
@@ -86,8 +84,6 @@ class ABotVis extends FlxTypedSpriteGroup<FlxSprite>
 		analyzer.fftN = 256;
 		#end
 		
-		startedAnalyzing = true;
-		
 		// analyzer.maxDb = -35;
 		// analyzer.fftN = 2048;
 	}
@@ -114,7 +110,7 @@ class ABotVis extends FlxTypedSpriteGroup<FlxSprite>
 	override function draw()
 	{
 		super.draw();
-		if (startedAnalyzing) drawFFT();
+		drawFFT();
 	}
 	
 	/**

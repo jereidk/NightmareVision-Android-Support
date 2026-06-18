@@ -23,12 +23,12 @@ class PerspectiveModifier extends NoteModifier
 	var near = 0;
 	var far = 2;
 	
-	function FastTan(rad:Float) // thanks schmoovin
+	inline function fastTan(rad:Float) // thanks schmoovin
 	{
 		return FlxMath.fastSin(rad) / FlxMath.fastCos(rad);
 	}
 	
-	public function getVector(curZ:Float, pos:Vector3):Vector3
+	public inline function getVector(curZ:Float, pos:Vector3):Vector3
 	{
 		pos.subtract(halfOffset, pos);
 		
@@ -47,7 +47,7 @@ class PerspectiveModifier extends NoteModifier
 		var shit = curZ - 1;
 		if (shit > 0) shit = 0; // thanks schmovin!!
 		
-		var ta = FastTan(fov / 2);
+		var ta = fastTan(fov / 2);
 		var x = oX * aspect / ta;
 		var y = oY / ta;
 		var a = (near + far) / (near - far);

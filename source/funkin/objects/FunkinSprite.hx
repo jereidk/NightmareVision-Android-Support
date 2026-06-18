@@ -2,6 +2,7 @@ package funkin.objects;
 
 import flixel.graphics.frames.FlxAtlasFrames;
 
+import animate.FlxAnimateController;
 import animate.FlxAnimateFrames;
 import animate.FlxAnimate;
 
@@ -49,11 +50,18 @@ class FunkinSprite extends FlxAnimate
 	public var skewableOffsets:Bool = true;
 	
 	/**
-	 * Corrects this sprite's animation offsets when it's flipped.
+	 * The base flipX for this sprite's offsets.
 	 * 
-	 * (incomplete saaave me saaave me)
+	 * If not null, animation offsets will be corrected based on this value.
 	 */
-	public var correctFlippedOffsets:Bool = false;
+	public var baseFlipX:Null<Bool> = null;
+	
+	/**
+	 * The base flipY for this sprite's offsets.
+	 * 
+	 * If not null, animation offsets will be corrected based on this value.
+	 */
+	public var baseFlipY:Null<Bool> = null;
 	
 	/**
 	 * If `false`, playAnim will no longer function
@@ -72,7 +80,8 @@ class FunkinSprite extends FlxAnimate
 	 * 
 	 * @return this `Bopper` instance. Useful for chaining
 	 */
-	public function loadAtlas(path:String):FunkinSprite
+	@:access(animate.FlxAnimateSpritemapCollection)
+	public function loadAtlas(path:String, ?settings:FlxAnimateSettings, mode:PathsTestMode = NORMAL):FunkinSprite
 	{
 		final splitPath = path.split(',');
 		
@@ -84,14 +93,16 @@ class FunkinSprite extends FlxAnimate
 		{
 			path = path.trim();
 			
-			final isAtlasSprite = FunkinAssets.exists(Paths.getPath('images/$path/Animation.json', null, true));
+			final isAtlasSprite = FunkinAssets.exists(Paths.getPath('images/$path/Animation.json', null, true, mode));
 			if (isAtlasSprite)
 			{
-				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', null, true), null, null, null, false, {cacheOnLoad: true});
+				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', null, true, mode), null, null, null, false, settings ?? {cacheOnLoad: true});
 				if (atlas != null)
 				{
-					// unsure if flxanimate messes with the buffer or not but if it does then drop this
-					if (ClientPrefs.gpuCaching && atlas.parent.bitmap != null) atlas.parent.bitmap.disposeImage();
+					for (spritemap in cast(atlas.parent, FlxAnimateSpritemapCollection).spritemaps)
+					{
+						if (spritemap.bitmap != null) FunkinAssets.cache.cacheBitmap(spritemap.key, spritemap.bitmap);
+					}
 					
 					containsFlxAnimate = true;
 					
@@ -100,7 +111,7 @@ class FunkinSprite extends FlxAnimate
 			}
 			else
 			{
-				var atlas = Paths.getAtlasFrames(path);
+				var atlas = Paths.getAtlasFrames(path, mode);
 				
 				if (atlas != null) framesFound.push(atlas);
 			}
@@ -129,7 +140,24 @@ class FunkinSprite extends FlxAnimate
 			this.frames = FlxAnimateFrames.combineAtlas(framesFound);
 		}
 		
+		setBaseFrameSize();
+		
 		return this;
+	}
+	
+	var baseFrameWidth:Float = -1;
+	var baseFrameHeight:Float = -1;
+	
+	inline function setBaseFrameSize():Void
+	{
+		baseFrameWidth = frameWidth;
+		baseFrameHeight = frameHeight;
+	}
+	
+	override function updateHitbox():Void
+	{
+		super.updateHitbox();
+		setBaseFrameSize();
 	}
 	
 	/**
@@ -167,27 +195,9 @@ class FunkinSprite extends FlxAnimate
 		
 		animation.play(correctedAnim, isForced, isReversed, frame);
 		
-		setOffsets(correctedAnim);
-	}
-
-	public function setOffsets(anim:String = 'idle')
-	{
-		final animationOffsets = animOffsets.get(anim);
+		final animationOffsets = animOffsets.get(correctedAnim);
 		
-		if (animationOffsets != null)
-		{
-			animOffset.set(animationOffsets[0], animationOffsets[1]);
-			
-			if (correctFlippedOffsets)
-			{
-				final scaleXFactor:Float = scalableOffsets ? scale.x : 1.0;
-				final scaleYFactor:Float = scalableOffsets ? scale.y : 1.0;
-				
-				if (flipX) animOffset.x = ((frameWidth * scaleXFactor) - width) - animOffset.x;
-				
-				if (flipY) animOffset.y = ((frameHeight * scaleYFactor) - height) - animOffset.y;
-			}
-		}
+		if (animationOffsets != null) setAnimOffset(animationOffsets[0], animationOffsets[1]);
 	}
 	
 	final forcedAnimationTimer:FlxTimer = new FlxTimer();
@@ -209,11 +219,24 @@ class FunkinSprite extends FlxAnimate
 	}
 	
 	/**
-	 * Helper function to quickly set an anim offset
+	 * Helper function to quickly define an anim offset
 	 */
 	public function addOffset(anim:String, x:Float = 0, y:Float = 0):Void
 	{
 		animOffsets[anim] = [x, y];
+	}
+	
+	/**
+	 * Sets the animation offset, applying corrections from baseFlipX and baseFlipY.
+	 */
+	public inline function setAnimOffset(x:Float = 0, y:Float = 0):Void
+	{
+		if (baseFrameWidth < 0) setBaseFrameSize();
+		
+ 		animOffset.set(
+ 			(baseFlipX != null && flipX != baseFlipX) ? (frameWidth - baseFrameWidth - x) : x,
+ 			(baseFlipY != null && flipY != baseFlipY) ? (frameHeight - baseFrameHeight - y) : y
+ 		);
 	}
 	
 	/**
@@ -299,6 +322,24 @@ class FunkinSprite extends FlxAnimate
 		animOffsets.remove(anim);
 	}
 	
+	public inline function renameAnim(anim:String, newAnim:String):Void
+	{
+		animation.rename(anim, newAnim);
+		animOffsets.set(newAnim, animOffsets.get(anim));
+		animOffsets.remove(anim);
+	}
+	
+	public inline function swapAnims(animA:String, animB:String):Void
+	{
+		final tempName:String = '__temp$animB';
+		
+		if (hasAnim(animB)) renameAnim(animB, tempName);
+		
+		renameAnim(animA, animB);
+		
+		if (hasAnim(tempName)) renameAnim(tempName, animA);
+	}
+	
 	public inline function finishAnim():Void
 	{
 		if (isAnimNull()) return;
@@ -355,26 +396,35 @@ class FunkinSprite extends FlxAnimate
 		return point;
 	}
 	
-	override function clone():FunkinSprite
-	{
-		final spr = new FunkinSprite();
-		
-		spr.frames = this.frames;
-		spr.animation.copyFrom(this.animation);
-		
-		for (key in this.animOffsets.keys())
+	@:access(flixel.animation.FlxAnimationController)
+	public inline function copyAnimController(controller:flixel.animation.FlxAnimationController):Void
+	{ // maybe could be an extension. i dont know.im lazey
+		animation.destroyAnimations();
+
+		for (name => anim in controller._animations)
 		{
-			var offsets = this.animOffsets.get(key);
-			
-			spr.animOffsets.set(key, offsets);
+			if (anim is FlxAnimateAnimation)
+			{
+				var newAnim:FlxAnimateAnimation = new FlxAnimateAnimation(animation, anim.name, anim.frames, anim.frameRate, anim.looped, anim.flipX, anim.flipY);
+				newAnim.timeline = cast(anim, FlxAnimateAnimation).timeline;
+				animation._animations.set(name, newAnim);
+			}
+			else
+			{
+				animation.add(anim.name, anim.frames, anim.frameRate, anim.looped, anim.flipX, anim.flipY);
+			}
 		}
-		
-		spr.spriteOffset.copyFrom(this.spriteOffset);
-		spr.baseScale.copyFrom(this.baseScale);
-		spr.scale.copyFrom(this.scale);
-		
-		spr.updateHitbox();
-		
-		return spr;
+
+		if (controller._prerotated != null)
+		{
+			animation.createPrerotated();
+		}
+
+		if (controller.name != null)
+		{
+			animation.name = controller.name;
+		}
+
+		animation.frameIndex = controller.frameIndex;
 	}
 }

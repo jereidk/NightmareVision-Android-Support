@@ -3,10 +3,9 @@ package funkin.states.editors.ui;
 class DebugBounds extends flixel.FlxObject
 {
 	public var target:Null<FlxSprite> = null;
-	public var negativeSize:Bool = false;
 	
 	public var alpha:Float = 1;
-	public var bgAlpha:Float = 0.0000001;
+	public var bgAlpha:Float = 0;
 	public var color:FlxColor = FlxColor.WHITE;
 	
 	public var thickness:Int = 3;
@@ -16,7 +15,8 @@ class DebugBounds extends flixel.FlxObject
 	final right:FlxSprite;
 	final bottom:FlxSprite;
 	
-	public final middle:FlxSprite;
+	@:allow(funkin.states.editors.WIPNoteSkinEditor)
+	final middle:FlxSprite;
 	
 	public function new(?target:FlxSprite, color:FlxColor = FlxColor.WHITE)
 	{
@@ -120,8 +120,6 @@ class DebugBounds extends flixel.FlxObject
 	
 	override function setSize(width:Float, height:Float):Void
 	{
-		if (negativeSize) return super.setSize(width, height);
-		
 		this.width = Math.max(1, width);
 		this.height = Math.max(1, height);
 	}

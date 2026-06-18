@@ -1,11 +1,11 @@
 package funkin.backend;
 
-import flixel.system.frontEnds.SoundFrontEnd;
-
 import openfl.events.Event;
 
 import funkin.scripting.ScriptedState;
 import funkin.scripts.FunkinScript;
+
+import flixel.system.frontEnds.SoundFrontEnd;
 
 /**
  * Modified FlxGame to support switching to mod states and to load our custom sound tray.

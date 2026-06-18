@@ -1,23 +1,21 @@
 package funkin.states.options;
 
 import flixel.FlxObject;
-import flixel.group.FlxSpriteContainer;
-
-import funkin.input.Controls.Action;
-
 import flixel.group.FlxContainer;
-
-import funkin.input.Controls.Device;
-
+import flixel.group.FlxSpriteContainer;
 import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.input.keyboard.FlxKey;
+import flixel.math.FlxMath;
+import flixel.math.FlxRect;
 
 import funkin.objects.*;
-import funkin.states.substates.*;
+import funkin.input.Controls;
 import funkin.input.InputFormatter;
-import funkin.backend.MusicBeatSubstate;
+import funkin.objects.menu.ScrollBar;
 
 class ControlsSubState extends MusicBeatSubstate
 {
@@ -31,89 +29,96 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	public var currentOption(get, set):ControlsOption;
 	
-	public var currentBind(get, set):Alphabet;
+	public var currentBind(get, set):FlxText;
 	
 	public var currentBindIndex(get, set):Int;
 	
 	public var state:BindState = BindState.NONE;
 	
+	public var scrollBar:ScrollBar;
+	public var autoScroll:Bool = true;
+	public var currentScrollY:Float = 0;
+	
 	var optionsList:Array<ControlsOption> = [];
 	
-	var controlsGroup = new FlxTypedContainer<ControlsGroup>();
+	var controlsGroup = new FlxTypedSpriteContainer<ControlsGroup>();
 	
-	var camPos:FlxObject;
+	var titleText:FlxText;
+	var languageTextYOffset:Float = 0;
 	
-	var resetKeysLabel:Alphabet;
-	var resetGamepadLabel:Alphabet;
+	var panelX:Float = 480;
+	var optionEndY:Float = 0;
+	
+	final topBound:Float = 150;
+	final bottomBound:Float = 630;
+	
+	var fadeCamera:FlxCamera; // erm .. awkward
 	
 	public function new(device:Device)
 	{
 		super();
 		
-		camera = new FlxCamera();
-		FlxG.cameras.add(camera);
+		scrollBar = new ScrollBar(panelX - 16, topBound, 8, Std.int(bottomBound - topBound), 0xFF2C3F3F, 0xFFFFFFFF);
+		scrollBar.camera = scrollBar.track.camera = scrollBar.thumb.camera = FlxG.camera;
+		scrollBar.onScroll.add(function(scroll:Float, _) currentScrollY = (scroll * (optionEndY - camera.height)));
+		scrollBar.onInteract.add(function() autoScroll = false);
+		add(scrollBar);
 		
-		camPos = new FlxObject();
-		camPos.screenCenter();
-		camPos.y -= 600;
-		camera.follow(camPos);
-		add(camPos);
+		titleText = new FlxText(panelX, 112, 700, Lang.str('opt_category_controls'));
+		titleText.setFormat(Paths.font('vcr.ttf'), 28, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleText.y += Math.round((titleText.size - titleText.height) * .5);
+		titleText.borderSize = 2;
+		titleText.antialiasing = ClientPrefs.globalAntialiasing;
+		titleText.camera = FlxG.camera;
+		add(titleText);
+		
+		(camera = new FlxCamera(panelX, topBound, 676, Std.int(bottomBound - topBound))).bgColor = 0;
+		FlxG.cameras.add(camera, false);
+		
+		FlxG.cameras.add(fadeCamera = new FlxCamera(), false);
+		fadeCamera.bgColor = 0;
 		
 		initStateScript('ControlsSubState');
 		scriptGroup.set('this', this);
 		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
-		bg.scrollFactor.y = 0;
-		bg.color = 0xFFea71fd;
-		bg.screenCenter();
-		add(bg);
+		bgColor = 0;
 		
-		final group = new ControlsGroup("NOTES", [
+		controlsGroup.add(new ControlsGroup("NOTES", [
 			{label: "Left", action: NOTE_LEFT},
 			{label: "Down", action: NOTE_DOWN},
 			{label: "Up", action: NOTE_UP},
 			{label: "Right", action: NOTE_RIGHT},
-			{label: "Dodge", action: NOTE_DODGE},
 			null,
-		], 0);
-		controlsGroup.add(group);
+			{label: "Taunt", action: NOTE_TAUNT},
+			null,
+		], AnyOption));
 		
-		resetGamepadLabel = new Alphabet(0, 80 * group.groupLastIndex, "Reset to Default Buttons", true);
-		resetGamepadLabel.screenCenter(X);
-		add(resetGamepadLabel);
-		
-		final group = new ControlsGroup("UI", [
+		controlsGroup.add(new ControlsGroup("UI", [
 			{label: "Left", action: UI_LEFT},
 			{label: "Down", action: UI_DOWN},
 			{label: "Up", action: UI_UP},
 			{label: "Right", action: UI_RIGHT},
 			null,
 			{label: "Reset", action: RESET},
-			{label: "Accept", action: ACCEPT},
-			{label: "Back", action: BACK},
 			{label: "Pause", action: PAUSE},
 			null,
-		], group.groupLastIndex);
-		controlsGroup.add(group);
+		], KeysOption));
 		
-		final group = new ControlsGroup("VOLUME", [
+		controlsGroup.add(new ControlsGroup("VOLUME", [
 			{label: "Mute", action: "volume_mute"},
 			{label: "Up", action: "volume_up"},
 			{label: "Down", action: "volume_down"},
 			null,
-		], group.groupLastIndex);
-		controlsGroup.add(group);
+		], KeysOption));
 		
-		final group = new ControlsGroup("DEBUG", [
+		controlsGroup.add(new ControlsGroup("DEBUG", [
 			{label: "Key 1", action: "debug_1"},
 			{label: "Key 2", action: "debug_2"},
 			null,
-		], group.groupLastIndex);
-		controlsGroup.add(group);
+		], KeysOption));
 		
-		resetKeysLabel = new Alphabet(0, 80 * group.groupLastIndex, "Reset to Default Keys", true);
-		resetKeysLabel.screenCenter(X);
-		add(resetKeysLabel);
+		controlsGroup.add(new ControlsGroup("", [{label: 'Reset to Default Buttons', fun: function(_) resetGamepadBinds()}], GamepadOption));
+		controlsGroup.add(new ControlsGroup("", [{label: 'Reset to Default Keys', fun: function(_) resetKeyBinds()}], KeysOption));
 		
 		this.device = device;
 		
@@ -129,37 +134,65 @@ class ControlsSubState extends MusicBeatSubstate
 			optionsList[i].index = NONE;
 		}
 		
-		scriptGroup.set('device', device);
-		scriptGroup.set('optionsList', optionsList);
-		scriptGroup.set('controlsGroup', controlsGroup);
-		scriptGroup.set('resetKeysLabel', resetKeysLabel);
-		scriptGroup.set('resetGamepadLabel', resetGamepadLabel);
-		scriptGroup.set('bg', bg);
+		scrollBar.setMetrics(camera.height, optionEndY);
+		
 		scriptGroup.call('onCreatePost', []);
+	}
+	
+	public function resetGamepadBinds():Void
+	{
+		ClientPrefs.gamepadBinds = ClientPrefs.defaultGamepadBinds.copy();
+		
+		for (option in optionsList)
+			option.refreshAll(device);
+			
+		FlxG.sound.play(Paths.sound('cancelMenu'));
+	}
+	
+	public function resetKeyBinds():Void
+	{
+		ClientPrefs.keyBinds = ClientPrefs.defaultKeys.copy();
+		
+		for (option in optionsList)
+			option.refreshAll(device);
+			
+		FlxG.sound.play(Paths.sound('cancelMenu'));
 	}
 	
 	function refreshOptionsList()
 	{
-		optionsList = [];
+		var y:Float = 0;
+		
+		optionsList.resize(0);
+		
 		for (group in controlsGroup)
 		{
-			if (device == Keys || group.label.text == "NOTES")
+			if (group.matchDevice(device))
 			{
-				group.visible = true;
+				group.revive();
+				
 				for (option in group.options)
 				{
 					optionsList.push(option);
 					option.refreshAll(device);
 				}
+				
+				group.y = (controlsGroup.y + y);
+				y += group.height;
+				optionEndY = (controlsGroup.y + y);
 			}
-			else group.visible = false;
+			else
+			{
+				group.kill();
+			}
 		}
-		if (index > optionsList.length) index = optionsList.length;
-		scriptGroup.set('optionsList', optionsList);
+		
+		if (index >= optionsList.length) index = (optionsList.length - 1);
 	}
 	
 	var leaving:Bool = false;
 	var bindingTime:Float = 0;
+	var mouseControlActive:Bool = false;
 	
 	override function update(elapsed:Float)
 	{
@@ -167,10 +200,22 @@ class ControlsSubState extends MusicBeatSubstate
 		{
 			if (!(controls.UI_UP_P && controls.UI_DOWN_P) && (controls.UI_UP_P || controls.UI_DOWN_P))
 			{
-				if (controls.UI_UP_P) index--;
-				else if (controls.UI_DOWN_P) index++;
-				
+				if (controls.UI_UP_P)
+				{
+					index--;
+				}
+				else if (controls.UI_DOWN_P)
+				{
+					index++;
+				}
 				FlxG.sound.play(Paths.sound('scrollMenu'));
+			}
+			
+			if (FlxG.mouse.wheel != 0)
+			{
+				index -= FlxG.mouse.wheel;
+				
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
 			}
 		}
 		
@@ -196,46 +241,26 @@ class ControlsSubState extends MusicBeatSubstate
 				
 				if (!(controls.UI_LEFT_P && controls.UI_RIGHT_P) && (controls.UI_LEFT_P || controls.UI_RIGHT_P))
 				{
+					mouseControlActive = false;
+					
 					if (controls.UI_LEFT_P) currentBindIndex--;
 					else if (controls.UI_RIGHT_P) currentBindIndex++;
+					
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
-				
 				if (controls.BACK)
 				{
-					ClientPrefs.reloadControls();
+					mouseControlActive = false;
+					
+					// ClientPrefs.reloadControls();
 					close();
 					FlxG.sound.play(Paths.sound('cancelMenu'));
 				}
-				
 				if (controls.ACCEPT)
 				{
-					state = REBIND;
-					currentBind.visible = false;
-				}
-				
-			case SELECT_RESET:
-				handleIndex();
-				
-				if (controls.ACCEPT)
-				{
-					switch device
-					{
-						case Keys:
-							ClientPrefs.keyBinds = ClientPrefs.defaultKeys.copy();
-						case Gamepad(_):
-							ClientPrefs.gamepadBinds = ClientPrefs.defaultGamepadBinds.copy();
-					}
-					for (option in optionsList)
-						option.refreshAll(device);
-					FlxG.sound.play(Paths.sound('confirmMenu'));
-				}
-				
-				if (controls.BACK)
-				{
-					ClientPrefs.reloadControls();
-					close();
-					FlxG.sound.play(Paths.sound('cancelMenu'));
+					mouseControlActive = false;
+					
+					selectOption();
 				}
 				
 			case REBIND:
@@ -244,38 +269,100 @@ class ControlsSubState extends MusicBeatSubstate
 					case Keys: FlxG.keys.firstJustPressed();
 					case Gamepad(id): FlxG.gamepads.getByID(id).firstJustPressedID();
 				}
+				
 				if (inputID > -1)
 				{
 					currentOption.change(device, inputID);
 					FlxG.sound.play(Paths.sound('confirmMenu'));
 					state = SELECT;
-					currentBind.visible = true;
+					
+					if (currentBind != null) currentBind.visible = true;
 				}
 				
 				bindingTime += elapsed;
-				
 				if (bindingTime > 5)
 				{
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 					state = SELECT;
 					bindingTime = 0;
-					currentBind.visible = true;
+					
+					if (currentBind != null) currentBind.visible = true;
 				}
+		}
+		
+		if (FlxG.mouse.justMoved || FlxG.mouse.justPressed || FlxG.mouse.wheel != 0) mouseControlActive = true;
+		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK) mouseControlActive = false;
+		
+		if (mouseControlActive && state == SELECT && FlxG.mouse.justMoved)
+		{
+			for (i => option in optionsList)
+			{
+				var hoveredBind:Int = -1;
+				
+				for (j => bindText in option.binds.members)
+				{
+					if (bindText.visible && FlxG.mouse.overlaps(bindText, camera))
+					{
+						hoveredBind = j;
+						break;
+					}
+				}
+				
+				if (hoveredBind != -1 || FlxG.mouse.overlaps(option.label, camera))
+				{
+					if (index != i) index = i;
+					
+					if (hoveredBind != -1) currentBindIndex = hoveredBind;
+					if (FlxG.mouse.justPressed && state == SELECT) selectOption();
+					
+					break;
+				}
+			}
 		}
 		
 		super.update(elapsed);
 		
-		var target:FlxObject = currentOption;
-		if (state == SELECT_RESET)
+		final target:FlxObject = currentOption;
+		
+		if (autoScroll)
 		{
-			target = switch (device)
-			{
-				case Keys: resetKeysLabel;
-				case Gamepad(_): resetGamepadLabel;
-			}
+			final scrollPad:Float = 64;
+			
+			var targetY = camera.scroll.y;
+			
+			targetY = Math.min(targetY, target.y - scrollPad);
+			targetY = Math.max(targetY, target.y + target.height - camera.height + scrollPad);
+			targetY = FlxMath.bound(targetY, 0, optionEndY);
+			
+			currentScrollY = FlxMath.lerp(currentScrollY, targetY, FlxMath.getElapsedLerp(.16, elapsed));
 		}
 		
-		camPos.y = FlxMath.lerp(camPos.y, target.y + 25, FlxMath.getElapsedLerp(0.16, elapsed));
+		camera.scroll.y = currentScrollY;
+	}
+	
+	public function selectOption():Void
+	{
+		if (currentOption.fun != null) currentOption.fun(currentOption);
+		
+		if (currentBind != null)
+		{
+			state = REBIND;
+			currentBind.visible = false;
+		}
+	}
+	
+	inline function updateOptionFlash():Void
+	{
+		autoScroll = true;
+		
+		for (i => option in optionsList)
+		{
+			if (i != index) option.index = NONE;
+			option.label.alpha = (i == index) ? 1.0 : 0.6;
+		}
+		
+		for (group in controlsGroup)
+			group.label.alpha = (currentGroup == group) ? 1.0 : 0.6;
 	}
 	
 	function set_device(device:Device):Device
@@ -283,9 +370,6 @@ class ControlsSubState extends MusicBeatSubstate
 		if (this.device != device)
 		{
 			this.device = device;
-			resetKeysLabel.visible = device == Keys;
-			resetGamepadLabel.visible = device != Keys;
-			scriptGroup.set('device', device);
 			refreshOptionsList();
 		}
 		
@@ -294,7 +378,6 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	function get_currentGroup():Null<ControlsGroup>
 	{
-		if (state == SELECT_RESET) return null;
 		return cast currentOption.container.container;
 	}
 	
@@ -306,7 +389,6 @@ class ControlsSubState extends MusicBeatSubstate
 			return controlsGroup.members[0];
 		}
 		index = optionsList.indexOf(currentGroup.options.members[0]);
-		
 		return get_currentGroup();
 	}
 	
@@ -323,8 +405,8 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	function set_index(index:Int):Int
 	{
-		index = FlxMath.wrap(index, 0, optionsList.length);
-		if (state != BindState.NONE) state = (index == optionsList.length) ? SELECT_RESET : SELECT;
+		index = FlxMath.wrap(index, 0, optionsList.length - 1);
+		if (state != BindState.NONE) state = SELECT;
 		
 		if (this.index != index)
 		{
@@ -336,118 +418,164 @@ class ControlsSubState extends MusicBeatSubstate
 			
 			this.index = index;
 			
-			for (i => option in optionsList)
-			{
-				if (i != index) option.index = NONE;
-				option.label.alpha = (i == index) ? 1.0 : 0.6;
-			}
+			updateOptionFlash();
 			
-			for (group in controlsGroup)
-				group.label.alpha = (currentGroup == group) ? 1.0 : 0.6;
-				
 			if (currentBindIndex == NONE) currentBindIndex = 0;
 		}
+		
 		return index;
 	}
 	
-	function get_currentBind():Null<Alphabet>
+	function get_currentBind():Null<FlxText>
 	{
-		if (state == SELECT_RESET) return null;
 		return currentOption.binds.members[currentBindIndex];
 	}
 	
-	function set_currentBind(currentBind:Alphabet):Null<Alphabet>
+	function set_currentBind(currentBind:FlxText):Null<FlxText>
 	{
-		if (state == SELECT_RESET) return null;
-		
 		final index = currentOption.binds.members.indexOf(currentBind);
 		if (index != -1) currentBindIndex = index;
-		
 		return currentBind;
 	}
 	
 	function get_currentBindIndex():Int
 	{
-		if (state == SELECT_RESET) return NONE;
 		return currentOption.index;
 	}
 	
 	function set_currentBindIndex(currentBindIndex:Int):Int
 	{
-		if (state == SELECT_RESET) return NONE;
-		return currentOption.index = currentBindIndex;
+		currentOption.index = currentBindIndex;
+		
+		updateOptionFlash();
+		
+		return currentBindIndex;
 	}
 	
 	override function destroy()
 	{
-		FlxG.cameras.remove(camera);
+		// check before to prevent a annoying warning
+		if (FlxG.cameras.list.indexOf(fadeCamera) != -1 && fadeCamera != null) FlxG.cameras.remove(fadeCamera);
+		if (FlxG.cameras.list.indexOf(camera) != -1 && camera != null) FlxG.cameras.remove(camera);
 		super.destroy();
 	}
 }
 
-class ControlsGroup extends FlxContainer
+class ControlsGroup extends FlxSpriteContainer
 {
-	public var label:Alphabet;
+	public var label:FlxText;
 	
-	public var options = new FlxTypedContainer<ControlsOption>();
+	public var options = new FlxTypedSpriteContainer<ControlsOption>();
+	
+	public var bg:FlxSprite;
+	public var hitbox:FlxSprite;
 	
 	public var groupLastIndex:Int;
 	
-	public function new(label:String, options:Array<{label:String, action:Action}>, groupIndex:Int)
+	public var type:ControlsOptionType;
+	
+	var lineHeight:Float = 24;
+	
+	public function new(label:String = '', options:Array<{label:String, ?action:Action, ?fun:ControlsOption->Void}>, ?type:ControlsOptionType = AnyOption)
 	{
 		super();
 		
-		this.label = new Alphabet(0, (80 * groupIndex++) - 55, label);
-		this.label.screenCenter(X);
-		add(this.label);
+		this.type = type;
+		this.label = new FlxText(0, 0, 200, label);
+		this.label.setFormat(Paths.font('vcr'), 20, FlxColor.WHITE /*0xFF62E0CF*/, LEFT, OUTLINE, FlxColor.BLACK);
+		this.label.borderSize = 1;
 		
-		for (option in options)
+		if (label.length > 0) add(this.label);
+		
+		var startY:Float = (label.length > 0 ? lineHeight : 0);
+		
+		hitbox = new FlxSprite(0, startY);
+		hitbox.setSize(1, options.length * lineHeight + 10);
+		hitbox.visible = false;
+		add(hitbox);
+		
+		bg = new FlxSprite(0, startY).makeGraphic(1, 1, FlxColor.BLACK);
+		bg.alpha = .5;
+		add(bg);
+		
+		var maxBgIndex:Int = 0;
+		for (i => option in options)
 		{
-			if (option != null) this.options.add(new ControlsOption(200, (80 * groupIndex), option.label, option.action));
-			groupIndex++;
+			if (option != null)
+			{
+				this.options.add(new ControlsOption(5, startY + lineHeight * i + 5, option.label, option.action, option.fun));
+				
+				maxBgIndex = (i + 1);
+			}
 		}
-		add(this.options);
 		
-		groupLastIndex = groupIndex;
+		bg.setGraphicSize(FlxG.width, maxBgIndex * lineHeight + 10);
+		bg.updateHitbox();
+		
+		add(this.options);
+	}
+	
+	public function matchDevice(device:Device):Bool
+	{
+		if (type == AnyOption) return true;
+		
+		return switch (device)
+		{
+			default: false;
+			case Keys: (type == KeysOption);
+			case Gamepad(_): (type == GamepadOption);
+		}
 	}
 }
 
 class ControlsOption extends FlxSpriteContainer
 {
-	public var label:Alphabet;
+	public var label:FlxText;
 	
 	public var action:Action;
 	
-	public var binds:FlxTypedSpriteContainer<Alphabet>;
+	public var binds:FlxTypedSpriteContainer<FlxText>;
 	
 	public var index(default, set):Int = -1;
 	
-	public function new(x = .0, y = .0, label:String, action:Action)
+	public var fun:ControlsOption->Void;
+	
+	public function new(x = .0, y = .0, label:String, ?action:Action, ?fun:ControlsOption->Void)
 	{
 		super(x, y);
-		this.label = new Alphabet(0, 0, label, true);
+		this.label = new FlxText(0, 0, 500, label);
+		this.label.setFormat(Paths.font('vcr'), 18, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+		this.label.borderSize = 1;
 		add(this.label);
 		
-		binds = new FlxTypedSpriteContainer<Alphabet>(400, -55);
+		binds = new FlxTypedSpriteContainer<FlxText>(0, 0);
 		add(binds);
 		
 		this.action = action;
+		this.fun = fun;
 		
 		index = 0;
 		index = ControlsSubState.NONE;
 	}
 	
-	public function refreshAll(device:Device)
+	public function refreshAll(device:Null<Device>)
 	{
-		final binds:Array<Int> = getBinds(device);
+		final binds:Array<Int> = (getBinds(device) ?? [] /* whatever bro*/);
 		
 		for (i => _ in binds)
 		{
-			if (this.binds.members[i] == null) this.binds.add(new Alphabet(250 * i, 0));
+			if (this.binds.members[i] == null)
+			{
+				var text:FlxText = new FlxText(250 + 200 * i, 0, 200);
+				text.setFormat(Paths.font('vcr'), 18, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
+				text.borderSize = 1;
+				
+				this.binds.add(text);
+			}
+			
 			refreshBind(device, i);
 		}
 		
-		// wouldn't happen normally but just incase someone edits binds to be three or more fun guys
 		if (binds.length < this.binds.length)
 		{
 			for (i in binds.length...this.binds.length)
@@ -459,14 +587,12 @@ class ControlsOption extends FlxSpriteContainer
 	{
 		final inputID:Int = getBinds(device)[index];
 		final alpha = binds.members[index].alpha;
-		
-		binds.members[index].alpha = 1.0;
-		binds.members[index].changeText(switch device
+		binds.members[index].visible = true;
+		binds.members[index].text = switch (device)
 		{
 			case Keys: InputFormatter.getKeyName(inputID);
 			case Gamepad(id): FlxG.gamepads.getByID(id).getInputLabel(inputID).toUpperCase();
-		});
-		
+		};
 		binds.members[index].alpha = alpha;
 	}
 	
@@ -479,9 +605,7 @@ class ControlsOption extends FlxSpriteContainer
 	{
 		final binds:Array<Int> = getBinds(device);
 		final altIndex = binds.indexOf(inputID);
-		
 		if (altIndex != -1) binds[altIndex] = binds[index];
-		
 		binds[index] = inputID;
 		refreshBind(device, index);
 	}
@@ -501,17 +625,23 @@ class ControlsOption extends FlxSpriteContainer
 		if (this.index != index)
 		{
 			for (i => bind in binds.members)
-				bind.alpha = (i == index) ? 1.0 : 0.6;
+			{
+				bind.alpha = (i == index ? 1.0 : 0.6);
+				bind.color = (i == index ? 0xffffe066 : FlxColor.WHITE);
+			}
 			this.index = index;
 		}
 		
 		return index;
 	}
 	
-	inline function getBinds(device:Device):Array<Int>
+	inline function getBinds(device:Null<Device>):Array<Int>
 	{
-		return switch device
+		if (device == null) return [];
+		
+		return switch (device)
 		{
+			default: [];
 			case Keys: ClientPrefs.keyBinds.get(action);
 			case Gamepad(_): ClientPrefs.gamepadBinds.get(action);
 		}
@@ -522,6 +652,12 @@ enum abstract BindState(Int)
 {
 	var NONE;
 	var SELECT;
-	var SELECT_RESET;
 	var REBIND;
+}
+
+enum abstract ControlsOptionType(String) to String
+{
+	var AnyOption = 'any';
+	var KeysOption = 'keys';
+	var GamepadOption = 'gamepad';
 }

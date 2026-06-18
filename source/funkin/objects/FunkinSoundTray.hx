@@ -22,7 +22,8 @@ class FunkinSoundTray extends FlxSoundTray
 	var lerpYPos:Float = 0;
 	var alphaTarget:Float = 0;
 	
-	var volumeMaxSound:FlxSoundAsset;
+	var volumeMaxSound:String;
+	var max:Bool;
 	
 	public function new()
 	{
@@ -74,6 +75,8 @@ class FunkinSoundTray extends FlxSoundTray
 		volumeUpSound = 'soundtray/Volup';
 		volumeDownSound = 'soundtray/Voldown';
 		volumeMaxSound = 'soundtray/VolMAX';
+		
+		max = (Math.round(FlxG.sound.volume * 10) == 10);
 	}
 	
 	override public function update(MS:Float):Void
@@ -138,26 +141,24 @@ class FunkinSoundTray extends FlxSoundTray
 		lerpYPos = 10;
 		visible = true;
 		active = true;
-		var globalVolume:Int = Math.round(FlxG.sound.volume * 10);
 		
-		if (FlxG.sound.muted)
-		{
-			globalVolume = 0;
-		}
+		var globalVolume:Int = Math.round(FlxG.sound.volume * 10);
 		
 		if (!silent)
 		{
-			var sound = up ? volumeUpSound : volumeDownSound;
-			
-			if (globalVolume == 10) sound = volumeMaxSound;
+			var sound = (up ? (max ? volumeMaxSound : volumeUpSound) : volumeDownSound);
 			
 			if (sound != null) FlxG.sound.play(Paths.sound(sound));
 		}
+		
+		if (FlxG.sound.muted) globalVolume = 0;
 		
 		for (i in 0..._bars.length)
 			_bars[i].visible = i < globalVolume;
 			
 		checkAntialiasing();
+		
+		max = (globalVolume == 10);
 	}
 	
 	#if (flixel > "6.0.0")

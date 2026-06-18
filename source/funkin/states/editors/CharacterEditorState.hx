@@ -12,6 +12,8 @@ import haxe.ui.components.Button;
 import haxe.ui.components.Slider;
 import haxe.ui.backend.flixel.UIState;
 
+import openfl.events.Event;
+
 import flixel.group.FlxContainer;
 import flixel.graphics.FlxGraphic;
 import flixel.addons.display.FlxGridOverlay;
@@ -136,6 +138,8 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			var dad = new Character(dadPos.x, dadPos.y, 'dad', false);
 			var bf = new Character(bfPos.x, bfPos.y, 'bf', true);
+			dad.useRenderTexture = true;
+			bf.useRenderTexture = true;
 			dad.active = false;
 			bf.active = false;
 			dad.x += dad.positionArray[0];
@@ -183,41 +187,20 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		pointerBounds = new DebugBounds(cameraPointer);
 		add(pointerBounds);
 		pointerBounds.alpha = 0;
-
-        #if mobile
-	    addVirtualPad(LEFT_FULL, CHARACTER_EDITOR);
-        addVirtualPadCamera();
-		#end
 	}
 	
 	function exitState()
 	{
-		#if mobile
-		virtualPad.visible = false;
-		#end
-
-		// i want this to only show up on unsaved changes but i think id ahve to do a bit of refactoring for that to work nice
-		ToolKitUtils.openPrompt('Are you sure you want to exit? There may be unsaved changes.', 'Exiting Menu', 'yesno', (button) -> {
-			if (button.toString().contains('yes'))
-			{
-				if (goToPlayState)
-				{
-					FlxG.switchState(PlayState.new);
-				}
-				else
-				{
-					FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
-					FunkinSound.playMusic(Paths.music('freakyMenu'));
-				}
-				FlxG.mouse.visible = false;
-			}
-			else
-			{
-				#if mobile
-				virtualPad.visible = true;
-				#end
-			}
-		});
+		if (goToPlayState)
+		{
+			FlxG.switchState(PlayState.new);
+		}
+		else
+		{
+			FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
+			FunkinSound.playMusic(Paths.music('freakyMenu'));
+		}
+		FlxG.mouse.visible = false;
 	}
 	
 	public function buildUI()
@@ -294,6 +277,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		uiElements.toolBar.isPlayerCheckBox.onChange = (ui) -> {
 			character.isPlayer = ui.value.toBool();
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 			
 			positionCharacter();
 		}
@@ -429,10 +413,15 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			if (character.originalFlipX == ui.value.toBool()) return;
 			character.originalFlipX = !character.originalFlipX;
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 		}
 		
 		uiElements.characterDialogBox.vSliceSusCheckbox.onChange = (ui) -> {
 			character.vSliceSustains = ui.value.toBool();
+		}
+		
+		uiElements.characterDialogBox.afterimagesCheckbox.onChange = (ui) -> {
+			character.ghostsEnabled = ui.value.toBool();
 		}
 		
 		uiElements.characterDialogBox.antialiasingCheckbox.onChange = (ui) -> {
@@ -532,10 +521,19 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			updateHealthIcon();
 		}
 		
+		uiElements.characterDialogBox.pauseMenuTextField.onChange = (ui) -> {
+			character.pausePortrait = uiElements.characterDialogBox.pauseMenuTextField.value;
+		}
+		
 		uiElements.characterDialogBox.getIconColourButton.onClick = (ui) -> {
 			final newColour = CoolUtil.dominantColor(healthIcon);
 			uiElements.characterDialogBox.healthColourPicker.value = newColour;
 			character.healthColour = newColour;
+		}
+		
+		uiElements.characterDialogBox.getPortraitButton.onClick = (ui) -> {
+			uiElements.characterDialogBox.pauseMenuTextField.value = characterId;
+			trace('ok $characterId');
 		}
 		
 		uiElements.characterDialogBox.reloadCharacterImageButton.onClick = (ui) -> {
@@ -986,22 +984,22 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		final moveDistance = FlxG.keys.pressed.SHIFT ? 10 : 1;
 		
-		if (FlxG.keys.justPressed.LEFT #if mobile || virtualPad.buttonLeft.justPressed #end)
+		if (FlxG.keys.justPressed.LEFT)
 		{
 			character.animOffset.x += moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.DOWN #if mobile || virtualPad.buttonDown.justPressed #end)
+		else if (FlxG.keys.justPressed.DOWN)
 		{
 			character.animOffset.y -= moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.UP #if mobile || virtualPad.buttonUp.justPressed #end)
+		else if (FlxG.keys.justPressed.UP)
 		{
 			character.animOffset.y += moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.RIGHT #if mobile || virtualPad.buttonRight.justPressed #end)
+		else if (FlxG.keys.justPressed.RIGHT)
 		{
 			character.animOffset.x -= moveDistance;
 			return true;
@@ -1034,36 +1032,36 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			uiElements.animationList.animationList.selectItemBy((item) -> return item.id == anim);
 		}
 		
-		if (FlxG.keys.justPressed.A #if mobile || virtualPad.buttonLeft2.justPressed #end)
+		if (FlxG.keys.justPressed.A)
 		{
 			playSing('singLEFT');
 		}
-		else if (FlxG.keys.justPressed.W #if mobile || virtualPad.buttonUp2.justPressed #end)
+		else if (FlxG.keys.justPressed.W)
 		{
 			playSing('singUP');
 		}
-		else if (FlxG.keys.justPressed.S #if mobile || virtualPad.buttonDown2.justPressed #end)
+		else if (FlxG.keys.justPressed.S)
 		{
 			playSing('singDOWN');
 		}
-		else if (FlxG.keys.justPressed.D #if mobile || virtualPad.buttonRight2.justPressed #end)
+		else if (FlxG.keys.justPressed.D)
 		{
 			playSing('singRIGHT');
 		}
-		else if (FlxG.keys.justPressed.SPACE #if mobile || virtualPad.buttonA.justPressed #end)
+		else if (FlxG.keys.justPressed.SPACE)
 		{
 			dance();
 		}
 		
 		if (character.isAnimNull()) return;
 		
-		if ((FlxG.keys.justPressed.Z || FlxG.keys.justPressed.X #if mobile || virtualPad.buttonC.justPressed #end))
+		if ((FlxG.keys.justPressed.Z || FlxG.keys.justPressed.X))
 		{
 			character.pauseAnim();
 			character.animCurFrame = FlxMath.wrap(character.animCurFrame + (FlxG.keys.justPressed.Z ? -1 : 1), 0, character.getAnimNumFrames() - 1);
 		}
 		
-		if (FlxG.keys.justPressed.C #if mobile || virtualPad.buttonZ.justPressed #end)
+		if (FlxG.keys.justPressed.C)
 		{
 			character.playAnim(character.getAnimName(), true);
 		}
@@ -1071,22 +1069,22 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	
 	function controlCamera(elapsed:Float)
 	{
-		if (FlxG.keys.pressed.E #if mobile || virtualPad.buttonD.justPressed #end && FlxG.camera.zoom < 3)
+		if (FlxG.keys.pressed.E && FlxG.camera.zoom < 3)
 		{
 			FlxG.camera.zoom += elapsed * FlxG.camera.zoom;
 		}
-		if (FlxG.keys.pressed.Q #if mobile || virtualPad.buttonB.justPressed #end && FlxG.camera.zoom > 0.1)
+		if (FlxG.keys.pressed.Q && FlxG.camera.zoom > 0.1)
 		{
 			FlxG.camera.zoom -= elapsed * FlxG.camera.zoom;
 		}
 		
 		final speedMult = FlxG.keys.pressed.SHIFT ? 2 : 1;
 		
-		if (FlxG.keys.pressed.I #if mobile || virtualPad.buttonX.justPressed #end)
+		if (FlxG.keys.pressed.I)
 		{
 			FlxG.camera.scroll.y -= 200 * elapsed * speedMult;
 		}
-		else if (FlxG.keys.pressed.K #if mobile || virtualPad.buttonV.justPressed #end)
+		else if (FlxG.keys.pressed.K)
 		{
 			FlxG.camera.scroll.y += 200 * elapsed * speedMult;
 		}
@@ -1146,6 +1144,17 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterList = CoolUtil.coolTextFile(Paths.txt('characterList'));
 		#end
 		
+		inline function clearCopies<T>(input:Array<T>):Array<T>
+		{
+			var output:Array<T> = [];
+			for (obj in input)
+			{
+				if (!output.contains(obj)) output.push(obj);
+			}
+			return output;
+		}
+		characterList = clearCopies(characterList);
+		
 		uiElements.toolBar.characterDropdown.populateList([for (i in characterList) ToolKitUtils.makeSimpleDropDownItem(i)]);
 		uiElements.toolBar.characterDropdown.dataSource.sort(null, ASCENDING);
 	}
@@ -1156,6 +1165,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		uiElements.characterDialogBox.flipXCheckbox.selected = character.originalFlipX;
 		uiElements.characterDialogBox.vSliceSusCheckbox.selected = character.vSliceSustains;
+		uiElements.characterDialogBox.afterimagesCheckbox.selected = character.ghostsEnabled;
 		uiElements.characterDialogBox.antialiasingCheckbox.value = !character.noAntialiasing;
 		uiElements.characterDialogBox.scaledOffsetsCheckbox.value = character.scalableOffsets;
 		
@@ -1171,6 +1181,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		uiElements.characterDialogBox.imageFileTextField.value = character.imageFile;
 		uiElements.characterDialogBox.healthIconTextField.value = character.healthIcon;
+		uiElements.characterDialogBox.pauseMenuTextField.value = character.pausePortrait;
 		
 		uiElements.characterDialogBox.danceEveryStepper.value = character.danceEveryNumBeats;
 		
@@ -1331,6 +1342,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			character.isPlayer = !character.isPlayer;
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 			
 			uiElements.toolBar.isPlayerCheckBox.value = character.isPlayer;
 		}
@@ -1414,6 +1426,8 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterGhost.y = character.y;
 		
 		characterGhost.scale.copyFrom(character.scale);
+		characterGhost.updateHitbox();
+		characterGhost.offset.set();
 		
 		characterGhost.flipX = character.flipX;
 		
@@ -1422,7 +1436,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterGhost.pauseAnim();
 		characterGhost.animCurFrame = character.animCurFrame;
 		
-		characterGhost.offset.copyFrom(character.offset);
+		characterGhost.animOffset.copyFrom(character.animOffset);
 		
 		characterGhost.alpha = uiElements.toolBar.ghostAlphaSlider.value;
 		updateGhostLayering();
@@ -1463,6 +1477,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 				"scalableOffsets": character.scalableOffsets,
 				"dance_every": character.danceEveryNumBeats,
 				"_editor_isPlayer": character.isPlayer,
+				"afterimages": character.ghostsEnabled,
+				"flags": character.flags,
+				"pausePortrait": character.pausePortrait,
 				
 				"gameover_character": character.gameoverCharacter,
 				"gameover_intial_sound": character.gameoverInitialDeathSound,
@@ -1480,10 +1497,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 				ToolKitUtils.makeNotification('Character File Saving', 'Character ($char) was successfully saved.', Success);
 				FlxG.sound.play(Paths.sound('ui/success'));
 			}
-			
 			function onFileCancel()
 			{
-				ToolKitUtils.makeNotification('Character File Saving', 'Character saving was canceled.', Info);
+				ToolKitUtils.makeNotification('Character File Saving', 'Character saving was canceled.', Warning);
 				FlxG.sound.play(Paths.sound('ui/warn'));
 			}
 			

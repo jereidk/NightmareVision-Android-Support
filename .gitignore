@@ -28,3 +28,7 @@ dump/*
 !.vscode/launch.json
 !.vscode/extensions.json
 /content
+!content/NMV-Base-Game
+
+# Claude Code worktrees
+.claude/worktrees/

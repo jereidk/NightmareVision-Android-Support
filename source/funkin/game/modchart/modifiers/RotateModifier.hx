@@ -56,6 +56,7 @@ class RotateModifier extends NoteModifier
 		out.z /= scale;
 		
 		origin.add(out, pos);
+		diff.put();
 		out.put(); // hehehehe
 		
 		return pos;

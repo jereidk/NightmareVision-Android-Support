@@ -10,6 +10,7 @@ import flixel.util.FlxTimer;
 import funkin.backend.MusicBeatSubstate;
 import funkin.states.PlayState;
 import funkin.objects.Character;
+import funkin.objects.menu.AmongControls;
 
 /**
  * The substate that goes over the game whenever the player dies.
@@ -49,19 +50,21 @@ class GameOverSubstate extends MusicBeatSubstate
 	/**
 	 * The object the camera will follow. Placed on the midpoint of `boyfriend`.
 	 */
-	public var camFollow:FlxObject;
+	var camFollow:FlxObject;
 	
 	/**
 	 * Flag that is true when the intro of `boyfriend`'s death animation is finished.
 	 */
-	public var startedDeath:Bool = false;
+	var startedDeath:Bool = false;
+	
+	var camCTRL:FlxCamera;
 	
 	/**
 	 * Resets gameover character values
 	 */
 	public static function resetVariables()
 	{
-		characterName = 'bf-dead';
+		characterName = 'genericDeath';
 		deathSoundName = 'fnf_loss_sfx';
 		loopSoundName = 'gameOver';
 		endSoundName = 'gameOverEnd';
@@ -95,15 +98,26 @@ class GameOverSubstate extends MusicBeatSubstate
 			FlxG.camera.target = null;
 			
 			boyfriend.playAnim('firstDeath');
-			
+
 			#if mobile
 			controls.isInSubstate = true;
 			addVirtualPad(NONE, A_B);
 			addVirtualPadCamera();
 			#end
-			
+
 			FlxG.camera.follow(camFollow, LOCKON, 0);
 		}
+		
+		camCTRL = new FlxCameraEx();
+		camCTRL.bgColor = 0x0;
+		FlxG.cameras.add(camCTRL, false);
+		
+		var bottomControls:AmongControls = new AmongControls([
+			['enter', 'restartsong'], // conf
+			['esc', 'backtomenu'] // back
+		], false);
+		bottomControls.camera = camCTRL;
+		add(bottomControls);
 		
 		super.create();
 		
@@ -133,12 +147,17 @@ class GameOverSubstate extends MusicBeatSubstate
 		}
 	}
 	
+	/**
+	 * Flag to prevent spamming of `endBullshit`
+	 */
+	var isEnding:Bool = false;
+	
 	override function update(elapsed:Float)
 	{
 		PlayState.instance?.scripts.call('onUpdate', [elapsed]);
 		super.update(elapsed);
 		
-		if (controls.ACCEPT)
+		if (controls.ACCEPT && !isEnding)
 		{
 			if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC) endBullshit();
 		}
@@ -151,9 +170,9 @@ class GameOverSubstate extends MusicBeatSubstate
 				PlayState.deathCounter = 0;
 				PlayState.seenCutscene = false;
 				#if mobile controls.isInSubstate = false; #end
-				
+
 				FlxG.switchState(() -> PlayState.isStoryMode ? new StoryMenuState() : new FreeplayState());
-				
+
 				FunkinSound.playMusic(Paths.music('freakyMenu'));
 			}
 		}
@@ -197,29 +216,22 @@ class GameOverSubstate extends MusicBeatSubstate
 	}
 	
 	/**
-	 * Flag to prevent spamming of `endBullshit`
-	 */
-	var isEnding:Bool = false;
-	
-	/**
 	 *	Finishes the game over and restarts the game.
 	 */
 	function endBullshit():Void
 	{
-		if (!isEnding)
-		{
-			isEnding = true;
-			boyfriend.playAnim('deathConfirm', true);
-			FlxG.sound.music.stop();
-			#if mobile controls.isInSubstate = false; #end
-			if (endSoundName != null) FlxG.sound.play(Paths.music(endSoundName));
-			new FlxTimer().start(0.7, function(tmr:FlxTimer) {
-				FlxG.camera.fade(FlxColor.BLACK, 2, false, function() {
-					FlxG.resetState();
-				});
+		isEnding = true;
+		boyfriend.playAnim('deathConfirm', true);
+		FlxG.sound.music.stop();
+		#if mobile controls.isInSubstate = false; #end
+		if (endSoundName != null) FlxG.sound.play(Paths.music(endSoundName));
+		new FlxTimer().start(0.7, function(tmr:FlxTimer) {
+			FlxG.camera.fade(FlxColor.BLACK, 2, false, function() {
+				FlxG.resetState();
 			});
-			PlayState.instance?.scripts.call('onGameOverConfirm', [true]);
-		}
+			camCTRL.fade(FlxColor.BLACK, 2, false);
+		});
+		// PlayState.instance?.scripts.call('onGameOverConfirm', [true]); Commented bc i don't get the point of this call also makes things fucky
 	}
 	
 	override function destroy()

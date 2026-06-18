@@ -1,12 +1,35 @@
 package funkin;
 
 import haxe.io.Path;
+import haxe.Json;
 
+import openfl.system.System;
+import openfl.utils.AssetType;
+import openfl.utils.Assets;
+import openfl.display.BitmapData;
 import openfl.media.Sound;
 
 import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.FlxGraphic;
+
+enum PathsTestMode
+{
+	/**
+	 * Check for assets in content/, current mod and global mods
+	 */
+	NORMAL;
+	
+	/**
+	 * Only check for assets in content/ and current mod
+	 */
+	STRICT;
+	
+	/**
+	 * Check for assets in all mods
+	 */
+	LOOSE;
+}
 
 /**
  * Primary class used to simplify retrieving and finding assets.
@@ -20,7 +43,7 @@ class Paths
 	/**
 	 * Primary asset directory
 	 */
-	public static inline final CORE_DIRECTORY = #if ASSET_REDIRECT trail + 'assets/game' #else 'assets' #end;
+	public static inline final CORE_DIRECTORY = #if ASSET_REDIRECT trail + 'assets/legacy' #else 'assets' #end;
 	
 	/**
 	 * Mod directory
@@ -34,16 +57,6 @@ class Paths
 	 */
 	public static var DEFAULT_FONT:String = 'vcr.ttf';
 	
-	/**
-	 * Prefix that tells the game where certain UI elements are located.
-	 */
-	public static var COMBO_PREFIX:String = 'UI/combo/';
-	
-	public static var RATINGS_PREFIX:String = 'UI/ratings/';
-	public static var COUNTDOWN_PREFIX:String = 'UI/countdown/';
-	public static var UI_PREFIX:String = 'UI/';
-	
-	// , , ,
 	@:allow(funkin.backend.FunkinCache)
 	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
 	
@@ -54,21 +67,21 @@ class Paths
 	 * @param checkMods If true, will search through Mod directories
 	 * @return The path to the file.
 	 */
-	public static function getPath(file:String, ?parentFolder:String, checkMods:Bool = false):String
+	public static function getPath(file:String, ?parentFolder:String, checkMods:Bool = false, mode:PathsTestMode = NORMAL):String
 	{
 		if (parentFolder != null) file = '$parentFolder/$file';
 		
 		#if MODS_ALLOWED
 		if (checkMods)
 		{
-			final modPath:String = modFolders(file);
+			final modPath:String = modFolders(file, mode);
 			
 			if (FileSystem.exists(modPath)) return modPath;
 		}
 		#end
 		
 		#if ASSET_REDIRECT
-		final embedPath = getCorePath().replace(CORE_DIRECTORY, trail + 'assets/embeds') + file;
+		final embedPath = '${trail}assets/embeds/$file';
 		if (FunkinAssets.exists(embedPath)) return embedPath;
 		#end
 		
@@ -134,12 +147,11 @@ class Paths
 	/**
 	 * Searches for a video file wihin the `videos` directory.
 	 * 
-	 * Automatically will attempt to append .mp4, .mov, and .webm extensions.
+	 * Automatically will attempt to append .mp4 and .mov extensions.
 	 */
-	public static function video(key:String, ?ext:String, checkMods:Bool = true):String
+	public static function video(key:String, checkMods:Bool = true):String
 	{
-		final exts = ext != null ? [ext, 'mp4', 'mov', 'webm'] : ['mp4', 'mov', 'webm'];
-		return findFileWithExts('videos/$key', exts, null, checkMods);
+		return findFileWithExts('videos/$key', ['mp4', 'mov'], null, checkMods);
 	}
 	
 	public static function textureAtlas(key:String, ?parentFolder:String, checkMods:Bool = true):String
@@ -229,9 +241,9 @@ class Paths
 	/**
 	 * Searches for a file within the `images` directory and caches a `FlxGraphic` instance.
 	 */
-	public static inline function image(key:String, ?parentFolder:String, allowGPU:Bool = true, checkMods:Bool = true):FlxGraphic
+	public static inline function image(key:String, ?parentFolder:String, allowGPU:Bool = true, checkMods:Bool = true, mode:PathsTestMode = NORMAL):FlxGraphic
 	{
-		return FunkinAssets.getGraphic(getPath('images/$key.png', parentFolder, checkMods), true, allowGPU);
+		return FunkinAssets.getGraphic(getPath('images/$key.png', parentFolder, checkMods, mode), true, allowGPU);
 	}
 	
 	/**
@@ -239,20 +251,24 @@ class Paths
 	 * 
 	 * Automatically will attempt to append .ttf and .otf extensions.
 	 */
-	public static inline function font(key:String, checkMods:Bool = true):String
+	public static inline function font(key:String, overridable:Bool = true, checkMods:Bool = true):String
 	{
-		return findFileWithExts('fonts/$key', ['ttf', 'otf'], null, checkMods);
+		key = overridable ? Lang.getFont(key) : key;
+		
+		final path:String = findFileWithExts('fonts/$key', ['ttf', 'otf'], null, checkMods);
+		
+		return (Assets.exists(path, FONT) ? Assets.getFont(path).fontName : path);
 	}
 	
-	public static function findFileWithExts(key:String, exts:Array<String>, ?parentFolder:String, checkMods:Bool = true):String
+	public static function findFileWithExts(key:String, exts:Array<String>, ?parentFolder:String, checkMods:Bool = true, mode:PathsTestMode = NORMAL):String
 	{
 		for (ext in exts)
 		{
-			final joined = getPath('$key.$ext', parentFolder, checkMods);
+			final joined = getPath('$key.$ext', parentFolder, checkMods, mode);
 			if (FunkinAssets.exists(joined)) return joined;
 		}
 		
-		return getPath(key, parentFolder, checkMods); // assuming u mightve added a ext already
+		return getPath(key, parentFolder, checkMods, mode); // assuming u mightve added a ext already
 	}
 	
 	/**
@@ -260,9 +276,9 @@ class Paths
 	 * 
 	 * Will return a empty string if the file could not be found.
 	 */
-	public static function getTextFromFile(key:String, ?parentFolder:String, checkMods:Bool = true):String
+	public static function getTextFromFile(key:String, ?parentFolder:String, checkMods:Bool = true, mode:PathsTestMode = NORMAL):String
 	{
-		key = getPath(key, parentFolder, checkMods);
+		key = getPath(key, parentFolder, checkMods, mode);
 		
 		return FunkinAssets.exists(key) ? FunkinAssets.getContent(key) : '';
 	}
@@ -270,9 +286,9 @@ class Paths
 	/**
 	 * Convenience function to check if a file exists. handles getPath for you
 	 */
-	public static inline function fileExists(key:String, ?parentFolder:String, checkMods:Bool = true):Bool
+	public static inline function fileExists(key:String, ?parentFolder:String, checkMods:Bool = true, mode:PathsTestMode = NORMAL):Bool
 	{
-		return FunkinAssets.exists(getPath(key, parentFolder, checkMods));
+		return FunkinAssets.exists(getPath(key, parentFolder, checkMods, mode));
 	}
 	
 	public static inline function getMultiAtlas(keys:Array<String>, ?parentFolder:String, allowGPU:Bool = true, checkMods:Bool = true):FlxAtlasFrames // from psych
@@ -280,8 +296,6 @@ class Paths
 		if (keys.length == 0) return null;
 		
 		final firstKey:Null<String> = keys.shift()?.trim();
-		
-		if (firstKey == null) return null;
 		
 		var frames = getAtlasFrames(firstKey, parentFolder, allowGPU, checkMods);
 		
@@ -303,25 +317,21 @@ class Paths
 	}
 	
 	/**
-	 * Retrieves atlas frames from either `Sparrow`, `Aseprite` or `Packer` 
+	 * Retrieves atlas frames from either `Sparrow` or `Packer` 
 	 * 
 	 * `Sparrow` has priority.
 	 */
-	public static inline function getAtlasFrames(key:String, ?parentFolder:String, allowGPU:Bool = true, checkMods:Bool = true):FlxAtlasFrames
+	public static inline function getAtlasFrames(key:String, ?parentFolder:String, allowGPU:Bool = true, checkMods:Bool = true, mode:PathsTestMode = NORMAL):FlxAtlasFrames
 	{
-		final directPath = getPath('images/$key.png', parentFolder, checkMods).withoutExtension();
+		final directPath = getPath('images/$key.png', parentFolder, checkMods, mode).withoutExtension();
 		
 		final tempFrames = tempAtlasFramesCache.get(directPath);
-		if (tempFrames != null)
-		{
-			return tempFrames;
-		}
+		if (tempFrames != null) return tempFrames;
 		
-		final xmlPath = getPath('images/$key.xml', parentFolder, checkMods);
-		final txtPath = getPath('images/$key.txt', parentFolder, checkMods);
-		final jsonPath = getPath('images/$key.json', parentFolder, checkMods);
+		final xmlPath = getPath('images/$key.xml', parentFolder, checkMods, mode);
+		final txtPath = getPath('images/$key.txt', parentFolder, checkMods, mode);
 		
-		final graphic = image(key, parentFolder, allowGPU, checkMods);
+		final graphic = image(key, parentFolder, allowGPU, checkMods, mode);
 		
 		// sparrow
 		if (FunkinAssets.exists(xmlPath))
@@ -329,18 +339,7 @@ class Paths
 			// until flixel does null safety
 			@:nullSafety(Off)
 			{
-				final frames = FlxAtlasFrames.fromSparrow(graphic, FunkinAssets.getContent(xmlPath));
-				if (frames != null) tempAtlasFramesCache.set(directPath, frames);
-				return frames;
-			}
-		}
-		
-		if (FunkinAssets.exists(jsonPath))
-		{
-			//
-			@:nullSafety(Off) // until flixel does null safety
-			{
-				final frames = FlxAtlasFrames.fromAseprite(graphic, FunkinAssets.getContent(jsonPath));
+				final frames = FlxAtlasFrames.fromSparrow(graphic, FunkinAssets.exists(xmlPath) ? FunkinAssets.getContent(xmlPath) : null);
 				if (frames != null) tempAtlasFramesCache.set(directPath, frames);
 				return frames;
 			}
@@ -405,43 +404,44 @@ class Paths
 	 * 
 	 * if `checkMods`, they will be loaded in order of
 	 * 
-	 * `content/globalMods/`, `content/`, `content/currentMod/`.
+	 * `content/`, `content/currentMod/`, `content/globalMods/`, (rest of the mods if it can check all)
 	 */
-	public static function listAllFilesInDirectory(directory:String, checkMods:Bool = true) // based of psychs Mods.directoriesWithFile
+	public static function listAllFilesInDirectory(directory:String, checkMods:Bool = true, mode:PathsTestMode = NORMAL) // based of psychs Mods.directoriesWithFile
 	{
 		// todo maybe make this recursive ?
 		var folders:Array<String> = [];
 		var files:Array<String> = [];
 		
-		if (FunkinAssets.exists(getCorePath(directory))) folders.push(getCorePath(directory));
-		
 		#if MODS_ALLOWED
 		if (checkMods)
 		{
-			for (mod in Mods.globalMods)
-			{
-				final folder = mods('$mod/$directory');
-				if (FileSystem.exists(folder) && !folders.contains(folder)) folders.push(folder);
-			}
+			final path:String = mods(directory);
+			if (FileSystem.exists(path)) folders.push(path);
 			
-			final folder = mods(directory);
-			if (FileSystem.exists(folder) && !folders.contains(folder)) folders.push(folder);
+			if (overrideMode != null) mode = overrideMode;
 			
-			if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+			for (mod in Mods.enabled)
 			{
-				final folder = mods('${Mods.currentModDirectory}/$directory');
-				if (FileSystem.exists(folder) && !folders.contains(folder)) folders.push(folder);
+				if (Mods.globalMods.contains(mod))
+				{
+					if (mode == STRICT) continue;
+				}
+				else if (mode != LOOSE && mod != Mods.currentModDirectory)
+				{
+					continue;
+				}
+				
+				final path:String = mods('$mod/$directory');
+				if (FunkinAssets.exists(path) && !folders.contains(path)) folders.push(path);
 			}
 		}
 		#end
 		
+		if (FunkinAssets.exists(getCorePath(directory))) folders.push(getCorePath(directory));
+		
 		for (folder in folders)
 		{
-			for (file in FunkinAssets.readDirectory(folder))
-			{
-				final path = Path.join([folder, file]);
-				if (!files.contains(path)) files.push(path);
-			}
+			for (file in FunkinAssets.readDirectory(folder)) files.push(Path.join([folder, file]));
 		}
 		
 		return files;
@@ -453,30 +453,37 @@ class Paths
 	 */
 	public static inline function mods(key:String = ''):String
 	{
-		return #if mobile StorageSystem.getDirectory() + #end '$MODS_DIRECTORY/' + key;
+		return '$MODS_DIRECTORY/' + key;
 	}
 	
 	/**
 	 * Searches the primary loaded mod path and general mod path for a given file
 	 */
-	public static function modFolders(key:String):String
+	public static function modFolders(key:String, mode:PathsTestMode = NORMAL):String
 	{
-		if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+		if (FunkinAssets.exists(mods(key))) return mods(key);
+		
+		if (overrideMode != null) mode = overrideMode;
+		
+		for (mod in Mods.enabled)
 		{
-			final fileToCheck:String = mods(Mods.currentModDirectory + '/' + key);
-			// trace(fileToCheck);
-			if (FileSystem.exists(fileToCheck))
+			if (Mods.globalMods.contains(mod))
 			{
-				return fileToCheck;
+				if (mode == STRICT) continue;
 			}
+			else if (mode != LOOSE && mod != Mods.currentModDirectory)
+			{
+				continue;
+			}
+			
+			
+			final fileToCheck:String = mods('$mod/$key');
+			if (FunkinAssets.exists(fileToCheck)) return fileToCheck;
 		}
 		
-		for (mod in Mods.globalMods)
-		{
-			final fileToCheck:String = mods(mod + '/' + key);
-			if (FileSystem.exists(fileToCheck)) return fileToCheck;
-		}
 		return mods(key);
 	}
 	#end
+	
+	public static var overrideMode:Null<PathsTestMode> = null;
 }

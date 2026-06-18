@@ -33,6 +33,11 @@ class Bopper extends FunkinSprite
 	}
 	
 	/**
+	 * danceEveryNumBeats multiplier
+	 */
+	public var danceSpeed:Int = 1;
+	
+	/**
 	 * However many beats between dances
 	 */
 	public var danceEveryNumBeats:Int = 2;
@@ -107,7 +112,7 @@ class Bopper extends FunkinSprite
 	
 	public function onBeatHit(beat:Int)
 	{
-		if (!isAnimNull() && beat % danceEveryNumBeats == 0) dance();
+		if (!isAnimNull() && beat % (danceEveryNumBeats * danceSpeed) == 0) dance();
 	}
 	
 	override function destroy()

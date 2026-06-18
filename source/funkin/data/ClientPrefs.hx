@@ -1,25 +1,39 @@
 package funkin.data;
 
 import flixel.input.gamepad.FlxGamepadInputID;
-
-import funkin.backend.DebugDisplay;
-
 import flixel.input.keyboard.FlxKey;
 import flixel.util.FlxSave;
 
-import funkin.input.Controls.KeyboardScheme;
+import funkin.backend.DebugDisplay;
 import funkin.input.Controls;
 
-enum abstract UnderlayType(String) to String from String
+// i did this cuz options are stupid
+enum abstract VsyncMode(String) from String to String
 {
-	public var FIELD = 'Lane Underlay';
-	public var SCREEN = 'Screen Dim';
+	var OFF = 'Off';
+	var ON = 'On';
+	var ADAPTIVE = 'Adaptive';
 	
-	// @:to
-	public static function toArray():Array<String> // dont want to jump to options states to update
+	@:to
+	public function toLimeVsyncMode():lime.ui.WindowVSyncMode
 	{
-		// granted its a bit overkill to even do this for 2 options but i dunno remove it if u dont want it //or maybe i will another time
-		return [FIELD, SCREEN];
+		return switch (this)
+		{
+			default: lime.ui.WindowVSyncMode.OFF;
+			case ON: lime.ui.WindowVSyncMode.ON;
+			case ADAPTIVE: lime.ui.WindowVSyncMode.ADAPTIVE;
+		}
+	}
+	
+	@:from
+	public static function fromInt(v:Int):VsyncMode
+	{
+		return switch (v)
+		{
+			default: OFF;
+			case 1: ON;
+			case -1: ADAPTIVE;
+		}
 	}
 }
 
@@ -33,10 +47,58 @@ enum abstract UnderlayType(String) to String from String
 @:build(funkin.backend.macro.SaveMacro.buildSaveVars('im gonna make this do smth later okay just not rn'))
 class ClientPrefs
 {
+	// legacy ------------------------------------------------------------------------//
+	@saveVar public static var finaleState:FinaleState = INACTIVE;
+	
+	@saveVar public static var activeCosmicube:String = 'impostor';
+	
+	@saveVar public static var cosmicubeUnlocks:Array<String> = [];
+	
+	@saveVar public static var checkoutUnlockedSongs:Array<String> = [];
+	
+	@saveVar public static var unlockedSongs:Array<String> = [];
+	
+	@saveVar public static var doubletrouble:Bool = false;
+	
+	@saveVar public static var money:Map<String, Int> = [];
+	
+	@saveVar public static var equipment:Map<String, Null<String>> = ['playerSkin' => null, 'speakerSkin' => null, 'pet' => null];
+	
+	public static var bfSkin(get, set):String;
+	
+	public static var gfSkin(get, set):String;
+	
+	public static var pet(get, set):String;
+	
+	@saveVar public static var forceUnlockReq:Bool = false;
+	
+	@saveVar public static var forceUnlock:Bool = false;
+	
+	@saveVar public static var colorText = 'Enabled';
+	
+	@saveVar public static var language:String = 'english';
+	
+	@saveVar public static var subtitles:Bool = true;
+	
+	@saveVar public static var achievements:Array<String> = [];
+	
+	@saveVar public static var tidbits:Array<String> = [];
+	
+	@saveVar public static var totalPlayTime:Float = 0;
+	
+	// my bullshit ------------------------------------------------------------------------//
+	@saveVar public static var fnafStateVisited:Bool = false;
+	
+	@saveVar public static var scaryDefeat:Bool = false;
+	
+	@saveVar public static var scaryZared:Bool = false;
+	
+	@saveVar public static var fnafHintCode:String = '';
+	
 	// debug ------------------------------------------------------------------------//
 	@saveVar public static var inDevMode:Bool = false;
 	
-	@saveVar public static var fpsDisplayType:String = 'Simple';
+	@saveVar public static var fpsDisplayType:String = 'Disabled';
 	
 	@saveVar public static var streamedMusic:Bool = false;
 	
@@ -51,22 +113,28 @@ class ClientPrefs
 	
 	@saveVar public static var shaders:Bool = true;
 	
-	@saveVar public static var unlockedFramerate:Bool = false;
-	
 	@saveVar public static var framerate:Int = 60;
 	
+	@saveVar public static var unlockedFramerate:Bool = false;
+	
+	@saveVar public static var vsyncMode:VsyncMode = OFF;
+	
 	// visuals ------------------------------------------------------------------------//
-	@saveVar public static var jumpGhosts:Bool = false;
+	@saveVar public static var jumpGhosts:Bool = true;
 	
 	@saveVar public static var noteSplashes:Bool = true;
 	
+	@saveVar public static var noteCovers:Bool = true;
+	
 	@saveVar public static var hideHud:Bool = false;
 	
-	@saveVar public static var showRatings:Bool = true;
+	@saveVar public static var timeBarType:String = 'Song Name';
 	
-	@saveVar public static var timeBarType:String = 'Time Left';
+	@saveVar public static var hudRankDisplay:String = 'Both';
 	
-	@saveVar public static var flashing:Bool = true;
+	@saveVar public static var flashing(get, set):Bool;
+	
+	@saveVar public static var photosensitive:Bool = true;
 	
 	@saveVar public static var camZooms:Bool = true;
 	
@@ -74,13 +142,12 @@ class ClientPrefs
 	
 	@saveVar public static var healthBarAlpha:Float = 1;
 	
-	@saveVar public static var pauseMusic:String = 'Tea Time';
+	@saveVar public static var showFPS:Bool = false;
 	
+	@saveVar public static var discordRPC(default, set):Bool = true;
+	
+	// its aura ok
 	@saveVar public static var camFollowsCharacters:Bool = true;
-	
-	@saveVar public static var underlayType:String = 'Lane Underlay';
-	
-	@saveVar public static var underlayOpacity:Float = 0.0;
 	
 	// gameplay ------------------------------------------------------------------------//
 	@saveVar public static var mechanics:Bool = true;
@@ -96,6 +163,12 @@ class ClientPrefs
 	@saveVar public static var ghostTapping:Bool = true;
 	
 	@saveVar public static var noReset:Bool = false;
+	
+	@saveVar public static var laneUnderlayAlpha:Float = 0;
+	
+	@saveVar public static var laneUnderlayStyle:String = 'A';
+	
+	@saveVar public static var opponentLaneUnderlay:Bool = true;
 	
 	@saveVar public static var hitsoundVolume:Float = 0;
 	
@@ -118,9 +191,6 @@ class ClientPrefs
 	@saveVar public static var noteOffset:Int = 0;
 	
 	@saveVar public static var quants:Bool = false;
-	
-	// @saveVar public static var noteSkin:String = 'Vanilla';
-	@saveVar public static var comboOffset:Array<Int> = [0, 0, 0, 0];
 	
 	@saveVar public static var gameplaySettings:Map<String, Dynamic> = [
 		'scrollspeed' => 1.0,
@@ -200,7 +270,7 @@ class ClientPrefs
 		'note_down' => [S, DOWN],
 		'note_up' => [W, UP],
 		'note_right' => [D, RIGHT],
-		'note_dodge' => [SPACE, NONE],
+		'note_taunt' => [SPACE, NONE],
 		'ui_left' => [A, LEFT],
 		'ui_down' => [S, DOWN],
 		'ui_up' => [W, UP],
@@ -216,22 +286,23 @@ class ClientPrefs
 		'debug_2' => [EIGHT, NONE]
 	];
 	
-	public static var defaultKeys:Map<Action, Array<FlxKey>> = null;
-	
-	public static var gamepadBinds:Map<Action, Array<FlxGamepadInputID>> = [
-		'note_up' => [DPAD_UP, Y],
-		'note_down' => [DPAD_DOWN, A],
-		'note_left' => [DPAD_LEFT, X],
-		'note_right' => [DPAD_RIGHT, B],
-	];
-	
-	public static var defaultGamepadBinds:Map<Action, Array<FlxGamepadInputID>> = null;
+	public static var defaultKeys:Map<String, Array<FlxKey>> = null;
 	
 	public static function loadDefaultKeys()
 	{
 		defaultKeys = keyBinds.copy();
 		defaultGamepadBinds = gamepadBinds.copy();
 	}
+	
+	@saveVar(false, false) public static var gamepadBinds:Map<Action, Array<FlxGamepadInputID>> = [
+		'note_up' => [DPAD_UP, Y],
+		'note_down' => [DPAD_DOWN, A],
+		'note_left' => [DPAD_LEFT, X],
+		'note_right' => [DPAD_RIGHT, B],
+		'note_taunt' => [LEFT_SHOULDER, NONE],
+	];
+	
+	public static var defaultGamepadBinds:Map<Action, Array<FlxGamepadInputID>> = null;
 	
 	// Editor Colours ------------------------------------------------------------------------//
 	@saveVar public static var editorUIColor:FlxColor = FlxColor.fromRGB(102, 163, 255);
@@ -271,37 +342,150 @@ class ClientPrefs
 	 */
 	public static var volumeUpKeys:Array<FlxKey> = [FlxKey.NUMPADPLUS, FlxKey.PLUS];
 	
+	public static final maxBackups:Int = 10;
+	
 	public static function flush()
 	{
-		FlxG.save.flush();
+		flushSave();
 		
-		var save:FlxSave = new FlxSave();
-		save.bind('controls_v2');
+		flushControls();
+	}
+	
+	public static function flushSave():Void
+	{
+		FlxG.save.data.date = Date.now().toString();
+		
+		backupSave();
+		
+		FlxG.save.flush();
+	}
+	
+	public static function flushControls():Void
+	{
+		var save:FlxSave = getControlsSave(); // Placing this in a separate save so that it can be manually deleted without removing your Score and stuff
 		save.data.customControls = keyBinds;
 		save.data.customGamepadControls = gamepadBinds;
 		save.close();
 	}
 	
-	public static function tryBindingSave(name:String = 'funkin')
+	public static inline function getControlsSave():FlxSave
 	{
-		if (FlxG.save.bind(name, CoolUtil.getSavePath()) == false) // coudlnt bind the save so just fallback
+		var save:FlxSave = new FlxSave();
+		save.bind('controls_v2', 'MotorFrog', function(data:String, exception:haxe.Exception) {
+			trace('controls save data was corrupted: ${exception.message}. controls have been reset');
+			
+			return {};
+		});
+		
+		return save;
+	}
+	
+	public static function backupSave(name:String = 'funkin'):Void // surely theres better ways right but whatever
+	{
+		final path:String = SaveUtil.getPath('', FlxG.stage.application.meta.get('file') + '/$name');
+		final sav = path.withoutExtension();
+		
+		if (FileSystem.exists(path))
 		{
-			@:privateAccess
+			if (FileSystem.exists('$sav-backup.sol')) FileSystem.deleteFile('$sav-backup.sol');
+			
+			try
 			{
-				final file = FlxSave.validate(FlxG.stage.application.meta.get('file'));
-				final path = SaveUtil.getPath('', '$file/$name');
+				File.copy(path, '$sav-backup.sol');
 				
-				if (FileSystem.exists(path))
+				function push(i:Int)
 				{
-					final corruptedPath = path.withoutExtension() + ' (corrupted) ${Date.now().toString().replace(':', '_')}.sol';
-					FileSystem.rename(path, corruptedPath);
+					if (!FileSystem.exists('$sav-backup$i.sol')) return;
 					
-					trace('Save was corrupted. corrupted save was placed at $corruptedPath');
+					if (FileSystem.exists('$sav-backup${i + 1}.sol')) push(i + 1);
+					
+					if (i + 1 <= maxBackups)
+					{
+						FileSystem.rename('$sav-backup$i.sol', '$sav-backup${i + 1}.sol');
+					}
+					else
+					{
+						FileSystem.deleteFile('$sav-backup$i.sol');
+					}
+				}
+				
+				push(1);
+			}
+			catch (e:haxe.Exception)
+			{
+				trace('sigh ${e.message}');
+			}
+			
+			if (FileSystem.exists('$sav-backup.sol')) FileSystem.rename('$sav-backup.sol', '$sav-backup1.sol');
+		}
+	}
+	
+	public static function tryBindingSave(name:String = 'funkin'):Void
+	{
+		FlxG.save.bind(name, CoolUtil.getSavePath(), function(data:String, exception:haxe.Exception) {
+			final file = @:privateAccess FlxSave.validate(FlxG.stage.application.meta.get('file'));
+			final path = SaveUtil.getPath('', '$file/$name');
+			
+			if (FileSystem.exists(path))
+			{
+				final corruptedPath = path.withoutExtension() + ' (corrupted) ${Date.now().toString().replace(':', '_')}.sol';
+				FileSystem.rename(path, corruptedPath);
+				
+				trace('save was corrupted: ${exception.message}. corrupted save was placed at $corruptedPath');
+				
+				// can someone add a freaking notiifcation or sometihng
+			}
+			
+			return attemptLoadBackup(name);
+		});
+	}
+	
+	public static function attemptLoadBackup(name:String = 'funkin'):Dynamic
+	{
+		final path:String = SaveUtil.getPath('', FlxG.stage.application.meta.get('file') + '/funkin');
+		final sav = path.withoutExtension();
+		
+		var backupSave:FlxSave = new FlxSave();
+		
+		function attempt(postfix:String):Dynamic
+		{
+			if (FileSystem.exists('$sav-backup$postfix.sol'))
+			{
+				if (backupSave.bind('$name-backup$postfix', CoolUtil.getSavePath()))
+				{
+					var data = backupSave.data;
+					backupSave.destroy();
+					
+					FileSystem.deleteFile('$sav-backup$postfix.sol');
+					
+					trace('loaded $name-backup$postfix (${data.date})');
+					
+					return data;
+				}
+				else
+				{
+					trace('cant load bak $postfix');
+					
+					FileSystem.deleteFile('$sav-backup$postfix.sol');
 				}
 			}
 			
-			FlxG.save.bind(name, CoolUtil.getSavePath());
+			return null;
 		}
+		
+		final result = attempt('');
+		
+		if (result != null) return result;
+		
+		var i:Int = 0;
+		while (++i <= maxBackups)
+		{
+			final result = attempt(Std.string(i));
+			
+			if (result != null) return result;
+		}
+		
+		return {};
 	}
 	
 	/**
@@ -312,20 +496,69 @@ class ClientPrefs
 	public static function load()
 	{
 		if (FlxG.save.data.volume != null) FlxG.sound.volume = FlxG.save.data.volume;
+		else FlxG.sound.volume = 0.6; // I'm doing them a fucking favor.
 		
 		if (FlxG.save.data.mute != null) FlxG.sound.muted = FlxG.save.data.mute;
 		
-		if (FlxG.save.data.framerate == null) framerate = Std.int(FlxMath.bound(FlxG.stage.application.window.displayMode.refreshRate, 60, 400));
+		if (DebugDisplay.instance != null) DebugDisplay.instance.visible = showFPS;
+		
+		if (FlxG.save.data.framerate == null) framerate = Std.int(FlxMath.bound(FlxG.stage.application.window.displayMode.refreshRate, 60, 240));
 		
 		changeFps(framerate);
 		
-		var save:FlxSave = new FlxSave();
-		save.bind('controls_v2');
-		if (save != null && save.data.customControls != null) CoolUtil.copyMapValues(save.data.customControls, keyBinds);
-		if (save != null && save.data.customGamepadControls != null) CoolUtil.copyMapValues(save.data.customGamepadControls, gamepadBinds);
-		reloadControls();
+		if (FlxG.save.data.beans != null)
+		{
+			ClientPrefs.money.set('beans', FlxG.save.data.beans);
+			
+			Reflect.deleteField(FlxG.save.data, 'beans');
+			
+			trace('migrated beans');
+		}
 		
-		save = FlxDestroyUtil.destroy(save);
+		for (oldField => newField in ['bfSkin' => 'playerSkin', 'gfSkin' => 'speakerSkin', 'pet' => 'pet'])
+		{
+			if (Reflect.hasField(FlxG.save.data, oldField))
+			{
+				var value:String = Reflect.field(FlxG.save.data, oldField);
+				
+				if (value == 'default' || value == '') value = null;
+				
+				ClientPrefs.equipment.set(newField, value);
+				
+				Reflect.deleteField(FlxG.save.data, oldField);
+				
+				trace('migrated $oldField');
+			}
+		}
+		
+		var save:FlxSave = getControlsSave();
+		if (save.data?.customControls is haxe.ds.StringMap) CoolUtil.copyMapValues(save.data.customControls, keyBinds);
+		if (save.data?.customGamepadControls is haxe.ds.StringMap) CoolUtil.copyMapValues(save.data.customGamepadControls, gamepadBinds);
+		reloadControls();
+		save.destroy();
+	}
+	
+	inline public static function getGameplaySetting(name:String, defaultValue:Dynamic):Dynamic
+	{
+		return (gameplaySettings.exists(name) ? gameplaySettings.get(name) : defaultValue);
+	}
+	
+	public static function reloadControls()
+	{
+		Controls.instance.setKeyboardScheme(KeyboardScheme.Solo);
+		
+		final gamepads = Controls.instance.gamepadsAdded.copy();
+		Controls.instance.removeGamepad();
+		for (id in gamepads)
+			Controls.instance.addDefaultGamepad(id);
+			
+		ClientPrefs.muteKeys = copyKey(keyBinds.get('volume_mute'));
+		ClientPrefs.volumeDownKeys = copyKey(keyBinds.get('volume_down'));
+		ClientPrefs.volumeUpKeys = copyKey(keyBinds.get('volume_up'));
+		
+		FlxG.sound.muteKeys = ClientPrefs.muteKeys;
+		FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
+		FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
 	}
 	
 	public static function changeFps(fps:Int = 60)
@@ -344,26 +577,9 @@ class ClientPrefs
 		}
 	}
 	
-	inline public static function getGameplaySetting(name:String, defaultValue:Dynamic):Dynamic
+	public static function updateVsyncMode()
 	{
-		return (gameplaySettings.exists(name) ? gameplaySettings.get(name) : defaultValue);
-	}
-	
-	public static function reloadControls()
-	{
-		Controls.instance.setKeyboardScheme(KeyboardScheme.Solo);
-		final gamepads = Controls.instance.gamepadsAdded.copy();
-		Controls.instance.removeGamepad();
-		for (id in gamepads)
-			Controls.instance.addDefaultGamepad(id);
-			
-		ClientPrefs.muteKeys = copyKey(keyBinds.get('volume_mute'));
-		ClientPrefs.volumeDownKeys = copyKey(keyBinds.get('volume_down'));
-		ClientPrefs.volumeUpKeys = copyKey(keyBinds.get('volume_up'));
-		
-		FlxG.sound.muteKeys = ClientPrefs.muteKeys;
-		FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
-		FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
+		FlxG.stage.window.setVSyncMode(ClientPrefs.vsyncMode);
 	}
 	
 	public static function copyKey(arrayToCopy:Array<FlxKey>):Array<FlxKey>
@@ -385,12 +601,55 @@ class ClientPrefs
 		
 		return copiedArray;
 	}
+	
+	static function get_bfSkin():String return (equipment.get('playerSkin') ?? 'default');
+	
+	static function get_gfSkin():String return (equipment.get('speakerSkin') ?? 'default');
+	
+	static function get_pet():String return (equipment.get('pet') ?? '');
+	
+	static function set_bfSkin(now:String):String
+	{
+		equipment.set('playerSkin', now == 'default' ? null : now);
+		return now;
+	}
+	
+	static function set_gfSkin(now:String):String
+	{
+		equipment.set('speakerSkin', now == 'default' ? null : now);
+		return now;
+	}
+	
+	static function set_pet(now:String):String
+	{
+		equipment.set('pet', now == '' ? null : now);
+		return now;
+	}
+	
+	static function get_flashing():Bool
+	{
+		return !photosensitive;
+	}
+	
+	static function set_flashing(now:Bool):Bool
+	{
+		return photosensitive = !now;
+	}
+	
+	static function set_discordRPC(now:Bool):Bool
+	{
+		discordRPC = now;
+		
+		funkin.api.DiscordClient.check();
+		
+		return now;
+	}
 }
 
 @:access(flixel.util.FlxSave)
 private class SaveUtil
 {
-	static function getPath(localPath:String, name:String):String
+	public static function getPath(localPath:String, name:String):String
 	{
 		// Avoid ever putting .sol files directly in AppData
 		if (localPath == "") localPath = getDefaultLocalPath();
@@ -427,7 +686,7 @@ private class SaveUtil
 		return path + name + ".sol";
 	}
 	
-	static function getDefaultLocalPath()
+	public static function getDefaultLocalPath()
 	{
 		var meta = openfl.Lib.current.stage.application.meta;
 		var path = meta["company"];

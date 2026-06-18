@@ -7,7 +7,6 @@ import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 
 import funkin.data.*;
-import funkin.game.shaders.*;
 import funkin.game.shaders.RGBShader;
 import funkin.objects.Character;
 import funkin.scripts.*;
@@ -105,13 +104,13 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 	function set_missed(v:Bool):Bool return this[3] = v;
 }
 
-class Note extends FunkinSprite implements funkin.game.modchart.IModNote
+@:allow(funkin.states.PlayState)
+class Note extends RGBSprite implements funkin.game.modchart.IModNote
 {
 	public static var defaultNotes = ['No Animation', 'GF Sing', ''];
 	
 	var queueNote:Null<QueueNote> = null;
 	
-	public var row:Int = 0;
 	public var lane:Int = 0;
 	
 	public var noteScript:Null<FunkinScript> = null;
@@ -121,7 +120,7 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var typeOffsetX:Float = 0; // used to offset notes, mainly for note types. use in place of offset.x and offset.y when offsetting notetypes
 	public var typeOffsetY:Float = 0;
 	
-	public var noteDiff:Float = 1000;
+	public var noteDiff(get, never):Float;
 	public var quant:Int = 4;
 	
 	public var z:Float = 0;
@@ -138,7 +137,7 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var mustPress:Bool = false;
 	public var noteData:Int = 0;
 	public var hitPriority:Int = 1;
-	public var canBeHit:Bool = false;
+	public var canBeHit(get, never):Bool;
 	public var tooLate:Bool = false;
 	public var wasGoodHit:Bool = false;
 	public var ignoreNote:Bool = false;
@@ -149,15 +148,11 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var spawned:Bool = false;
 	
-	// shared between a note and its tail to prevent some issues
+	public var tailState:NoteSharedTailState; // shared between a note and its tail to prevent some issues
+	
 	// its kind of  fuking stupid theres probably some other way to fix it but i cant think rn
-	public var tailState:NoteSharedTailState;
-	
-	public var tail:Array<Note> = []; // for sustains
+	public var tail(get, never):Array<Note>; // for sustains
 	public var parent:Null<Note> = null;
-	
-	// 0 to 1, 1 = missed
-	public var coyoteProgress:Float = 0;
 	
 	/**
 	 * if true, the note cannot be hit.
@@ -172,7 +167,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var alreadyShifted:Bool = false;
 	
-	public var rgbGraphics:RGBGraphics;
 	public var rgbEnabled:Bool = true;
 	public var reAssignable:Bool = true;
 	
@@ -182,7 +176,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var earlyHitMult:Float = 1;
 	
-	@:isVar
 	public var daWidth(get, never):Float;
 	
 	inline function get_daWidth():Float return (playField == null ? Note.swagWidth : playField.swagWidth);
@@ -190,9 +183,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public static var swagWidth:Float = 160 * 0.7;
 	
 	public var noteSplashDisabled:Bool = false;
-	public var noteSplashHue:Float = 0;
-	public var noteSplashSat:Float = 0;
-	public var noteSplashBrt:Float = 0;
 	
 	public var offsetX:Float = 0;
 	public var offsetY:Float = 0;
@@ -208,7 +198,8 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var hitHealth:Float = 0.023;
 	public var missHealth:Float = 0.0475;
 	public var rating:String = 'unknown';
-	public var ratingMod:Float = 0; // 9 = unknown, 0.25 = shit, 0.5 = bad, 0.75 = good, 1 = sick
+	public var ratingData:Null<funkin.game.Rating> = null;
+	public var ratingMod:Float = 0; // 0 = unknown, 0.25 = shit, 0.5 = bad, 0.75 = good, 1 = sick
 	public var ratingDisabled:Bool = false;
 	
 	public var texture(default, set):String = null;
@@ -219,7 +210,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var noMissAnimation:Bool = false;
 	public var hitCausesMiss:Bool = false;
 	public var canMiss:Bool = false;
-	public var distance:Float = 2000; // plan on doing scroll directions soon -bb
 	
 	public var hitsoundDisabled:Bool = false;
 	
@@ -227,9 +217,10 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var owner:Character = null;
 	public var singers:Array<Character> = null;
-	public var playField(default, set):PlayField;
+	public var playField(default, set):PlayField = null;
 	public var sustainSplash:SustainSplash = null;
 	public var noteSplash:NoteSplash = null;
+	public var strum:StrumNote = null;
 	
 	public var skin:NoteSkin;
 	
@@ -309,27 +300,30 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public inline function _reset():Void
 	{
-		exists = true;
-		alive = true;
+		// MAYBE we need a macro to reset all of this :pray:
+		animSuffix = '';
+		rating = 'unknown';
+		ratingData = null;
+		ratingMod = 0;
+		
 		garbage = spawned = false;
 		reAssignable = true;
+		canQuant = true;
 		
 		hitPriority = 1;
 		hitHealth = .023;
 		missHealth = .0475;
-		coyoteProgress = 0;
-		
 		noAnimation = noMissAnimation = ratingDisabled = hitCausesMiss = false;
 		
-		ignoreNote = canBeHit = tooLate = wasGoodHit = noteWasHit = hitByOpponent = false;
+		ignoreNote = tooLate = wasGoodHit = noteWasHit = hitByOpponent = false;
 		
 		owner = null;
 		singers?.resize(0);
 		
-		tail.resize(0);
+		parent = prevNote = nextNote = null;
+		color = FlxColor.WHITE;
 		sustainSplash = null;
 		noteSplash = null;
-		nextNote = null;
 		clipRect = null;
 		alpha = 1;
 	}
@@ -341,11 +335,9 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
 		
 		rgbGraphics = NoteUtil.getCurColors(noteData, quant, player);
-		rgbEnabled = NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false;
+		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
 		
-		updateColors();
-		
-		prefix = suffix = animSuffix = texture = '';
+		prefix = suffix = texture = '';
 		
 		playAnim(getDefaultAnim(), true);
 		updateHitbox();
@@ -362,7 +354,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		if (parent != null)
 		{
 			tailState = parent.tailState;
-			parent.coyoteProgress = 0;
 		}
 		else if (tailState == null || tailState.tail.length > 0)
 		{
@@ -425,11 +416,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		
 		return (animation.exists('$anim$noteData') ? '$anim$noteData' : anim);
 	}
-	
-	var lastNoteOffsetXForPixelAutoAdjusting:Float = 0;
-	var lastNoteScaleToo:Float = 1;
-	
-	public var originalHeightForCalcs:Float = 6;
 	
 	public function reloadNote(?_prefix:String = '', ?_texture:String = '', ?_suffix:String = '')
 	{
@@ -532,6 +518,7 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		var fallback = NoteUtil.getCurColors(noteData, quant, player);
 		
 		rgbGraphics = fallback;
+		
 		if (color != null || color.length == skin?.keys ?? 4)
 		{
 			reAssignable = false;
@@ -578,43 +565,29 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 			noteScript?.executeFunc("update", [this, elapsed], this);
 		}
 		
-		if (rgbGraphics != null)
+		if (rgbShader != null)
 		{
-			rgbGraphics.enabled = rgbEnabled;
+			rgbShader.enabled = rgbEnabled;
 			
-			rgbGraphics.alpha = (alphaMod * alphaMod2) * (playField?.baseAlpha ?? 1.0);
-		}
-		
-		var actualHitbox:Float = hitbox * earlyHitMult;
-		
-		var diff = (strumTime - Conductor.songPosition);
-		noteDiff = diff;
-		var absDiff = Math.abs(diff);
-		canBeHit = absDiff <= actualHitbox;
-		
-		if (isSustainNote && parent != null)
-		{
-			if (parent.coyoteProgress >= 1 && !wasGoodHit) tooLate = true;
+			rgbShader.alpha = (alphaMod * alphaMod2) * (playField?.baseAlpha ?? 1.0);
 		}
 		
 		if (tooLate && !inEditor && alpha > 0.3) alpha = 0.3;
 	}
 	
+	public inline function get_noteDiff():Float
+	{
+		return (strumTime - Conductor.songPosition);
+	}
+	
+	public inline function get_canBeHit():Bool
+	{
+		return (Math.abs(noteDiff) <= (hitbox * earlyHitMult));
+	}
+	
 	public inline function isLate():Bool
 	{
-		return (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit && (parent?.coyoteProgress ?? 1) >= 1);
-	}
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
+		return (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit);
 	}
 	
 	override public function destroy()

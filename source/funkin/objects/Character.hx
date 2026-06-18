@@ -13,7 +13,7 @@ import animate.FlxAnimate;
  * Bopper with extended features to be animated to the strums
  */
 // NOT DONE NOT DONE NOT DONE
-class Character extends Bopper
+class Character extends Bopper implements IFlags
 {
 	public static final DEFAULT_CHARACTER:String = 'bf';
 	
@@ -32,7 +32,7 @@ class Character extends Bopper
 	/**
 	 * Character's json name
 	 */
-	public var curCharacter:String = DEFAULT_CHARACTER;
+	public var curCharacter:String;
 	
 	public var holdTimer:Float = 0;
 	
@@ -146,29 +146,45 @@ class Character extends Bopper
 	 */
 	public var vSliceSustains = false;
 	
-	public function new(x:Float = 0, y:Float = 0, character:String = 'bf', isPlayer:Bool = false)
+	public var legacyOffset:Bool = true;
+	
+	public var flags:haxe.DynamicAccess<Dynamic> = {};
+	
+	public var pausePortrait:String = '';
+	
+	public function new(x:Float = 0, y:Float = 0, character:String, isPlayer:Bool = false)
 	{
 		super(x, y);
 		
-		this.curCharacter = character;
 		this.isPlayer = isPlayer;
 		
-		genGhosts();
-		
-		loadFile(CharacterParser.fetchInfo(curCharacter));
+		loadCharacter(character ?? DEFAULT_CHARACTER);
 	}
 	
-	function genGhosts()
+	function genGhosts(count:Int):Void
 	{
-		for (i in 0...4)
+		while (doubleGhosts.length < count)
 		{
 			final ghost = new FunkinSprite();
 			ghost.visible = false;
 			ghost.useRenderTexture = true;
 			ghost.antialiasing = true;
 			ghost.alpha = ghostAlpha;
+			
 			doubleGhosts.push(ghost);
 		}
+	}
+	
+	public function loadCharacter(name:String, force:Bool = false):Void
+	{
+		if (curCharacter == name && !force) return;
+		
+		for (ghost in doubleGhosts) ghost?.destroy();
+		doubleGhosts.resize(0);
+		
+		loadFile(CharacterParser.fetchInfo(curCharacter = name));
+		
+		genGhosts(PlayState.SONG?.keys ?? 0);
 	}
 	
 	// clean this up
@@ -183,28 +199,35 @@ class Character extends Bopper
 		this.cameraPosition = json.camera_position;
 		
 		this.healthIcon = json.healthicon;
+		this.ghostsEnabled = json.afterimages;
 		this.vSliceSustains = json.vslice_sustains;
 		this.singDuration = json.sing_duration;
 		this.noAntialiasing = json.no_antialiasing;
+		this.scalableOffsets = json.scalableOffsets;
+		
+		this.flags = json.flags;
+		
+		this.pausePortrait = json.pausePortrait;
 		
 		this.flipX = (json.flip_x != isPlayer);
 		this.originalFlipX = (json.flip_x == true);
 		this.imageFile = json.image;
 		
+		this.baseFlipX = (isPlayer ? !originalFlipX : originalFlipX);
+		this.baseFlipY = false;
+		
 		this.antialiasing = !noAntialiasing && ClientPrefs.globalAntialiasing;
 		
 		this.danceEveryNumBeats = json.dance_every ?? 2;
+		
+		this.isPlayerInEditor = json._editor_isPlayer;
 		
 		this.gameoverCharacter = json.gameover_character;
 		this.gameoverConfirmDeathSound = json.gameover_confirm_sound;
 		this.gameoverLoopDeathSound = json.gameover_loop_sound;
 		this.gameoverInitialDeathSound = json.gameover_intial_sound;
 		
-		this.scalableOffsets = json.scalableOffsets ?? false;
-		
-		this.isPlayerInEditor = json._editor_isPlayer;
-		
-		loadAtlas(imageFile);
+		loadAtlas(imageFile, LOOSE);
 		
 		if (jsonScale != 1)
 		{
@@ -258,7 +281,9 @@ class Character extends Bopper
 			addAnimByPrefix('idle', 'BF idle dance', 24, false);
 		}
 		
-		dance(forceDance);
+		dance(true);
+		setBaseFrameSize();
+		dance(true);
 	}
 	
 	override function update(elapsed:Float)
@@ -305,6 +330,7 @@ class Character extends Bopper
 			for (ghost in doubleGhosts)
 				ghost.update(elapsed);
 		}
+		
 		super.update(elapsed);
 	}
 	
@@ -336,21 +362,22 @@ class Character extends Bopper
 	 */
 	override function dance(forced:Bool = false)
 	{
-		if (debugMode || specialAnim) return;
+		if (debugMode || specialAnim || skipDance) return;
+		
 		super.dance(forced);
 	}
 	
 	override function playAnim(animToPlay:String, isForced:Bool = false, isReversed:Bool = false, frame:Int = 0)
 	{
 		specialAnim = false;
-		animToPlay += animSuffix;
 		
-		super.playAnim(animToPlay, isForced, isReversed, frame);
+		super.playAnim(animToPlay + animSuffix, isForced, isReversed, frame);
 	}
 	
 	override function onBeatHit(beat:Int)
 	{
 		if (stunned || getAnimName().startsWith('sing') || holding) return;
+		
 		super.onBeatHit(beat);
 	}
 	
@@ -373,40 +400,49 @@ class Character extends Bopper
 	
 	public function playGhostAnim(ghostID = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
-		var ghost:FunkinSprite = doubleGhosts[ghostID];
+		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
+		
+		var ghost = doubleGhosts[ghostID];
+		
+		if (ghost.frames == null)
+		{
+			ghost.frames = frames;
+			ghost.copyAnimController(animation);
+		}
+		
 		ghost.scale.copyFrom(scale);
-		ghost.frames = frames;
-		ghost.animation.copyFrom(animation);
+		ghost.offset.copyFrom(offset);
+		ghost.origin.copyFrom(origin);
 		ghost.antialiasing = antialiasing;
+		ghost.angle = angle;
 		ghost.x = x;
 		ghost.y = y;
+		ghost.width = width;
+		ghost.height = height;
+		ghost.baseFrameWidth = baseFrameWidth;
+		ghost.baseFrameHeight = baseFrameHeight;
 		ghost.flipX = flipX;
 		ghost.flipY = flipY;
+		ghost.baseFlipX = baseFlipX;
+		ghost.baseFlipY = baseFlipY;
 		ghost.alpha = alpha * ghostAlpha;
 		ghost.visible = true;
 		ghost.color = healthColour;
-		ghost.animation.play(animName, force, reversed, frame);
 		
 		ghostTweenGrp[ghostID]?.cancel();
 		
 		final direction:String = animName.substring(4).split('-')[0];
 		
-		inline function resolveDir(xDir:Bool = false):Float
+		inline function resolveDir(x:Bool):Float
 		{
-			var output:Float = 0;
-			switch (direction)
+			return switch (direction)
 			{
-				case 'UP':
-					if (!xDir) output = -ghostDisplacement;
-				case 'DOWN':
-					if (!xDir) output = ghostDisplacement;
-				case 'RIGHT':
-					if (xDir) output = ghostDisplacement;
-				case 'LEFT':
-					if (xDir) output = -ghostDisplacement;
+				default: 0;
+				case 'UP': !x ? -ghostDisplacement : 0;
+				case 'DOWN': !x ? ghostDisplacement : 0;
+				case 'RIGHT': x ? ghostDisplacement : 0;
+				case 'LEFT': x ? -ghostDisplacement : 0;
 			}
-			
-			return output;
 		}
 		
 		final moveX = x + resolveDir(true);
@@ -420,10 +456,12 @@ class Character extends Bopper
 				}
 			});
 			
+		ghost.animation.play(animName, force, reversed, frame);
+		
 		if (animOffsets.exists(animName))
 		{
 			final daOffset = animOffsets.get(animName);
-			ghost.animOffset.set(daOffset[0] * scale.x, daOffset[1] * scale.y);
+			ghost.setAnimOffset(daOffset[0], daOffset[1]);
 		}
 	}
 	
@@ -439,6 +477,25 @@ class Character extends Bopper
 		
 		doubleGhosts = FlxDestroyUtil.destroyArray(doubleGhosts);
 		
+		flags = null;
+		
 		super.destroy();
+	}
+	
+	public override function updateHitbox():Void // im so disgusted
+	{
+		super.updateHitbox();
+		
+		if (legacyOffset) offset.set();
+	}
+	
+	public function hasFlag(flag:String):Bool
+	{
+		return flags.exists(flag);
+	}
+	
+	public function getFlag(flag:String):Dynamic
+	{
+		return flags.get(flag);
 	}
 }

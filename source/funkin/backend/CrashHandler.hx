@@ -40,6 +40,8 @@ class CrashHandler
 		
 		var message:String = Std.string(event.error);
 		
+		#if sys Sys.println #else trace #end (message);
+		
 		if (Std.isOfType(event.error, Error))
 		{
 			message = cast(event.error, Error).message;

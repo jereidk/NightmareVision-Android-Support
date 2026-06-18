@@ -1,13 +1,11 @@
 package funkin.objects;
 
-import funkin.game.IUiSprite;
-
 import flixel.util.helpers.FlxBounds;
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxRect;
 
 @:nullSafety
-class Bar extends FlxSpriteGroup implements IUiSprite
+class Bar extends FlxSpriteGroup
 {
 	public final bg:FlxSprite;
 	public final leftBar:FlxSprite;
@@ -42,11 +40,6 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 	 */
 	public var barOffset:FlxPoint = new FlxPoint(3, 3);
 	
-	/**
-	 * additive offset for the bg position
-	**/
-	public var bgOffset:FlxPoint = new FlxPoint(0, 0);
-	
 	public function new(x:Float, y:Float, image:String = 'healthBar', ?valueFunction:Void->Float, boundX:Float = 0, boundY:Float = 1)
 	{
 		super(x, y);
@@ -54,7 +47,7 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 		this.valueFunction = valueFunction;
 		
 		bg = new FlxSprite().loadGraphic(Paths.image(image));
-		bg.setPosition(bg.x + bgOffset.x, bg.y + bgOffset.y);
+		bg.setPosition(bg.x, bg.y);
 		
 		@:bypassAccessor barWidth = Std.int(bg.width - 6);
 		@:bypassAccessor barHeight = Std.int(bg.height - 6);
@@ -92,13 +85,6 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 		super.update(elapsed);
 	}
 	
-	public function setBGOffset(x:Float, y:Float)
-	{
-		bgOffset.set(x, y);
-		bg.x += bgOffset.x;
-		bg.y += bgOffset.y;
-	}
-	
 	public function setBounds(min:Float, max:Float)
 	{
 		bounds.min = min;
@@ -115,8 +101,8 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 	{
 		if (leftBar == null || rightBar == null) return;
 		
-		leftBar.setPosition(bg.x - bgOffset.x, bg.y - bgOffset.y);
-		rightBar.setPosition(bg.x - bgOffset.x, bg.y - bgOffset.y);
+		leftBar.setPosition(bg.x, bg.y);
+		rightBar.setPosition(bg.x, bg.y);
 		
 		var leftSize:Float = 0;
 		if (leftToRight) leftSize = FlxMath.lerp(0, barWidth, percent / 100);
@@ -132,9 +118,9 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 		rightBar.clipRect.x = barOffset.x + leftSize;
 		rightBar.clipRect.y = barOffset.y;
 		
-		barCenter = leftBar.x + leftSize + barOffset.x;
+		barCenter = leftBar.x + (leftSize / leftBar.frameWidth * leftBar.width) + barOffset.x;
 		
-		// flixel.. is.. well. you know!
+		// flixel is retarded
 		leftBar.clipRect = leftBar.clipRect;
 		rightBar.clipRect = rightBar.clipRect;
 	}
@@ -199,21 +185,5 @@ class Bar extends FlxSpriteGroup implements IUiSprite
 		barHeight = value;
 		regenerateClips();
 		return value;
-	}
-	
-	public var alphaMultipler(default, set):Float = 1;
-	
-	function set_alphaMultipler(v:Float):Float
-	{
-		alphaMultipler = FlxMath.bound(v, 0, 1);
-		set_alpha(alpha);
-		return alphaMultipler;
-	}
-	
-	override function set_alpha(v:Float)
-	{
-		v = FlxMath.bound(v, 0, 1);
-		v *= alphaMultipler;
-		return super.set_alpha(v);
 	}
 }

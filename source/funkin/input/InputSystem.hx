@@ -1,21 +1,17 @@
 package funkin.input;
 
-import openfl.events.KeyboardEvent;
-import openfl.events.EventType;
-import openfl.events.EventDispatcher;
-
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.gamepad.FlxGamepad;
 import flixel.input.FlxInput.FlxInputState;
 import flixel.input.actions.FlxActionInput;
 import flixel.input.actions.FlxAction.FlxActionDigital;
 
-#if mobile
-import mobile.backend.flixel.input.FlxMobileInputID;
-#end
+import openfl.events.EventType;
+import openfl.events.EventDispatcher;
 
 import funkin.input.Controls;
-import funkin.input.Controls.Action;
+
+import openfl.events.KeyboardEvent;
 
 import lime.system.System;
 #if FLX_GAMEINPUT_API
@@ -46,12 +42,12 @@ typedef AxisEvent<T> = (id:T, value:Float) -> Void;
  * ```
  */
 @:nullSafety
-class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
+class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 {
 	/**
 	 * The list of actions checked for, in order of their note direction
 	 */
-	public static var ACTION_LIST:Array<Action> = [NOTE_LEFT, NOTE_DOWN, NOTE_UP, NOTE_RIGHT];
+	public static final ACTION_LIST:Array<Action> = [NOTE_LEFT, NOTE_DOWN, NOTE_UP, NOTE_RIGHT];
 	
 	/**
 	 * The current controls instance used for this input system
@@ -73,8 +69,7 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 	var justReleasedGamepadInputs:Array<Array<FlxActionInput>> = [];
 	
 	// cleared out every frame
-	var awaitingEvents:Array<InputEvent> = [];
-	
+	// var awaitingEvents:Array<InputEvent> = [];
 	#if FLX_GAMEINPUT_API
 	var awaitingAxisEvents:Array<{id:FlxGamepadInputID, gamepad:FlxGamepad, timer:Float}> = [];
 	
@@ -148,11 +143,7 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 	 */
 	public function inputPressed(noteData:Int)
 	{
-		var check = pressedActions[noteData].check();
-		#if mobile
-		check = check || controls.hitboxPressed(getMobileKeysForNote(noteData)) || controls.mobilePadPressed(getMobileKeysForNote(noteData));
-		#end
-		return check;
+		return pressedActions[noteData].check();
 	}
 	
 	/**
@@ -161,11 +152,7 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 	 */
 	public function inputJustPressed(noteData:Int)
 	{
-		var check = justPressedActions[noteData].check();
-		#if mobile
-		check = check || controls.hitboxJustPressed(getMobileKeysForNote(noteData)) || controls.mobilePadJustPressed(getMobileKeysForNote(noteData));
-		#end
-		return check;
+		return justPressedActions[noteData].check();
 	}
 	
 	/**
@@ -174,26 +161,8 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 	 */
 	public function inputJustReleased(noteData:Int)
 	{
-		var check = justReleasedActions[noteData].check();
-		#if mobile
-		check = check || controls.hitboxJustReleased(getMobileKeysForNote(noteData)) || controls.mobilePadJustReleased(getMobileKeysForNote(noteData));
-		#end
-		return check;
+		return justReleasedActions[noteData].check();
 	}
-	
-	#if mobile
-	private function getMobileKeysForNote(noteData:Int):Array<FlxMobileInputID>
-	{
-		return switch(noteData) {
-			case 0: [noteLEFT];  // NOTE_LEFT
-			case 1: [noteDOWN];  // NOTE_DOWN
-			case 2: [noteUP];    // NOTE_UP
-			case 3: [noteRIGHT]; // NOTE_RIGHT
-			default: [];
-		};
-	}
-	#end
-	
 	
 	/**
 	 * Dispatches all awaiting input events
@@ -201,33 +170,15 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 	@:nullSafety(Off)
 	public function update():Void
 	{
-		#if mobile
-		for (i in 0...ACTION_LIST.length)
-		{
-			var keys = getMobileKeysForNote(i);
-			
-			if (controls.hitboxJustPressed(keys) || controls.mobilePadJustPressed(keys))
-			{
-				awaitingEvents.push(new InputEvent(InputEvent.INPUT_PRESSED, false, true, i, Keys, -1, System.getTimer()));
-			}
-			
-			if (controls.hitboxJustReleased(keys) || controls.mobilePadJustReleased(keys))
-			{
-				awaitingEvents.push(new InputEvent(InputEvent.INPUT_RELEASED, false, true, i, Keys, -1, System.getTimer()));
-			}
-		}
-		#end
-
 		while (awaitingAxisEvents.length > 0)
 		{
 			final info = awaitingAxisEvents.shift();
 			if (info.gamepad.checkStatus(info.id, JUST_PRESSED)) onInputEvent(InputEvent.INPUT_PRESSED, Gamepad(info.gamepad.id), info.id, info.timer);
 			else if (info.gamepad.checkStatus(info.id, JUST_RELEASED)) onInputEvent(InputEvent.INPUT_RELEASED, Gamepad(info.gamepad.id), info.id, info.timer);
 		}
-		while (awaitingEvents.length > 0)
-			dispatchEvent(awaitingEvents.shift());
+		// while (awaitingEvents.length > 0)
+		// 	dispatchEvent(awaitingEvents.shift());
 	}
-
 	
 	public function destroy():Void
 	{
@@ -307,11 +258,8 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 		switch device
 		{
 			case Keys:
-				#if debug
-				@:privateAccess if (!FlxG.keys._keyListMap.exists(inputID)) return;
-				#end
 				// with lime, it counts repeated key inputs when you hold down the key.
-				if (!FlxG.keys.checkStatus(inputID, inputState)) return;
+				if (#if debug @:privateAccess !FlxG.keys._keyListMap.exists(inputID) || #end!FlxG.keys.checkStatus(inputID, inputState)) return;
 			case _:
 		}
 		
@@ -338,7 +286,7 @@ class InputSystem extends EventDispatcher implements flixel.util.IFlxDestroyable
 			@:nullSafety(Off)
 			if (inputs[inputID] != null)
 			{
-				awaitingEvents.push(new InputEvent(event, false, true, noteData, device, inputID, timer));
+				dispatchEvent(new InputEvent(event, false, true, noteData, device, inputID, timer));
 				// if we don't break here, then people would be able to bind multiple controls to the same key
 				// i don't know if we would want that and it's kinda cheaty so i'll just break
 				break;

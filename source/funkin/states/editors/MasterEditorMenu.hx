@@ -1,5 +1,7 @@
 package funkin.states.editors;
 
+import flixel.addons.display.FlxBackdrop;
+
 import funkin.objects.Character;
 
 import flixel.FlxG;
@@ -14,14 +16,11 @@ import funkin.objects.*;
 class MasterEditorMenu extends MusicBeatState
 {
 	var options:Array<String> = [
-		'Chart Editor',
+		// 'Week Editor',
+		// 'Menu Character Editor',
 		'Character Editor',
-	//	'Note Skin Editor',
-		'Chart Converter',
-		"Metadata Editor",
-		'Mods Manager',
-		'Week Editor',
-		'Menu Character Editor',
+		'Chart Editor',
+		'Chart Converter'
 	];
 	private var grpTexts:FlxTypedGroup<Alphabet>;
 	private var directories:Array<String> = [null];
@@ -37,10 +36,13 @@ class MasterEditorMenu extends MusicBeatState
 		
 		persistentUpdate = true;
 		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
-		bg.scrollFactor.set();
-		bg.color = 0xFF353535;
-		add(bg);
+		var starBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
+		add(starBG);
+		starBG.velocity.x -= 7;
+		
+		var starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
+		add(starFG);
+		starFG.velocity.x = -15;
 		
 		grpTexts = new FlxTypedGroup<Alphabet>();
 		add(grpTexts);
@@ -75,11 +77,6 @@ class MasterEditorMenu extends MusicBeatState
 		changeSelection();
 		
 		FlxG.mouse.visible = false;
-
-        #if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		#end
-
 		super.create();
 	}
 	
@@ -113,25 +110,18 @@ class MasterEditorMenu extends MusicBeatState
 		{
 			switch (options[curSelected])
 			{
-				case 'Mods Manager':
-					FlxG.switchState(() -> new ModsState());
 				case 'Character Editor':
 					FlxG.switchState(() -> new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
 				case 'Week Editor':
 					FlxG.switchState(() -> new WeekEditorState());
-				case 'Metadata Editor':
-					openSubState(new SongMetaEditor());
 				case 'Menu Character Editor':
 					FlxG.switchState(() -> new MenuCharacterEditorState());
 				case 'Chart Editor': // felt it would be cool maybe
 					FlxG.switchState(ChartEditorState.new);
-				// case 'Note Skin Editor':
-				// 	FlxG.switchState(() -> new NoteSkinEditor('default'));
 				case 'Chart Converter':
 					FlxG.switchState(() -> new ChartConverterState());
 			}
 			if (FlxG.sound.music != null) FlxG.sound.music.volume = 0;
-			FreeplayState.destroyFreeplayVocals();
 		}
 		
 		var bullShit:Int = 0;

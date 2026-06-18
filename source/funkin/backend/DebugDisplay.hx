@@ -199,7 +199,7 @@ class DebugDisplay extends Sprite
         #if mobile
 		str += ' • Arch: ${get_arch()}';
 		#end
-		
+
 		if (displayType == FpsDisplayMode.ADVANCED)
 		{
 			var className = Type.getClassName(Type.getClass(FlxG.state));
@@ -231,24 +231,6 @@ class DebugDisplay extends Sprite
 		
 		textField.text = str;
 	}
-
-    #if mobile
-	public inline function setScale(?scale:Float):Void {
-	    if (scale == null) {
-	        var screenW:Float = FlxG.stage.window.width;
-	        var screenH:Float = FlxG.stage.window.height;
-	        scale = Math.min(screenW / FlxG.width, screenH / FlxG.height);
-	    }
-	
-	    #if android
-	        var finalScale:Float = (scale > 1) ? scale : 1;
-	    #else
-	        var finalScale:Float = (scale < 1 ? scale : 1);
-	    #end
-	
-	    scaleX = scaleY = finalScale;
-	}
-	#end
 	
 	inline function get_gcMemory():Float
 	{
@@ -260,6 +242,24 @@ class DebugDisplay extends Sprite
 		return (cast openfl.system.System.totalMemoryNumber : UInt);
 		#end
 	}
+
+    #if mobile
+	public inline function setScale(?scale:Float):Void {
+	    if (scale == null) {
+	        var screenW:Float = FlxG.stage.window.width;
+	        var screenH:Float = FlxG.stage.window.height;
+	        scale = Math.min(screenW / FlxG.width, screenH / FlxG.height);
+	    }
+
+	    #if android
+	        var finalScale:Float = (scale > 1) ? scale : 1;
+	    #else
+	        var finalScale:Float = (scale < 1 ? scale : 1);
+	    #end
+
+	    scaleX = scaleY = finalScale;
+	}
+	#end
 
     inline function get_arch():String
 	{
@@ -275,7 +275,7 @@ class DebugDisplay extends Sprite
 		return "Unknown Arch";
 		#end
 	}
-	
+
 	inline function get_taskMemory():Float
 	{
 		return external.Native.getTaskMemory();

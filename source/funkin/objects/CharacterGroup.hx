@@ -39,8 +39,11 @@ class CharacterGroup extends FlxSpriteGroup
 		if (existing != null) return existing; // compiler now knows it's non-null
 		
 		var newChar = new Character(0, 0, newCharacter, type == BF);
-		newChar.alpha = 0.00001;
+		newChar.alpha = 0.001;
 		addChar(newChar);
+		
+		FlxG.signals.postDraw.addOnce(function() new FlxTimer().start(1, function(_) if (newChar.alpha == .001) newChar.visible = false));
+		// theres probably some cooler solution out there
 		
 		return newChar;
 	}
@@ -62,8 +65,9 @@ class CharacterGroup extends FlxSpriteGroup
 			
 			var lastAlpha = parent.alpha;
 			
-			parent.alpha = 0.0001;
+			parent.visible = false;
 			parent = map.get(name);
+			parent.visible = true;
 			parent.alpha = lastAlpha;
 			
 			for (field in PlayState.instance.playFields.members)

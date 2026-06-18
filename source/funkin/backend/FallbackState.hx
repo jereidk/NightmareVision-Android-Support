@@ -33,7 +33,7 @@ class FallbackState extends MusicBeatState
 		add(text);
 		text.screenCenter(Y);
 		
-		var text = new FlxText(0, FlxG.height - 25 - 32, FlxG.width, #if mobile 'Tap the screen to continue.' #else 'Press Confirm to continue.' #end, 32);
+		var text = new FlxText(0, FlxG.height - 25 - 32, FlxG.width, 'Press Confirm to continue.', 32);
 		text.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		add(text);
 		
@@ -44,7 +44,7 @@ class FallbackState extends MusicBeatState
 	{
 		super.update(elapsed);
 		
-		if (controls.ACCEPT #if mobile || TouchUtil.justPressed() #end)
+		if (controls.ACCEPT)
 		{
 			persistentUpdate = false;
 			continueCallback();

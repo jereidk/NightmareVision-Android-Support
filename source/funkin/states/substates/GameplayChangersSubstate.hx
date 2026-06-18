@@ -138,7 +138,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		
 		changeSelection();
 		reloadCheckboxes();
-		
+
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B_C);
@@ -335,7 +335,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		var val:Dynamic = option.getValue();
 		if (option.type == 'percent') val *= 100;
 		var def:Dynamic = option.defaultValue;
-		option.text = text.replace('%v', Std.string(val)).replace('%d', Std.string(def));
+		option.text = text.replace('%v', val).replace('%d', def);
 	}
 	
 	function clearHold()

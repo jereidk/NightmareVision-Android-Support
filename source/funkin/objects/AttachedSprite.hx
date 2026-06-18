@@ -33,12 +33,14 @@ class AttachedSprite extends FlxSprite
 		scrollFactor.set();
 	}
 	
-	override function draw():Void
+	override function update(elapsed:Float)
 	{
+		super.update(elapsed);
+		
 		if (sprTracker != null)
 		{
 			setPosition(sprTracker.x + xAdd, sprTracker.y + yAdd);
-			scrollFactor.copyFrom(sprTracker.scrollFactor);
+			scrollFactor.set(sprTracker.scrollFactor.x, sprTracker.scrollFactor.y);
 			
 			if (copyAngle) angle = sprTracker.angle + angleAdd;
 			
@@ -46,8 +48,6 @@ class AttachedSprite extends FlxSprite
 			
 			if (copyVisible) visible = sprTracker.visible;
 		}
-		
-		super.draw();
 	}
 	
 	override function makeGraphic(width:Int, height:Int, color:FlxColor = FlxColor.WHITE, unique:Bool = false, ?key:String)

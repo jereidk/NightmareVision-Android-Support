@@ -4,12 +4,15 @@ import extensions.hscript.Sharables;
 import extensions.hscript.IrisEx;
 
 import crowplexus.iris.Iris;
+import crowplexus.iris.ErrorSeverity;
 
 import extensions.hscript.InterpEx;
 
 import funkin.backend.plugins.DebugTextPlugin;
 import funkin.objects.*;
 import funkin.objects.note.*;
+
+using crowplexus.iris.utils.Ansi;
 
 @:access(crowplexus.iris.Iris)
 @:access(funkin.states.PlayState)
@@ -25,15 +28,14 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param path 
 	 * @return String
 	 */
-	public static function getPath(path:String):String
+	public static function getPath(path:String, mode:PathsTestMode = NORMAL):String
 	{
 		for (extension in H_EXTS)
 		{
 			final file = '$path.$extension';
 			
-			final targetPath = Paths.getPath(file, null, true);
+			final targetPath = Paths.getPath(file, null, true, mode);
 			if (FunkinAssets.exists(targetPath)) return targetPath;
-			if (FunkinAssets.exists(file)) return file;
 		}
 		return path;
 	}
@@ -49,45 +51,54 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		return false;
 	}
 	
+	static inline function formatPosInfos(fileName:String = 'hscript', lineNumber:Int = 0, x:String = '', prefix:String = '')
+	{
+		var prefix = '[$prefix$fileName:$lineNumber]';
+		
+		final modPath:String = Paths.mods(Mods.currentModDirectory + '/');
+		if (fileName.contains(modPath)) prefix = prefix.replace(modPath, '');
+		
+		return '$prefix - $x';
+	}
+	
 	/**
 	 * Initiates the debugging backend of Iris
 	 */
 	public static function init()
 	{
-		inline function formatFileLoc(fileName:String, lineNumber:Int, x:String)
+		Iris.logLevel = (level, x, ?pos) -> {
+			pos ??= Iris.getDefaultPos();
+			
+			final prefix:String = ErrorSeverityTools.getPrefix(level);
+			final prefixEmpty:Bool = (prefix == '');
+			
+			var out = formatPosInfos(pos.fileName, pos.lineNumber, x, prefixEmpty ? '' : '$prefix:');
+			
+			if (!prefixEmpty)
+			{
+				out = out.fg(ErrorSeverityTools.getColor(level)).reset();
+				if (level == FATAL) out = out.attr(INTENSITY_BOLD);
+			}
+			
+			#if sys Sys.println #else trace #end (out.stripColor());
+		}
+		
+		function log(x:String, ?pos:haxe.PosInfos, level:ErrorSeverity)
 		{
-			var tempName = '[$fileName:$lineNumber]';
+			final prefix:String = ErrorSeverityTools.getPrefix(level);
 			
-			if (fileName.contains(Mods.currentModDirectory)) tempName = tempName.replace('content/${Mods.currentModDirectory}/', '');
+			DebugTextPlugin.addText(formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:'), Logger.getHexColourFromSeverity(Severity.fromIris(level)));
 			
-			tempName += ' - $x';
-			
-			return tempName;
+			Iris.logLevel(level, x, pos);
 		}
 		
-		Iris.warn = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(WARN));
-			
-			Iris.logLevel(ERROR, x, pos);
-		}
+		Iris.warn = log.bind(_, _, WARN);
 		
-		Iris.error = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(ERROR));
-			
-			Iris.logLevel(NONE, x, pos);
-		}
+		Iris.error = log.bind(_, _, ERROR);
 		
-		Iris.print = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(PRINT));
-			
-			Iris.logLevel(NONE, x, pos);
-		}
+		Iris.fatal = log.bind(_, _, FATAL);
+		
+		Iris.print = log.bind(_, _, NONE);
 	}
 	
 	/**
@@ -208,13 +219,14 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set('Std', hl.HLFixes.HLStd);
 		set("trace", Reflect.makeVarArgs(function(x:Array<Dynamic>) {
 			var pos = this.interp != null ? this.interp.posInfos() : Iris.getDefaultPos(this.name);
-			var v = x.shift();
-			if (x.length > 0) pos.customParams = x;
-			Iris.print(Std.string(v), pos);
+			
+			Iris.print(formatPosInfos(pos.fileName, pos.lineNumber, x), pos);
 		}));
 		#end
 		
 		set("StringTools", StringTools);
+		set("Date", Date);
+		set("Sys", Sys);
 		
 		set("Type", Type);
 		set("script", this);
@@ -230,22 +242,19 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("OpenFlAssets", openfl.utils.Assets);
 		
 		set('curBpm', Conductor.bpm);
-		set('crotchet', Conductor.crotchet);
-		set('stepCrotchet', Conductor.stepCrotchet);
+		set('Function_Cancel', funkin.scripting.ScriptConstants.CANCEL_FUNC);
 		set('Function_Halt', funkin.scripting.ScriptConstants.HALT_FUNC);
 		set('Function_Stop', funkin.scripting.ScriptConstants.STOP_FUNC);
 		set('Function_Continue', funkin.scripting.ScriptConstants.CONTINUE_FUNC);
-		set('curBeat', 0);
-		set('curStep', 0);
-		set('curSection', 0);
-		set('curDecBeat', 0);
-		set('curDecStep', 0);
 		set('version', Main.NMV_VERSION.trim());
 		set('Defines', funkin.data.Defines);
 		
 		// set flixel related stuff
 		set("FlxG", flixel.FlxG);
 		set("FlxSprite", flixel.FlxSprite);
+		set("FunkinSprite", funkin.objects.FunkinSprite);
+		set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
+		set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
 		set("FlxCamera", extensions.flixel.FlxCameraEx);
 		set("FlxMath", flixel.math.FlxMath);
 		set("FlxTimer", flixel.util.FlxTimer);
@@ -259,10 +268,8 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("FlxBackdrop", flixel.addons.display.FlxBackdrop);
 		set("FlxTiledSprite", flixel.addons.display.FlxTiledSprite);
 		set('FlxPoint', flixel.math.FlxPoint.FlxBasePoint);
-		
-		set("FlxTypedGroup", flixel.group.FlxGroup);
-		set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
-		set("FlxEmitter", flixel.effects.particles.FlxEmitter);
+		set('FlxParticle', flixel.effects.particles.FlxParticle);
+		set('FlxEmitter', flixel.effects.particles.FlxEmitter);
 		
 		set('FlxCameraFollowStyle', flixel.FlxCamera.FlxCameraFollowStyle);
 		set("FlxTextBorderStyle", flixel.text.FlxText.FlxTextBorderStyle);
@@ -302,9 +309,12 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		
 		// FNF-specific things
 		set("Paths", Paths);
+		set("PathsTestMode", PathsTestMode);
 		set("MusicBeatState", funkin.backend.MusicBeatState);
 		set("Conductor", funkin.backend.Conductor);
 		set("ClientPrefs", funkin.data.ClientPrefs);
+		set("Lang", funkin.data.Lang);
+		set("GameFlags", funkin.data.GameFlags);
 		set("CoolUtil", funkin.utils.CoolUtil);
 		set('WindowUtil', funkin.utils.WindowUtil);
 		
@@ -335,8 +345,6 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		#if VIDEOS_ALLOWED
 		set("FunkinVideoSprite", funkin.video.FunkinVideoSprite);
 		#end
-		set("BackgroundDancer", funkin.objects.stageobjects.BackgroundDancer);
-		set("BackgroundGirls", funkin.objects.stageobjects.BackgroundGirls);
 		set("HealthIcon", HealthIcon);
 		set("Character", funkin.objects.Character);
 		set("NoteSplash", NoteSplash);
@@ -347,23 +355,11 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("AttachedAlphabet", AttachedAlphabet);
 		
 		set("CutsceneHandler", funkin.objects.CutsceneHandler);
-		set('DialogueBox', funkin.objects.DialogueBox);
-		
-		// modchart related
-		set("ModManager", funkin.game.modchart.ModManager);
-		set("SubModifier", funkin.game.modchart.SubModifier);
-		set("NoteModifier", funkin.game.modchart.NoteModifier);
-		set("EventTimeline", funkin.game.modchart.EventTimeline);
-		set("Modifier", funkin.game.modchart.Modifier);
-		set("StepCallbackEvent", funkin.game.modchart.events.StepCallbackEvent);
-		set("CallbackEvent", funkin.game.modchart.events.CallbackEvent);
-		set("ModEvent", funkin.game.modchart.events.ModEvent);
-		set("EaseEvent", funkin.game.modchart.events.EaseEvent);
-		set("SetEvent", funkin.game.modchart.events.SetEvent);
 		
 		set('inGameOver', false);
 		
 		set("game", FlxG.state);
+		set("state", FlxG.state);
 		
 		if ((FlxG.state is PlayState))
 		{

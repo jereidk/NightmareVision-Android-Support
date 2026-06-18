@@ -172,6 +172,7 @@ class StorageSystem
 					
 					if (StringTools.startsWith(relativePath, "embeds/")) relativePath = relativePath.substring(7);
 					else if (StringTools.startsWith(relativePath, "game/")) relativePath = relativePath.substring(5);
+					else if (StringTools.startsWith(relativePath, "legacy/")) relativePath = relativePath.substring(7);
 					
 					var fullTargetPath = targetDir + relativePath;
 					var targetFolder = Path.directory(fullTargetPath);

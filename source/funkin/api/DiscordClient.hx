@@ -11,9 +11,9 @@ import hxdiscord_rpc.Types.DiscordRichPresence;
 class DiscordClient
 {
 	/**
-	 * NightmareVisions specific id
+	 * NightmareVisions specific id no its vs impostor now boy
 	 */
-	public static final NMV_ID:String = '1252033037680513115';
+	public static final NMV_ID:String = '1445524195864870996';
 	
 	/**
 	 * Additional thread to run discord tasks without lagspikes
@@ -37,26 +37,22 @@ class DiscordClient
 	 * 
 	 * use `changePresence` to change the displayed presence
 	 */
-	public static final discordPresence:DiscordRichPresence = new DiscordRichPresence();
-	
-	/**
-	 * The string value of the currently connected discord user.
-	 * Only used for gags in individual mods, it serves no real purpose.
-	 */
-	public static var username:String = 'Unknown';
+	public static final discordPresence:DiscordRichPresence = DiscordRichPresence.create();
 	
 	/**
 	 * Initiates the discord thread and hooks to `rpcId`
 	 */
 	public static function init()
 	{
-		final discordEventHandlers = new DiscordEventHandlers();
+		if (!ClientPrefs.discordRPC) return;
+		
+		final discordEventHandlers = DiscordEventHandlers.create();
 		
 		discordEventHandlers.ready = cpp.Function.fromStaticFunction(onReady);
 		discordEventHandlers.errored = cpp.Function.fromStaticFunction(onError);
 		discordEventHandlers.disconnected = cpp.Function.fromStaticFunction(onDisconnect);
 		
-		Discord.Initialize(rpcId, cpp.RawPointer.addressOf(discordEventHandlers), true, null);
+		Discord.Initialize(rpcId, cpp.RawPointer.addressOf(discordEventHandlers), 1, null);
 		
 		if (thread == null)
 		{
@@ -79,6 +75,21 @@ class DiscordClient
 		}
 		
 		initiated = true;
+	}
+	
+	/**
+	 * Enables or disables Discord Rich Presence depending on user preference.
+	 */
+	public static function check():Void
+	{
+		if (ClientPrefs.discordRPC)
+		{
+			init();
+		}
+		else if (initiated)
+		{
+			close();
+		}
 	}
 	
 	/**
@@ -114,8 +125,7 @@ class DiscordClient
 		final user:String = cast request[0].username;
 		final discriminator:String = cast request[0].discriminator;
 		
-		username = discriminator != '0' ? '$user#$discriminator' : '$user';
-		var discordUser = '[$username]';
+		var discordUser = discriminator != '0' ? '[$user#$discriminator]' : '[$user]';
 		
 		Logger.log('Successfully connect to user $discordUser', NOTICE);
 		
@@ -141,7 +151,7 @@ class DiscordClient
 		discordPresence.details = details;
 		discordPresence.smallImageKey = smallImageKey;
 		discordPresence.largeImageKey = largeImageKey;
-		discordPresence.largeImageText = 'FNF NMV (${Main.NMV_VERSION})';
+		discordPresence.largeImageText = Main.LEGACY_VERSION;
 		discordPresence.startTimestamp = Std.int(startTimestamp / 1000);
 		discordPresence.endTimestamp = Std.int(endTimestamp / 1000);
 		
@@ -179,7 +189,7 @@ class DiscordClient
  */
 class DiscordClient
 {
-	public static final NMV_ID:String = '';
+	public static final NMV_ID:String = '1252033037680513115';
 	
 	public static var rpcId(default, set):String = '';
 	

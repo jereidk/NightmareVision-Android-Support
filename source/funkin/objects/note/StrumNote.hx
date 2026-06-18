@@ -10,7 +10,7 @@ import funkin.game.shaders.RGBShader;
 import funkin.states.*;
 import funkin.data.*;
 
-class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
+class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 {
 	public var intThing:Int = 0;
 	
@@ -26,6 +26,8 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var parent:PlayField;
 	@:isVar
 	public var swagWidth(get, null):Float;
+	
+	public var coyoteTime:Float = 0;
 	
 	public function get_swagWidth()
 	{
@@ -53,7 +55,6 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		return value;
 	}
 	
-	public var rgbGraphics:RGBGraphics = new RGBGraphics();
 	public var useRGBShader:Bool = true;
 	
 	public var skin:NoteSkin;
@@ -73,36 +74,19 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		scrollFactor.set();
 		
 		useRGBShader = skin.inEngineColoring;
-		rgbGraphics.enabled = useRGBShader;
 		
 		isQuant = parent?.quants ?? ClientPrefs.quants;
-		
-		handleColors();
 	}
 	
-	public var lastNote:Null<Note> = null;
-	
-	public function handleColors(anim:String = '', ?note:Note)
+	public function copyNoteColor(?note:Note)
 	{
-		if (!useRGBShader) return;
+		if (!useRGBShader || rgbShader == null) return;
 		
-		note ??= lastNote;
-		lastNote = note;
+		var arr:Array<FlxColor> = note?.rgbShader?.getColors();
 		
-		final fallback = skin.colors != null ? NoteUtil.colorToArray(skin.colors[noteData]) : NoteUtil.getCurColors(noteData, (isQuant && note != null) ? note.quant : 4, player)
-			.getColors();
-			
-		var arr:Array<FlxColor> = note?.rgbGraphics?.getColors();
-		if (arr == null) arr = fallback;
+		arr ??= (!isQuant && skin.colors != null ? NoteUtil.colorToArray(skin.colors[noteData]) : NoteUtil.getCurColors(noteData, note?.quant ?? 4, player).getColors());
 		
-		if (isQuant && anim == 'pressed') arr = ClientPrefs.arrowRGBquant[0];
-		
-		if (rgbGraphics != null)
-		{
-			rgbGraphics.setColors(arr);
-			
-			rgbGraphics.enabled = (anim != 'static');
-		}
+		rgbShader.setColors(arr);
 	}
 	
 	public function reloadNote()
@@ -124,7 +108,7 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		
 		if (lastAnim != null) playAnim(lastAnim, true);
 		
-		handleColors();
+		copyNoteColor();
 	}
 	
 	function loadAnimations()
@@ -158,6 +142,9 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	override function update(elapsed:Float)
 	{
+		if (coyoteTime > 0 && getAnimName() != 'confirm') // improve
+			coyoteTime = Math.max(coyoteTime - elapsed, 0);
+		
 		if (resetAnim > 0)
 		{
 			resetAnim -= elapsed;
@@ -167,6 +154,7 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 				resetAnim = 0;
 			}
 		}
+		
 		@:bypassAccessor
 		super.set_alpha(targetAlpha * alphaMult);
 		
@@ -180,18 +168,11 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		centerOffsets();
 		centerOrigin();
 		
-		handleColors(anim);
-	}
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
+		if (rgbShader != null)
+		{
+			if (anim == 'pressed') copyNoteColor();
+			
+			rgbShader.enabled = (useRGBShader && anim != 'static');
+		}
 	}
 }

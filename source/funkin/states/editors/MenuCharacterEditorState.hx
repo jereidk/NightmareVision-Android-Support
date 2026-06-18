@@ -2,11 +2,7 @@ package funkin.states.editors;
 
 import haxe.Json;
 
-#if mobile
-import extensions.openfl.net.FileReference;
-#else
 import openfl.net.FileReference;
-#end
 import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileFilter;
@@ -59,7 +55,7 @@ class MenuCharacterEditorState extends MusicBeatState
 		add(grpWeekCharacters);
 		
 		txtOffsets = new FlxText(20, 10, 0, "[0, 0]", 32);
-		txtOffsets.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER);
+		txtOffsets.setFormat("VCR OSD Mono", 32, FlxColor.WHITE, CENTER);
 		txtOffsets.alpha = 0.7;
 		add(txtOffsets);
 		
@@ -73,10 +69,6 @@ class MenuCharacterEditorState extends MusicBeatState
 		FlxG.mouse.visible = true;
 		updateCharTypeBox();
 		
-        #if mobile
-		addVirtualPad(LEFT_FULL, A_B_C);
-		#end
-
 		super.create();
 	}
 	
@@ -236,7 +228,7 @@ class MenuCharacterEditorState extends MusicBeatState
 		var char:MenuCharacter = grpWeekCharacters.members[curTypeSelected];
 		
 		char.alpha = 1;
-		char.frames = Paths.getSparrowAtlas('menus/story/characters/' + characterFile.image);
+		char.frames = Paths.getSparrowAtlas('menucharacters/' + characterFile.image);
 		char.animation.addByPrefix('idle', characterFile.idle_anim, 24);
 		if (curTypeSelected == 1) char.animation.addByPrefix('confirm', characterFile.confirm_anim, 24, false);
 		char.flipX = (characterFile.flipX == true);
@@ -292,7 +284,7 @@ class MenuCharacterEditorState extends MusicBeatState
 				FlxG.sound.volumeUpKeys = [];
 				blockInput = true;
 				
-				if (FlxG.keys.justPressed.ENTER #if mobile || virtualPad.buttonC.pressed #end) inputText.hasFocus = false;
+				if (FlxG.keys.justPressed.ENTER) inputText.hasFocus = false;
 				break;
 			}
 		}
@@ -302,7 +294,7 @@ class MenuCharacterEditorState extends MusicBeatState
 			FlxG.sound.muteKeys = ClientPrefs.muteKeys;
 			FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
 			FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
-			if (FlxG.keys.justPressed.ESCAPE #if mobile || virtualPad.buttonB.justPressed #end)
+			if (FlxG.keys.justPressed.ESCAPE)
 			{
 				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
 				FunkinSound.playMusic(Paths.music('freakyMenu'));
@@ -311,28 +303,28 @@ class MenuCharacterEditorState extends MusicBeatState
 			var shiftMult:Int = 1;
 			if (FlxG.keys.pressed.SHIFT) shiftMult = 10;
 			
-			if (FlxG.keys.justPressed.LEFT #if mobile || virtualPad.buttonLeft.justPressed #end)
+			if (FlxG.keys.justPressed.LEFT)
 			{
 				characterFile.position[0] += shiftMult;
 				updateOffset();
 			}
-			if (FlxG.keys.justPressed.RIGHT#if mobile || virtualPad.buttonRight.justPressed #end)
+			if (FlxG.keys.justPressed.RIGHT)
 			{
 				characterFile.position[0] -= shiftMult;
 				updateOffset();
 			}
-			if (FlxG.keys.justPressed.UP#if mobile || virtualPad.buttonUp.justPressed #end)
+			if (FlxG.keys.justPressed.UP)
 			{
 				characterFile.position[1] += shiftMult;
 				updateOffset();
 			}
-			if (FlxG.keys.justPressed.DOWN #if mobile || virtualPad.buttonDown.justPressed #end)
+			if (FlxG.keys.justPressed.DOWN)
 			{
 				characterFile.position[1] -= shiftMult;
 				updateOffset();
 			}
 			
-			if (FlxG.keys.justPressed.SPACE #if mobile || virtualPad.buttonA.justPressed #end && curTypeSelected == 1)
+			if (FlxG.keys.justPressed.SPACE && curTypeSelected == 1)
 			{
 				grpWeekCharacters.members[curTypeSelected].animation.play('confirm', true);
 			}
@@ -358,16 +350,12 @@ class MenuCharacterEditorState extends MusicBeatState
 	
 	function loadCharacter()
 	{
-        #if ios
-        PopUp.showAlert("This function is not implemented yet.", "Sorry!");
-        #else
 		var jsonFilter:FileFilter = new FileFilter('JSON', 'json');
 		_file = new FileReference();
 		_file.addEventListener(Event.SELECT, onLoadComplete);
 		_file.addEventListener(Event.CANCEL, onLoadCancel);
 		_file.addEventListener(IOErrorEvent.IO_ERROR, onLoadError);
 		_file.browse([jsonFilter]);
-        #end 
 	}
 	
 	function onLoadComplete(_):Void
@@ -376,57 +364,37 @@ class MenuCharacterEditorState extends MusicBeatState
 		_file.removeEventListener(Event.CANCEL, onLoadCancel);
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onLoadError);
 		
-		var rawJson:String = null;
-
 		#if sys
+		var fullPath:String = null;
 		@:privateAccess
-		if (_file.__path != null && _file.__path != "")
+		if (_file.__path != null) fullPath = _file.__path;
+		
+		if (fullPath != null)
 		{
-			rawJson = File.getContent(_file.__path);
-		}
-		else if (_file.data != null)
-		{
-			rawJson = _file.data.toString();
-		}
-		#else
-		if (_file.data != null)
-		{
-			rawJson = _file.data.toString();
-		}
-		#end
-
-		if (rawJson != null && rawJson.length > 0)
-		{
-			try
+			var rawJson:String = File.getContent(fullPath);
+			if (rawJson != null)
 			{
 				var loadedChar:MenuCharacterFile = cast Json.parse(rawJson);
-
-				if (loadedChar.idle_anim != null)
+				if (loadedChar.idle_anim != null && loadedChar.confirm_anim != null) // Make sure it's really a character
 				{
+					var cutName:String = _file.name.substr(0, _file.name.length - 5);
+					trace("Successfully loaded file: " + cutName);
 					characterFile = loadedChar;
 					reloadSelectedCharacter();
-
 					imageInputText.text = characterFile.image;
-					idleInputText.text = characterFile.idle_anim;
-					confirmInputText.text = characterFile.confirm_anim;
+					idleInputText.text = characterFile.image;
+					confirmInputText.text = characterFile.image;
 					scaleStepper.value = characterFile.scale;
 					updateOffset();
-				}
-				else
-				{
-					trace("Invalid Json!");
+					_file = null;
+					return;
 				}
 			}
-			catch (e:Dynamic)
-			{
-				trace("Error Parsing the JSON: " + e);
-			}
-		}
-		else
-		{
-			trace("Errr: Null Content.");
 		}
 		_file = null;
+		#else
+		trace("File couldn't be loaded! You aren't on Desktop, are you?");
+		#end
 	}
 	
 	/**
@@ -461,15 +429,11 @@ class MenuCharacterEditorState extends MusicBeatState
 			var splittedImage:Array<String> = imageInputText.text.trim().split('_');
 			var characterName:String = splittedImage[splittedImage.length - 1].toLowerCase().replace(' ', '');
 			
-            #if ios
-            StorageSystem.saveContent(data, characterName + ".json");
-            #else
 			_file = new FileReference();
 			_file.addEventListener(Event.COMPLETE, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, characterName + ".json");
-            #end
 		}
 	}
 	

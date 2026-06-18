@@ -3,8 +3,6 @@ package funkin;
 import haxe.Json;
 import haxe.DynamicAccess;
 
-import grig.audio.SampleRate;
-
 import lime.graphics.Image;
 
 import openfl.utils.Assets;
@@ -73,31 +71,12 @@ typedef ModMeta =
 	 * Optional font that will replace most seen text in the game.
 	 */
 	var ?defaultFont:String;
-	
-	/**
-	 * Prefixes that tell the game where the combo, ratings & countdown graphics are located.
-	 * Ignore the weird formatting I'll fix it later
-	 */
-	var ?uiPrefix:String;
-	
-	var ?comboPrefix:String;
-	var ?ratingsPrefix:String;
-	var ?countdownPrefix:String;
 }
-
-typedef ModsList =
-{
-	var enabled:Array<String>;
-	var disabled:Array<String>;
-	var all:Array<String>;
-}
-
-// add docs later
 
 class Mods
 {
 	/**
-	 * The primary loaded mod's directory
+	 * The current primary loaded mod
 	 */
 	public static var currentModDirectory:Null<String> = '';
 	
@@ -122,6 +101,7 @@ class Mods
 		'fonts',
 		'scripts',
 		'noteskins',
+		'lang'
 	];
 	
 	/**
@@ -137,14 +117,19 @@ class Mods
 	
 	public static var globalMods:Array<String> = [];
 	
+	public static var disabled:Array<String> = [];
+	public static var enabled:Array<String> = [];
+	public static var all:Array<String> = [];
+	
 	/**
 	 * Refreshes all globally loaded mods
 	 * @return 
 	 */
 	public static inline function pushGlobalMods():Array<String> // prob a better way to do this but idc
 	{
-		globalMods = [];
-		for (mod in parseList().enabled)
+		globalMods.resize(0);
+		
+		for (mod in enabled)
 		{
 			var pack = getPack(mod);
 			if (pack != null && pack.global) globalMods.push(mod);
@@ -228,71 +213,65 @@ class Mods
 		return foldersToCheck;
 	}
 	
-	public static function getPack(?folder:String):Null<ModMeta>
+	public static function getPack(?folder:String):ModMeta
 	{
 		#if MODS_ALLOWED
 		if (folder == null) folder = Mods.currentModDirectory;
 		
 		var path = Paths.mods(folder + '/meta.json');
-		if (FunkinAssets.exists(path))
+		if (FileSystem.exists(path))
 		{
-			final raw = FunkinAssets.getContent(path);
-			if (raw != null && raw.length > 0)
+			try
 			{
-				final json:Null<ModMeta> = FunkinAssets.parseJson5(raw);
-				if (json != null) return json;
+				final json = FunkinAssets.getContent(path);
+				if (json != null && json.length > 0) return Json.parse(json);
 			}
+			catch (e) {}
 		}
 		#end
 		return null;
 	}
 	
-	public static inline function parseList():ModsList
+	// todo jsut deprecate this function
+	public static inline function parseList():{enabled:Array<String>, disabled:Array<String>, all:Array<String>}
 	{
-		updateModList();
-		var list:ModsList = {enabled: [], disabled: [], all: []};
-		
-		#if MODS_ALLOWED
-		for (mod in CoolUtil.coolTextFile('modsList.txt'))
-		{
-			if (mod.trim().length < 1) continue;
-			
-			var dat = mod.split("|");
-			list.all.push(dat[0]);
-			if (dat[1] == "1") list.enabled.push(dat[0]);
-			else list.disabled.push(dat[0]);
-		}
-		#end
-		return list;
+		return {enabled: enabled, disabled: disabled, all: all};
 	}
 	
-	public static function getListAsArray(?top:String = ''):Array<{folder:String, enabled:Bool}>
+	public static function updateModList(top:String = '')
 	{
-		var list:Array<{folder:String, enabled:Bool}> = [];
-		var added:Array<String> = [];
-		if (top == null || top == '') top = currentModDirectory;
+		#if MODS_ALLOWED
+		ensureModsListExists();
 		
-		if (top.length >= 1)
-		{
-			if (FileSystem.exists(Paths.mods(top)) && FileSystem.isDirectory(Paths.mods(top)) && !added.contains(top))
-			{
-				added.push(top);
-				list.push({folder: top, enabled: true});
-			}
-		}
+		disabled.resize(0);
+		enabled.resize(0);
+		all.resize(0);
+		
+		var write:Bool = false;
+		
 		for (mod in CoolUtil.coolTextFile('modsList.txt'))
 		{
-			var dat:Array<String> = mod.split("|");
-			var folder:String = dat[0];
+			final dat:Array<String> = mod.split('|');
+			final folder:String = dat[0], modEnabled:Bool = (dat[1] == '1');
+			
 			if (folder.trim().length > 0
 				&& FileSystem.exists(Paths.mods(folder))
 				&& FileSystem.isDirectory(Paths.mods(folder))
-				&& !added.contains(folder) && folder != top)
+				&& !all.contains(folder))
 			{
-				added.push(folder);
-				list.push({folder: folder, enabled: (dat[1] == "1")});
+				if (folder == top)
+				{
+					all.insert(0, folder);
+					(modEnabled ? enabled : disabled).insert(0, folder);
+				}
+				else
+				{
+					all.push(folder);
+					(modEnabled ? enabled : disabled).push(folder);
+				}
 			}
 		}
+		
 		// Scan for folders that aren't on modsList.txt yet
 		for (folder in getModDirectories())
 		{
@@ -300,59 +279,59 @@ class Mods
 				&& FileSystem.exists(Paths.mods(folder))
 				&& FileSystem.isDirectory(Paths.mods(folder))
 				&& !ignoreModFolders.contains(folder.toLowerCase())
-				&& !added.contains(folder) && folder != top)
+				&& !all.contains(folder))
 			{
-				added.push(folder);
-				list.push({folder: folder, enabled: true});
+				write = true;
+				
+				all.push(folder);
+				enabled.push(folder);
 			}
 		}
 		
-		return list;
+		// write if list was updated!!!!!
+		if (write) writeModList();
+		
+		pushGlobalMods();
+		#end
 	}
 	
-	public static function updateModList(top:String = '')
+	public static function writeModList():Void
 	{
-		#if MODS_ALLOWED
-		ensureModsListExists();
-		// Find all that are already ordered
-		var list = getListAsArray();
-		
 		// Now save file
-		
 		var fileStr:String = '';
-		for (values in list)
+		for (mod in all)
 		{
 			if (fileStr.length > 0) fileStr += '\n';
-			fileStr += values.folder + '|' + (values.enabled ? '1' : '0');
+			
+			fileStr += '$mod|${enabled.contains(mod) ? '1' : '0'}';
 		}
+		
 		File.saveContent('modsList.txt', fileStr);
-		#end
 	}
 	
 	public static function loadTopMod()
 	{
 		currentModDirectory = '';
+		
 		#if MODS_ALLOWED
-		var list:Array<String> = Mods.parseList().enabled;
-		if (list != null && list[0] != null) Mods.currentModDirectory = list[0];
-		applyModConfig();
+		if (enabled != null) Mods.currentModDirectory = enabled[0];
+		
+		currentModConfig = loadTopModConfig();
 		#end
 	}
 	
-	public static function applyModConfig(?directory:String):Void
+	public static function loadTopModConfig():Null<ModMeta>
 	{
-		var pack = getPack(directory);
-		if (pack == null) return;
+		var pack = getPack();
+		if (pack == null) return null;
 		
-		currentModConfig = pack;
-		
-		WindowUtil.setTitle(pack.windowTitle ?? 'Friday Night Funkin');
+		WindowUtil.setTitle(pack.windowTitle ?? 'VS IMPOSTOR LEGACY v' + Main.LEGACY_VERSION);
 		
 		inline function resetIcon()
 		{
 			final path = Paths.getPath('images/branding/icon/icon64.png', null, true);
 			
-			FlxG.stage.window.setIcon(Image.fromBytes(FunkinAssets.getBytes(path)));
+			if (FunkinAssets.exists(path)) FlxG.stage.window.setIcon(Image.fromBytes(FunkinAssets.getBytes(path)));
 		}
 		
 		if (pack.iconFile != null)
@@ -393,38 +372,44 @@ class Mods
 		
 		Paths.DEFAULT_FONT = pack.defaultFont != null && FunkinAssets.exists(Paths.font(pack.defaultFont)) ? Paths.font(pack.defaultFont) : Paths.font('vcr.ttf');
 		
-		inline function dirExists(dir:String):Bool return dir != null && FunkinAssets.isDirectory('content/${Mods.currentModDirectory}/images/$dir');
-		
-		Paths.UI_PREFIX = dirExists(pack.uiPrefix) ? pack.uiPrefix : 'UI/';
-		Paths.COMBO_PREFIX = dirExists(pack.comboPrefix) ? pack.comboPrefix : 'UI/combo/';
-		Paths.RATINGS_PREFIX = dirExists(pack.ratingsPrefix) ? pack.ratingsPrefix : 'UI/ratings/';
-		Paths.COUNTDOWN_PREFIX = dirExists(pack.countdownPrefix) ? pack.countdownPrefix : 'UI/countdown/';
+		return pack;
 	}
 	
-	public static function getModIcon(mod:String):String
+	public static function getModIcon(?mod:String):String
 	{
 		if (mod.length < 1) mod = currentModDirectory;
+		
 		var retVal = 'branding/icon/fallback';
 		var pack = getPack(mod);
+		
 		if (pack != null && pack.iconFile != null) retVal = pack.iconFile;
+		
 		return retVal;
 	}
 	
-	public static function getModName(mod:String):String
+	public static function getModName(?mod:String):String
 	{
 		if (mod.length < 1) mod = currentModDirectory;
+		
 		var retVal = mod;
 		var pack = getPack(mod);
+		
 		if (pack != null && pack.name != null) retVal = pack.name;
+		
 		return retVal;
 	}
 	
-	public static function getModFont(mod:String):String
+	public static function getModFont(?mod:String):String
 	{
 		if (mod.length < 1) mod = currentModDirectory;
+		
 		var retVal = Paths.font('vcr.ttf');
 		var pack = getPack(mod);
+		
 		if (pack != null && pack.defaultFont != null) retVal = Paths.font(pack.defaultFont);
+		
+		trace(retVal);
+		
 		return retVal;
 	}
 }

@@ -19,58 +19,48 @@ class FlashingState extends MusicBeatState
 	{
 		super.create();
 		
-		var bg:FlxSprite = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		add(bg);
-		
-		warnText = new FlxText(0, 0, FlxG.width, "Hey, watch out!\n
-			This Mod contains some flashing lights!\n
-			Press A to disable them now or go to Options Menu.\n
-			Press B to ignore this message.\n
-			You've been warned!", 32);
+		warnText = new FlxText(0, 0, FlxG.width, "
+WARNING!\n
+This mod contains effects that may trigger photosensitivity.\n
+Press ESCAPE to disable these effects now.\n
+Press ENTER to keep them on.\n
+You may change this anytime in the Options menu.
+		", 32);
 		warnText.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER);
-		warnText.screenCenter(Y);
+		warnText.screenCenter();
 		add(warnText);
-		
-		#if mobile
-		addVirtualPad(NONE, A_B);
-		#end
 	}
 	
 	override function update(elapsed:Float)
 	{
-		if (!leftState)
-		{
-			if (controls.ACCEPT || controls.BACK)
+		if (!leftState && (controls.ACCEPT || controls.BACK)) {
+			FlxTransitionableState.skipNextTransIn = true;
+			FlxTransitionableState.skipNextTransOut = true;
+			
+			ClientPrefs.photosensitive = controls.BACK;
+			FlxG.sound.play(Paths.sound('confirmMenu'));
+			
+			if (controls.BACK)
 			{
-				leftState = true;
-				FlxTransitionableState.skipNextTransIn = true;
-				FlxTransitionableState.skipNextTransOut = true;
-				if (!controls.BACK)
+				FlxTween.tween(warnText, {alpha: 0}, 1,
 				{
-					ClientPrefs.flashing = false;
-					ClientPrefs.flush();
-					FlxG.sound.play(Paths.sound('confirmMenu'));
-					
-					FlxFlicker.flicker(warnText, 1, 0.1, false, true, function(flk:FlxFlicker) {
-						new FlxTimer().start(0.5, function(tmr:FlxTimer) {
-							FlxG.switchState(TitleState.new);
-						});
-					});
-				}
-				else
-				{
-					ClientPrefs.flashing = true;
-					ClientPrefs.flush();
-					FlxG.sound.play(Paths.sound('cancelMenu'));
-					FlxTween.tween(warnText, {alpha: 0}, 1,
-						{
-							onComplete: function(twn:FlxTween) {
-								FlxG.switchState(TitleState.new);
-						}
-					});
-				}
+					onComplete: function(twn:FlxTween) {
+						FlxG.switchState(TitleState.new);
+					}
+				});
 			}
+			else
+			{
+				FlxFlicker.flicker(warnText, 1, 0.1, false, true, function(flk:FlxFlicker) {
+					new FlxTimer().start(0.5, function(tmr:FlxTimer) {
+						FlxG.switchState(TitleState.new);
+					});
+				});
+			}
+			
+			leftState = true;
 		}
+		
 		super.update(elapsed);
 	}
 }
