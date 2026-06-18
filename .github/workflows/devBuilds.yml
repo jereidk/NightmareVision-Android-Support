@@ -149,7 +149,14 @@ jobs:
           Run haxelib run lime rebuild cpp -release
 
       - name: Build Windows
-        run: haxelib run lime build windows -D ${{inputs.buildFlags}}
+        shell: pwsh
+        run: |
+          $buildFlags = "${{inputs.buildFlags}}"
+          if ($buildFlags) {
+            haxelib run lime build windows -D $buildFlags
+          } else {
+            haxelib run lime build windows
+          }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7.0.1
@@ -213,7 +220,13 @@ jobs:
         env:
           CC: gcc-13
           CXX: g++-13
-        run: haxelib run lime build Project.xml linux -D ${{inputs.buildFlags}}
+        run: |
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build Project.xml linux -D $BUILD_FLAGS
+          else
+            haxelib run lime build Project.xml linux
+          fi
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7.0.1
