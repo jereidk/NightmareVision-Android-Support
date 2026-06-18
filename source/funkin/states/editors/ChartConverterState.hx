@@ -82,6 +82,10 @@ class ChartConverterState extends MusicBeatState
 		}
 		
 		changeSel();
+
+		#if mobile
+		addVirtualPad(UP_DOWN, A_B);
+		#end
 	}
 	
 	override function update(elapsed:Float)
