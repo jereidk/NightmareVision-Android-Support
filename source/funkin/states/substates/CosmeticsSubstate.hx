@@ -313,8 +313,13 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		}
 		
 		super.create();
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(UP_DOWN, A_B);
+		#end
 	}
-	
+
 	function createCategoryPreviewCard(nodeAtlas:FlxAtlasFrames, centerX:Float, centerY:Float, fallbackText:String):Void
 	{
 		var bgSprite = new FlxSprite();

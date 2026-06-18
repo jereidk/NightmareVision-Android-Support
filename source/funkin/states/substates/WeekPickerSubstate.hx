@@ -105,6 +105,11 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		
 		super.create();
 		changeSelection();
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
 	
 	function updateItems()

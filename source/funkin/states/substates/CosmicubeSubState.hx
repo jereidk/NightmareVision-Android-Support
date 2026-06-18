@@ -75,7 +75,9 @@ class CosmicubeSubState extends MusicBeatSubstate
 		CosmicubeData.reload(false);
 		CosmeticsSubstate.preloadForFreeplay();
 		
+		#if DISCORD_ALLOWED
 		DiscordClient.changePresence("Cosmicube Menu");
+		#end
 		
 		this.meta = (CosmicubeData.cosmicubeMetas.get(cosmicube) ?? CosmicubeData.fallbackMeta);
 		
@@ -190,8 +192,13 @@ class CosmicubeSubState extends MusicBeatSubstate
 		FlxTween.tween(awardCamera, {alpha: 1}, .35, {ease: FlxEase.circOut});
 		
 		scriptGroup.call('onCreatePost', []);
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
 	}
-	
+
 	public function closeTween():Void
 	{
 		lockMovement = true;

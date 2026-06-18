@@ -7,6 +7,12 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import funkin.input.Controls;
 import funkin.scripts.*;
 
+#if mobile
+import flixel.group.FlxGroup;
+import mobile.controls.MobileHitbox;
+import mobile.controls.MobileVirtualPad;
+#end
+
 class MusicBeatSubstate extends FlxSubState
 {
 	public function new()
@@ -26,9 +32,73 @@ class MusicBeatSubstate extends FlxSubState
 	private var curDecStep:Float = 0;
 	private var curDecBeat:Float = 0;
 	private var controls(get, never):Controls;
-	
+
 	inline function get_controls():Controls return Controls.instance;
-	
+
+	#if mobile
+	public var hitbox:MobileHitbox;
+	public var virtualPad:MobileVirtualPad;
+
+	public var virtualPadCam:FlxCamera;
+	public var hitboxCam:FlxCamera;
+
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode)
+	{
+		virtualPad = new MobileVirtualPad(DPad, Action);
+		add(virtualPad);
+	}
+
+	public function addVirtualPadCamera(DefaultDrawTarget:Bool = false)
+	{
+		if (virtualPad != null)
+		{
+			virtualPadCam = new FlxCamera();
+			virtualPadCam.bgColor.alpha = 0;
+			FlxG.cameras.add(virtualPadCam, DefaultDrawTarget);
+			virtualPad.cameras = [virtualPadCam];
+		}
+	}
+
+	public function removeVirtualPad()
+	{
+		if (virtualPad != null)
+		{
+			remove(virtualPad);
+			virtualPad = FlxDestroyUtil.destroy(virtualPad);
+		}
+		if (virtualPadCam != null)
+		{
+			FlxG.cameras.remove(virtualPadCam);
+			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
+		}
+	}
+
+	public function addMobileControls(DefaultDrawTarget:Bool = false)
+	{
+		hitbox = new MobileHitbox();
+		hitboxCam = new FlxCamera();
+		hitboxCam.bgColor.alpha = 0;
+		FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
+		hitbox.cameras = [hitboxCam];
+		hitbox.visible = false;
+		add(hitbox);
+	}
+
+	public function removeMobileControls()
+	{
+		if (hitbox != null)
+		{
+			remove(hitbox);
+			hitbox = FlxDestroyUtil.destroy(hitbox);
+		}
+		if (hitboxCam != null)
+		{
+			FlxG.cameras.remove(hitboxCam);
+			hitboxCam = FlxDestroyUtil.destroy(hitboxCam);
+		}
+	}
+	#end
+
 	public var scripted:Bool = false;
 	public var scriptName:String = '';
 	public var scriptPrefix:String = 'substates';
@@ -171,9 +241,14 @@ class MusicBeatSubstate extends FlxSubState
 	override function destroy()
 	{
 		scriptGroup.call('onDestroy', []);
-		
 		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
-		
+
+		#if mobile
+		controls.isInSubstate = false;
+		removeVirtualPad();
+		removeMobileControls();
+		#end
+
 		super.destroy();
 	}
 }

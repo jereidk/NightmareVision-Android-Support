@@ -107,7 +107,12 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 		
 		bottomControls.alpha = 0;
 		FlxTween.tween(bottomControls, {alpha: 1}, 0.35, {ease: FlxEase.circOut});
-		
+
+		#if mobile
+		controls.isInSubstate = true;
+		addVirtualPad(LEFT_FULL, A_B);
+		#end
+
 		super.create();
 	}
 	
