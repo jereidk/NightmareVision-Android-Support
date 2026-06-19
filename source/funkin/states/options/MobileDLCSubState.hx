@@ -39,7 +39,7 @@ class MobileDLCSubState extends MusicBeatSubstate
     static final LIST_W:Float  = 1160;
     static final LIST_Y0:Float = 118;
     static final ITEM_H:Float  = 54;
-    static final MAX_VIS:Int   = 10;
+    static final MAX_VIS:Int   = 9;    // 9 × 54px = 486px fits between y=118 and the bottom panel at y=640
 
     static final TAB_INSTALLED:Int = 0;
     static final TAB_BROWSE:Int    = 1;
@@ -185,10 +185,8 @@ class MobileDLCSubState extends MusicBeatSubstate
         _updateRows();
 
         // Fetch registry if we don't already have it (don't interrupt an ongoing download)
-        if (DLCManager.taskState != DLCTaskState.BUSY && DLCManager.registryData == null) {
-            DLCManager.taskState = DLCTaskState.IDLE;
+        if (DLCManager.taskState != DLCTaskState.BUSY && DLCManager.registryData == null)
             DLCManager.fetchRegistryAsync();
-        }
     }
 
     // ── Update ─────────────────────────────────────────────────────────────
@@ -258,7 +256,18 @@ class MobileDLCSubState extends MusicBeatSubstate
     {
         if (DLCManager.taskState == DLCTaskState.BUSY) return;
         var item:Null<DLCListItem> = _items[_sel];
-        if (item == null || item.id == "") return;
+        if (item == null) return;
+
+        // Empty placeholder item — retry registry fetch if it previously failed
+        if (item.id == "") {
+            if (_tab == TAB_BROWSE && DLCManager.taskState == DLCTaskState.FAILED) {
+                DLCManager.fetchRegistryAsync();
+                _rebuildItems();
+                _updateRows();
+                FunkinSound.play(Paths.sound('confirmMenu'));
+            }
+            return;
+        }
 
         if (item.installed) {
             DLCManager.uninstallDLC(item.id);
@@ -326,8 +335,9 @@ class MobileDLCSubState extends MusicBeatSubstate
             if (_items.length == 0) {
                 var msg = (DLCManager.taskState == DLCTaskState.BUSY)
                     ? "Loading DLC list..."
-                    : "No DLCs available. Check your connection and reopen this menu.";
-                _items.push({id: "", label: msg, sub: "", installed: false, downloadable: false});
+                    : "Could not load DLC list. Check your connection.";
+                var sub = (DLCManager.taskState == DLCTaskState.FAILED) ? "Press Accept to retry." : "";
+                _items.push({id: "", label: msg, sub: sub, installed: false, downloadable: false});
             }
         }
 

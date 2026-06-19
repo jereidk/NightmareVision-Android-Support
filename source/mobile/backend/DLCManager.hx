@@ -210,7 +210,7 @@ class DLCManager {
                 _mutex.acquire();
                 taskState    = SUCCESS;
                 taskProgress = 100;
-                taskMessage  = entry.name + " installed!";
+                taskMessage  = entry.name + " installed! Restart the game to load it.";
                 activeTaskId = "";
                 _mutex.release();
             } catch (e:Dynamic) {
@@ -258,14 +258,15 @@ class DLCManager {
             try {
                 var meta:Dynamic = Json.parse(File.getContent(metaPath));
                 if (meta.dlcId == null) {
-                    meta.dlcId = entry.id;
+                    meta.dlcId  = entry.id;
+                    meta.global = true;
                     File.saveContent(metaPath, Json.stringify(meta));
                 }
             } catch (_:Dynamic) {}
         } else {
             var meta = {
                 name:        entry.name,
-                global:      false,
+                global:      true,   // load alongside the active mod, not only when selected
                 description: entry.description,
                 dlcId:       entry.id
             };

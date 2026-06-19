@@ -163,7 +163,6 @@ jobs:
             printf '    esac\n'
             printf '  done\n'
             printf '  NEWARGS+=("-L$ARM32")\n'
-            printf '  NEWARGS+=("--allow-undefined-version")\n'
             printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "${NEWARGS[@]}"\n'
             printf 'else\n'
             printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "$@"\n'
