@@ -107,12 +107,12 @@ jobs:
             printf '#!/bin/bash\n'
             printf 'for arg in "$@"; do\n'
             printf '  case "$arg" in\n'
-            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
             printf '  esac\n'
             printf 'done\n'
-            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
           } > /tmp/ndk-wrap/clang++
-          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" "$@"\n' \
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
             "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
@@ -127,10 +127,22 @@ jobs:
 
       - name: Patch SDL posix process for Android
         run: |
-          SDL_FILE=".haxelib/lime/git/lib/sdl/src/process/posix/SDL_posixprocess.c"
-          if [ -f "$SDL_FILE" ]; then
-            { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
-            mv /tmp/sdlfix "$SDL_FILE"
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
           fi
 
       - name: Rebuild Android Lime so
