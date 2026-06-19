@@ -24,6 +24,7 @@ class OptionsState extends MusicBeatState
 		'graphics',
 		'visualsui',
 		'misc',
+		#if mobile 'mobile', #end
 		'credits'
 	];
 	
@@ -93,6 +94,10 @@ class OptionsState extends MusicBeatState
 				openSubState(new funkin.states.options.LanguageSubState());
 			case 'misc':
 				openSubState(new funkin.states.options.MiscSubState());
+			#if mobile
+			case 'mobile':
+				openSubState(new funkin.states.options.MobileSettingsSubState());
+			#end
 			case 'credits':
 				openSubState(new funkin.states.substates.CreditsRollSubState(true, resumeMenuMusic, resumeMenuMusic));
 		}

@@ -84,6 +84,13 @@ class MusicBeatState extends FlxUIState
 
 	public function addMobileControls(DefaultDrawTarget:Bool = false)
 	{
+		if (ClientPrefs.touchInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, NONE);
+			addVirtualPadCamera(DefaultDrawTarget);
+			return;
+		}
+
 		hitbox = new MobileHitbox();
 
 		hitboxCam = new FlxCamera();

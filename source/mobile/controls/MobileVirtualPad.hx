@@ -211,7 +211,7 @@ class MobileVirtualPad extends TouchInputManager
 		button.immovable = true;
 		button.scrollFactor.set();
 		button.color = Color;
-		button.alpha = 0.5;
+		button.alpha = funkin.data.ClientPrefs.virtualPadAlpha;
 		
 		#if FLX_DEBUG button.ignoreDrawDebug = true; #end
 		

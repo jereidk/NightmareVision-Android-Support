@@ -827,7 +827,7 @@ class PlayState extends MusicBeatState
 
 		#if mobile
 		addMobileControls(false);
-		hitbox.visible = false;
+		if (hitbox != null) hitbox.visible = false;
 
 		mobilePauseBtn = new FlxSprite();
 		mobilePauseBtn.makeGraphic(100, 50, 0x88000000);
@@ -1217,7 +1217,7 @@ class PlayState extends MusicBeatState
 		inCutscene = false;
 
 		#if mobile
-		hitbox.visible = true;
+		if (hitbox != null) hitbox.visible = true;
 		#end
 
 		if (!ScriptConstants.stopping(scripts.call('onStartCountdown')))
@@ -2858,7 +2858,7 @@ class PlayState extends MusicBeatState
 		updateTime = false;
 
 		#if mobile
-		hitbox.visible = false;
+		if (hitbox != null) hitbox.visible = false;
 		#end
 
 		deathCounter = 0;

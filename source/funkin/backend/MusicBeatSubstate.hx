@@ -78,6 +78,13 @@ class MusicBeatSubstate extends FlxSubState
 
 	public function addMobileControls(DefaultDrawTarget:Bool = false)
 	{
+		if (funkin.data.ClientPrefs.touchInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, NONE);
+			addVirtualPadCamera(DefaultDrawTarget);
+			return;
+		}
+
 		hitbox = new MobileHitbox();
 		hitboxCam = new FlxCamera();
 		hitboxCam.bgColor.alpha = 0;

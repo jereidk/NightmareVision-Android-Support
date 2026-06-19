@@ -22,13 +22,14 @@ class MobileHitbox extends TouchInputManager
 	public var buttonUp:FlxButton;
 	public var buttonRight:FlxButton;
 
-	private final alphaTarget:Float = 0.2;
-	
+	private final alphaTarget:Float;
+
 	private var _cachedGraphics:Map<Int, flixel.graphics.FlxGraphic> = new Map();
 
 	public function new():Void
 	{
 		super();
+		alphaTarget = funkin.data.ClientPrefs.hitboxAlpha;
 
 		var buttonWidth:Int = Std.int(FlxG.width / 4);
 		var data = [

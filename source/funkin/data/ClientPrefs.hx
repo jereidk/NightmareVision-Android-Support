@@ -105,6 +105,8 @@ class ClientPrefs
 	@saveVar public static var autoPause:Bool = true;
 	
 	// graphics ------------------------------------------------------------------------//
+	@saveVar public static var performancePreset:String = 'Custom';
+
 	@saveVar public static var gpuCaching:Bool = true;
 	
 	@saveVar public static var globalAntialiasing:Bool = true;
@@ -149,6 +151,15 @@ class ClientPrefs
 	// its aura ok
 	@saveVar public static var camFollowsCharacters:Bool = true;
 	
+	// mobile ------------------------------------------------------------------------//
+	#if mobile
+	@saveVar public static var touchInputMode:String = 'Hitbox';
+
+	@saveVar public static var hitboxAlpha:Float = 0.2;
+
+	@saveVar public static var virtualPadAlpha:Float = 0.5;
+	#end
+
 	// gameplay ------------------------------------------------------------------------//
 	@saveVar public static var mechanics:Bool = true;
 	
