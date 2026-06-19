@@ -126,7 +126,6 @@ jobs:
           haxelib run lime config ANDROID_SETUP true
 
       - name: Patch SDL posix process for Android
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           SDL_FILE=".haxelib/lime/git/lib/sdl/src/process/posix/SDL_posixprocess.c"
           if [ -f "$SDL_FILE" ]; then
