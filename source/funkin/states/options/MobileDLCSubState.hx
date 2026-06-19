@@ -69,6 +69,10 @@ class MobileDLCSubState extends MusicBeatSubstate
     var _installed:Array<{id:String, name:String, folder:String}> = [];
     var _lastTaskState:DLCTaskState = DLCTaskState.IDLE;
     var _items:Array<DLCListItem>   = [];
+    var _pendingUninstallId:Null<String> = null;
+    var _successTimer:Float = 0.0;
+    var _scrollUpHint:FlxText;
+    var _scrollDownHint:FlxText;
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -175,6 +179,21 @@ class MobileDLCSubState extends MusicBeatSubstate
         _statusText.borderSize = 1;
         add(_statusText);
 
+        // Scroll position hints — shown when items extend above or below the visible window
+        _scrollUpHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 - 16, 156, "▲ more above");
+        _scrollUpHint.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.fromRGB(120, 120, 120), RIGHT,
+            FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+        _scrollUpHint.borderSize = 1;
+        _scrollUpHint.visible = false;
+        add(_scrollUpHint);
+
+        _scrollDownHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 + MAX_VIS * ITEM_H + 2, 156, "▼ more below");
+        _scrollDownHint.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.fromRGB(120, 120, 120), RIGHT,
+            FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+        _scrollDownHint.borderSize = 1;
+        _scrollDownHint.visible = false;
+        add(_scrollDownHint);
+
         super.create();
 
         #if mobile
@@ -201,6 +220,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         var ts = DLCManager.taskState;
         if (ts != _lastTaskState) {
             _lastTaskState = ts;
+            _pendingUninstallId = null;
             if (ts == DLCTaskState.SUCCESS || ts == DLCTaskState.FAILED) {
                 _blockInput = false;
                 _refreshInstalled();
@@ -210,6 +230,11 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _updateRows();
             }
         }
+
+        if (ts == DLCTaskState.SUCCESS)
+            _successTimer += elapsed;
+        else
+            _successTimer = 0.0;
 
         _updateProgressBar();
         _updateStatusLine();
@@ -228,6 +253,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         if (len == 0) return;
 
         if (controls.UI_UP_P) {
+            _pendingUninstallId = null;
             _sel = (_sel <= 0) ? len - 1 : _sel - 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -235,6 +261,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (controls.UI_DOWN_P) {
+            _pendingUninstallId = null;
             _sel = (_sel >= len - 1) ? 0 : _sel + 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -242,6 +269,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (controls.UI_LEFT_P || controls.UI_RIGHT_P) {
+            _pendingUninstallId = null;
             _tab   = (_tab == TAB_INSTALLED) ? TAB_BROWSE : TAB_INSTALLED;
             _sel    = 0;
             _scroll = 0;
@@ -279,11 +307,20 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (item.installed) {
-            DLCManager.uninstallDLC(item.id);
-            FunkinSound.play(Paths.sound('cancelMenu'));
-            _refreshInstalled();
-            _rebuildItems();
-            _updateRows();
+            if (_pendingUninstallId == item.id) {
+                // Second press confirms — actually uninstall
+                _pendingUninstallId = null;
+                DLCManager.uninstallDLC(item.id);
+                FunkinSound.play(Paths.sound('cancelMenu'));
+                _refreshInstalled();
+                _rebuildItems();
+                _updateRows();
+            } else {
+                // First press — request confirmation
+                _pendingUninstallId = item.id;
+                FunkinSound.play(Paths.sound('scrollMenu'));
+                _updateRows();
+            }
         } else if (item.downloadable && DLCManager.registryData != null) {
             var entry:Null<DLCEntry> = null;
             for (e in DLCManager.registryData.dlcs)
@@ -434,8 +471,13 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _actionTexts[i].text  = "[Open file picker]";
                 _actionTexts[i].color = FlxColor.fromRGB(200, 200, 100);
             } else if (item.installed) {
-                _actionTexts[i].text  = "[Uninstall]";
-                _actionTexts[i].color = FlxColor.fromRGB(255, 110, 110);
+                if (_pendingUninstallId == item.id) {
+                    _actionTexts[i].text  = "[Confirm uninstall!]";
+                    _actionTexts[i].color = FlxColor.RED;
+                } else {
+                    _actionTexts[i].text  = "[Uninstall]";
+                    _actionTexts[i].color = FlxColor.fromRGB(255, 110, 110);
+                }
             } else if (item.downloadable) {
                 _actionTexts[i].text  = "[Download]";
                 _actionTexts[i].color = FlxColor.fromRGB(100, 200, 255);
@@ -443,6 +485,9 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _actionTexts[i].text = "";
             }
         }
+
+        _scrollUpHint.visible   = (_scroll > 0);
+        _scrollDownHint.visible = (_scroll + MAX_VIS < _items.length);
 
         // Show description of selected Browse-tab entry
         if (_tab == TAB_BROWSE && DLCManager.registryData != null && _items.length > 0) {
@@ -467,7 +512,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             _progressBg.visible   = true;
             _progressFill.visible = true;
             _progressFill.clipRect = new FlxRect(0, 0, pct * LIST_W, 18);
-        } else if (ts == DLCTaskState.SUCCESS) {
+        } else if (ts == DLCTaskState.SUCCESS && _successTimer < 5.0) {
             _progressBg.visible   = true;
             _progressFill.visible = true;
             _progressFill.clipRect = new FlxRect(0, 0, LIST_W, 18);
@@ -483,7 +528,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         if (ts == DLCTaskState.BUSY) {
             _statusText.text  = DLCManager.taskMessage;
             _statusText.color = FlxColor.WHITE;
-        } else if (ts == DLCTaskState.SUCCESS) {
+        } else if (ts == DLCTaskState.SUCCESS && _successTimer < 5.0) {
             _statusText.text  = DLCManager.taskMessage;
             _statusText.color = FlxColor.fromRGB(100, 255, 100);
         } else if (ts == DLCTaskState.FAILED) {
