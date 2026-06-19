@@ -32,8 +32,10 @@ jobs:
         id: haxelibs-cache
         uses: actions/cache@v4
         with:
-          path: ~/haxelib
-          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
       # ── Cache: Lime source tree + compiled ndll/Android .so
       - name: Cache Lime (source + built artifacts)
@@ -257,8 +259,10 @@ jobs:
         id: haxelibs-cache
         uses: actions/cache@v4
         with:
-          path: ~/haxelib
-          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
@@ -490,8 +494,10 @@ jobs:
         id: haxelibs-cache
         uses: actions/cache@v4
         with:
-          path: ~/haxelib
-          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
@@ -818,8 +824,10 @@ jobs:
         id: haxelibs-cache
         uses: actions/cache@v4
         with:
-          path: ~/haxelib
-          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
       # ── Cache: Lime source + compiled Linux ndll
       - name: Cache Lime (source + built artifacts)
