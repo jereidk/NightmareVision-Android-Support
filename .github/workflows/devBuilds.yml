@@ -89,12 +89,19 @@ jobs:
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
+      - name: Wrap g++-13 to force C++23
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
       - name: Rebuild Linux Lime ndll
         if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
-          HXCPP_CPP23: "1"
         run: |
           haxelib run lime rebuild cpp -release
           if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
