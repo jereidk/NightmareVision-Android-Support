@@ -144,7 +144,19 @@
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
     </section>
 
-     <java path="source" if="android"/>
+    <java path="source" if="android"/>
+
+    <!-- Android release optimizations (release only, not debug) -->
+    <section if="android" unless="debug">
+        <!-- NEON: use ARMv8-A SIMD units — mandatory on all ARM64 devices.
+             Lets the compiler auto-vectorize math loops (modifiers, audio DSP, note positions). -->
+        <compilerflag value="-march=armv8-a+simd" />
+
+        <!-- ThinLTO: at link time, see all .cpp files at once.
+             Enables cross-file inlining and dead-code removal the per-file pass can't do. -->
+        <compilerflag value="-flto=thin" />
+        <linker value="-flto=thin" />
+    </section>
 
     <icon path="projFiles/icon/icon16.png" size='16'/>
     <icon path="projFiles/icon/icon32.png" size='32'/>
