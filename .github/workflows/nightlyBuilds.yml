@@ -145,9 +145,9 @@ jobs:
             printf '    esac\n'
             printf '  done\n'
             printf '  NEW_ARGS+=("-L$ARM32")\n'
-            printf '  exec "$NDK/bin/ld.lld.real" "${NEW_ARGS[@]}"\n'
+            printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "${NEW_ARGS[@]}"\n'
             printf 'else\n'
-            printf '  exec "$NDK/bin/ld.lld.real" "$@"\n'
+            printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "$@"\n'
             printf 'fi\n'
           } > "$NDK_PREBUILT/bin/ld.lld"
           chmod +x "$NDK_PREBUILT/bin/ld.lld"
