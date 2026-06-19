@@ -122,6 +122,34 @@ jobs:
             /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
+          # Replace ld.lld with a wrapper that fixes ARM32/API-16 bare CRT paths
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          {
+            printf '#!/bin/bash\n'
+            printf 'NDK="%s"\n' "$NDK_PREBUILT"
+            printf 'ARM32="$NDK/sysroot/usr/lib/arm-linux-androideabi/16"\n'
+            printf 'IS_ARM32=false\n'
+            printf 'ARGS=("$@")\n'
+            printf 'for i in "${!ARGS[@]}"; do\n'
+            printf '  [[ "${ARGS[$i]}" == "-m" && "${ARGS[$((i+1))]:-}" == "armelf_linux_eabi" ]] && IS_ARM32=true && break\n'
+            printf 'done\n'
+            printf 'if $IS_ARM32; then\n'
+            printf '  NEW_ARGS=()\n'
+            printf '  for arg in "${ARGS[@]}"; do\n'
+            printf '    case "$arg" in\n'
+            printf '      crtbegin_so.o|crtbegin_dynamic.o|crtbegin_static.o|crtend_so.o|crtend.o)\n'
+            printf '        [ -f "$ARM32/$arg" ] && NEW_ARGS+=("$ARM32/$arg") || NEW_ARGS+=("$arg") ;;\n'
+            printf '      *) NEW_ARGS+=("$arg") ;;\n'
+            printf '    esac\n'
+            printf '  done\n'
+            printf '  NEW_ARGS+=("-L$ARM32")\n'
+            printf '  exec "$NDK/bin/ld.lld.real" "${NEW_ARGS[@]}"\n'
+            printf 'else\n'
+            printf '  exec "$NDK/bin/ld.lld.real" "$@"\n'
+            printf 'fi\n'
+          } > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
       - name: Configure Android
         run: |
           haxelib run lime setup android
@@ -129,22 +157,6 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
-
-      - name: Patch NDK ARM32 sysroot (API 16 linker paths)
-        run: |
-          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
-          ARM32_LIB="$NDK_PREBUILT/sysroot/usr/lib/arm-linux-androideabi"
-          echo "=== Symlinking ARM32/API-16 files into base sysroot dir ==="
-          for f in \
-            crtbegin_so.o crtend_so.o crtbegin_dynamic.o crtend.o crtbegin_static.o \
-            liblog.so libandroid.so libEGL.so libGLESv2.so libOpenSLES.so \
-            libc++.so libc++_shared.so libdl.so libm.so libc.so libz.so libvulkan.so; do
-            src="$ARM32_LIB/16/$f"
-            if [ -f "$src" ]; then
-              ln -sf "16/$f" "$ARM32_LIB/$f"
-              echo "  Symlinked: $f"
-            fi
-          done
 
       - name: Patch SDL posix process for Android
         run: |
