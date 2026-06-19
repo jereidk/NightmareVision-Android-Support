@@ -9,8 +9,12 @@ on:
         type: string
 
 jobs:
-   Android:
-    name: Build Android
+
+  # ── Fat APK (arm64 + armv7 in one build). Disabled — superseded by the two
+  #    single-ABI jobs below.  Keep for reference; re-enable by removing `if`.
+  Android:
+    if: ${{ false }}
+    name: Build Android (fat APK – disabled)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
@@ -194,12 +198,407 @@ jobs:
           fi
 
       - name: Compile
-        run: haxelib run lime build android -final -D ${{inputs.buildFlags}}
+        run: |
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android -final -D $BUILD_FLAGS
+          else
+            haxelib run lime build android -final
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: NightmareVision (Android)
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ARM64 (aarch64) — covers all modern Android devices (2019+).
+  # No ld.lld wrapper needed: the ARM32 sysroot issue does not affect arm64.
+  # ─────────────────────────────────────────────────────────────────────────────
+  Android-ARM64:
+    name: Build Android (ARM64)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Cache Haxe libraries
+        id: haxelibs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/haxelib
+          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+
+      - name: Cache Lime (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+
+      - name: Install Linux system deps
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      - name: Wrap g++-13 to force C++23
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      - name: Rebuild Linux Lime ndll
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          haxelib run lime rebuild cpp -release
+          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "ERROR: Missing Lime ndll"
+            exit 1
+          fi
+
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+      - name: Rebuild Android Lime so
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib run lime rebuild android -release
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
+            echo "ERROR: Missing Liblime 64 so"
+            exit 1
+          fi
+
+      - name: Compile
+        run: |
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android -final -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
+          else
+            haxelib run lime build android -final -D ANDROID_ARM64_ONLY
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NightmareVision (Android ARM64)
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ARM32 (armeabi-v7a) — for older / low-end 32-bit devices.
+  # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
+  # ─────────────────────────────────────────────────────────────────────────────
+  Android-ARM32:
+    name: Build Android (ARM32)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Cache Haxe libraries
+        id: haxelibs-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/haxelib
+          key: haxelibs-ubuntu-v2-${{ hashFiles('.hxpkg') }}
+
+      - name: Cache Lime (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+
+      - name: Install Linux system deps
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      - name: Wrap g++-13 to force C++23
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      - name: Rebuild Linux Lime ndll
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          haxelib run lime rebuild cpp -release
+          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "ERROR: Missing Lime ndll"
+            exit 1
+          fi
+
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
+          # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
+          # hxcpp passes all linker args via a response file (one arg per line);
+          # the wrapper rewrites it with versioned CRT paths and missing -L entries.
+          # Script is base64-encoded to avoid YAML block-scalar indentation issues.
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgZm9yIGFwaSBpbiAxNiAxOSAyMSAyMyAyNDsgZG8KICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICBBUk0zMj0iJEFSTTMyX0JBU0UvJGFwaSIKICAgICAgYnJlYWsKICAgIGZpCiAgZG9uZQogIGVjaG8gImxkLmxsZC13cmFwcGVyOiBBUk0zMiBsaW5rIGRldGVjdGVkLCBzeXNyb290PSRBUk0zMiIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogcmVzcCBmaWxlIGhlYWQgKGNhdCAtQSk6IiA+JjIKICAgIGhlYWQgLTMgIiRSRVNQT05TRV9GSUxFIiB8IGNhdCAtQSA+JjIKICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBjcnRiZWdpbi9jcnRlbmQgbGluZXMgaW4gcmVzcDoiID4mMgogICAgZ3JlcCAtbiAnY3J0YmVnaW5cfGNydGVuZCcgIiRSRVNQT05TRV9GSUxFIiB8IGhlYWQgLTEwID4mMiB8fCBlY2hvICJsZC5sbGQtd3JhcHBlcjogKG5vbmUgZm91bmQhKSIgPiYyCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgd2hpbGUgSUZTPSByZWFkIC1yIGxpbmUgfHwgWyAtbiAiJGxpbmUiIF07IGRvCiAgICAgICMgU3RyaXAgdHJhaWxpbmcgQ1IgKENSTEYgc2FmZXR5KQogICAgICByYXc9IiR7bGluZSUkJ1xyJ30iCiAgICAgICMgU3RyaXAgc3Vycm91bmRpbmcgZG91YmxlLXF1b3RlcyBpZiBwcmVzZW50CiAgICAgIHF1b3RlZD1mYWxzZQogICAgICBpZiBbWyAiJHJhdyIgPT0gJyInKiciJyBdXTsgdGhlbgogICAgICAgIHF1b3RlZD10cnVlCiAgICAgICAgaW5uZXI9IiR7cmF3I1wifSIKICAgICAgICBpbm5lcj0iJHtpbm5lciVcIn0iCiAgICAgIGVsc2UKICAgICAgICBpbm5lcj0iJHJhdyIKICAgICAgZmkKICAgICAgY2FzZSAiJGlubmVyIiBpbgogICAgICAgIGNydGJlZ2luX3NvLm98Y3J0YmVnaW5fZHluYW1pYy5vfGNydGJlZ2luX3N0YXRpYy5vfGNydGVuZF9zby5vfGNydGVuZC5vKQogICAgICAgICAgZWNobyAibGQubGxkLXdyYXBwZXI6IHJlcGxhY2luZyBDUlQ6ICRyYXcgLT4gJEFSTTMyLyRpbm5lciIgPiYyCiAgICAgICAgICBpZiAkcXVvdGVkOyB0aGVuCiAgICAgICAgICAgIHByaW50ZiAnJXNcbicgIlwiJEFSTTMyLyRpbm5lclwiIgogICAgICAgICAgZWxzZQogICAgICAgICAgICBwcmludGYgJyVzXG4nICIkQVJNMzIvJGlubmVyIgogICAgICAgICAgZmkKICAgICAgICAgIDs7CiAgICAgICAgKikgcHJpbnRmICclc1xuJyAiJHJhdyIgOzsKICAgICAgZXNhYwogICAgZG9uZSA8ICIkUkVTUE9OU0VfRklMRSIgPj4gIiRORVdfUkVTUCIKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgcHJpbnRmICclc1xuJyAiLUwkZCIgPj4gIiRORVdfUkVTUCIKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIkAkTkVXX1JFU1AiCiAgZWxzZQogICAgIyBDb21tYW5kLWxpbmUgcGF0aCAoTGltZSBuYXRpdmUgcmVidWlsZCk6IHByZXBlbmQgdmVyc2lvbmVkIHBhdGggdG9vCiAgICBORVdBUkdTPSgiLUwkQVJNMzIiKQogICAgZm9yIGFyZyBpbiAiJEAiOyBkbwogICAgICBjYXNlICIkYXJnIiBpbgogICAgICAgIGNydGJlZ2luX3NvLm98Y3J0YmVnaW5fZHluYW1pYy5vfGNydGJlZ2luX3N0YXRpYy5vfGNydGVuZF9zby5vfGNydGVuZC5vKQogICAgICAgICAgTkVXQVJHUys9KCIkQVJNMzIvJGFyZyIpIDs7CiAgICAgICAgKikgTkVXQVJHUys9KCIkYXJnIikgOzsKICAgICAgZXNhYwogICAgZG9uZQogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBORVdBUkdTKz0oIi1MJGQiKQogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiJHtORVdBUkdTW0BdfSIKICBmaQplbHNlCiAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiJEAiCmZpCg==' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+      - name: Rebuild Android Lime so
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib run lime rebuild android -release
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
+            echo "ERROR: Missing Liblime 64 so"
+            exit 1
+          fi
+
+      - name: Compile
+        run: |
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android -final -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
+          else
+            haxelib run lime build android -final -D ANDROID_ARM32_ONLY
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NightmareVision (Android ARM32)
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 

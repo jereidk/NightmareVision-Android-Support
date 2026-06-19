@@ -144,6 +144,11 @@
 		<android extension="mobile.backend.java.AndroidUtils" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
+
+    <!-- ABI targeting: pass -D ANDROID_ARM64_ONLY or -D ANDROID_ARM32_ONLY for a
+         single-ABI APK.  Without either flag both ABIs are built (fat APK). -->
+    <architecture name="arm64" unless="ANDROID_ARM32_ONLY" />
+    <architecture name="armv7" unless="ANDROID_ARM64_ONLY" />
     </section>
 
     <java path="source" if="android"/>
