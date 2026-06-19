@@ -1133,14 +1133,19 @@ class PlayState extends MusicBeatState
 			
 			strums.onNoteHit.add((note, field) -> {
 				if (field.ID == 1) camZooming = true;
-				
+
 				if (field.playerControls || (!audio.splitVocals && !audio.trackSwap)) audio.hit();
-				
+
 				if (field.playerControls && field.showRatings && !note.isSustainNote)
 				{
 					combo++;
 					popUpScore(note);
 				}
+
+				#if android
+				if (field.playerControls && !note.isSustainNote && !cpuControlled && ClientPrefs.hapticFeedback)
+					mobile.backend.AndroidUtils.vibrate(12);
+				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
 				if (note.canMiss || !field.playerControls) return;
@@ -1218,6 +1223,10 @@ class PlayState extends MusicBeatState
 
 		#if mobile
 		if (hitbox != null) hitbox.visible = true;
+		#end
+
+		#if android
+		mobile.backend.AndroidUtils.keepScreenOn(true);
 		#end
 
 		if (!ScriptConstants.stopping(scripts.call('onStartCountdown')))
@@ -3298,7 +3307,11 @@ class PlayState extends MusicBeatState
 	override function destroy()
 	{
 		instance = null;
-		
+
+		#if android
+		mobile.backend.AndroidUtils.keepScreenOn(false);
+		#end
+
 		scripts.call('onDestroy', [], true);
 		
 		scripts = FlxDestroyUtil.destroy(scripts);

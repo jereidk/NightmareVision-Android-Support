@@ -158,6 +158,8 @@ class ClientPrefs
 	@saveVar public static var hitboxAlpha:Float = 0.2;
 
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
+
+	@saveVar public static var hapticFeedback:Bool = true;
 	#end
 
 	// gameplay ------------------------------------------------------------------------//

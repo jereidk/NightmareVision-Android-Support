@@ -7,6 +7,11 @@ class MobileSettingsSubState extends BaseOptionsMenu
 		title = 'mobile';
 		rpcTitle = 'Mobile Settings Menu';
 
+		var option = new Option(Lang.str('opt_haptic', 'Haptic Feedback'),
+			Lang.str('opt_haptic_desc', 'Vibrates briefly on each note hit.\nOnly fires when you are in control (not bot play).'),
+			'hapticFeedback', 'bool', true);
+		addOption(option);
+
 		var option = new Option(Lang.str('opt_touchmode', 'Touch Input Mode'),
 			Lang.str('opt_touchmode_desc', 'Hitbox splits the screen into four tap zones.\nVirtual Pad shows an on-screen D-pad in the corner.'),
 			'touchInputMode', 'string', 'Hitbox',
