@@ -152,6 +152,11 @@
              Lets the compiler auto-vectorize math loops (modifiers, audio DSP, note positions). -->
         <compilerflag value="-march=armv8-a+simd" />
 
+        <!-- -O3: upgrade from Lime's default -O2.
+             Enables aggressive inlining, loop vectorization hints, and strength reduction.
+             Safe: no strict-aliasing violations or threading hazards found in codebase. -->
+        <compilerflag value="-O3" />
+
         <!-- ThinLTO: at link time, see all .cpp files at once.
              Enables cross-file inlining and dead-code removal the per-file pass can't do. -->
         <compilerflag value="-flto=thin" />
