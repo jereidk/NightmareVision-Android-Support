@@ -125,6 +125,15 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Patch SDL posix process for Android
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          SDL_FILE=".haxelib/lime/git/lib/sdl/src/process/posix/SDL_posixprocess.c"
+          if [ -f "$SDL_FILE" ]; then
+            { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+            mv /tmp/sdlfix "$SDL_FILE"
+          fi
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
