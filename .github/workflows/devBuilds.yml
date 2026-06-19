@@ -132,28 +132,44 @@ jobs:
             /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
-          # Replace ld.lld with a wrapper that fixes ARM32/API-16 bare CRT paths
+          # Replace ld.lld with a wrapper that fixes ARM32 bare CRT paths.
+          # NDK 29 drops API-16 sysroot files; we probe for the lowest available
+          # API level (16→19→21→23) so the fix works across NDK versions.
           mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
           {
             printf '#!/bin/bash\n'
             printf 'NDK="%s"\n' "$NDK_PREBUILT"
-            printf 'ARM32="$NDK/sysroot/usr/lib/arm-linux-androideabi/16"\n'
+            printf '# Detect ARM32 by scanning for armelf_linux_eabi in args\n'
             printf 'IS_ARM32=false\n'
-            printf 'ARGS=("$@")\n'
-            printf 'for i in "${!ARGS[@]}"; do\n'
-            printf '  [[ "${ARGS[$i]}" == "-m" && "${ARGS[$((i+1))]:-}" == "armelf_linux_eabi" ]] && IS_ARM32=true && break\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  [ "$arg" = "armelf_linux_eabi" ] && IS_ARM32=true && break\n'
             printf 'done\n'
             printf 'if $IS_ARM32; then\n'
-            printf '  NEW_ARGS=()\n'
-            printf '  for arg in "${ARGS[@]}"; do\n'
+            printf '  # Find lowest API level that has crtbegin_so.o (NDK 29 may start at 19 or 21)\n'
+            printf '  ARM32_BASE="$NDK/sysroot/usr/lib/arm-linux-androideabi"\n'
+            printf '  ARM32=""\n'
+            printf '  for api in 16 19 21 23 24; do\n'
+            printf '    if [ -f "$ARM32_BASE/$api/crtbegin_so.o" ]; then\n'
+            printf '      ARM32="$ARM32_BASE/$api"\n'
+            printf '      break\n'
+            printf '    fi\n'
+            printf '  done\n'
+            printf '  echo "ld.lld-wrapper: ARM32 link detected, sysroot=$ARM32" >&2\n'
+            printf '  if [ -z "$ARM32" ]; then\n'
+            printf '    echo "ld.lld-wrapper: ERROR no ARM32 crtbegin_so.o found under $ARM32_BASE" >&2\n'
+            printf '    ls "$ARM32_BASE" >&2 2>/dev/null || true\n'
+            printf '    exit 1\n'
+            printf '  fi\n'
+            printf '  NEWARGS=()\n'
+            printf '  for arg in "$@"; do\n'
             printf '    case "$arg" in\n'
             printf '      crtbegin_so.o|crtbegin_dynamic.o|crtbegin_static.o|crtend_so.o|crtend.o)\n'
-            printf '        [ -f "$ARM32/$arg" ] && NEW_ARGS+=("$ARM32/$arg") || NEW_ARGS+=("$arg") ;;\n'
-            printf '      *) NEW_ARGS+=("$arg") ;;\n'
+            printf '        NEWARGS+=("$ARM32/$arg") ;;\n'
+            printf '      *) NEWARGS+=("$arg") ;;\n'
             printf '    esac\n'
             printf '  done\n'
-            printf '  NEW_ARGS+=("-L$ARM32")\n'
-            printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "${NEW_ARGS[@]}"\n'
+            printf '  NEWARGS+=("-L$ARM32")\n'
+            printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "${NEWARGS[@]}"\n'
             printf 'else\n'
             printf '  exec -a ld.lld "$NDK/bin/ld.lld.real" "$@"\n'
             printf 'fi\n'
