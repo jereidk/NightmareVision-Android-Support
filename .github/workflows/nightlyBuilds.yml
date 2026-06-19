@@ -158,7 +158,7 @@ jobs:
             printf '      crtbegin_so.o|crtbegin_dynamic.o|crtbegin_static.o|crtend_so.o|crtend.o)\n'
             printf '        NEWARGS+=("$ARM32/$arg") ;;\n'
             printf '      "-L${ARM32_BASE}")\n'
-            printf '        NEWARGS+=("-L${ARM32_BASE}" "-L${ARM32}") ;;\n'
+            printf '        NEWARGS+=("-L${ARM32}" "-L${ARM32_BASE}") ;;\n'
             printf '      *) NEWARGS+=("$arg") ;;\n'
             printf '    esac\n'
             printf '  done\n'
