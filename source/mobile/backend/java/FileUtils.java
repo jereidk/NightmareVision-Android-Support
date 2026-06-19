@@ -119,34 +119,43 @@ public class FileUtils extends Extension {
                 if (uri != null && callbackObject != null) {
                     readBytesFromUri(uri);
                 }
+            } else if (callbackObject != null) {
+                callbackObject.call("onCancel", new Object[0]);
             }
             return true;
         }
 
-     if (requestCode == PICK_MULTIPLE_FILES_CODE) {
+        if (requestCode == PICK_MULTIPLE_FILES_CODE) {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         java.util.ArrayList<String> filePaths = new java.util.ArrayList<>();
-                        
+
                         if (data.getClipData() != null) {
                             int count = data.getClipData().getItemCount();
                             for (int i = 0; i < count; i++) {
                                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                                String realPath = copyFileToExternal(uri); 
+                                String realPath = copyFileToExternal(uri);
                                 if (realPath != null) filePaths.add(realPath);
                             }
                         } else if (data.getData() != null) {
                             String realPath = copyFileToExternal(data.getData());
                             if (realPath != null) filePaths.add(realPath);
                         }
+
                         if (callbackObject != null && !filePaths.isEmpty()) {
                             String[] report = filePaths.toArray(new String[0]);
                             callbackObject.call("onFileSelected", new Object[] { null, report });
+                        } else if (callbackObject != null) {
+                            // All copies failed — treat as cancel so the UI unblocks
+                            callbackObject.call("onCancel", new Object[0]);
                         }
                     }
                 }).start();
+            } else if (callbackObject != null) {
+                // User dismissed the picker without selecting a file
+                callbackObject.call("onCancel", new Object[0]);
             }
             return true;
         }

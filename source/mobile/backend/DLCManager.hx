@@ -320,6 +320,14 @@ class DLCManager {
                 fname = fname.substring(stripPrefix.length);
             if (fname == "" || fname == "/") { i++; continue; }
 
+            // Guard against path traversal: remove .., absolute segments, and Windows separators
+            var rawParts = fname.replace("\\", "/").split("/");
+            var safeParts:Array<String> = [];
+            for (p in rawParts) { if (p != "" && p != "." && p != "..") safeParts.push(p); }
+            if (safeParts.length == 0) { i++; continue; }
+            var isDir = fname.endsWith("/");
+            fname = safeParts.join("/") + (isDir ? "/" : "");
+
             var target = destPath + fname;
             if (fname.endsWith("/")) {
                 if (!FileSystem.exists(target)) _mkdirs(target);
