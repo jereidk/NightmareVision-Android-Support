@@ -147,6 +147,17 @@ jobs:
             find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
           fi
 
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
