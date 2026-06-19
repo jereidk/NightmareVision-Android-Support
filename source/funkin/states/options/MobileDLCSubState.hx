@@ -8,6 +8,9 @@ import flixel.math.FlxRect;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 
+import openfl.net.FileFilter;
+import funkin.utils.FileUtil;
+
 import mobile.backend.DLCManager;
 import mobile.backend.DLCManager.DLCTaskState;
 import mobile.backend.DLCManager.DLCEntry;
@@ -258,6 +261,12 @@ class MobileDLCSubState extends MusicBeatSubstate
         var item:Null<DLCListItem> = _items[_sel];
         if (item == null) return;
 
+        // Open native file picker to install a local ZIP
+        if (item.id == "__install_local__") {
+            _openLocalFilePicker();
+            return;
+        }
+
         // Empty placeholder item — retry registry fetch if it previously failed
         if (item.id == "") {
             if (_tab == TAB_BROWSE && DLCManager.taskState == DLCTaskState.FAILED) {
@@ -313,11 +322,19 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _items.push({
                     id:           "",
                     label:        "No DLCs installed yet.",
-                    sub:          "Switch to Browse tab to download community DLCs.",
+                    sub:          "Browse the community tab, or install a ZIP below.",
                     installed:    false,
                     downloadable: false
                 });
             }
+            // Always show the local install option at the bottom
+            _items.push({
+                id:           "__install_local__",
+                label:        "Install from local ZIP...",
+                sub:          "Open your device file picker to select a mod ZIP",
+                installed:    false,
+                downloadable: false
+            });
         } else {
             if (DLCManager.registryData != null) {
                 for (e in DLCManager.registryData.dlcs) {
@@ -350,6 +367,24 @@ class MobileDLCSubState extends MusicBeatSubstate
         if (_sel < _scroll) _scroll = _sel;
         if (_sel >= _scroll + MAX_VIS) _scroll = _sel - MAX_VIS + 1;
         if (_scroll < 0) _scroll = 0;
+    }
+
+    function _openLocalFilePicker():Void
+    {
+        #if android
+        _blockInput = true;
+        FunkinSound.play(Paths.sound('confirmMenu'));
+        FileUtil.browseForMultipleFiles(
+            { typeFilter: [new FileFilter("ZIP files", "zip")] },
+            (paths) -> {
+                if (paths != null && paths.length > 0 && paths[0] != null && paths[0] != "")
+                    DLCManager.installFromLocalZipAsync(paths[0]);
+                else
+                    _blockInput = false;
+            },
+            () -> { _blockInput = false; }
+        );
+        #end
     }
 
     // ── Visual refresh ─────────────────────────────────────────────────────
@@ -393,6 +428,9 @@ class MobileDLCSubState extends MusicBeatSubstate
             if (activeDown) {
                 _actionTexts[i].text  = "Downloading...";
                 _actionTexts[i].color = FlxColor.YELLOW;
+            } else if (item.id == "__install_local__") {
+                _actionTexts[i].text  = "[Open file picker]";
+                _actionTexts[i].color = FlxColor.fromRGB(200, 200, 100);
             } else if (item.installed) {
                 _actionTexts[i].text  = "[Uninstall]";
                 _actionTexts[i].color = FlxColor.fromRGB(255, 110, 110);

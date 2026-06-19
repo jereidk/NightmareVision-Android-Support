@@ -108,7 +108,14 @@ class FileUtil
 		#if android
 		try
 		{
-			var mimeType:String = "application/json";
+			var mimeType:String = "*/*";
+			if (options.typeFilter != null && options.typeFilter.length > 0)
+			{
+				var ext = options.typeFilter[0].extension;
+				if (ext == "json") mimeType = "application/json";
+				else if (ext == "txt") mimeType = "text/plain";
+				else if (ext == "zip") mimeType = "application/zip";
+			}
 
 			var callback =
 				{

@@ -163,6 +163,56 @@ class DLCManager {
         #end
     }
 
+    /**
+     * Installs a DLC from a local ZIP file (e.g. selected via the native file picker).
+     * No download or SHA-256 check — the user is responsible for what they install.
+     */
+    public static function installFromLocalZipAsync(zipPath:String):Void {
+        #if sys
+        if (taskState == BUSY) return;
+
+        var fileName = Path.withoutDirectory(zipPath);
+        var id       = ~/[^a-zA-Z0-9\-_]/.replace(Path.withoutExtension(fileName), "-");
+        if (id == "" || id == "-") id = "local-dlc-" + Std.int(Date.now().getTime() / 1000);
+        var name = id;
+
+        _setStatus(BUSY, 0, "Installing from local file...");
+        activeTaskId = id;
+
+        Thread.create(() -> {
+            try {
+                if (!FileSystem.exists(zipPath)) throw "File not found: " + zipPath;
+
+                _setProgress(20, "Installing " + fileName + "...");
+                var destPath = getContentPath() + id + "/";
+                _mkdirs(destPath);
+
+                var fakeEntry:DLCEntry = {
+                    id: id, name: name, description: "", author: "",
+                    version: "1.0", sizeMb: 0, downloadUrl: "", sha256: ""
+                };
+                _extractZip(zipPath, destPath, fakeEntry);
+
+                _setProgress(96, "Cleaning up...");
+                try {
+                    if (zipPath.indexOf(".temp") >= 0 || zipPath.indexOf("dlc-import") >= 0)
+                        if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath);
+                } catch (_:Dynamic) {}
+
+                _mutex.acquire();
+                taskState    = SUCCESS;
+                taskProgress = 100;
+                taskMessage  = name + " installed! Restart the game to load it.";
+                activeTaskId = "";
+                _mutex.release();
+            } catch (e:Dynamic) {
+                _setStatus(FAILED, 0, Std.string(e));
+                activeTaskId = id + "_failed";
+            }
+        });
+        #end
+    }
+
     /** Downloads, validates (SHA-256), and installs a DLC asynchronously. */
     public static function downloadAndInstallAsync(entry:DLCEntry):Void {
         #if sys
@@ -230,6 +280,18 @@ class DLCManager {
         var entries = Reader.readZip(input);
         input.close();
 
+        // Detect single top-level folder to strip (e.g. GitHub ZIPs: my-mod/songs/...)
+        var stripPrefix = "";
+        var topLevels = new haxe.ds.StringMap<Bool>();
+        for (e in entries) {
+            var fn = e.fileName;
+            if (fn == null || fn == "" || fn.startsWith("__MACOSX") || fn.startsWith("._")) continue;
+            var slash = fn.indexOf("/");
+            topLevels.set(slash > 0 ? fn.substring(0, slash + 1) : "__root__", true);
+        }
+        var topKeys = [for (k in topLevels.keys()) k];
+        if (topKeys.length == 1 && topKeys[0] != "__root__") stripPrefix = topKeys[0];
+
         var i     = 0;
         var total = entries.length;
 
@@ -238,6 +300,11 @@ class DLCManager {
             if (fname == null || fname == "") { i++; continue; }
             // Skip macOS metadata junk
             if (fname.startsWith("__MACOSX") || fname.startsWith("._")) { i++; continue; }
+
+            // Strip single top-level folder prefix if detected
+            if (stripPrefix != "" && fname.startsWith(stripPrefix))
+                fname = fname.substring(stripPrefix.length);
+            if (fname == "" || fname == "/") { i++; continue; }
 
             var target = destPath + fname;
             if (fname.endsWith("/")) {
