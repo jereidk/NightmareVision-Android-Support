@@ -116,7 +116,10 @@ jobs:
             "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
-          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
       - name: Configure Android
@@ -126,6 +129,22 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
+
+      - name: Patch NDK ARM32 sysroot (API 16 linker paths)
+        run: |
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          ARM32_LIB="$NDK_PREBUILT/sysroot/usr/lib/arm-linux-androideabi"
+          echo "=== Symlinking ARM32/API-16 files into base sysroot dir ==="
+          for f in \
+            crtbegin_so.o crtend_so.o crtbegin_dynamic.o crtend.o crtbegin_static.o \
+            liblog.so libandroid.so libEGL.so libGLESv2.so libOpenSLES.so \
+            libc++.so libc++_shared.so libdl.so libm.so libc.so libz.so libvulkan.so; do
+            src="$ARM32_LIB/16/$f"
+            if [ -f "$src" ]; then
+              ln -sf "16/$f" "$ARM32_LIB/$f"
+              echo "  Symlinked: $f"
+            fi
+          done
 
       - name: Patch SDL posix process for Android
         run: |
