@@ -158,6 +158,18 @@ jobs:
             fi
           done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
 
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
