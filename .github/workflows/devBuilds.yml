@@ -132,100 +132,13 @@ jobs:
             /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
-          # Replace ld.lld with a Python-written wrapper that handles ARM32 links.
-          # hxcpp passes all linker args via @response_file; the wrapper detects ARM32
-          # from it and rewrites the file with the correct versioned sysroot paths.
+          # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
+          # hxcpp passes all linker args via a response file (one arg per line);
+          # the wrapper rewrites it with versioned CRT paths and missing -L entries.
+          # Script is base64-encoded to avoid YAML block-scalar indentation issues.
           mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
-          python3 << 'PYEOF'
-import os, stat
-ndk = os.environ['ANDROID_NDK_LATEST_HOME'] + '/toolchains/llvm/prebuilt/linux-x86_64'
-wrapper = r"""#!/bin/bash
-NDK="@NDK@"
-IS_ARM32=false
-RESPONSE_FILE=""
-for arg in "$@"; do
-  case "$arg" in
-    armelf_linux_eabi) IS_ARM32=true ;;
-    @*)
-      RESPONSE_FILE="${arg#@}"
-      if [ -f "$RESPONSE_FILE" ] && grep -qF 'armelf_linux_eabi' "$RESPONSE_FILE"; then
-        IS_ARM32=true
-      fi
-      ;;
-  esac
-done
-if $IS_ARM32; then
-  ARM32_BASE="$NDK/sysroot/usr/lib/arm-linux-androideabi"
-  ARM32=""
-  for api in 16 19 21 23 24; do
-    if [ -f "$ARM32_BASE/$api/crtbegin_so.o" ]; then
-      ARM32="$ARM32_BASE/$api"
-      break
-    fi
-  done
-  echo "ld.lld-wrapper: ARM32 link detected, sysroot=$ARM32" >&2
-  if [ -z "$ARM32" ]; then
-    echo "ld.lld-wrapper: ERROR no ARM32 crtbegin_so.o found under $ARM32_BASE" >&2
-    ls "$ARM32_BASE" >&2 2>/dev/null || true
-    exit 1
-  fi
-  if [ -n "$RESPONSE_FILE" ] && [ -f "$RESPONSE_FILE" ]; then
-    NEW_RESP=$(mktemp /tmp/ld-arm32-XXXXXX.txt)
-    python3 - "$RESPONSE_FILE" "$ARM32" "$ARM32_BASE" "$NDK" "$NEW_RESP" << 'PY_FIX'
-import sys, shlex, os as _os
-resp_file, arm32, arm32_base, ndk_path, out_file = sys.argv[1:]
-with open(resp_file) as f:
-    args = shlex.split(f.read())
-crts = {'crtbegin_so.o','crtbegin_dynamic.o','crtbegin_static.o','crtend_so.o','crtend.o'}
-new_args = []
-for arg in args:
-    if arg in crts:
-        new_args.append(arm32 + '/' + arg)
-    elif arg == '-L' + arm32_base:
-        new_args.append('-L' + arm32)
-        new_args.append('-L' + arm32_base)
-    else:
-        new_args.append(arg)
-new_args.append('-L' + arm32)
-for d in [arm32_base, ndk_path+'/lib/linux/arm', ndk_path+'/lib/clang/21/lib/linux/arm', ndk_path+'/lib/clang/18/lib/linux/arm']:
-    if _os.path.exists(d+'/libc++_static.a'):
-        new_args.append('-L'+d)
-        print('ld.lld-wrapper: added libc++_static='+d, file=sys.stderr)
-        break
-with open(out_file, 'w') as f:
-    for a in new_args:
-        f.write(shlex.quote(a) + '\n')
-PY_FIX
-    exec -a ld.lld "$NDK/bin/ld.lld.real" "@$NEW_RESP"
-  else
-    NEWARGS=()
-    for arg in "$@"; do
-      case "$arg" in
-        crtbegin_so.o|crtbegin_dynamic.o|crtbegin_static.o|crtend_so.o|crtend.o)
-          NEWARGS+=("$ARM32/$arg") ;;
-        "-L${ARM32_BASE}")
-          NEWARGS+=("-L${ARM32}" "-L${ARM32_BASE}") ;;
-        *) NEWARGS+=("$arg") ;;
-      esac
-    done
-    NEWARGS+=("-L$ARM32")
-    for d in "$NDK/sysroot/usr/lib/arm-linux-androideabi" "$NDK/lib/linux/arm" "$NDK/lib/clang/21/lib/linux/arm" "$NDK/lib/clang/18/lib/linux/arm"; do
-      if [ -f "$d/libc++_static.a" ]; then
-        NEWARGS+=("-L$d")
-        echo "ld.lld-wrapper: added libc++_static=$d" >&2
-        break
-      fi
-    done
-    exec -a ld.lld "$NDK/bin/ld.lld.real" "${NEWARGS[@]}"
-  fi
-else
-  exec -a ld.lld "$NDK/bin/ld.lld.real" "$@"
-fi
-""".replace('@NDK@', ndk)
-with open(ndk + '/bin/ld.lld', 'w') as f:
-    f.write(wrapper)
-os.chmod(ndk + '/bin/ld.lld', 0o755)
-PYEOF
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgZm9yIGFwaSBpbiAxNiAxOSAyMSAyMyAyNDsgZG8KICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICBBUk0zMj0iJEFSTTMyX0JBU0UvJGFwaSIKICAgICAgYnJlYWsKICAgIGZpCiAgZG9uZQogIGVjaG8gImxkLmxsZC13cmFwcGVyOiBBUk0zMiBsaW5rIGRldGVjdGVkLCBzeXNyb290PSRBUk0zMiIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICB3aGlsZSBJRlM9IHJlYWQgLXIgbGluZSB8fCBbIC1uICIkbGluZSIgXTsgZG8KICAgICAgY2FzZSAiJGxpbmUiIGluCiAgICAgICAgY3J0YmVnaW5fc28ub3xjcnRiZWdpbl9keW5hbWljLm98Y3J0YmVnaW5fc3RhdGljLm98Y3J0ZW5kX3NvLm98Y3J0ZW5kLm8pCiAgICAgICAgICBwcmludGYgJyVzXG4nICIkQVJNMzIvJGxpbmUiIDs7CiAgICAgICAgKikgcHJpbnRmICclc1xuJyAiJGxpbmUiIDs7CiAgICAgIGVzYWMKICAgIGRvbmUgPCAiJFJFU1BPTlNFX0ZJTEUiID4gIiRORVdfUkVTUCIKICAgIHByaW50ZiAnJXNcbicgIi1MJEFSTTMyIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICBORVdBUkdTPSgpCiAgICBmb3IgYXJnIGluICIkQCI7IGRvCiAgICAgIGNhc2UgIiRhcmciIGluCiAgICAgICAgY3J0YmVnaW5fc28ub3xjcnRiZWdpbl9keW5hbWljLm98Y3J0YmVnaW5fc3RhdGljLm98Y3J0ZW5kX3NvLm98Y3J0ZW5kLm8pCiAgICAgICAgICBORVdBUkdTKz0oIiRBUk0zMi8kYXJnIikgOzsKICAgICAgICAqKSBORVdBUkdTKz0oIiRhcmciKSA7OwogICAgICBlc2FjCiAgICBkb25lCiAgICBORVdBUkdTKz0oIi1MJEFSTTMyIikKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
           chmod +x "$NDK_PREBUILT/bin/ld.lld"
 
       - name: Configure Android
