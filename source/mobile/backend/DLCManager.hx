@@ -147,6 +147,8 @@ class DLCManager {
                 if (data  == "") throw "Empty response from server";
 
                 var reg:DLCRegistry = Json.parse(data);
+                if (reg.schemaVersion != 1)
+                    throw "Unsupported registry version: " + reg.schemaVersion;
 
                 _mutex.acquire();
                 registryData   = reg;
@@ -341,16 +343,15 @@ class DLCManager {
             _setProgress(70 + (total > 0 ? Std.int(25 * i / total) : 25), "Installing (" + i + "/" + total + ")...");
         }
 
-        // Ensure meta.json carries our dlcId marker
+        // Ensure meta.json carries our dlcId marker and global:true
         var metaPath = destPath + "meta.json";
         if (FileSystem.exists(metaPath)) {
             try {
                 var meta:Dynamic = Json.parse(File.getContent(metaPath));
-                if (meta.dlcId == null) {
-                    meta.dlcId  = entry.id;
-                    meta.global = true;
-                    File.saveContent(metaPath, Json.stringify(meta));
-                }
+                var changed = false;
+                if (meta.dlcId  == null)  { meta.dlcId  = entry.id; changed = true; }
+                if (meta.global != true)  { meta.global = true;      changed = true; }
+                if (changed) File.saveContent(metaPath, Json.stringify(meta));
             } catch (_:Dynamic) {}
         } else {
             var meta = {

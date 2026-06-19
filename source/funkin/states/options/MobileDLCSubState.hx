@@ -73,6 +73,10 @@ class MobileDLCSubState extends MusicBeatSubstate
     var _successTimer:Float = 0.0;
     var _scrollUpHint:FlxText;
     var _scrollDownHint:FlxText;
+    var _clipRect:FlxRect;
+    var _uninstallMsg:String = "";
+    var _uninstallMsgOk:Bool = false;
+    var _uninstallMsgTimer:Float = 0.0;
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -172,6 +176,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             .makeGraphic(Std.int(LIST_W), 18, FlxColor.fromRGB(80, 210, 120));
         _progressFill.visible = false;
         add(_progressFill);
+        _clipRect = new FlxRect(0, 0, 0, 18);
 
         _statusText = new FlxText(LIST_X, FlxG.height - 19, Std.int(LIST_W), "");
         _statusText.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.GRAY, LEFT,
@@ -236,8 +241,16 @@ class MobileDLCSubState extends MusicBeatSubstate
         else
             _successTimer = 0.0;
 
+        if (_uninstallMsgTimer > 0.0) {
+            _uninstallMsgTimer -= elapsed;
+            if (_uninstallMsgTimer <= 0.0) _uninstallMsg = "";
+        }
+
         _updateProgressBar();
         _updateStatusLine();
+
+        // BACK is always available — player must never be fully trapped
+        if (controls.BACK) { close(); return; }
 
         if (!_blockInput)
             _handleInput();
@@ -247,8 +260,6 @@ class MobileDLCSubState extends MusicBeatSubstate
 
     function _handleInput():Void
     {
-        if (controls.BACK) { close(); return; }
-
         var len = _items.length;
         if (len == 0) return;
 
@@ -310,11 +321,20 @@ class MobileDLCSubState extends MusicBeatSubstate
             if (_pendingUninstallId == item.id) {
                 // Second press confirms — actually uninstall
                 _pendingUninstallId = null;
-                DLCManager.uninstallDLC(item.id);
+                var ok = DLCManager.uninstallDLC(item.id);
                 FunkinSound.play(Paths.sound('cancelMenu'));
                 _refreshInstalled();
                 _rebuildItems();
                 _updateRows();
+                if (ok) {
+                    _uninstallMsg      = item.label + " removed.";
+                    _uninstallMsgOk    = true;
+                    _uninstallMsgTimer = 4.0;
+                } else {
+                    _uninstallMsg      = "Could not remove DLC. Check storage permissions.";
+                    _uninstallMsgOk    = false;
+                    _uninstallMsgTimer = 5.0;
+                }
             } else {
                 // First press — request confirmation
                 _pendingUninstallId = item.id;
@@ -463,7 +483,9 @@ class MobileDLCSubState extends MusicBeatSubstate
                 item.installed ? FlxColor.fromRGB(180, 255, 180) :
                                  FlxColor.WHITE;
 
-            var activeDown = (DLCManager.taskState == DLCTaskState.BUSY && DLCManager.activeTaskId == item.id);
+            var activeDown = (DLCManager.taskState == DLCTaskState.BUSY && DLCManager.activeTaskId == item.id)
+                          || (item.id == "__install_local__" && DLCManager.taskState == DLCTaskState.BUSY
+                              && DLCManager.activeTaskId != "_registry" && DLCManager.activeTaskId != "");
             if (activeDown) {
                 _actionTexts[i].text  = "Downloading...";
                 _actionTexts[i].color = FlxColor.YELLOW;
@@ -508,14 +530,15 @@ class MobileDLCSubState extends MusicBeatSubstate
     {
         var ts = DLCManager.taskState;
         if (ts == DLCTaskState.BUSY) {
-            var pct = Math.max(0.0, DLCManager.taskProgress / 100.0);
-            _progressBg.visible   = true;
-            _progressFill.visible = true;
-            _progressFill.clipRect = new FlxRect(0, 0, pct * LIST_W, 18);
+            _clipRect.width = Math.max(0.0, DLCManager.taskProgress / 100.0) * LIST_W;
+            _progressBg.visible    = true;
+            _progressFill.visible  = true;
+            _progressFill.clipRect = _clipRect;
         } else if (ts == DLCTaskState.SUCCESS && _successTimer < 5.0) {
-            _progressBg.visible   = true;
-            _progressFill.visible = true;
-            _progressFill.clipRect = new FlxRect(0, 0, LIST_W, 18);
+            _clipRect.width = LIST_W;
+            _progressBg.visible    = true;
+            _progressFill.visible  = true;
+            _progressFill.clipRect = _clipRect;
         } else {
             _progressBg.visible   = false;
             _progressFill.visible = false;
@@ -534,6 +557,9 @@ class MobileDLCSubState extends MusicBeatSubstate
         } else if (ts == DLCTaskState.FAILED) {
             _statusText.text  = DLCManager.taskMessage;
             _statusText.color = FlxColor.fromRGB(255, 100, 100);
+        } else if (_uninstallMsg != "") {
+            _statusText.text  = _uninstallMsg;
+            _statusText.color = _uninstallMsgOk ? FlxColor.fromRGB(255, 180, 80) : FlxColor.fromRGB(255, 100, 100);
         } else {
             _statusText.text  = _installed.length + " DLC" + (_installed.length == 1 ? "" : "s") + " installed";
             _statusText.color = FlxColor.fromRGB(120, 120, 120);

@@ -80,25 +80,25 @@ public class FileUtils extends Extension {
     }
 
     public static void browseForMultipleFiles(final String mimeType, final org.haxe.lime.HaxeObject callback) {
-    callbackObject = callback;
-    new Handler(Looper.getMainLooper()).post(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType(mimeType != null ? mimeType : "*/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        callbackObject = callback;
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType(mimeType != null ? mimeType : "*/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
 
-                if (Extension.mainActivity != null) {
-                    Extension.mainActivity.startActivityForResult(intent, PICK_MULTIPLE_FILES_CODE);
+                    if (Extension.mainActivity != null) {
+                        Extension.mainActivity.startActivityForResult(intent, PICK_MULTIPLE_FILES_CODE);
+                    }
+                } catch (Exception e) {
+                    Log.e("FileUtils", "Error opening selector: " + e.toString());
                 }
-            } catch (Exception e) {
-                Log.e("FileUtils", "Error opening selector: " + e.toString());
             }
-        }
-    });
-}
+        });
+    }
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CREATE_FILE_CODE) {
@@ -144,13 +144,18 @@ public class FileUtils extends Extension {
                             if (realPath != null) filePaths.add(realPath);
                         }
 
-                        if (callbackObject != null && !filePaths.isEmpty()) {
-                            String[] report = filePaths.toArray(new String[0]);
-                            callbackObject.call("onFileSelected", new Object[] { null, report });
-                        } else if (callbackObject != null) {
-                            // All copies failed — treat as cancel so the UI unblocks
-                            callbackObject.call("onCancel", new Object[0]);
-                        }
+                        final java.util.ArrayList<String> finalPaths = filePaths;
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (callbackObject != null && !finalPaths.isEmpty()) {
+                                    String[] report = finalPaths.toArray(new String[0]);
+                                    callbackObject.call("onFileSelected", new Object[] { null, report });
+                                } else if (callbackObject != null) {
+                                    callbackObject.call("onCancel", new Object[0]);
+                                }
+                            }
+                        });
                     }
                 }).start();
             } else if (callbackObject != null) {
@@ -205,7 +210,7 @@ public class FileUtils extends Extension {
             }
            
             if (fileName == null || fileName.isEmpty()) {
-                fileName = "temp_" + System.currentTimeMillis() + ".json";
+                fileName = "temp_" + System.currentTimeMillis() + ".zip";
             }
 
             java.io.File rootDir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".NightmareVision");
