@@ -150,19 +150,15 @@
 
     <!-- Android release optimizations (release only, not debug) -->
     <section if="android" unless="debug">
-        <!-- NEON: use ARMv8-A SIMD units — mandatory on all ARM64 devices.
-             Lets the compiler auto-vectorize math loops (modifiers, audio DSP, note positions). -->
-        <compilerflag value="-march=armv8-a+simd" />
-
         <!-- -O3: upgrade from Lime's default -O2.
              Enables aggressive inlining, loop vectorization hints, and strength reduction.
-             Safe: no strict-aliasing violations or threading hazards found in codebase. -->
-        <compilerflag value="-O3" />
+             Safe for both ARM64 and ARM32. -->
+        <compilerflag name="-O3" />
 
         <!-- ThinLTO: at link time, see all .cpp files at once.
              Enables cross-file inlining and dead-code removal the per-file pass can't do. -->
-        <compilerflag value="-flto=thin" />
-        <linker value="-flto=thin" />
+        <compilerflag name="-flto=thin" />
+        <linkerFlag value="-flto=thin" />
     </section>
 
     <icon path="projFiles/icon/icon16.png" size='16'/>
