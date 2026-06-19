@@ -79,15 +79,12 @@ jobs:
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
-      - name: Configure C++23 for Lime rebuild
-        if: steps.lime-cache.outputs.cache-hit != 'true'
-        run: printf '<xml>\n  <compilerflag value="-std=c++23"/>\n</xml>' > ~/.hxcpp_config.xml
-
       - name: Rebuild Linux Lime ndll
         if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
+          HXCPP_CPP23: "1"
         run: |
           haxelib run lime rebuild cpp -release
           if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
@@ -108,6 +105,7 @@ jobs:
         env:
           CC: gcc-13
           CXX: g++-13
+          HXCPP_CPP23: "1"
         run: |
           haxelib run lime rebuild android -release
           if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
@@ -277,15 +275,12 @@ jobs:
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
-      - name: Configure C++23 for Lime rebuild
-        if: steps.lime-cache.outputs.cache-hit != 'true'
-        run: printf '<xml>\n  <compilerflag value="-std=c++23"/>\n</xml>' > ~/.hxcpp_config.xml
-
       - name: Rebuild Linux Lime ndll
         if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
+          HXCPP_CPP23: "1"
         run: |
           haxelib run lime rebuild cpp -release
           if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
