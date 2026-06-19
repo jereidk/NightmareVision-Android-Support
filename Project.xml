@@ -148,19 +148,6 @@
 
     <java path="source" if="android"/>
 
-    <!-- Android release optimizations (release only, not debug) -->
-    <section if="android" unless="debug">
-        <!-- -O3: upgrade from Lime's default -O2.
-             Enables aggressive inlining, loop vectorization hints, and strength reduction.
-             Safe for both ARM64 and ARM32. -->
-        <compilerflag name="-O3" />
-
-        <!-- ThinLTO: at link time, see all .cpp files at once.
-             Enables cross-file inlining and dead-code removal the per-file pass can't do. -->
-        <compilerflag name="-flto=thin" />
-        <linkerFlag value="-flto=thin" />
-    </section>
-
     <icon path="projFiles/icon/icon16.png" size='16'/>
     <icon path="projFiles/icon/icon32.png" size='32'/>
     <icon path="projFiles/icon/icon64.png" size='64'/>
