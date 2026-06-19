@@ -156,8 +156,12 @@ class DLCManager {
                 activeTaskId   = "";
                 _mutex.release();
             } catch (e:Dynamic) {
-                _setStatus(FAILED, 0, "Registry fetch failed: " + Std.string(e));
+                _mutex.acquire();
+                taskState    = FAILED;
+                taskProgress = 0;
+                taskMessage  = "Registry fetch failed: " + Std.string(e);
                 activeTaskId = "";
+                _mutex.release();
             }
         });
         #end
@@ -173,8 +177,10 @@ class DLCManager {
 
         var fileName = Path.withoutDirectory(zipPath);
         var id       = ~/[^a-zA-Z0-9\-_]/.replace(Path.withoutExtension(fileName), "-");
-        if (id == "" || id == "-") id = "local-dlc-" + Std.int(Date.now().getTime() / 1000);
-        var name = id;
+        if (id == "" || id == "-") id = "local-dlc-" + Std.string(Math.floor(Date.now().getTime() / 1000));
+        // Human-readable name: restore spaces from the original filename
+        var name = ~/[-_]+/.replace(Path.withoutExtension(fileName), " ").trim();
+        if (name == "") name = id;
 
         _setStatus(BUSY, 0, "Installing from local file...");
         activeTaskId = id;
@@ -206,8 +212,12 @@ class DLCManager {
                 activeTaskId = "";
                 _mutex.release();
             } catch (e:Dynamic) {
-                _setStatus(FAILED, 0, Std.string(e));
+                _mutex.acquire();
+                taskState    = FAILED;
+                taskProgress = 0;
+                taskMessage  = Std.string(e);
                 activeTaskId = id + "_failed";
+                _mutex.release();
             }
         });
         #end
@@ -265,8 +275,12 @@ class DLCManager {
                 _mutex.release();
             } catch (e:Dynamic) {
                 try { if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath); } catch (_:Dynamic) {}
-                _setStatus(FAILED, 0, Std.string(e));
+                _mutex.acquire();
+                taskState    = FAILED;
+                taskProgress = 0;
+                taskMessage  = Std.string(e);
                 activeTaskId = entry.id + "_failed";
+                _mutex.release();
             }
         });
         #end
@@ -316,7 +330,7 @@ class DLCManager {
             }
 
             i++;
-            _setProgress(70 + Std.int(25 * i / total), "Installing (" + i + "/" + total + ")...");
+            _setProgress(70 + (total > 0 ? Std.int(25 * i / total) : 25), "Installing (" + i + "/" + total + ")...");
         }
 
         // Ensure meta.json carries our dlcId marker

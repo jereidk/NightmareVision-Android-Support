@@ -350,10 +350,11 @@ class MobileDLCSubState extends MusicBeatSubstate
                 }
             }
             if (_items.length == 0) {
-                var msg = (DLCManager.taskState == DLCTaskState.BUSY)
-                    ? "Loading DLC list..."
-                    : "Could not load DLC list. Check your connection.";
-                var sub = (DLCManager.taskState == DLCTaskState.FAILED) ? "Press Accept to retry." : "";
+                var ts  = DLCManager.taskState;
+                var msg = ts == DLCTaskState.BUSY      ? "Loading DLC list..."
+                        : DLCManager.registryData != null ? "No community DLCs available yet."
+                        : "Could not load DLC list. Check your connection.";
+                var sub = ts == DLCTaskState.FAILED ? "Press Accept to retry." : "";
                 _items.push({id: "", label: msg, sub: sub, installed: false, downloadable: false});
             }
         }
@@ -379,7 +380,8 @@ class MobileDLCSubState extends MusicBeatSubstate
             (paths) -> {
                 if (paths != null && paths.length > 0 && paths[0] != null && paths[0] != "")
                     DLCManager.installFromLocalZipAsync(paths[0]);
-                else
+                // Unblock if task didn't actually start (already BUSY, or empty path)
+                if (DLCManager.taskState != DLCTaskState.BUSY)
                     _blockInput = false;
             },
             () -> { _blockInput = false; }
@@ -485,7 +487,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             _statusText.text  = DLCManager.taskMessage;
             _statusText.color = FlxColor.fromRGB(100, 255, 100);
         } else if (ts == DLCTaskState.FAILED) {
-            _statusText.text  = "Error: " + DLCManager.taskMessage;
+            _statusText.text  = DLCManager.taskMessage;
             _statusText.color = FlxColor.fromRGB(255, 100, 100);
         } else {
             _statusText.text  = _installed.length + " DLC" + (_installed.length == 1 ? "" : "s") + " installed";

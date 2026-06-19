@@ -137,6 +137,8 @@ class FileUtil
 					}
 				};
 			_browseForMultipleFiles(mimeType, callback);
+		} catch (e:Dynamic) {
+			if (onCancel != null) onCancel();
 		}
 		#elseif desktop
 		final title = options.title;
