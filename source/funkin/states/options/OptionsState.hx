@@ -25,6 +25,7 @@ class OptionsState extends MusicBeatState
 		'visualsui',
 		'misc',
 		#if mobile 'mobile', #end
+		#if mobile 'dlc', #end
 		'credits'
 	];
 	
@@ -97,6 +98,8 @@ class OptionsState extends MusicBeatState
 			#if mobile
 			case 'mobile':
 				openSubState(new funkin.states.options.MobileSettingsSubState());
+			case 'dlc':
+				openSubState(new funkin.states.options.MobileDLCSubState());
 			#end
 			case 'credits':
 				openSubState(new funkin.states.substates.CreditsRollSubState(true, resumeMenuMusic, resumeMenuMusic));
