@@ -124,7 +124,9 @@ jobs:
           } > /tmp/ndk-wrap/clang++
           printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
             "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
-          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang /tmp/ndk-wrap/aarch64-linux-android-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
       - name: Configure Android
