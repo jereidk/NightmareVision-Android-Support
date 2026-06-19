@@ -109,6 +109,17 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          printf '#!/bin/bash\nexec "%s/bin/clang++" "--sysroot=%s/sysroot" "$@" -std=c++23\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
       - name: Configure Android
         run: |
           haxelib run lime setup android
@@ -119,9 +130,6 @@ jobs:
 
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
-        env:
-          CC: gcc-13
-          CXX: g++-13
         run: |
           haxelib run lime rebuild android -release
           if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
