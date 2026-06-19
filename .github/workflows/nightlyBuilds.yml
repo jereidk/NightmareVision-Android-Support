@@ -145,6 +145,16 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-
+
       - name: Patch SDL posix process for Android
         run: |
           echo "=== Scanning for SDL_posixprocess.c ==="
@@ -355,6 +365,16 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-
+
       - name: Patch SDL posix process for Android
         run: |
           echo "=== Scanning for SDL_posixprocess.c ==="
@@ -419,7 +439,20 @@ jobs:
             exit 1
           fi
 
+      - name: Cache hxcpp build artifacts (ARM64)
+        uses: actions/cache@v4
+        with:
+          path: |
+            export/release/android/obj
+            export/release/android/haxe
+            obj
+          key: hxcpp-android-arm64-${{ github.sha }}
+          restore-keys: |
+            hxcpp-android-arm64-
+
       - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
@@ -567,6 +600,16 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-
+
       - name: Patch SDL posix process for Android
         run: |
           echo "=== Scanning for SDL_posixprocess.c ==="
@@ -631,7 +674,20 @@ jobs:
             exit 1
           fi
 
+      - name: Cache hxcpp build artifacts (ARM32)
+        uses: actions/cache@v4
+        with:
+          path: |
+            export/release/android/obj
+            export/release/android/haxe
+            obj
+          key: hxcpp-android-arm32-${{ github.sha }}
+          restore-keys: |
+            hxcpp-android-arm32-
+
       - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
