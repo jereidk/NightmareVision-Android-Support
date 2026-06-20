@@ -828,17 +828,18 @@ class PlayState extends MusicBeatState
 		#if mobile
 		addMobileControls(false, true);
 		if (hitbox != null) hitbox.visible = false;
+		if (virtualPad != null) virtualPad.visible = false;
 
 		mobilePauseBtn = new FlxSprite();
-		mobilePauseBtn.makeGraphic(100, 50, 0x88000000);
-		mobilePauseBtn.screenCenter(X);
+		mobilePauseBtn.makeGraphic(55, 55, 0x88000000);
+		mobilePauseBtn.x = FlxG.width - mobilePauseBtn.width - 5;
 		mobilePauseBtn.y = 5;
 		mobilePauseBtn.scrollFactor.set();
 		mobilePauseBtn.cameras = [camHUD];
 		add(mobilePauseBtn);
 
-		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + 10, 100, 'II', 24);
-		_pauseLabel.setFormat(null, 24, FlxColor.WHITE, FlxTextAlign.CENTER);
+		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + 9, Std.int(mobilePauseBtn.width), 'II', 26);
+		_pauseLabel.setFormat(null, 26, FlxColor.WHITE, FlxTextAlign.CENTER);
 		_pauseLabel.scrollFactor.set();
 		_pauseLabel.cameras = [camHUD];
 		add(_pauseLabel);
@@ -1223,6 +1224,7 @@ class PlayState extends MusicBeatState
 
 		#if mobile
 		if (hitbox != null) hitbox.visible = true;
+		if (virtualPad != null) virtualPad.visible = true;
 		#end
 
 		#if android
@@ -2868,6 +2870,7 @@ class PlayState extends MusicBeatState
 
 		#if mobile
 		if (hitbox != null) hitbox.visible = false;
+		if (virtualPad != null) virtualPad.visible = false;
 		#end
 
 		deathCounter = 0;
