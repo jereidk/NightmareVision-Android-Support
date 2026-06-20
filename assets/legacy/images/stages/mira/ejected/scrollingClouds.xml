@@ -1,9 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <TextureAtlas imagePath="scrollingClouds.png">
-	<!-- Created with Adobe Animate version 21.0.7.42652 -->
-	<!-- http://www.adobe.com/products/animate.html -->
-	<SubTexture name="Cloud00000" x="0" y="0" width="2640" height="627"/>
-	<SubTexture name="Cloud10000" x="0" y="642" width="540" height="159"/>
-	<SubTexture name="Cloud20000" x="2655" y="501" width="1258" height="291"/>
-	<SubTexture name="Cloud30000" x="2655" y="0" width="1414" height="486"/>
+ <SubTexture name="Cloud00000" x="0" y="0" width="660" height="157" />
+ <SubTexture name="Cloud10000" x="0" y="160" width="135" height="40" />
+ <SubTexture name="Cloud20000" x="664" y="125" width="314" height="73" />
+ <SubTexture name="Cloud30000" x="664" y="0" width="354" height="122" />
 </TextureAtlas>
