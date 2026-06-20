@@ -145,16 +145,15 @@ public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canS
 	}
 	else
 	{
-		// Video file missing or inaccessible.  Restore songStartCallback so the countdown
-		// can proceed — otherwise the song is permanently blocked (and Android kills the
-		// app after the ANR timeout, producing the silent-exit the user reported).
+		// Video file missing or inaccessible — skip the cutscene entirely and let PlayState's
+		// own songStartCallback() call (which fires after all scripts load) trigger startCountdown.
+		// Do NOT call startCountdown() here: song scripts run videoCutscene() at top-level code
+		// time (before PlayState line 905), so calling startCountdown() twice would crash the
+		// countdown state machine.
 		if (blackYnot != null) { blackYnot.kill(); blackYnot = null; }
 		video.kill();
 		PlayState.seenCutscene = true;
 		songStartCallback = startCountdown;
-		if (onEnd != null) onEnd();
-		else if (dialogueAfter && (PlayState.isStoryMode || !videoCheckStory)) readDialogue();
-		else startCountdown();
 	}
 }
 

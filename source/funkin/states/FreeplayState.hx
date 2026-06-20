@@ -233,6 +233,7 @@ class FreeplayState extends AmongUIState
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 

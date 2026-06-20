@@ -15,8 +15,9 @@ var holdFill:FlxSprite = null;
 var panelOpen:Bool = false;
 var panelAll:Array<Dynamic>  = [];  // every sprite/text that belongs to the panel
 var panelBtns:Array<Dynamic> = [];  // {x, y, w, h, idx} button hit-boxes
-// Counts down after openPanel() so the hold-release doesn't immediately close the panel
 var panelCooldown:Int = 0;
+var panelCam:Dynamic = null;          // dedicated top-most camera so panel always renders above game sprites
+var panelWaitingForAllUp:Bool = false; // blocks input until hold-gesture fingers fully lift
 
 var lblUnlock:FlxText    = null;
 var lblUnlockReq:FlxText = null;
@@ -139,9 +140,22 @@ function unlockReqLabel():String
 function openPanel()
 {
 	panelOpen = true;
-	panelCooldown = 5; // ignore touch releases for 5 frames so the hold gesture doesn't instantly close the panel
+	panelCooldown = 5;
+	panelWaitingForAllUp = true; // block input until hold-gesture fingers fully lift
+
 	if (lblUnlock    != null) lblUnlock.text    = unlockLabel();
 	if (lblUnlockReq != null) lblUnlockReq.text = unlockReqLabel();
+
+	// Assign panel sprites to a dedicated camera added last in the list.
+	// Being last = renders on top of everything: game sprites, virtual pad, etc.
+	if (panelCam == null)
+	{
+		panelCam = new FlxCamera();
+		panelCam.bgColor = 0x00000000;
+		FlxG.cameras.add(panelCam);
+		for (thing in panelAll) thing.cameras = [panelCam];
+	}
+
 	for (thing in panelAll) thing.visible = true;
 }
 
@@ -245,6 +259,7 @@ function onUpdate()
 	if (touches == null || touches.length == 0)
 	{
 		resetHold();
+		if (panelWaitingForAllUp) panelWaitingForAllUp = false; // all fingers lifted, ready for new input
 		return;
 	}
 
@@ -252,6 +267,9 @@ function onUpdate()
 	if (panelOpen)
 	{
 		if (panelCooldown > 0) { panelCooldown--; return; }
+
+		// Don't process taps until hold-gesture fingers have fully lifted
+		if (panelWaitingForAllUp) return;
 
 		for (touch in touches)
 		{

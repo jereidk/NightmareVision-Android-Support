@@ -140,11 +140,8 @@ class StoryMenuState extends AmongUIState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		if (ClientPrefs.touchInputMode == 'Virtual Pad')
-		{
-			addVirtualPad(LEFT_FULL, A_B);
-			addVirtualPadCamera();
-		}
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
