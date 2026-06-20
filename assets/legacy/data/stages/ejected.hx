@@ -165,12 +165,16 @@ function onCreatePost()
 	
 	gf.scrollFactor.set(0.7, 0.7);
 	
-	speedlines = new FlxBackdrop().loadGraphic(Paths.image(ext + 'speedlines'));
-	speedlines.scale.set(3, 3);
-	speedlines.updateHitbox();
-	speedlines.scrollFactor.set(.3, .3);
-	speedlines.alpha = 0.5;
-	add(speedlines);
+	var speedlinesPath = Paths.getPath('images/' + ext + 'speedlines.png', null, true);
+	if (FunkinAssets.exists(speedlinesPath))
+	{
+		speedlines = new FlxBackdrop().loadGraphic(Paths.image(ext + 'speedlines'));
+		speedlines.scale.set(3, 3);
+		speedlines.updateHitbox();
+		speedlines.scrollFactor.set(.3, .3);
+		speedlines.alpha = 0.5;
+		add(speedlines);
+	}
 	
 	pet.origin.set(pet.width / 2, pet.height / 2);
 	
@@ -195,8 +199,6 @@ function onUpdate(elapsed)
 	if (isDead) return;
 	camHUD.y = Math.sin((Conductor.songPosition / 1000) * (Conductor.bpm / 60) * 1.0) * 15;
 	camHUD.angle = Math.sin((Conductor.songPosition / 1200) * (Conductor.bpm / 60) * -1.0) * 1.2;
-	
-	var porns:Array<FlxSprite> = cloudScroll.members;
 	
 	if (cloudScroll.length >= 3)
 	{
@@ -252,7 +254,6 @@ function onUpdate(elapsed)
 			if (middleBuildings[i].y < -11759.9)
 			{
 				middleBuildings[i].y = 3190.5;
-				middleBuildings[i].animation.play(FlxG.random.bool(50) ? '1' : '2');
 			}
 			middleBuildings[i].y = FlxMath.lerp(middleBuildings[i].y, middleBuildings[i].y - 1300, FlxMath.bound(elapsed * ejectedSpeed, 0, 1));
 		}

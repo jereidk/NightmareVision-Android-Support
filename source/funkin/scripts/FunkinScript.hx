@@ -240,6 +240,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("Lib", openfl.Lib);
 		set("Assets", lime.utils.Assets);
 		set("OpenFlAssets", openfl.utils.Assets);
+		set("FunkinAssets", FunkinAssets);
 		
 		set('curBpm', Conductor.bpm);
 		set('Function_Cancel', funkin.scripting.ScriptConstants.CANCEL_FUNC);

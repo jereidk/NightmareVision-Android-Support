@@ -49,8 +49,9 @@ class MusicBeatState extends FlxUIState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode)
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false)
 	{
+		if (!forceShow && ClientPrefs.navInputMode != 'Virtual Pad') return;
 		virtualPad = new MobileVirtualPad(DPad, Action);
 		add(virtualPad);
 	}
@@ -88,7 +89,7 @@ class MusicBeatState extends FlxUIState
 		{
 			if (ClientPrefs.gameInputMode == 'Virtual Pad')
 			{
-				addVirtualPad(LEFT_FULL, NONE);
+				addVirtualPad(LEFT_FULL, NONE, true);
 				addVirtualPadCamera(DefaultDrawTarget);
 				return;
 			}

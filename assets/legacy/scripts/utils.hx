@@ -139,8 +139,8 @@ function onMoveCamera(whosTurn:Bool)
 		var character = switch (whosTurn)
 		{
 			case 'gf': gf;
-			case 'dad': (opponentStrums?.owner ?? dad);
-			default: (playerStrums?.owner ?? boyfriend);
+			case 'dad': (game.opponentStrums?.owner ?? dad);
+			default: (game.playerStrums?.owner ?? boyfriend);
 		}
 		
 		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
