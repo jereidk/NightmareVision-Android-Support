@@ -149,7 +149,7 @@ class RGBShader extends flixel.system.FlxAssets.FlxShader
 		{
 			vec4 color = flixel_texture2D(bitmap, coord);
 			
-			if (!hasTransform || color.a == 0. || _mult == 0. || _enabled == 0) return color;
+			if (!hasTransform || color.a == 0. || _mult == 0. || _enabled == 0.) return color;
 
 			vec4 newColor = color;
 			newColor.rgb = min(color.r * _r + color.g * _g + color.b * _b, vec3(1.));

@@ -280,6 +280,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("FlxSpriteElement", animate.internal.elements.FlxSpriteElement);
 		
 		set('Controls', funkin.input.Controls);
+		set('controls', funkin.input.Controls.instance);
 		
 		// abstracts
 		set("FlxTextAlign", funkin.utils.MacroUtil.buildAbstract(flixel.text.FlxText.FlxTextAlign));
