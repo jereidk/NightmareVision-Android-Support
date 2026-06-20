@@ -140,7 +140,15 @@ class MainMenuState extends MusicBeatState
 		
 		final rtl:Bool = Lang.hasSpecial('rightToLeft');
 		
-		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.width - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
+		#if mobile
+		var portCredit = new FlxText(rtl ? 12 : 0, FlxG.height - 42, 0, 'Android port by Jere', 14);
+		portCredit.scrollFactor.set();
+		portCredit.setFormat(Paths.font('vcr.ttf', false), 14, 0xFF6CFF7A, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		portCredit.borderSize = 1.5;
+		add(portCredit);
+		#end
+
+		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.height - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
 		#if debug
 		versionShit.text += ' (${GitMacro.getGitCommitHash()})';
 		#end
