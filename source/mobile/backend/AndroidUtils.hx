@@ -8,6 +8,10 @@ class AndroidUtils
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
-	public static inline function vibrate(ms:Int = 12):Void _vibrate([ms]);
+	public static function vibrate(ms:Int = 12):Void
+	{
+		try { _vibrate([ms]); }
+		catch (e:Dynamic) { trace("Vibrate error: " + e); }
+	}
 }
 #end

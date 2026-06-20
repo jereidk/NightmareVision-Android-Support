@@ -5,7 +5,7 @@ function onCreatePost()
 	playHUD.updateIconsPosition();
 	playHUD.updateIconPos = false;
 	modManager.setValue("opponentSwap", 0.5, 0);
-	for (i in opponentStrums)
+	for (i in game.opponentStrums)
 		i.visible = false;
 	playHUD.healthBar.alpha = 0;
 }
