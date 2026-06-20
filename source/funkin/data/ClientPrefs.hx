@@ -99,6 +99,7 @@ class ClientPrefs
 	@saveVar public static var inDevMode:Bool = false;
 	
 	@saveVar public static var fpsDisplayType:String = 'Simple';
+	@saveVar public static var fpsRGB:Bool = false;
 	
 	@saveVar public static var streamedMusic:Bool = false;
 	

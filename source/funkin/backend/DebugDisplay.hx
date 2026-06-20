@@ -35,18 +35,12 @@ class FpsDisplayMode
 	 */
 	public static inline final ADVANCED:Int = 2;
 
-	/**
-	 * Like Simple but the text color cycles through the rainbow.
-	 */
-	public static inline final RGB:Int = 3;
-
 	public static inline function fromString(str:String):Int
 	{
 		return switch (str)
 		{
 			case 'Advanced': ADVANCED;
 			case 'Simple':   SIMPLE;
-			case 'RGB':      RGB;
 			default:         DISABLED;
 		}
 	}
@@ -215,16 +209,6 @@ class DebugDisplay extends Sprite
 		str += ' • Arch: ${get_arch()}';
 		#end
 
-		if (displayType == FpsDisplayMode.RGB)
-		{
-			var hue = (haxe.Timer.stamp() * 90) % 360;
-			textField.textColor = FlxColor.fromHSB(hue, 1.0, 1.0);
-			textField.text = str;
-			return;
-		}
-
-		textField.textColor = 0xFFFFFFFF;
-
 		if (displayType == FpsDisplayMode.ADVANCED)
 		{
 			var className = Type.getClassName(Type.getClass(FlxG.state));
@@ -255,8 +239,11 @@ class DebugDisplay extends Sprite
 		}
 		
 		textField.text = str;
+		textField.textColor = ClientPrefs.fpsRGB
+			? FlxColor.fromHSB((haxe.Timer.stamp() * 90) % 360, 1.0, 1.0)
+			: 0xFFFFFFFF;
 	}
-	
+
 	inline function get_gcMemory():Float
 	{
 		#if cpp
