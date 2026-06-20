@@ -178,6 +178,37 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 		}
 		// while (awaitingEvents.length > 0)
 		// 	dispatchEvent(awaitingEvents.shift());
+
+		#if mobile
+		// Bridge hitbox / virtual pad just-pressed & just-released into InputSystem events.
+		// Controls.NOTE_*_P/R getters already handle both hitbox and virtualPad correctly.
+		// ACTION_LIST order: 0=LEFT, 1=DOWN, 2=UP, 3=RIGHT.
+		final now = System.getTimer();
+		for (noteData in 0...4)
+		{
+			final pressed:Bool = switch noteData
+			{
+				case 0: controls.NOTE_LEFT_P;
+				case 1: controls.NOTE_DOWN_P;
+				case 2: controls.NOTE_UP_P;
+				case 3: controls.NOTE_RIGHT_P;
+				default: false;
+			};
+			if (pressed)
+				dispatchEvent(new InputEvent(InputEvent.INPUT_PRESSED, false, true, noteData, Keys, 0, now));
+
+			final released:Bool = switch noteData
+			{
+				case 0: controls.NOTE_LEFT_R;
+				case 1: controls.NOTE_DOWN_R;
+				case 2: controls.NOTE_UP_R;
+				case 3: controls.NOTE_RIGHT_R;
+				default: false;
+			};
+			if (released)
+				dispatchEvent(new InputEvent(InputEvent.INPUT_RELEASED, false, true, noteData, Keys, 0, now));
+		}
+		#end
 	}
 	
 	public function destroy():Void
