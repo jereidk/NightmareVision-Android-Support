@@ -21,7 +21,7 @@ class Pet extends Bopper implements IFlags {
 	public function loadPet(name:String = ''):Pet {
 		curPet = name;
 		
-		if (name == '') {
+		if (name == null || name == '') {
 			kill();
 			return this;
 		}

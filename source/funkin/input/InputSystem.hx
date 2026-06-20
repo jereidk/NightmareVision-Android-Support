@@ -141,8 +141,17 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 	 * Checks if a note direction is pressed
 	 * @param noteData 
 	 */
-	public function inputPressed(noteData:Int)
+	public function inputPressed(noteData:Int):Bool
 	{
+		#if mobile
+		return switch noteData {
+			case 0: controls.NOTE_LEFT;
+			case 1: controls.NOTE_DOWN;
+			case 2: controls.NOTE_UP;
+			case 3: controls.NOTE_RIGHT;
+			default: pressedActions[noteData].check();
+		};
+		#end
 		return pressedActions[noteData].check();
 	}
 	
