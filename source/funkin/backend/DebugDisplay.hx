@@ -6,6 +6,7 @@ import openfl.text.TextField;
 import openfl.text.TextFormat;
 import openfl.Assets;
 import openfl.display.Sprite;
+import openfl.events.Event;
 
 import flixel.util.FlxStringUtil;
 import flixel.FlxG;
@@ -73,8 +74,15 @@ class DebugDisplay extends Sprite
 		
 		instance = new DebugDisplay(10, 3, 0xFFFFFF);
 		instance.visible = instance.displayType != FpsDisplayMode.DISABLED;
-		
-		FlxG.game.parent.addChild(instance);
+		instance.mouseEnabled = false;
+		instance.mouseChildren = false;
+
+		var parent = FlxG.game.parent;
+		parent.addChild(instance);
+		parent.addEventListener(Event.ADDED, function(_) {
+			if (parent.contains(instance) && parent.getChildIndex(instance) < parent.numChildren - 1)
+				parent.setChildIndex(instance, parent.numChildren - 1);
+		});
 	}
 	
 	/**
