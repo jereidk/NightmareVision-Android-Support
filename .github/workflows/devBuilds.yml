@@ -239,9 +239,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
         with:
-          submodules: false  # content/NMV-Base-Game is 296 MB and is base-game content
-                             # VS Impostor Legacy is self-contained in assets/legacy/ (607 MB).
-                             # Re-enable if the mod starts referencing NMV base-game assets.
+          submodules: true
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v2.1.0
@@ -476,7 +474,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
         with:
-          submodules: false  # same rationale as ARM64 job above
+          submodules: true
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v2.1.0
