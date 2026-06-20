@@ -25,7 +25,6 @@ class OptionsState extends MusicBeatState
 		'visualsui',
 		'misc',
 		#if mobile 'mobile', #end
-		#if mobile 'dlc', #end
 		'credits'
 	];
 	
@@ -66,6 +65,11 @@ class OptionsState extends MusicBeatState
 	var buttonSpacing:Float = 65;
 	
 	var bottomControls:AmongControls;
+
+	#if mobile
+	var dlcButton:FlxSprite;
+	var dlcButtonLabel:FlxText;
+	#end
 	
 	public function openSelectedSubstate(label:String)
 	{
@@ -194,6 +198,20 @@ class OptionsState extends MusicBeatState
 			], true);
 			bottomControls.zIndex = 12;
 			add(bottomControls);
+
+			#if mobile
+			dlcButton = new FlxSprite(952, 618);
+			dlcButton.makeGraphic(292, 60, 0xFF162C16);
+			dlcButton.antialiasing = ClientPrefs.globalAntialiasing;
+			add(dlcButton);
+
+			dlcButtonLabel = new FlxText(952, 618, 292, Lang.str('opt_category_dlc'));
+			dlcButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			dlcButtonLabel.borderSize = 2;
+			dlcButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
+			dlcButtonLabel.y += Math.round((60 - dlcButtonLabel.height) / 2);
+			add(dlcButtonLabel);
+			#end
 			
 			changeSelection();
 			refreshOptionFonts();
@@ -251,6 +269,10 @@ class OptionsState extends MusicBeatState
 			fitLeftOptionLabel(txt);
 		}
 		
+		#if mobile
+		if (dlcButtonLabel != null) dlcButtonLabel.text = Lang.str('opt_category_dlc');
+		#end
+
 		scriptGroup.call('onRefreshLang', []);
 		refreshOptionVisuals();
 	}
@@ -338,6 +360,14 @@ class OptionsState extends MusicBeatState
 				else FlxG.switchState(MainMenuState.new);
 				return;
 			}
+
+			#if mobile
+			if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton) && !blockAllInput && !blockInput)
+			{
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				openSelectedSubstate('dlc');
+			}
+			#end
 			
 			if (mouseControlActive && !blockAllInput)
 			{

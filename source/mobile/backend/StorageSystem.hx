@@ -123,48 +123,145 @@ class StorageSystem
 	private static function startApkCopy():Void
 	{
 		#if android
-		PopUp.showAlert("First-Time Setup", "Game assets need to be extracted from the APK.\nThis only happens once and may take about a minute.", "OK");
+		PopUp.showAlert("First-Time Setup", "VS IMPOSTOR: LEGACY needs to extract game files from the APK.\nThis only happens once and may take about a minute.", "Got it!");
 
 		var stage = Lib.current.stage;
 		var sw:Float = stage.stageWidth > 0 ? stage.stageWidth : 1280;
 		var sh:Float = stage.stageHeight > 0 ? stage.stageHeight : 720;
 
 		var overlay = new Sprite();
-		overlay.graphics.beginFill(0x000000, 1.0);
+
+		// Dark background
+		overlay.graphics.beginFill(0x0D0D0D, 1.0);
 		overlay.graphics.drawRect(0, 0, sw, sh);
 		overlay.graphics.endFill();
 
-		var tf = new TextFormat();
-		tf.font = "_sans";
-		tf.size = 28;
-		tf.color = 0xFFFFFF;
-		tf.bold = true;
-		tf.align = TextFormatAlign.CENTER;
+		// Top & bottom accent bars (Among Us green)
+		overlay.graphics.beginFill(0x2DB83D, 1.0);
+		overlay.graphics.drawRect(0, 0, sw, 7);
+		overlay.graphics.endFill();
+		overlay.graphics.beginFill(0x2DB83D, 1.0);
+		overlay.graphics.drawRect(0, sh - 7, sw, 7);
+		overlay.graphics.endFill();
 
-		var label = new TextField();
-		label.defaultTextFormat = tf;
-		label.width = sw;
-		label.height = 60;
-		label.y = (sh - 60) / 2;
-		label.selectable = false;
-		label.text = "Extracting assets, please wait...";
-		overlay.addChild(label);
+		// Center card
+		var cardW:Float = sw * 0.56;
+		var cardH:Float = sh * 0.52;
+		var cardX:Float = Math.round((sw - cardW) / 2);
+		var cardY:Float = Math.round((sh - cardH) / 2);
+
+		overlay.graphics.beginFill(0x171717, 1.0);
+		overlay.graphics.drawRoundRect(cardX, cardY, cardW, cardH, 16, 16);
+		overlay.graphics.endFill();
+
+		// Card top accent strip
+		overlay.graphics.beginFill(0x2DB83D, 1.0);
+		overlay.graphics.drawRoundRect(cardX, cardY, cardW, 6, 16, 16);
+		overlay.graphics.endFill();
+
+		// --- Text helpers ---
+		var makeTf = function(size:Int, color:Int, bold:Bool):TextFormat
+		{
+			var tf = new TextFormat();
+			tf.font = "_sans";
+			tf.size = size;
+			tf.color = color;
+			tf.bold = bold;
+			tf.align = TextFormatAlign.CENTER;
+			return tf;
+		};
+
+		var addLabel = function(text:String, tf:TextFormat, x:Float, y:Float, w:Float, h:Float, multi:Bool = false):TextField
+		{
+			var label = new TextField();
+			label.defaultTextFormat = tf;
+			label.selectable = false;
+			label.multiline = multi;
+			label.wordWrap = multi;
+			label.width = w;
+			label.height = h;
+			label.x = x;
+			label.y = y;
+			label.text = text;
+			overlay.addChild(label);
+			return label;
+		};
+
+		var lx:Float = cardX + 24;
+		var lw:Float = cardW - 48;
+
+		// Game title
+		addLabel("VS IMPOSTOR: LEGACY", makeTf(Math.round(sw * 0.022), 0x2DB83D, true),
+			lx, cardY + 20, lw, 44);
+
+		// Subtitle
+		addLabel("First-Time Setup", makeTf(Math.round(sw * 0.016), 0xFFFFFF, true),
+			lx, cardY + 68, lw, 36);
+
+		// Description
+		addLabel("Extracting game files from the APK.\nThis only needs to happen once.", makeTf(Math.round(sw * 0.012), 0x888888, false),
+			cardX + 32, cardY + 112, cardW - 64, 60, true);
+
+		// Status label (animated)
+		var statusLabel = addLabel("Extracting...", makeTf(Math.round(sw * 0.014), 0xCCCCCC, false),
+			lx, cardY + cardH - 80, lw, 34);
+
+		// Progress bar track
+		var barW:Float = cardW - 80;
+		var barH:Float = 14;
+		var barX:Float = cardX + 40;
+		var barY:Float = cardY + cardH - 44;
+
+		var barTrack = new Sprite();
+		barTrack.graphics.beginFill(0x2A2A2A, 1.0);
+		barTrack.graphics.drawRoundRect(0, 0, barW, barH, 8, 8);
+		barTrack.graphics.endFill();
+		barTrack.x = barX;
+		barTrack.y = barY;
+		overlay.addChild(barTrack);
+
+		var fillW:Float = barW * 0.22;
+		var barFill = new Sprite();
+		barFill.graphics.beginFill(0x2DB83D, 1.0);
+		barFill.graphics.drawRoundRect(0, 0, fillW, barH, 8, 8);
+		barFill.graphics.endFill();
+		barFill.x = barX;
+		barFill.y = barY;
+		overlay.addChild(barFill);
+
 		stage.addChild(overlay);
 
 		var done = false;
 		var failed = false;
 		var dotCount = 0;
 		var frameTimer = 0;
+		var barProgress:Float = 0;
+		var barDir:Float = 1;
 
 		var onFrame:Event -> Void = null;
 		onFrame = function(_:Event)
 		{
 			frameTimer++;
+
 			if (frameTimer % 20 == 0)
 			{
 				dotCount = (dotCount + 1) % 4;
-				label.text = "Extracting assets, please wait" + ["", ".", "..", "..."][dotCount];
+				statusLabel.text = "Extracting" + ["", ".", "..", "..."][dotCount];
 			}
+
+			// Bouncing indeterminate progress bar
+			barProgress += barDir * 3;
+			if (barProgress + fillW > barW)
+			{
+				barProgress = barW - fillW;
+				barDir = -1;
+			}
+			else if (barProgress < 0)
+			{
+				barProgress = 0;
+				barDir = 1;
+			}
+			barFill.x = barX + barProgress;
 
 			if (done)
 			{
@@ -174,7 +271,7 @@ class StorageSystem
 				if (failed)
 					PopUp.showAlert("Extraction Failed", "An error occurred. Please reinstall the game.", "OK");
 				else
-					PopUp.showConfirm("Setup Complete!", "Assets extracted successfully.\nThe game must restart to continue.", "Restart", "Later", function() {
+					PopUp.showConfirm("Setup Complete!", "All game assets have been extracted.\nThe game needs to restart to continue.", "Restart", "Later", function() {
 						lime.system.System.exit(0);
 					});
 			}
