@@ -12,7 +12,7 @@
     <!-- ENGINE CONFIGS -->
 
     <define name="MODS_ALLOWED" if="desktop || mobile"/>
-    <define name="VIDEOS_ALLOWED" if="cpp" unless="android"/>
+    <define name="VIDEOS_ALLOWED" if="cpp"/>
     <define name="DISCORD_ALLOWED" if="cpp" unless="android || ios"/>
 
     <!-- PATH SETTINGS -->

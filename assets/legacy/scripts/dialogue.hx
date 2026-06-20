@@ -108,29 +108,19 @@ public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canS
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
 
-	// Skip the video on platforms where hxvlc is not compiled in (e.g. Android).
-	// We MUST check this BEFORE intercepting songStartCallback, otherwise the
-	// song gets stuck waiting for a video that will never play.
-	if (Type.resolveClass('funkin.video.FunkinVideoSprite') == null) {
-		PlayState.seenCutscene = true;
-		if (onEnd != null) onEnd();
-		else startCountdown();
-		return;
-	}
-
 	songStartCallback = () -> return Function_Stop;
-	
+
 	skippableVideo = (canSkip ?? true); // fuck you hscript
 	dialogueAfter = (dAfter ?? true);
-	
+
 	if (!dialogueAfter) PlayState.seenCutscene = true;
-	
+
 	blackYnot = new FlxSprite().makeScaledGraphic(FlxG.width + 3, FlxG.height, FlxColor.BLACK);
 	blackYnot.camera = camOther;
 	add(blackYnot);
-	
+
 	video = new FunkinVideoSprite();
-	
+
 	video.onEnd(onVidEnd);
 	video.onFormat(() -> {
 		vidPlaying = true;
@@ -143,12 +133,29 @@ public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canS
 		// ^ for windowed fullscreen
 		textFade();
 	});
-	
+
 	add(video);
-	
+
 	if (onEnd != null) video.onEnd(onEnd);
 	if (onFormat != null) video.onFormat(onFormat);
-	if (video.load(Paths.video(Paths.sanitize(vid)))) video.delayAndStart();
+
+	if (video.load(Paths.video(Paths.sanitize(vid))))
+	{
+		video.delayAndStart();
+	}
+	else
+	{
+		// Video file missing or inaccessible.  Restore songStartCallback so the countdown
+		// can proceed — otherwise the song is permanently blocked (and Android kills the
+		// app after the ANR timeout, producing the silent-exit the user reported).
+		if (blackYnot != null) { blackYnot.kill(); blackYnot = null; }
+		video.kill();
+		PlayState.seenCutscene = true;
+		songStartCallback = startCountdown;
+		if (onEnd != null) onEnd();
+		else if (dialogueAfter && (PlayState.isStoryMode || !videoCheckStory)) readDialogue();
+		else startCountdown();
+	}
 }
 
 public function textFade()
