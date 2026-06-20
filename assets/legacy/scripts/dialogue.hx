@@ -71,7 +71,7 @@ var portrait:Array<FlxSprite> = [];
 function onCreatePost()
 {
 	final PADDING = 15;
-	skipText = new FlxText(PADDING, 0, FlxG.width - PADDING * 2, Lang.str('video_skip'));
+	skipText = new FlxText(PADDING, 0, FlxG.width - PADDING * 2, IS_ANDROID ? Lang.str('video_skip_android', '◄ to skip') : Lang.str('video_skip'));
 	skipText.setFormat(Paths.font("liberbold.ttf"), 25, FlxColor.WHITE, Lang.hasSpecial('rightToLeft') ? 'right' : 'left', FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 	skipText.borderSize = 2;
 	skipText.y = FlxG.height - skipText.height - (PADDING * (3 / 4));

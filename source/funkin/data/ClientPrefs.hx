@@ -98,7 +98,7 @@ class ClientPrefs
 	// debug ------------------------------------------------------------------------//
 	@saveVar public static var inDevMode:Bool = false;
 	
-	@saveVar public static var fpsDisplayType:String = 'Disabled';
+	@saveVar public static var fpsDisplayType:String = 'Simple';
 	
 	@saveVar public static var streamedMusic:Bool = false;
 	

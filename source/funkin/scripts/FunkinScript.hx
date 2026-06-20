@@ -281,6 +281,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		
 		set('Controls', funkin.input.Controls);
 		set('controls', funkin.input.Controls.instance);
+		set('IS_ANDROID', #if android true #else false #end);
 		
 		// abstracts
 		set("FlxTextAlign", funkin.utils.MacroUtil.buildAbstract(flixel.text.FlxText.FlxTextAlign));

@@ -35,7 +35,8 @@ class FallbackState extends MusicBeatState
 		add(text);
 		text.screenCenter(Y);
 
-		var hint = new FlxText(0, FlxG.height - 25 - 32, FlxG.width, 'Press Confirm to continue.', 32);
+		var hint = new FlxText(0, FlxG.height - 25 - 32, FlxG.width,
+			#if android 'Tap to continue.' #else 'Press Confirm to continue.' #end, 32);
 		hint.setFormat(null, 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		add(hint);
 
@@ -45,8 +46,16 @@ class FallbackState extends MusicBeatState
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		
-		if (controls.ACCEPT)
+
+		var shouldContinue = controls.ACCEPT;
+		#if android
+		if (!shouldContinue)
+		{
+			var touch = FlxG.touches.getFirst();
+			shouldContinue = touch != null && touch.justPressed;
+		}
+		#end
+		if (shouldContinue)
 		{
 			persistentUpdate = false;
 			continueCallback();

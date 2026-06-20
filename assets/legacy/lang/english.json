@@ -35,6 +35,7 @@
 		"dialogue_grey": "Grey",
 		"dialogue_pink": "Pink",
 		"video_skip": "Press BACK to skip",
+		"video_skip_android": "◄ (Back button) to skip",
         // @ is the song name
 		"reset_score_question": "Clear highscore for @?",
         "skins_disclaimer":"Skins and pets only work in Freeplay mode.",

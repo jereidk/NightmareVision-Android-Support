@@ -9,6 +9,7 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 
 import flixel.util.FlxStringUtil;
+import flixel.util.FlxColor;
 import flixel.FlxG;
 
 /**
@@ -33,14 +34,20 @@ class FpsDisplayMode
 	 * The Fps counter will additional info per state.
 	 */
 	public static inline final ADVANCED:Int = 2;
-	
+
+	/**
+	 * Like Simple but the text color cycles through the rainbow.
+	 */
+	public static inline final RGB:Int = 3;
+
 	public static inline function fromString(str:String):Int
 	{
 		return switch (str)
 		{
 			case 'Advanced': ADVANCED;
-			case 'Simple': SIMPLE;
-			default: DISABLED;
+			case 'Simple':   SIMPLE;
+			case 'RGB':      RGB;
+			default:         DISABLED;
 		}
 	}
 }
@@ -195,18 +202,28 @@ class DebugDisplay extends Sprite
 	{
 		displayType = FpsDisplayMode.fromString(ClientPrefs.fpsDisplayType);
 		visible = displayType != FpsDisplayMode.DISABLED;
-		
+
 		if (!canUpdate || (displayType == FpsDisplayMode.DISABLED)) return;
-		
+
 		#if cpp
 		var str = 'FPS: $currentFPS • [GC: ${FlxStringUtil.formatBytes(gcMemory)} | Task: ${FlxStringUtil.formatBytes(taskMemory)}]';
 		#else
 		var str = 'FPS: $currentFPS • GC: ${FlxStringUtil.formatBytes(gcMemory)}';
 		#end
 
-        #if mobile
+		#if mobile
 		str += ' • Arch: ${get_arch()}';
 		#end
+
+		if (displayType == FpsDisplayMode.RGB)
+		{
+			var hue = (haxe.Timer.stamp() * 90) % 360;
+			textField.textColor = FlxColor.fromHSB(hue, 1.0, 1.0);
+			textField.text = str;
+			return;
+		}
+
+		textField.textColor = 0xFFFFFFFF;
 
 		if (displayType == FpsDisplayMode.ADVANCED)
 		{
