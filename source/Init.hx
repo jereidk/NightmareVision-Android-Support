@@ -68,9 +68,9 @@ class Init extends FlxState
 		//   and bundled assets regardless of type.
 		// getText: FunkinAssets.getContent throws on missing files; wrap so FlxAnimate
 		//   gets null instead (matches the original FlxAnimateAssets behaviour).
-		animate.FlxAnimateAssets.getBitmapData = (path) -> funkin.FunkinAssets.getBitmapData(path);
+		animate.FlxAnimateAssets.getBitmapData = (path) -> cast funkin.FunkinAssets.getBitmapData(path);
 		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
-		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (_:Dynamic) return null; };
+		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (_:Dynamic) return cast null; };
 
 		// load settings/save
 		funkin.input.Controls.init();
