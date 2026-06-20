@@ -69,6 +69,7 @@ class OptionsState extends MusicBeatState
 	#if mobile
 	var dlcButton:FlxSprite;
 	var dlcButtonLabel:FlxText;
+	var dlcPadHint:FlxText;
 	#end
 	
 	public function openSelectedSubstate(label:String)
@@ -116,6 +117,22 @@ class OptionsState extends MusicBeatState
 	{
 		FunkinSound.playMusic(Paths.music('freakyMenu'));
 	}
+
+	#if mobile
+	/**
+	 * Picks how the DLC entry is presented based on the chosen navigation input.
+	 * Virtual Pad mode hides the on-screen button (the C pad button covers it) and
+	 * shows a bottom-left hint instead; Touch mode shows the tappable button.
+	 */
+	function updateDlcButtonMode():Void
+	{
+		if (dlcButton == null) return;
+		var padMode:Bool = (ClientPrefs.navInputMode == 'Virtual Pad');
+		dlcButton.visible = !padMode;
+		dlcButtonLabel.visible = !padMode;
+		if (dlcPadHint != null) dlcPadHint.visible = padMode;
+	}
+	#end
 	
 	override function create()
 	{
@@ -211,6 +228,16 @@ class OptionsState extends MusicBeatState
 			dlcButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
 			dlcButtonLabel.y += Math.round((60 - dlcButtonLabel.height) / 2);
 			add(dlcButtonLabel);
+
+			// Bottom-left hint shown only when the on-screen button is hidden (Virtual Pad mode),
+			// telling the player the C pad button opens the DLC manager.
+			dlcPadHint = new FlxText(16, FlxG.height - 70, 420, 'C  -  ' + Lang.str('opt_category_dlc'));
+			dlcPadHint.setFormat(Paths.font("vcr.ttf"), 18, 0xFF6CFF7A, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			dlcPadHint.borderSize = 1.5;
+			dlcPadHint.antialiasing = ClientPrefs.globalAntialiasing;
+			add(dlcPadHint);
+
+			updateDlcButtonMode();
 			#end
 			
 			changeSelection();
@@ -239,7 +266,11 @@ class OptionsState extends MusicBeatState
 		__openedOption = null;
 		blockInput = false;
 		refreshOptionFonts();
-		
+
+		#if mobile
+		updateDlcButtonMode();
+		#end
+
 		if (pendingSubstate == null) byeByeHomePanel(true);
 		
 		super.closeSubState();
@@ -271,6 +302,7 @@ class OptionsState extends MusicBeatState
 		
 		#if mobile
 		if (dlcButtonLabel != null) dlcButtonLabel.text = Lang.str('opt_category_dlc');
+		if (dlcPadHint != null) dlcPadHint.text = 'C  -  ' + Lang.str('opt_category_dlc');
 		#end
 
 		scriptGroup.call('onRefreshLang', []);
@@ -362,7 +394,7 @@ class OptionsState extends MusicBeatState
 			}
 
 			#if mobile
-			var dlcTouched:Bool = FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton);
+			var dlcTouched:Bool = dlcButton.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton);
 			var dlcPadPressed:Bool = (virtualPad != null && virtualPad.buttonC != null && virtualPad.buttonC.justPressed);
 			if ((dlcTouched || dlcPadPressed) && !blockAllInput && !blockInput)
 			{

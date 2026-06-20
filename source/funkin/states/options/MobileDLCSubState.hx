@@ -29,11 +29,17 @@ typedef DLCListItem = {
  * Opened from OptionsState on Android; shows installed DLCs and a browsable
  * community registry that can be downloaded in-app.
  *
- * Navigation:
+ * Navigation (virtual pad / keyboard):
  *   UP / DOWN    — move selection
  *   LEFT / RIGHT — switch tab (Installed ↔ Browse)
  *   ACCEPT       — download / uninstall selected DLC
  *   BACK         — close
+ *
+ * Touch (default 'Touch' nav mode, no virtual pad on screen):
+ *   tap a tab      — switch tab
+ *   tap a row      — select it; tap the selected row again to activate it
+ *   tap ▲/▼ hints  — scroll selection up / down
+ *   (BACK is the Android hardware back key, always available)
  */
 class MobileDLCSubState extends MusicBeatSubstate
 {
@@ -254,6 +260,11 @@ class MobileDLCSubState extends MusicBeatSubstate
 
         if (!_blockInput)
             _handleInput();
+
+        #if mobile
+        if (!_blockInput)
+            _handleTouch();
+        #end
     }
 
     // ── Input ──────────────────────────────────────────────────────────────
@@ -293,6 +304,79 @@ class MobileDLCSubState extends MusicBeatSubstate
         if (controls.ACCEPT)
             _handleAccept();
     }
+
+    #if mobile
+    /**
+     * Direct touch / mouse handling so the menu is fully usable in the default
+     * 'Touch' nav mode (where no virtual pad is shown). Runs in addition to the
+     * controls-based input above, so it also works alongside the virtual pad.
+     */
+    function _handleTouch():Void
+    {
+        if (!FlxG.mouse.justPressed) return;
+
+        var mx = FlxG.mouse.x;
+        var my = FlxG.mouse.y;
+
+        // Tabs
+        for (i in 0..._tabLabels.length) {
+            if (i != _tab && FlxG.mouse.overlaps(_tabLabels[i])) {
+                _pendingUninstallId = null;
+                _tab    = i;
+                _sel    = 0;
+                _scroll = 0;
+                _updateTabVisuals();
+                _rebuildItems();
+                _updateRows();
+                FunkinSound.play(Paths.sound('scrollMenu'));
+                return;
+            }
+        }
+
+        var len = _items.length;
+        if (len == 0) return;
+
+        // Scroll hints
+        if (_scrollUpHint.visible && FlxG.mouse.overlaps(_scrollUpHint)) {
+            _pendingUninstallId = null;
+            _sel = (_sel <= 0) ? len - 1 : _sel - 1;
+            _clampScroll();
+            FunkinSound.play(Paths.sound('hover'), 0.5);
+            _updateRows();
+            return;
+        }
+        if (_scrollDownHint.visible && FlxG.mouse.overlaps(_scrollDownHint)) {
+            _pendingUninstallId = null;
+            _sel = (_sel >= len - 1) ? 0 : _sel + 1;
+            _clampScroll();
+            FunkinSound.play(Paths.sound('hover'), 0.5);
+            _updateRows();
+            return;
+        }
+
+        // Rows — tap to select, tap the already-selected row to activate
+        if (mx < LIST_X || mx > LIST_X + LIST_W) return;
+        for (i in 0...MAX_VIS) {
+            if (!_nameTexts[i].visible) continue;
+            var realIdx = i + _scroll;
+            if (realIdx >= len) continue;
+
+            var rowY = LIST_Y0 + i * ITEM_H;
+            if (my >= rowY && my < rowY + ITEM_H) {
+                if (realIdx != _sel) {
+                    _pendingUninstallId = null;
+                    _sel = realIdx;
+                    _clampScroll();
+                    FunkinSound.play(Paths.sound('hover'), 0.5);
+                    _updateRows();
+                } else {
+                    _handleAccept();
+                }
+                return;
+            }
+        }
+    }
+    #end
 
     function _handleAccept():Void
     {
