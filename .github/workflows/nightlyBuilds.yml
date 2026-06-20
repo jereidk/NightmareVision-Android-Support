@@ -219,8 +219,21 @@ jobs:
             exit 1
           fi
 
+      - name: Cache hxcpp compile cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.hxcpp_cache
+          key: hxcpp-cache-android-nightly-${{ github.sha }}
+          restore-keys: |
+            hxcpp-cache-android-nightly-
+
       - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: "4"
+          HXCPP_CACHE_MB: "4000"
         run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -final -D $BUILD_FLAGS
@@ -709,7 +722,7 @@ jobs:
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-   Windows:
+  Windows:
     name: Build Windows
     runs-on: windows-latest
 
@@ -793,7 +806,7 @@ jobs:
           name: VS Impostor Legacy (Windows)
           path: export/release/windows/bin
 
-   Linux:
+  Linux:
     name: Build Linux
     runs-on: ubuntu-24.04
 

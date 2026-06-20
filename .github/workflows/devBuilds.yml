@@ -210,8 +210,21 @@ jobs:
             exit 1
           fi
 
+      - name: Cache hxcpp compile cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.hxcpp_cache
+          key: hxcpp-cache-android-fat-${{ github.sha }}
+          restore-keys: |
+            hxcpp-cache-android-fat-
+
       - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: "4"
+          HXCPP_CACHE_MB: "4000"
         run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -release -D $BUILD_FLAGS
