@@ -56,7 +56,7 @@ enum abstract DLCTaskState(Int) {
 class DLCManager {
     /** URL of the community DLC registry JSON. */
     public static final REGISTRY_URL =
-        "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/main/dlc-registry.json";
+        "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-registry.json";
 
     #if sys
     static var _mutex:Mutex = new Mutex();
