@@ -61,6 +61,12 @@ class Init extends FlxState
 		mobile.backend.AstcSupport.check();
 		#end
 
+		// Route FlxAnimate spritemap texture loads through FunkinAssets so that
+		// ASTC overrides and external-storage paths are handled transparently.
+		animate.FlxAnimateAssets.getBitmapData = (path) -> funkin.FunkinAssets.getBitmapData(path);
+		animate.FlxAnimateAssets.exists = (path, _) -> funkin.FunkinAssets.exists(path);
+		animate.FlxAnimateAssets.getText = funkin.FunkinAssets.getContent;
+
 		// load settings/save
 		funkin.input.Controls.init();
 		
