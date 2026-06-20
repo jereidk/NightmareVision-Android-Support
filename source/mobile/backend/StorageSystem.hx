@@ -7,10 +7,17 @@ import haxe.io.Bytes;
 
 import openfl.utils.ByteArray;
 import openfl.utils.Assets;
+import openfl.Lib;
+import openfl.display.Sprite;
+import openfl.events.Event;
+import openfl.text.TextField;
+import openfl.text.TextFormat;
+import openfl.text.TextFormatAlign;
 
 #if sys
 import sys.FileSystem;
 import sys.io.File;
+import sys.thread.Thread;
 #end
 
 using StringTools;
@@ -108,26 +115,87 @@ class StorageSystem
 	}
 	
 	/**
-	 * Initiates the internal APK asset extraction with UI alerts (Full Installation).
+	 * Initiates the internal APK asset extraction with an animated progress overlay.
+	 * Shows a blocking alert first, then extracts on a background thread while the
+	 * main thread animates a progress screen via ENTER_FRAME. On completion, prompts
+	 * the user to restart the game.
 	 */
 	private static function startApkCopy():Void
 	{
 		#if android
-		PopUp.showAlert("Extracting Files", "Extracting assets from APK. Please wait.", "OK");
-		
-		try
+		PopUp.showAlert("First-Time Setup", "Game assets need to be extracted from the APK.\nThis only happens once and may take about a minute.", "OK");
+
+		var stage = Lib.current.stage;
+		var sw:Float = stage.stageWidth > 0 ? stage.stageWidth : 1280;
+		var sh:Float = stage.stageHeight > 0 ? stage.stageHeight : 720;
+
+		var overlay = new Sprite();
+		overlay.graphics.beginFill(0x000000, 1.0);
+		overlay.graphics.drawRect(0, 0, sw, sh);
+		overlay.graphics.endFill();
+
+		var tf = new TextFormat();
+		tf.font = "_sans";
+		tf.size = 28;
+		tf.color = 0xFFFFFF;
+		tf.bold = true;
+		tf.align = TextFormatAlign.CENTER;
+
+		var label = new TextField();
+		label.defaultTextFormat = tf;
+		label.width = sw;
+		label.height = 60;
+		label.y = (sh - 60) / 2;
+		label.selectable = false;
+		label.text = "Extracting assets, please wait...";
+		overlay.addChild(label);
+		stage.addChild(overlay);
+
+		var done = false;
+		var failed = false;
+		var dotCount = 0;
+		var frameTimer = 0;
+
+		var onFrame:Event -> Void = null;
+		onFrame = function(_:Event)
 		{
-			copyFromAPK("assets/", null, true);
-			copyFromAPK("content/", null, true);
-			
-			PopUp.showConfirm("Success!", "Files extracted. The game will now restart.", "Restart", "Cancel", function() {
-				lime.system.System.exit(0);
-			});
-		}
-		catch (e:Dynamic)
+			frameTimer++;
+			if (frameTimer % 20 == 0)
+			{
+				dotCount = (dotCount + 1) % 4;
+				label.text = "Extracting assets, please wait" + ["", ".", "..", "..."][dotCount];
+			}
+
+			if (done)
+			{
+				stage.removeEventListener(Event.ENTER_FRAME, onFrame);
+				stage.removeChild(overlay);
+
+				if (failed)
+					PopUp.showAlert("Extraction Failed", "An error occurred. Please reinstall the game.", "OK");
+				else
+					PopUp.showConfirm("Setup Complete!", "Assets extracted successfully.\nThe game must restart to continue.", "Restart", "Later", function() {
+						lime.system.System.exit(0);
+					});
+			}
+		};
+
+		stage.addEventListener(Event.ENTER_FRAME, onFrame);
+
+		Thread.create(function()
 		{
-			trace("Error during Full Extraction: " + e);
-		}
+			try
+			{
+				copyFromAPK("assets/", null, true);
+				copyFromAPK("content/", null, true);
+			}
+			catch (e:Dynamic)
+			{
+				trace("Extraction error: " + e);
+				failed = true;
+			}
+			done = true;
+		});
 		#end
 	}
 	
