@@ -225,11 +225,15 @@ jobs:
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
+          # DIAGNOSTIC: build arm64-only (like the last good single-ABI build,
+          # run-53) to test whether the "crash entering any song" is the armv7
+          # 32-bit ABI hitting its address-space limit on large textures.
+          # Remove -D ANDROID_ARM64_ONLY to go back to the fat (arm64+armv7) APK.
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D $BUILD_FLAGS
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY
           fi
 
       - name: Upload Artifact
