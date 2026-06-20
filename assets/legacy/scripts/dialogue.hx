@@ -107,7 +107,17 @@ function onVidEnd()
 public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canSkip:Bool, ?onEnd:Void->Void, ?onFormat:Void->Void)
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
-	
+
+	// Skip the video on platforms where hxvlc is not compiled in (e.g. Android).
+	// We MUST check this BEFORE intercepting songStartCallback, otherwise the
+	// song gets stuck waiting for a video that will never play.
+	if (Type.resolveClass('funkin.video.FunkinVideoSprite') == null) {
+		PlayState.seenCutscene = true;
+		if (onEnd != null) onEnd();
+		else startCountdown();
+		return;
+	}
+
 	songStartCallback = () -> return Function_Stop;
 	
 	skippableVideo = (canSkip ?? true); // fuck you hscript
