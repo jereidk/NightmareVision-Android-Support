@@ -826,7 +826,7 @@ class PlayState extends MusicBeatState
 		addSongScripts('songs/${Paths.sanitize(SONG.song)}/scripts/');
 
 		#if mobile
-		addMobileControls(false);
+		addMobileControls(false, true);
 		if (hitbox != null) hitbox.visible = false;
 
 		mobilePauseBtn = new FlxSprite();

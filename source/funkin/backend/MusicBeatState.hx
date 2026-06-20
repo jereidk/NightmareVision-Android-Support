@@ -82,24 +82,33 @@ class MusicBeatState extends FlxUIState
 		}
 	}
 
-	public function addMobileControls(DefaultDrawTarget:Bool = false)
+	public function addMobileControls(DefaultDrawTarget:Bool = false, forGameplay:Bool = false)
 	{
-		if (ClientPrefs.touchInputMode == 'Virtual Pad')
+		if (forGameplay)
 		{
-			addVirtualPad(LEFT_FULL, NONE);
-			addVirtualPadCamera(DefaultDrawTarget);
+			if (ClientPrefs.gameInputMode == 'Virtual Pad')
+			{
+				addVirtualPad(LEFT_FULL, NONE);
+				addVirtualPadCamera(DefaultDrawTarget);
+				return;
+			}
+
+			hitbox = new MobileHitbox();
+			hitboxCam = new FlxCamera();
+			hitboxCam.bgColor.alpha = 0;
+			FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
+			hitbox.cameras = [hitboxCam];
+			hitbox.visible = false;
+			add(hitbox);
 			return;
 		}
 
-		hitbox = new MobileHitbox();
-
-		hitboxCam = new FlxCamera();
-		hitboxCam.bgColor.alpha = 0;
-		FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
-
-		hitbox.cameras = [hitboxCam];
-		hitbox.visible = false;
-		add(hitbox);
+		// Navigation: native touch handles it by default; virtual pad only if explicitly chosen.
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, NONE);
+			addVirtualPadCamera(DefaultDrawTarget);
+		}
 	}
 
 	public function removeMobileControls()

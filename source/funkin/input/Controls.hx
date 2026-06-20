@@ -335,6 +335,7 @@ class Controls extends FlxActionSet
 	inline function get_BACK() {
 		var check = _back.check();
 		#if mobile check = check || mobilePadJustPressed([B]); #end
+		#if android check = check || FlxG.android.justReleased.BACK; #end
 		return check;
 	}
 	
