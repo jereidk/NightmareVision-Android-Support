@@ -137,16 +137,21 @@ function onMoveCamera(whosTurn:Bool)
 	if (ClientPrefs.camFollowsCharacters && canFollow)
 	{
 		var character;
-		if (whosTurn == 'gf')
+		if (whosTurn == 'gf') {
 			character = gf;
-		else if (whosTurn == 'dad')
-			character = game.opponentStrums != null ? (game.opponentStrums.owner != null ? game.opponentStrums.owner : dad) : dad;
-		else
-			character = game.playerStrums != null ? (game.playerStrums.owner != null ? game.playerStrums.owner : boyfriend) : boyfriend;
-		
-		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
-		
-		final displacement = character.getSingDisplacement();
+		} else if (whosTurn == 'dad') {
+			character = dad;
+			var _os = opponentStrums;
+			if (_os != null && _os.owner != null) character = _os.owner;
+		} else {
+			character = boyfriend;
+			var _ps = playerStrums;
+			if (_ps != null && _ps.owner != null) character = _ps.owner;
+		}
+
+		if (game.camCurTarget != null) character = game.camCurTarget;
+
+		var displacement = character.getSingDisplacement();
 		camFollow.x += displacement.x;
 		camFollow.y += displacement.y;
 	}
@@ -225,7 +230,7 @@ function onUpdate(elapsed)
 {
 	if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
 	{
-		var tauntCharacter:Character = (tauntCharacter ?? boyfriend);
+		var tauntCharacter:Character = (tauntCharacter != null ? tauntCharacter : boyfriend);
 		
 		if (tauntCharacter.hasAnim('hey'))
 		{
@@ -279,14 +284,15 @@ function onUpdate(elapsed)
 
 function setTauntCharacter(note:Note)
 {
-	final playField = note.playField;
-	
-	if (playField?.isPlayer) // jsut made some bullshit
+	var playField = note.playField;
+
+	if (playField != null && playField.isPlayer)
 	{
-		tauntCharacter = (note.owner ?? (note.gfNote ? gf : null));
-		tauntCharacter ??= (note.singers == null ? playField.owner : note.singers[0]);
-		
-		if (tauntCharacter == boyfriend) tauntCharacter = null; // ok
+		tauntCharacter = (note.owner != null ? note.owner : (note.gfNote ? gf : null));
+		if (tauntCharacter == null)
+			tauntCharacter = (note.singers == null ? playField.owner : note.singers[0]);
+
+		if (tauntCharacter == boyfriend) tauntCharacter = null;
 	}
 }
 
@@ -336,7 +342,7 @@ public function showCaption(string:String, ?y:Float):Void
 	
 	prepareCaptions();
 	
-	caption.set(string, y ?? captionGroup.defaultY);
+	caption.set(string, y != null ? y : captionGroup.defaultY);
 	caption.visible = true;
 	
 	if (showDevInfo) trace(caption.text);
