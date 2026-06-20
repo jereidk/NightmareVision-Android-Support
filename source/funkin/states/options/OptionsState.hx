@@ -223,7 +223,7 @@ class OptionsState extends MusicBeatState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
 		#end
 	}
 
@@ -362,7 +362,9 @@ class OptionsState extends MusicBeatState
 			}
 
 			#if mobile
-			if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton) && !blockAllInput && !blockInput)
+			var dlcTouched:Bool = FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton);
+			var dlcPadPressed:Bool = (virtualPad != null && virtualPad.buttonC != null && virtualPad.buttonC.justPressed);
+			if ((dlcTouched || dlcPadPressed) && !blockAllInput && !blockInput)
 			{
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 				openSelectedSubstate('dlc');
