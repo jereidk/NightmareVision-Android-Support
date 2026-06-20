@@ -10,11 +10,9 @@ on:
 
 jobs:
 
-  # ── Fat APK (arm64 + armv7 in one build). Disabled — superseded by the two
-  #    single-ABI jobs below.  Keep for reference; re-enable by removing `if`.
+  # ── Fat APK (arm64 + armv7 in one build).
   Android:
-    if: ${{ false }}
-    name: Build Android (fat APK – disabled)
+    name: Build Android
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -233,6 +231,7 @@ jobs:
   # No ld.lld wrapper needed: the ARM32 sysroot issue does not affect arm64.
   # ─────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
+    if: ${{ false }}
     name: Build Android (ARM64)
     runs-on: ubuntu-latest
     steps:
@@ -468,6 +467,7 @@ jobs:
   # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
   # ─────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
+    if: ${{ false }}
     name: Build Android (ARM32)
     runs-on: ubuntu-latest
     steps:

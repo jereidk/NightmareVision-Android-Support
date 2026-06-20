@@ -1945,6 +1945,11 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
+		#if mobile
+		if (virtualPadCam != null) virtualPadCam.alpha = camHUD.alpha;
+		if (hitboxCam != null) hitboxCam.alpha = camHUD.alpha;
+		#end
+
 		if (canAccessEditors && !endingSong && !inCutscene)
 		{
 			if (FlxG.keys.anyJustPressed(debugKeysChart)) openChartEditor();
