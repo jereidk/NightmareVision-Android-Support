@@ -231,7 +231,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: NightmareVision (Android)
+          name: VS Impostor Legacy (Android)
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
@@ -467,7 +467,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: NightmareVision (Android ARM64)
+          name: VS Impostor Legacy (Android ARM64)
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
@@ -705,7 +705,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: NightmareVision (Android ARM32)
+          name: VS Impostor Legacy (Android ARM32)
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
@@ -790,7 +790,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: NightmareVision (Windows)
+          name: VS Impostor Legacy (Windows)
           path: export/release/windows/bin
 
    Linux:
@@ -892,5 +892,5 @@ jobs:
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: NightmareVision (Linux)
+          name: VS Impostor Legacy (Linux)
           path: export/release/linux/bin

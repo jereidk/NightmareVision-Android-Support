@@ -229,10 +229,11 @@ class OptionsState extends MusicBeatState
 			dlcButtonLabel.y += Math.round((60 - dlcButtonLabel.height) / 2);
 			add(dlcButtonLabel);
 
-			// Bottom-left hint shown only when the on-screen button is hidden (Virtual Pad mode),
-			// telling the player the C pad button opens the DLC manager.
-			dlcPadHint = new FlxText(16, FlxG.height - 70, 420, 'C  -  ' + Lang.str('opt_category_dlc'));
-			dlcPadHint.setFormat(Paths.font("vcr.ttf"), 18, 0xFF6CFF7A, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			// Hint shown only when the on-screen button is hidden (Virtual Pad mode),
+			// telling the player the C pad button opens the DLC manager. Placed in the
+			// bottom-center gap between the left D-pad and the right A/B/C buttons.
+			dlcPadHint = new FlxText(440, FlxG.height - 64, 400, 'C  -  ' + Lang.str('opt_category_dlc'));
+			dlcPadHint.setFormat(Paths.font("vcr.ttf"), 18, 0xFF6CFF7A, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			dlcPadHint.borderSize = 1.5;
 			dlcPadHint.antialiasing = ClientPrefs.globalAntialiasing;
 			add(dlcPadHint);
