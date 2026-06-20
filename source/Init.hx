@@ -63,9 +63,14 @@ class Init extends FlxState
 
 		// Route FlxAnimate spritemap texture loads through FunkinAssets so that
 		// ASTC overrides and external-storage paths are handled transparently.
+		// getBitmapData: Null<BitmapData> is fine — FlxAnimate tolerates null returns.
+		// exists: drops the AssetType arg since FunkinAssets.exists checks both filesystem
+		//   and bundled assets regardless of type.
+		// getText: FunkinAssets.getContent throws on missing files; wrap so FlxAnimate
+		//   gets null instead (matches the original FlxAnimateAssets behaviour).
 		animate.FlxAnimateAssets.getBitmapData = (path) -> funkin.FunkinAssets.getBitmapData(path);
-		animate.FlxAnimateAssets.exists = (path, _) -> funkin.FunkinAssets.exists(path);
-		animate.FlxAnimateAssets.getText = funkin.FunkinAssets.getContent;
+		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
+		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (_:Dynamic) return null; };
 
 		// load settings/save
 		funkin.input.Controls.init();
