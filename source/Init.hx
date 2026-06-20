@@ -18,23 +18,42 @@ class Init extends FlxState
 {
 	override public function create():Void
 	{
-		// Show crash log from the previous session (written by CrashHandler before
-		// the process died).  Shown first so the user sees it on every boot after a
-		// crash, regardless of which state died.
-		#if (android && sys)
+		// ── Crash detection (runs before anything else) ───────────────────────
+		#if android
+		final _crashLogPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
+
+		// Install Java-level uncaught exception handler. Catches JVM/JNI
+		// crashes that happen outside the Haxe exception pipeline and writes
+		// them to crash.log before the process dies.
+		try { mobile.backend.JavaCrashHandler.install(_crashLogPath); }
+		catch (_:Dynamic) {}
+
+		// 1. crash.log written by CrashHandler (Haxe exception) or by the
+		//    Java handler (JVM crash) during the previous session.
+		#if sys
 		try
 		{
-			final logPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
-			if (sys.FileSystem.exists(logPath))
+			if (sys.FileSystem.exists(_crashLogPath))
 			{
-				var log = sys.io.File.getContent(logPath);
-				sys.FileSystem.deleteFile(logPath);
+				final log = sys.io.File.getContent(_crashLogPath);
+				sys.FileSystem.deleteFile(_crashLogPath);
 				final preview = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
 				mobile.backend.utils.PopUp.showAlert('Crash detectado', preview, 'OK');
+			}
+			else
+			{
+				// 2. No crash.log → check Android's own exit record (API 30+).
+				//    This catches native SIGSEGV / OOM / ANR from the previous
+				//    session that killed the process before any handler could write.
+				final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
+				if (nativeInfo != null && nativeInfo.length > 0)
+					mobile.backend.utils.PopUp.showAlert('Crash nativo detectado', nativeInfo, 'OK');
 			}
 		}
 		catch (_:Dynamic) {}
 		#end
+		#end
+		// ──────────────────────────────────────────────────────────────────────
 
 		// Probe GL for ASTC extension support as early as possible.
 		// The GL context is guaranteed to be live by the time Init runs.

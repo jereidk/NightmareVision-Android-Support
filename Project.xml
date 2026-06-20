@@ -142,6 +142,7 @@
 
 		<android extension="mobile.backend.java.FileUtils" />
 		<android extension="mobile.backend.java.AndroidUtils" />
+		<android extension="mobile.backend.java.JavaCrashHandler" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
 
