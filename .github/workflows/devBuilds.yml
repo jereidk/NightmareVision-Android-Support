@@ -447,36 +447,6 @@ jobs:
           restore-keys: |
             hxcpp-android-arm64-
 
-      - name: Compress video assets
-        run: |
-          # Re-encode MP4 cutscenes: H.264 CRF 28, 1280x720, AAC 64kbps
-          # ffmpeg is pre-installed on ubuntu-latest — no apt-get needed.
-          # -pix_fmt yuv420p  → maximum VLC/hxvlc compatibility
-          # -movflags +faststart → moov atom at front (faster playback start)
-          # force_original_aspect_ratio=decrease + pad → letterbox to exact 1280x720
-          # On failure the original file is kept untouched.
-          find assets/legacy/videos -name "*.mp4" -type f | while IFS= read -r VID; do
-            ORIG=$(stat -c%s "$VID")
-            TMP="${VID%.mp4}__reenc.mp4"
-            echo "Encoding: $VID  ($(numfmt --to=iec-i --suffix=B "$ORIG"))"
-            if ffmpeg -y -i "$VID" \
-                -c:v libx264 -crf 28 -preset faster \
-                -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" \
-                -pix_fmt yuv420p \
-                -c:a aac -b:a 64k \
-                -movflags +faststart \
-                -loglevel error \
-                "$TMP"; then
-              NEW=$(stat -c%s "$TMP")
-              echo "  → $(numfmt --to=iec-i --suffix=B "$NEW")  (saved $(numfmt --to=iec-i --suffix=B $((ORIG - NEW))))"
-              mv "$TMP" "$VID"
-            else
-              echo "  WARNING: ffmpeg failed — keeping original"
-              rm -f "$TMP"
-            fi
-          done
-          echo "Total videos after compression: $(du -sh assets/legacy/videos/ | cut -f1)"
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
@@ -713,32 +683,6 @@ jobs:
           key: hxcpp-android-arm32-${{ github.sha }}
           restore-keys: |
             hxcpp-android-arm32-
-
-      - name: Compress video assets
-        run: |
-          # Identical to ARM64 job — each job checks out independently so each
-          # must re-encode. ffmpeg is pre-installed on ubuntu-latest.
-          find assets/legacy/videos -name "*.mp4" -type f | while IFS= read -r VID; do
-            ORIG=$(stat -c%s "$VID")
-            TMP="${VID%.mp4}__reenc.mp4"
-            echo "Encoding: $VID  ($(numfmt --to=iec-i --suffix=B "$ORIG"))"
-            if ffmpeg -y -i "$VID" \
-                -c:v libx264 -crf 28 -preset faster \
-                -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" \
-                -pix_fmt yuv420p \
-                -c:a aac -b:a 64k \
-                -movflags +faststart \
-                -loglevel error \
-                "$TMP"; then
-              NEW=$(stat -c%s "$TMP")
-              echo "  → $(numfmt --to=iec-i --suffix=B "$NEW")  (saved $(numfmt --to=iec-i --suffix=B $((ORIG - NEW))))"
-              mv "$TMP" "$VID"
-            else
-              echo "  WARNING: ffmpeg failed — keeping original"
-              rm -f "$TMP"
-            fi
-          done
-          echo "Total videos after compression: $(du -sh assets/legacy/videos/ | cut -f1)"
 
       - name: Compile
         env:
