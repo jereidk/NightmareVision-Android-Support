@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.util.List;
 
 /**
@@ -19,10 +20,9 @@ import java.util.List;
  *  1. Java UncaughtExceptionHandler — catches Java/JNI exceptions that escape
  *     all other handlers and writes them to crash.log before the process dies.
  *
- *  2. ApplicationExitInfo reader (API 30+) — reads Android's built-in record
- *     of why the PREVIOUS session ended (SIGSEGV, OOM, ANR, …).  The OS writes
- *     this automatically even for pure-C++ crashes that kill the process before
- *     any Java or Haxe handler can run.
+ *  2. ApplicationExitInfo reader (API 30 / Android 11+) — reads Android's
+ *     built-in record of why the PREVIOUS session ended (SIGSEGV, OOM, ANR…).
+ *     Accessed via reflection so the file compiles against any SDK version.
  */
 public class JavaCrashHandler extends Extension implements Thread.UncaughtExceptionHandler {
 
@@ -34,7 +34,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
     /**
      * Install the Java-level uncaught exception handler.
-     * Must be called once at startup, before any other init.
+     * Must be called once at startup.
      *
      * @param crashLogPath absolute path where crash.log should be written
      */
@@ -47,10 +47,11 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     /**
-     * Check Android's ApplicationExitInfo (API 30 / Android 11+) for the
-     * most recent process exit that was a crash, native crash, ANR or OOM.
+     * Read Android's ApplicationExitInfo (API 30 / Android 11+) for the most
+     * recent process exit from the previous session.  Uses reflection so this
+     * compiles against any compileSdkVersion.
      *
-     * @return a human-readable summary string, or null if none found / API < 30
+     * @return human-readable summary if the exit was abnormal, null otherwise
      */
     public static String readPreviousNativeCrash() {
         if (Build.VERSION.SDK_INT < 30) return null;
@@ -63,35 +64,37 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
             if (am == null) return null;
 
-            // Most-recent-first; we care only about the last exit.
-            List<ActivityManager.ApplicationExitInfo> exits =
-                am.getHistoricalProcessExitReasons(null, 0, 1);
+            // ActivityManager.getHistoricalProcessExitReasons(String pkgName, int pid, int maxNum)
+            Method getReasons = ActivityManager.class.getDeclaredMethod(
+                "getHistoricalProcessExitReasons",
+                String.class, int.class, int.class);
 
+            @SuppressWarnings("unchecked")
+            List<Object> exits = (List<Object>) getReasons.invoke(am, null, 0, 1);
             if (exits == null || exits.isEmpty()) return null;
 
-            ActivityManager.ApplicationExitInfo info = exits.get(0);
-            int reason = info.getReason();
+            Object info = exits.get(0);
+            Class<?> cls = info.getClass();
 
-            // Only surface abnormal exits.
-            if (reason != ActivityManager.ApplicationExitInfo.REASON_CRASH
-                && reason != ActivityManager.ApplicationExitInfo.REASON_CRASH_NATIVE
-                && reason != ActivityManager.ApplicationExitInfo.REASON_ANR
-                && reason != ActivityManager.ApplicationExitInfo.REASON_SIGNAL
-                && reason != ActivityManager.ApplicationExitInfo.REASON_OOM) {
-                return null;
-            }
+            int reason = (int) cls.getMethod("getReason").invoke(info);
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("Crash detectado (sesión anterior)\n\n");
+            // ApplicationExitInfo reason constants (API 30):
+            //   UNKNOWN=0, EXIT_SELF=1, SIGNALED=2, LOW_MEMORY=3,
+            //   CRASH=4, CRASH_NATIVE=5, ANR=6, INITIALIZATION_FAILURE=7,
+            //   PERMISSION_CHANGE=8, EXCESSIVE_RESOURCE_USAGE=9, USER_REQUESTED=10
+            // Skip clean/expected exits (UNKNOWN, EXIT_SELF, USER_REQUESTED).
+            if (reason == 0 || reason == 1 || reason == 10) return null;
+
+            Object desc = cls.getMethod("getDescription").invoke(info);
+            int importance = (int) cls.getMethod("getImportance").invoke(info);
+            int status    = (int) cls.getMethod("getStatus").invoke(info);
+
+            StringBuilder sb = new StringBuilder("Crash detectado (sesión anterior)\n\n");
             sb.append("Tipo: ").append(reasonLabel(reason)).append("\n");
-
-            String desc = info.getDescription();
-            if (desc != null && !desc.isEmpty())
+            if (desc != null && !desc.toString().isEmpty())
                 sb.append("Descripción: ").append(desc).append("\n");
-
-            sb.append("Estado del proceso: ").append(importanceLabel(info.getImportance())).append("\n");
-            sb.append("Código de salida: ").append(info.getStatus()).append("\n");
-
+            sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
+            sb.append("Código de salida: ").append(status).append("\n");
             return sb.toString();
 
         } catch (Exception e) {
@@ -114,7 +117,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
             writeCrashLog(sCrashLogPath, report);
         } catch (Throwable ignored) {
-            // If writing fails we still want the original handler to run.
+            // If writing fails we still forward to the original handler.
         }
 
         if (sOriginalHandler != null)
@@ -134,23 +137,20 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
     private static String reasonLabel(int reason) {
         switch (reason) {
-            case ActivityManager.ApplicationExitInfo.REASON_CRASH:
-                return "JAVA CRASH";
-            case ActivityManager.ApplicationExitInfo.REASON_CRASH_NATIVE:
-                return "NATIVE CRASH (SIGSEGV / SIGABRT / similar)";
-            case ActivityManager.ApplicationExitInfo.REASON_ANR:
-                return "ANR (App Not Responding)";
-            case ActivityManager.ApplicationExitInfo.REASON_SIGNAL:
-                return "SIGNAL";
-            case ActivityManager.ApplicationExitInfo.REASON_OOM:
-                return "OUT OF MEMORY";
-            default:
-                return "CODE " + reason;
+            case 2:  return "SIGNAL (SIGKILL / sistema)";
+            case 3:  return "LOW MEMORY / OOM";
+            case 4:  return "JAVA CRASH";
+            case 5:  return "NATIVE CRASH (SIGSEGV / SIGABRT)";
+            case 6:  return "ANR (App Not Responding)";
+            case 7:  return "INITIALIZATION FAILURE";
+            case 8:  return "PERMISSION CHANGE";
+            case 9:  return "EXCESSIVE RESOURCE USAGE";
+            default: return "CÓDIGO " + reason;
         }
     }
 
     private static String importanceLabel(int importance) {
-        // Values from ActivityManager.RunningAppProcessInfo
+        // ActivityManager.RunningAppProcessInfo importance levels
         if (importance <= 100) return "FOREGROUND";
         if (importance <= 130) return "FOREGROUND SERVICE";
         if (importance <= 200) return "VISIBLE";
