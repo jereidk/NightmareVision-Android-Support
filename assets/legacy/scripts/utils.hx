@@ -136,13 +136,12 @@ function onMoveCamera(whosTurn:Bool)
 	if (startingSong) return;
 	if (ClientPrefs.camFollowsCharacters && canFollow)
 	{
-		var character;
-		if (whosTurn == 'gf')
-			character = gf;
-		else if (whosTurn == 'dad')
-			character = game.opponentStrums != null ? (game.opponentStrums.owner != null ? game.opponentStrums.owner : dad) : dad;
-		else
-			character = game.playerStrums != null ? (game.playerStrums.owner != null ? game.playerStrums.owner : boyfriend) : boyfriend;
+		var character = switch (whosTurn)
+		{
+			case 'gf': gf;
+			case 'dad': (game.opponentStrums?.owner ?? dad);
+			default: (game.playerStrums?.owner ?? boyfriend);
+		}
 		
 		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
 		
