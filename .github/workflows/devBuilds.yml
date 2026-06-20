@@ -225,15 +225,11 @@ jobs:
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
-          # DIAGNOSTIC: build arm64-only (like the last good single-ABI build,
-          # run-53) to test whether the "crash entering any song" is the armv7
-          # 32-bit ABI hitting its address-space limit on large textures.
-          # Remove -D ANDROID_ARM64_ONLY to go back to the fat (arm64+armv7) APK.
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
+            haxelib run lime build android -release -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY
+            haxelib run lime build android -release
           fi
 
       - name: Upload Artifact
@@ -248,7 +244,6 @@ jobs:
   # No ld.lld wrapper needed: the ARM32 sysroot issue does not affect arm64.
   # ─────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
-    if: ${{ false }}
     name: Build Android (ARM64)
     runs-on: ubuntu-latest
     steps:
@@ -484,7 +479,6 @@ jobs:
   # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
   # ─────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
-    if: ${{ false }}
     name: Build Android (ARM32)
     runs-on: ubuntu-latest
     steps:
