@@ -95,19 +95,8 @@ class StorageSystem
 				startApkCopy();
 				return true;
 			}
-			else
-			{
-				trace("Running silent integrity check...");
-				var restoredAssets = copyFromAPK("assets/", null, false);
-				var restoredContent = copyFromAPK("content/", null, false);
-				
-				if (restoredAssets > 0 || restoredContent > 0)
-				{
-					trace('Integrity Check fixed missing files! Restored: ${restoredAssets + restoredContent} files.');
-				}
-				
-				return false;
-			}
+
+			return false;
 		}
 		catch (e:Dynamic)
 		{

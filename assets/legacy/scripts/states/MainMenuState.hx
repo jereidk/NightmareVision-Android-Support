@@ -4,7 +4,6 @@ import funkin.data.CosmicubeData;
 import funkin.states.TitleState;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
-import flixel.util.FlxColor;
 
 // ── 2-finger hold progress bar ────────────────────────────────────────────────
 var holdTime:Float  = 0;
@@ -16,6 +15,8 @@ var holdFill:FlxSprite = null;
 var panelOpen:Bool = false;
 var panelAll:Array<Dynamic>  = [];  // every sprite/text that belongs to the panel
 var panelBtns:Array<Dynamic> = [];  // {x, y, w, h, idx} button hit-boxes
+// Counts down after openPanel() so the hold-release doesn't immediately close the panel
+var panelCooldown:Int = 0;
 
 var lblUnlock:FlxText    = null;
 var lblUnlockReq:FlxText = null;
@@ -52,7 +53,13 @@ function onLoad()
 	holdFill.origin.x = 0;
 	holdFill.visible = false;
 	add(holdFill);
+}
 
+// buildPanel() is called here — AFTER the compiled state finishes adding all menu sprites
+// so the panel overlay renders on top of everything (z-index fix).
+function onCreatePost()
+{
+	if (!ClientPrefs.inDevMode) return;
 	buildPanel();
 }
 
@@ -132,6 +139,7 @@ function unlockReqLabel():String
 function openPanel()
 {
 	panelOpen = true;
+	panelCooldown = 5; // ignore touch releases for 5 frames so the hold gesture doesn't instantly close the panel
 	if (lblUnlock    != null) lblUnlock.text    = unlockLabel();
 	if (lblUnlockReq != null) lblUnlockReq.text = unlockReqLabel();
 	for (thing in panelAll) thing.visible = true;
@@ -243,6 +251,8 @@ function onUpdate()
 	// If panel is open, check for button taps on release
 	if (panelOpen)
 	{
+		if (panelCooldown > 0) { panelCooldown--; return; }
+
 		for (touch in touches)
 		{
 			if (!touch.justReleased) continue;
