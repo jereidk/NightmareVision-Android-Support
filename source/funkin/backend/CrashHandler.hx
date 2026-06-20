@@ -75,11 +75,22 @@ class CrashHandler
 		event.preventDefault();
 		event.stopPropagation();
 		event.stopImmediatePropagation();
-		
+
 		final callstackMessage = stackMessage.trim().length == 0 ? ' N/A' : '\n$stackMessage';
-		
+
 		var fullReport = '$curFlxState\n\nException caught: $message\n\nCallstack:$callstackMessage';
-		
+
+		// Write crash log before touching Flixel state — this survives double-faults
+		// and native crashes that kill the process before FallbackState renders.
+		#if sys
+		try
+		{
+			final logPath = #if android mobile.backend.StorageSystem.getDirectory() #else "./" #end + 'crash.log';
+			sys.io.File.saveContent(logPath, fullReport);
+		}
+		catch (_:Dynamic) {}
+		#end
+
 		FlxG.switchState(() -> new FallbackState(fullReport, () -> FlxG.switchState(() -> new MainMenuState())));
 	}
 }

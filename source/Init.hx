@@ -18,6 +18,24 @@ class Init extends FlxState
 {
 	override public function create():Void
 	{
+		// Show crash log from the previous session (written by CrashHandler before
+		// the process died).  Shown first so the user sees it on every boot after a
+		// crash, regardless of which state died.
+		#if (android && sys)
+		try
+		{
+			final logPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
+			if (sys.FileSystem.exists(logPath))
+			{
+				var log = sys.io.File.getContent(logPath);
+				sys.FileSystem.deleteFile(logPath);
+				final preview = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
+				mobile.backend.utils.PopUp.showAlert('Crash detectado', preview, 'OK');
+			}
+		}
+		catch (_:Dynamic) {}
+		#end
+
 		// Probe GL for ASTC extension support as early as possible.
 		// The GL context is guaranteed to be live by the time Init runs.
 		#if (android && cpp)
