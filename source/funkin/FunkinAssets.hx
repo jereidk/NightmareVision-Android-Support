@@ -98,10 +98,9 @@ class FunkinAssets
 	public static function getBitmapData(path:String, useCache:Bool = true):Null<BitmapData>
 	{
 		// On Android, try loading a GPU-compressed ASTC override first.
-		// If the device lacks ASTC support, or no .astc file exists at the
-		// mirror path (assets/astc/<...>.astc), this returns null and we
-		// fall through to the normal PNG loading below.
-		#if (mobile && MODS_ALLOWED)
+		// Checks external storage then bundled APK assets. Falls through to PNG
+		// if ASTC is unsupported, no .astc mirror exists, or loading fails.
+		#if (android && cpp)
 		var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
 		if (astcBitmap != null) return astcBitmap;
 		#end

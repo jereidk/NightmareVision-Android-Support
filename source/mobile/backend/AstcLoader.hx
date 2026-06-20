@@ -8,6 +8,7 @@ import openfl.display3D.Context3D;
 import openfl.display3D.Context3DTextureFormat;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
+import openfl.Assets as OflAssets;
 import lime.utils.UInt8Array;
 #end
 
@@ -36,8 +37,8 @@ class AstcLoader
 
 	/**
 	 * Derives the ASTC path for a PNG path and attempts to load it.
-	 * Returns null if ASTC is unsupported, the .astc file doesn't exist,
-	 * or loading fails for any reason — caller should then load the PNG.
+	 * Checks external storage first, then falls back to bundled APK assets.
+	 * Returns null if ASTC is unsupported, no .astc exists, or loading fails.
 	 */
 	public static function tryLoad(pngPath:String):Null<BitmapData>
 	{
@@ -46,9 +47,19 @@ class AstcLoader
 
 		var astcPath = deriveAstcPath(pngPath);
 		if (astcPath == null) return null;
-		if (!sys.FileSystem.exists(astcPath)) return null;
 
-		return load(astcPath);
+		// External storage (extracted APK assets, DLC overrides) takes priority.
+		if (sys.FileSystem.exists(astcPath))
+			return load(astcPath);
+
+		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
+		if (OflAssets.exists(astcPath))
+		{
+			var bytes = OflAssets.getBytes(astcPath);
+			if (bytes != null) return loadFromBytes(astcPath, bytes);
+		}
+
+		return null;
 		#else
 		return null;
 		#end
@@ -63,7 +74,28 @@ class AstcLoader
 		#if (android && cpp)
 		try
 		{
-			return loadInternal(astcPath);
+			return loadFromBytes(astcPath, sys.io.File.getBytes(astcPath));
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('AstcLoader: failed to load $astcPath — $e', WARN);
+			return null;
+		}
+		#else
+		return null;
+		#end
+	}
+
+	/**
+	 * Uploads already-read ASTC bytes to the GPU and returns a BitmapData.
+	 * Shared by both the filesystem and bundled-asset paths.
+	 */
+	public static function loadFromBytes(astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
+	{
+		#if (android && cpp)
+		try
+		{
+			return loadInternal(astcPath, bytes);
 		}
 		catch (e:Dynamic)
 		{
@@ -79,9 +111,8 @@ class AstcLoader
 
 	#if (android && cpp)
 
-	static function loadInternal(path:String):Null<BitmapData>
+	static function loadInternal(path:String, bytes:haxe.io.Bytes):Null<BitmapData>
 	{
-		var bytes = sys.io.File.getBytes(path);
 		if (bytes.length < HEADER_SIZE) return null;
 
 		// Verify ASTC magic
