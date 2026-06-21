@@ -126,7 +126,7 @@ class FunkinAssets
 		// "exists" in the APK (e.g. WeekData scanning assets/data/weeks/)
 		// get a correct answer even when nothing has been extracted.
 		final prefix = StringTools.endsWith(path, '/') ? path : (path + '/');
-		return Assets.list(type).exists(a -> StringTools.startsWith(a, prefix));
+		return Lambda.exists(Assets.list(type), a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
@@ -168,7 +168,7 @@ class FunkinAssets
 		#end
 		if (directory.trim().length == 0) return false;
 		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
-		return Assets.list().exists(a -> StringTools.startsWith(a, prefix));
+		return Lambda.exists(Assets.list(), a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
