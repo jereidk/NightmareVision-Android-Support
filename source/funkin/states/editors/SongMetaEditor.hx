@@ -12,7 +12,7 @@ import flixel.graphics.frames.FlxFrame;
 import funkin.data.SongMetaData.SongMeta;
 import funkin.objects.HealthIcon;
 import funkin.data.SongMetaData;
-import funkin.PathsTestMode;
+import funkin.Paths.PathsTestMode;
 
 using funkin.states.editors.ui.ToolKitUtils;
 
