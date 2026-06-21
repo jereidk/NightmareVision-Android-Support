@@ -3339,7 +3339,9 @@ class PlayState extends MusicBeatState
 		
 		FlxDestroyUtil.destroyArray(NoteUtil.noteskins);
 		NoteUtil.noteskins.resize(0);
-		
+
+		followingCams.resize(0);
+
 		super.destroy();
 	}
 	
