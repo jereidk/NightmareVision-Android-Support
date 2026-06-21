@@ -120,8 +120,11 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
           mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
           echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgZm9yIGFwaSBpbiAxNiAxOSAyMSAyMyAyNDsgZG8KICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICBBUk0zMj0iJEFSTTMyX0JBU0UvJGFwaSIKICAgICAgYnJlYWsKICAgIGZpCiAgZG9uZQogIGVjaG8gImxkLmxsZC13cmFwcGVyOiBBUk0zMiBsaW5rIGRldGVjdGVkLCBzeXNyb290PSRBUk0zMiIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
@@ -352,8 +355,11 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
@@ -587,8 +593,11 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
