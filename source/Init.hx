@@ -65,6 +65,7 @@ class Init extends FlxState
 		// The GL context is guaranteed to be live by the time Init runs.
 		#if (android && cpp)
 		mobile.backend.AstcSupport.check();
+		mobile.backend.AstcLoader.installContextHandler();
 		#end
 
 		// Route FlxAnimate spritemap texture loads through FunkinAssets so that

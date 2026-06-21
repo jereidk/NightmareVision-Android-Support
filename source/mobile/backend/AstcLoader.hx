@@ -9,6 +9,7 @@ import openfl.display3D.Context3DTextureFormat;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.Assets as OflAssets;
+import openfl.events.Event;
 import lime.utils.UInt8Array;
 #end
 
@@ -21,6 +22,13 @@ import lime.utils.UInt8Array;
  * The original PNGs are never touched and always serve as fallback.
  * On devices that do not expose GL_KHR_texture_compression_astc_ldr
  * the loader returns null and the caller falls through to the PNG.
+ *
+ * Context-loss recovery: Android destroys the GPU context when the app is
+ * backgrounded. BitmapData.fromTexture() has no CPU pixels and cannot be
+ * restored automatically by OpenFL. This class registers a CONTEXT3D_CREATE
+ * listener that re-uploads every tracked ASTC texture when the GL context
+ * comes back, patching the existing RectangleTexture handles in-place so
+ * all live BitmapData instances automatically see fresh GPU data.
  */
 @:access(openfl.display3D.textures.TextureBase)
 @:access(openfl.display3D.Context3D)
@@ -36,9 +44,44 @@ class AstcLoader
 	// ASTC header size in bytes
 	static inline final HEADER_SIZE:Int = 16;
 
+	#if (android && cpp)
+	// Keyed by PNG path (= FunkinCache cache key). Stores everything needed
+	// to re-upload the ASTC texture after an OpenGL context loss/restore cycle.
+	static var _recovery:Map<String, {astcPath:String, rectTex:RectangleTexture, width:Int, height:Int, glFormat:Int}> = [];
+	static var _listenerInstalled:Bool = false;
+	#end
+
+	/**
+	 * Installs the CONTEXT3D_CREATE listener that re-uploads all tracked ASTC
+	 * textures after an OpenGL context loss/restore cycle.
+	 * Safe to call multiple times — only installs once.
+	 * Call from Init.hx right after AstcSupport.check().
+	 */
+	public static function installContextHandler():Void
+	{
+		#if (android && cpp)
+		if (_listenerInstalled) return;
+		_listenerInstalled = true;
+		FlxG.stage.stage3Ds[0].addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		#end
+	}
+
+	/**
+	 * Removes a PNG cache key from the recovery map.
+	 * Call from FunkinCache.removeFromCache() so evicted textures are not
+	 * re-uploaded on context restoration.
+	 */
+	public static function removeTracking(cacheKey:String):Void
+	{
+		#if (android && cpp)
+		_recovery.remove(cacheKey);
+		#end
+	}
+
 	/**
 	 * Derives the ASTC path for a PNG path and attempts to load it.
 	 * Checks external storage first, then falls back to bundled APK assets.
+	 * The returned BitmapData is registered for automatic context-loss recovery.
 	 * Returns null if ASTC is unsupported, no .astc exists, or loading fails.
 	 */
 	public static function tryLoad(pngPath:String):Null<BitmapData>
@@ -51,13 +94,24 @@ class AstcLoader
 
 		// External storage (extracted APK assets, DLC overrides) takes priority.
 		if (sys.FileSystem.exists(astcPath))
-			return load(astcPath);
+		{
+			try
+			{
+				var bytes = sys.io.File.getBytes(astcPath);
+				return _loadAndTrack(pngPath, astcPath, bytes);
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
+				return null;
+			}
+		}
 
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
 		if (OflAssets.exists(astcPath))
 		{
 			var bytes = OflAssets.getBytes(astcPath);
-			if (bytes != null) return loadFromBytes(astcPath, bytes);
+			if (bytes != null) return _loadAndTrack(pngPath, astcPath, bytes);
 		}
 
 		return null;
@@ -69,6 +123,8 @@ class AstcLoader
 	/**
 	 * Loads an .astc file from the filesystem and returns a GPU-backed BitmapData.
 	 * Only call this after confirming the file exists and ASTC is supported.
+	 * Note: textures loaded via this method are NOT tracked for context-loss recovery.
+	 * Use tryLoad() for managed loading.
 	 */
 	public static function load(astcPath:String):Null<BitmapData>
 	{
@@ -90,13 +146,16 @@ class AstcLoader
 	/**
 	 * Uploads already-read ASTC bytes to the GPU and returns a BitmapData.
 	 * Shared by both the filesystem and bundled-asset paths.
+	 * Note: textures loaded via this method are NOT tracked for context-loss recovery.
+	 * Use tryLoad() for managed loading.
 	 */
 	public static function loadFromBytes(astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
 	{
 		#if (android && cpp)
 		try
 		{
-			return loadInternal(astcPath, bytes);
+			var result = _loadInternal(astcPath, bytes);
+			return result == null ? null : result.bitmap;
 		}
 		catch (e:Dynamic)
 		{
@@ -112,7 +171,39 @@ class AstcLoader
 
 	#if (android && cpp)
 
-	static function loadInternal(path:String, bytes:haxe.io.Bytes):Null<BitmapData>
+	/**
+	 * Loads ASTC bytes, wraps in BitmapData, and registers in the recovery map
+	 * so the texture survives an OpenGL context loss/restore cycle.
+	 */
+	static function _loadAndTrack(cacheKey:String, astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
+	{
+		try
+		{
+			var result = _loadInternal(astcPath, bytes);
+			if (result == null) return null;
+
+			_recovery.set(cacheKey, {
+				astcPath: astcPath,
+				rectTex:  result.rectTex,
+				width:    result.width,
+				height:   result.height,
+				glFormat: result.glFormat
+			});
+
+			return result.bitmap;
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('AstcLoader: failed to load $astcPath — $e', WARN);
+			return null;
+		}
+	}
+
+	/**
+	 * Parses the ASTC header, uploads the payload to the GPU, and returns the
+	 * BitmapData together with the metadata needed for context-loss re-upload.
+	 */
+	static function _loadInternal(path:String, bytes:haxe.io.Bytes):Null<{bitmap:BitmapData, rectTex:RectangleTexture, width:Int, height:Int, glFormat:Int}>
 	{
 		if (bytes.length < HEADER_SIZE) return null;
 
@@ -129,7 +220,7 @@ class AstcLoader
 		// bytes[6] = block depth, always 1 for 2-D textures
 
 		// Width and height are stored as 24-bit little-endian
-		var width:Int = bytes.get(7) | (bytes.get(8) << 8) | (bytes.get(9) << 16);
+		var width:Int  = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
 		var height:Int = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
 
 		if (width <= 0 || height <= 0) return null;
@@ -146,9 +237,29 @@ class AstcLoader
 		if (context3D == null) return null;
 		var gl = context3D.gl;
 
+		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat);
+		if (astcTex == null) return null;
+
 		// -----------------------------------------------------------------------
-		// Upload ASTC payload to a new GL texture
+		// Wrap in an OpenFL RectangleTexture so BitmapData.fromTexture() works.
+		// createRectangleTexture allocates a throw-away placeholder GL texture;
+		// we delete it immediately and inject our ASTC texture instead.
 		// -----------------------------------------------------------------------
+		var rectTex:RectangleTexture = context3D.createRectangleTexture(width, height, Context3DTextureFormat.BGRA, false);
+		gl.deleteTexture(rectTex.__textureID); // free the placeholder
+		rectTex.__textureID = astcTex;         // inject ASTC texture
+
+		var bitmap = BitmapData.fromTexture(rectTex);
+		return {bitmap: bitmap, rectTex: rectTex, width: width, height: height, glFormat: glFormat};
+	}
+
+	/**
+	 * Uploads the ASTC payload (bytes after the 16-byte header) to a new GL
+	 * texture with the given compressed format and returns the texture object,
+	 * or null on GL error.
+	 */
+	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
+	{
 		var imgLen:Int = bytes.length - HEADER_SIZE;
 		var imgData = new UInt8Array(imgLen);
 		for (i in 0...imgLen)
@@ -167,21 +278,71 @@ class AstcLoader
 		if (glErr != 0)
 		{
 			gl.deleteTexture(astcTex);
-			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)} for $path', WARN);
+			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)}', WARN);
 			return null;
 		}
 
-		// -----------------------------------------------------------------------
-		// Wrap in an OpenFL RectangleTexture so BitmapData.fromTexture() works.
-		// createRectangleTexture allocates a throw-away placeholder GL texture;
-		// we delete it immediately and inject our ASTC texture instead.
-		// -----------------------------------------------------------------------
-		var rectTex:RectangleTexture = context3D.createRectangleTexture(width, height, Context3DTextureFormat.BGRA, false);
-		gl.deleteTexture(rectTex.__textureID); // free the placeholder
-		rectTex.__textureID = astcTex; // inject ASTC texture
+		return astcTex;
+	}
 
-		var bitmap = BitmapData.fromTexture(rectTex);
-		return bitmap;
+	/**
+	 * Called when the Stage3D context is created or recreated after context loss.
+	 * Re-uploads every tracked ASTC texture and patches the existing RectangleTexture
+	 * handles in-place so all live BitmapData instances automatically see fresh GPU data.
+	 * On the initial CONTEXT3D_CREATE (before any ASTC textures are loaded), the
+	 * recovery map is empty and this function returns immediately.
+	 */
+	static function _onContextRestored(_:Dynamic):Void
+	{
+		var context3D:Null<Context3D> = FlxG.stage.stage3Ds[0].context3D;
+		if (context3D == null) return;
+		var gl = context3D.gl;
+
+		var restored = 0;
+		var failed = 0;
+		var toRemove:Array<String> = [];
+
+		for (cacheKey => entry in _recovery)
+		{
+			// Re-read the source bytes (filesystem first, then bundled assets).
+			var bytes:Null<haxe.io.Bytes> = null;
+			try
+			{
+				if (sys.FileSystem.exists(entry.astcPath))
+					bytes = sys.io.File.getBytes(entry.astcPath);
+				else if (OflAssets.exists(entry.astcPath))
+					bytes = OflAssets.getBytes(entry.astcPath);
+			}
+			catch (e:Dynamic) {}
+
+			if (bytes == null)
+			{
+				Logger.log('AstcLoader: context restore — ${entry.astcPath} not found, removing from tracking', WARN);
+				toRemove.push(cacheKey);
+				failed++;
+				continue;
+			}
+
+			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat);
+			if (freshTex == null)
+			{
+				failed++;
+				continue;
+			}
+
+			// The old __textureID is a dead handle after context loss; the driver
+			// already freed all GPU resources. Just overwrite with the fresh handle.
+			// The BitmapData holds a reference to this same RectangleTexture object,
+			// so the renderer will automatically use the new handle on the next draw.
+			entry.rectTex.__textureID = freshTex;
+			restored++;
+		}
+
+		for (key in toRemove)
+			_recovery.remove(key);
+
+		if (restored > 0 || failed > 0)
+			Logger.log('AstcLoader: context restored — $restored textures re-uploaded, $failed failed', WARN);
 	}
 
 	/**

@@ -116,6 +116,9 @@ class FunkinCache
 		{
 			if (disposeToo) disposeGraphic(currentTrackedGraphics.get(key));
 			currentTrackedGraphics.remove(key);
+			#if (android && cpp)
+			mobile.backend.AstcLoader.removeTracking(key);
+			#end
 			
 			// #if VERBOSE_LOGS
 			// Logger.log('Cleared Graphic [$key]');
