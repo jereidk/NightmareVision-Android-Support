@@ -159,11 +159,16 @@ class FunkinCache
 	 */
 	public function cacheBitmap(key:String, bitmap:BitmapData, allowGPU:Bool = true):FlxGraphic
 	{
+		#if android
+		if (bitmap.width > 4096 || bitmap.height > 4096)
+			Logger.log('Oversized texture [$key]: ${bitmap.width}x${bitmap.height} exceeds 4096px — compress or convert to ASTC', WARN);
+		#end
+
 		if (allowGPU && ClientPrefs.gpuCaching)
 		{
 			bitmap.disposeImage();
 		}
-		
+
 		var newGraphic:FlxGraphic = FlxGraphic.fromBitmapData(bitmap, false, key);
 		newGraphic.persist = true;
 		newGraphic.destroyOnNoUse = false;
