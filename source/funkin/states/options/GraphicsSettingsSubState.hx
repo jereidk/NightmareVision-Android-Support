@@ -30,7 +30,14 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		presetOption.onChange = onChangePreset;
 		addOption(presetOption);
 
-		gpuCachingOption = new Option(Lang.str('opt_gpucaching', 'GPU Caching'), Lang.str('opt_gpucaching_desc', 'If checked, GPU caching will be enabled.'), 'gpuCaching', 'bool', false);
+		gpuCachingOption = new Option(Lang.str('opt_gpucaching', 'GPU Caching'),
+			#if android
+			Lang.str('opt_gpucaching_desc_android',
+				'[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nWARNING: If the app is minimized or a call comes in,\nthe OpenGL context is lost and textures may appear\nblank until the game is restarted.\nDisabled by default. Enable only if you know the risk.'),
+			#else
+			Lang.str('opt_gpucaching_desc', 'If checked, GPU caching will be enabled.'),
+			#end
+			'gpuCaching', 'bool', false);
 		gpuCachingOption.onChange = markCustomPreset;
 		addOption(gpuCachingOption);
 
@@ -94,12 +101,12 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = false;
 			case 'Medium':
-				ClientPrefs.gpuCaching = true;
+				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = true;
 			case 'High':
-				ClientPrefs.gpuCaching = true;
+				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = true;
 				ClientPrefs.globalAntialiasing = true;

@@ -108,8 +108,11 @@ class ClientPrefs
 	// graphics ------------------------------------------------------------------------//
 	@saveVar public static var performancePreset:String = 'Custom';
 
-	@saveVar public static var gpuCaching:Bool = true;
-	
+	// On Android, disposeImage() removes the CPU pixel buffer needed to restore textures
+	// after an OpenGL context loss (app minimized). Default false on Android is safe.
+	// Users can enable it explicitly at their own risk (see GPU Caching option warning).
+	@saveVar public static var gpuCaching:Bool = #if android false #else true #end;
+
 	@saveVar public static var globalAntialiasing:Bool = true;
 	
 	@saveVar public static var lowQuality:Bool = false;
