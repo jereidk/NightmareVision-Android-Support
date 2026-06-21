@@ -4,6 +4,8 @@ import haxe.Json;
 
 import openfl.utils.Assets;
 
+import funkin.FunkinAssets;
+
 import flixel.FlxSprite;
 
 typedef MenuCharacterFile =
@@ -59,11 +61,11 @@ class MenuCharacter extends FlxSprite
 					path = Paths.getCorePath(characterPath);
 				}
 
-				if (!FileSystem.exists(path))
+				if (!FunkinAssets.exists(path))
 				{
 					path = Paths.getCorePath('images/menucharacters/' + DEFAULT_CHARACTER + '.json');
 				}
-				rawJson = File.getContent(path);
+				rawJson = FunkinAssets.getContent(path);
 				#else
 				var path:String = Paths.getCorePath(characterPath);
 				if (!Assets.exists(path))
