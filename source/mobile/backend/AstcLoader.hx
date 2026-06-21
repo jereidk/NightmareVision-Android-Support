@@ -250,7 +250,7 @@ class AstcLoader
 		var width:Int  = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
 		var height:Int = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
 
-		if (width <= 0 || height <= 0) return null;
+		if (width <= 0 || height <= 0 || width > 16384 || height > 16384) return null;
 
 		var glFormat:Int = blockSizeToGlFormat(blockW, blockH);
 		if (glFormat == 0)
@@ -271,13 +271,23 @@ class AstcLoader
 		// Wrap in an OpenFL RectangleTexture so BitmapData.fromTexture() works.
 		// createRectangleTexture allocates a throw-away placeholder GL texture;
 		// we delete it immediately and inject our ASTC texture instead.
+		// If either call throws (OOM, invalid context), clean up the GL handle
+		// before propagating so it doesn't leak.
 		// -----------------------------------------------------------------------
-		var rectTex:RectangleTexture = context3D.createRectangleTexture(width, height, Context3DTextureFormat.BGRA, false);
-		gl.deleteTexture(rectTex.__textureID); // free the placeholder
-		rectTex.__textureID = astcTex;         // inject ASTC texture
-
-		var bitmap = BitmapData.fromTexture(rectTex);
-		return {bitmap: bitmap, rectTex: rectTex, width: width, height: height, glFormat: glFormat};
+		try
+		{
+			var rectTex:RectangleTexture = context3D.createRectangleTexture(width, height, Context3DTextureFormat.BGRA, false);
+			gl.deleteTexture(rectTex.__textureID); // free the placeholder
+			rectTex.__textureID = astcTex;         // inject ASTC texture
+			var bitmap = BitmapData.fromTexture(rectTex);
+			return {bitmap: bitmap, rectTex: rectTex, width: width, height: height, glFormat: glFormat};
+		}
+		catch (e:Dynamic)
+		{
+			gl.deleteTexture(astcTex);
+			Logger.log('AstcLoader: failed to wrap GL texture in $path — $e', WARN);
+			return null;
+		}
 	}
 
 	/**
@@ -298,6 +308,7 @@ class AstcLoader
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		while (gl.getError() != 0) {} // drain any pre-existing errors so the check below is unambiguous
 		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgData);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -436,7 +447,7 @@ class AstcLoader
 			if (sys.FileSystem.exists(pngPath))
 				pngBitmap = BitmapData.fromFile(pngPath);
 			else if (OflAssets.exists(pngPath))
-				pngBitmap = OflAssets.getBitmapData(pngPath);
+				pngBitmap = OflAssets.getBitmapData(pngPath, false); // useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
 		}
 		catch (e:Dynamic) {}
 
@@ -446,11 +457,25 @@ class AstcLoader
 			return false;
 		}
 
+		if (pngBitmap.width != entry.width || pngBitmap.height != entry.height)
+			Logger.log('AstcLoader: PNG fallback size mismatch for $pngPath — PNG ${pngBitmap.width}x${pngBitmap.height}, ASTC was ${entry.width}x${entry.height}', WARN);
+
 		// Upload PNG pixels via OpenFL's standard path (format conversion handled
 		// internally) into a temporary RectangleTexture, then steal its GL handle.
+		var gl = context3D.gl;
 		var tempTex:RectangleTexture = context3D.createRectangleTexture(
 			pngBitmap.width, pngBitmap.height, Context3DTextureFormat.BGRA, false);
 		tempTex.uploadFromBitmapData(pngBitmap);
+
+		var uploadErr:Int = gl.getError();
+		if (uploadErr != 0)
+		{
+			Logger.log('AstcLoader: PNG fallback upload error 0x${StringTools.hex(uploadErr, 4)} for $pngPath', WARN);
+			tempTex.dispose();
+			pngBitmap.dispose();
+			return false;
+		}
+
 		var handle = tempTex.__textureID;
 		tempTex.__textureID = 0; // orphan wrapper — handle ownership moves to entry.rectTex
 		entry.rectTex.__textureID = handle;
