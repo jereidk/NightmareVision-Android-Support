@@ -339,7 +339,7 @@ class Paths
 			// until flixel does null safety
 			@:nullSafety(Off)
 			{
-				final frames = FlxAtlasFrames.fromSparrow(graphic, FunkinAssets.exists(xmlPath) ? FunkinAssets.getContent(xmlPath) : null);
+				final frames = FlxAtlasFrames.fromSparrow(graphic, FunkinAssets.getContent(xmlPath));
 				if (frames != null) tempAtlasFramesCache.set(directPath, frames);
 				return frames;
 			}

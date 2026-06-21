@@ -19,9 +19,29 @@ import funkin.backend.FunkinCache;
 class FunkinAssets
 {
 	/**
-	 * Handles the caching of assets collected through `Paths` 
+	 * Handles the caching of assets collected through `Paths`
 	 */
 	public static final cache:FunkinCache = new FunkinCache();
+
+	private static var _assetListAllCache:Null<Array<String>> = null;
+	private static var _assetListTypeCache:haxe.ds.StringMap<Array<String>> = new haxe.ds.StringMap();
+
+	private static function getCachedAssetList(?type:AssetType):Array<String>
+	{
+		if (type == null)
+		{
+			if (_assetListAllCache == null) _assetListAllCache = Assets.list();
+			return _assetListAllCache;
+		}
+		final key = Std.string(type);
+		var cached = _assetListTypeCache.get(key);
+		if (cached == null)
+		{
+			cached = Assets.list(type);
+			_assetListTypeCache.set(key, cached);
+		}
+		return cached;
+	}
 	
 	/**
 	 * Safer alternative to directly using `haxe.Json.parse`
@@ -126,7 +146,7 @@ class FunkinAssets
 		// "exists" in the APK (e.g. WeekData scanning assets/data/weeks/)
 		// get a correct answer even when nothing has been extracted.
 		final prefix = StringTools.endsWith(path, '/') ? path : (path + '/');
-		return Lambda.exists(Assets.list(type), a -> StringTools.startsWith(a, prefix));
+		return Lambda.exists(getCachedAssetList(type), a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
@@ -146,7 +166,7 @@ class FunkinAssets
 		// Deduplicate so a folder with many files appears only once.
 		final seen = new haxe.ds.StringMap<Bool>();
 		final result:Array<String> = [];
-		for (a in Assets.list())
+		for (a in getCachedAssetList())
 		{
 			if (!StringTools.startsWith(a, prefix)) continue;
 			var rel = a.substring(prefix.length);
@@ -168,7 +188,7 @@ class FunkinAssets
 		#end
 		if (directory.trim().length == 0) return false;
 		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
-		return Lambda.exists(Assets.list(), a -> StringTools.startsWith(a, prefix));
+		return Lambda.exists(getCachedAssetList(), a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
