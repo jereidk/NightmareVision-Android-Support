@@ -618,7 +618,15 @@ class FreeplayState extends AmongUIState
 			else if (controlDOWN.PRESSED || FlxG.mouse.wheel < 0) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
-			
+
+			#if android
+			if (controls.BACK)
+			{
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				FlxG.switchState(MainMenuState.new);
+			}
+			#end
+
 			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
 			
 			for (c in circles)

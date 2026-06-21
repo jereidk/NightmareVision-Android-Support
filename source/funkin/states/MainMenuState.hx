@@ -502,8 +502,15 @@ class MainMenuState extends MusicBeatState
 				updateMenuSelection();
 			}
 			if (controls.ACCEPT) select();
+			#if android
+			if (controls.BACK)
+			{
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				FlxG.switchState(TitleState.new);
+			}
+			#end
 		}
-		
+
 		super.update(elapsed);
 		
 		scriptGroup.call('onUpdatePost', [elapsed]);

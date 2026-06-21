@@ -288,7 +288,15 @@ class StoryMenuState extends AmongUIState
 			if (controls.UI_DOWN_P) moveCruiser(SOUTH);
 			if (controls.UI_UP_P) moveCruiser(NORTH);
 			if (controls.ACCEPT) accept();
-			
+
+			#if android
+			if (controls.BACK)
+			{
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				FlxG.switchState(MainMenuState.new);
+			}
+			#end
+
 			if (FlxG.mouse.justPressed)
 			{
 				wasPressingCruiser = FlxG.mouse.overlaps(cruiser);

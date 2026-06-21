@@ -1925,6 +1925,13 @@ class PlayState extends MusicBeatState
 			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
 		}
 
+		#if android
+		if (startedCountdown && canPause && FlxG.android.justReleased.BACK)
+		{
+			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
+		}
+		#end
+
 		#if mobile
 		if (startedCountdown && canPause)
 		{
