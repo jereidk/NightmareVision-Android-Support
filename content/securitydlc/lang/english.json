@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*snickers*",
+		"cutscene_dontlied1": "You're not gonna get me today!",
+		"cutscene_dontlied2": "Neeerd!",
+		
+		"yellowspeaker_name": "Speaker Yellow",
+		"yellowspeaker_hint": "Get your tasks done!",
+		"yellowspeaker_desc": "Please, quit slacking!",
+		"blackspeaker_name": "Speaker Black",
+		"blackspeaker_hint": "Threat to your safety",
+		"blackspeaker_desc": "What a nightmare (only for some).",
+		"whitespeaker_name": "Speaker White",
+		"whitespeaker_hint": "Newfound confidence.",
+		"whitespeaker_desc": "He's got to stop hiding behind that.",
+		"triplespeaker_name": "Speaker Triple Trouble",
+		"triplespeaker_hint": "Unlocked by receiving a rank of A or higher on Triple Threat.",
+		"triplespeaker_desc": "You don't seem to understand.",
+		"speakermungus_name": "Speaker Mungus & Jorsawsee",
+		"speakermungus_hint": "Perfect pillow.",
+		"speakermungus_desc": "Comes with the famous basketball player!",
+		"alien_name": "Alien", //alien homimid reference
+		"alien_hint": "Invasive species.",
+		"alien_desc": "An extremely mysterious species of yellow-skinned bipeds from an unknown planet.",
+		"aquarium_name": "Aquarium", //fish in an aquarium
+		"aquarium_hint": "Rescue Service", //because the fish got saved
+		"aquarium_desc": "Breathe in the new life!",
+		"bfweird_name": "Weird BF",
+		"bfweird_hint": "DLC Exclusive",
+		"bfweird_desc": "Some UPDOG business here...", //reference to UPDOG
+		"gfweird_name": "Weird GF",
+		"gfweird_hint": "DLC Exclusive",
+		"gfweird_desc": "A new coat of paint!",
+		"birdpostor_name": "Birdpostor",
+		"birdpostor_hint": "Don't let it peck you.",
+		"birdpostor_desc": "Isn't it nice, to just go outside and feed some birds!",
+		"blake_name": "Blake",
+		"blake_hint": "Oh my god.",
+		"blake_desc": "Get this guy on a treadmill!!",
+		"bobby_name": "Bobby",
+		"bobby_hint": "He's definitely not an Impostor!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+		"bobby_desc": "Even if he was, then he wouldn't be one, cus he's not one!",
+		"chefplayable_name": "Chef",
+		"chefplayable_hint": "Unlocked by receiving a rank of A or higher on Sauces Moogus.",
+		"chefplayable_desc": "Grade A Chef.",
+		"deadnoob49_name": "Dead Noob49",
+		"deadnoob49_hint": "Just throw it out the back.",
+		"deadnoob49_desc": "Missing person, no longer missing!",
+		"detectiveplayer_name": "Detective",
+		"detectiveplayer_hint": "Unlocked by receiving a rank of A or higher on Suspect.",
+		"detectiveplayer_desc": "Getting that \"Crewmate\" to confess was a Challenge.", //reference to Crewmate Challenge (cancelled mod)
+		"evilbf_name": "EVIL BF",
+		"evilbf_hint": "How EVIL can one be?",
+		"evilbf_desc": "Holy crap! He's got a knife!.. That's it.",
+		"fatogus_name": "Fatogus",
+		"fatogus_hint": "Brruuuup.",
+		"fatogus_desc": "Excuse me...",
+		"yellow-ghost_name": "Ghost Yellow",
+		"yellow-ghost_hint": "How about you finish your tasks instead???",
+		"yellow-ghost_desc": "Why does she keep dying?!",
+		"twin_name": "Twin",
+		"twin_hint": "Best bros.",
+		"twin_desc": "Forever and ever!",
+		"tuesdayplayable_name": "Tomongus",
+		"tuesdayplayable_hint": "They made WHO playable?!",
+		"tuesdayplayable_desc": "AWWWWW",
+		"tawny_name": "Tawny",
+		"tawny_hint": "Don't get faked out.", //reference to a mod Fakeout!
+		"tawny_desc": "So much torture.", //because i drew tawny getting tortured a lot
+		"suslet_name": "Suslet", //pokemon Wiglet
+		"suslet_hint": "Oh my god oh my god.",
+		"suslet_desc": "It's a worm, but with legs, except no legs.", //doesnt mean anything
+		"sneep_name": "Sneep",
+		"sneep_hint": "You wouldn't want to know what he's done.",
+		"sneep_desc": "The only Sneep colored character!",
+		"shit_name": "Shit",
+		"shit_hint": "Unlocked by receiving a rank of F or higher on Triple Threat.",
+		"shit_desc": "He's not to trifle with.", //refence to a mod TRIFFLE
+		"rgbpet_name": "RGBPet",
+		"rgbpet_hint": "Customization? In this day and age?",
+		"rgbpet_desc": "Personalized to your character color or your healthbar color.",
+		"noob49player_name": "Noob49",
+		"noob49player_hint": "Unlocked by completing DLC Week.",
+		"noob49player_desc": "Just vote that guy out already.",
+		"looksie_name": "Looksie",
+		"looksie_hint": "Let's take a see.",
+		"looksie_desc": "I'll look a watch.", //both are gibberish
+		"longusgang_name": "Longus' Gang",
+		"longusgang_hint": "Comes in a batch.",
+		"longusgang_desc": "Did you know these 3 were dating this whole time?",
+		"littlermungus_name": "Littler Mungus",
+		"littlermungus_hint": "They're getting smaller every time.",
+		"littlermungus_desc": "It's also his birthday today!",
+		"LIMEGREENPlayable_name": "JADSPOSTOR",
+		"LIMEGREENPlayable_hint": "LIME GREEN WHAT???",
+		"LIMEGREENPlayable_desc": "JADS.",
+		"kickflip_name": "David Pummel",
+		"kickflip_hint": "Vontastic!", //reference to a person named Von
+		"kickflip_desc": "Incredible! Rad! Perfect!", //because it does kickflips
+		"gumpymando_name": "Gumpy and Yarlowmando",
+		"gumpymando_hint": "There's too many of them! Stop it!!",
+		"gumpymando_desc": "The first one is named Gumpy and the second one is Yarlowmando.",
+		"gruntus_name": "Gruntus", //grunt from madness combat
+		"gruntus_hint": "Chaos Fighting!", //madness combat
+		"gruntus_desc": "I- umm... That's close.. enough?",
+		"greypet_name": "Grey Mini Crewmate",
+		"greypet_hint": "Unlocked by receiving a rank of A or higher on 49.",
+		"greypet_desc": "Is that... a potential killer?",
+		"goldennug_name": "Golden Nug",
+		"goldennug_hint": "Holy shit.",
+		"goldennug_desc": "How could you.", //the pet costs 42000 beans
+		"tinyhenry_name": "Henry Stickmin",
+		"tinyhenry_hint": "The robber, gone in a Flash.", //reference to Flash games
+		"tinyhenry_desc": "Don't FAIL!",
+		"bfblack_name": "SUSfriend", //black impostor in a bf cap playable
+		"bfblack_hint": "That's the closest you'll get to the real thing!",
+		"bfblack_desc": "Run away.",
+		
+		// dialogue
+		"dialogue_490": "so that's the dlc!",
+		"dialogue_491": "help me help me <:(",
+		"dialogue_492": "where's my son? have you seen my son!??",
+		"dialogue_493": "he's right there",
+		"dialogue_494": "I know I'm fucking with you.",
+		"dialogue_495": "wait",
+		"dialogue_496": "YOUR BITCH SON KILLED ME",
+		"dialogue_497": "TWICE",
+		"dialogue_498": "Nonsense, he would never do such a thing!",
+		"dialogue_499": "i never did that.",
+		"dialogue_4910": "See?",
+		"dialogue_4911": " : (",
+		"dialogue_4912": "But can you Believe it? I'm getting a whole week!",
+		"dialogue_4913": "All to myself!",
+		"dialogue_4914": "yeah good luck bud.",
+		"dialogue_dontlied0": "whew!! am i glad i escaped the Black Impostor just in time.",
+		"dialogue_dontlied1": "wait..............",
+		"dialogue_dontlied2": "oh my god!",
+		"dialogue_dontlied3": "it's purple!!",
+		"dialogue_dontlied4": "I'm Purple.",
+		"dialogue_dontlied5": "i love you purple",
+		"dialogue_suspect0": "This is a massacre.", //this dialogue is unused, but might get readded in the future
+		"dialogue_suspect1": "so...",
+		"dialogue_suspect2": "you do it?",
+		"dialogue_suspect3": "What?",
+		"dialogue_suspect4": "'Course not.",
+		"dialogue_suspect5": "alright boss then who did it.",
+		"dialogue_suspect6": "I've got an idea.",
+		"dialogue_suspect7": "I think Black killed them.", //black impostor
+		"dialogue_suspect8": "but you're black", //both detective and black impostor are black among us characters
+		"dialogue_suspect9": "Hm...",
+		"dialogue_detective": "Detective",
+		"dialogue_minigrey": "Mini Grey",
+		"dialogue_noob49": "Noob49",
+		"dialogue_pico": "Pico",
+		"dialogue_purple": "Purple" //gender neutral if you can (or plural yeah)
+	}
+}

@@ -1,0 +1,12 @@
+{
+	"type": "playerSkin",
+	"price": 109,
+	
+	"title": "Bobby",
+	"node": {
+		"direction": "north",
+		"parent": "tuesdayplayable"
+	},
+	"hint": "He's definitely not an Impostor!",
+	"description": "Even if he was, then he wouldn't be one, cus he's not one!"
+}

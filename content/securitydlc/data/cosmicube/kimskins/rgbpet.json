@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 255,
+	
+	"title": "RGBPet",
+	"node": {
+		"direction": "west",
+		"parent": "sneep"
+	},
+	"hint": "Customization? In this day and age?",
+	"description": "Personalized to your character color or your healthbar color.",
+	
+	"color": [
+		255,
+		0,
+		0
+	]
+}

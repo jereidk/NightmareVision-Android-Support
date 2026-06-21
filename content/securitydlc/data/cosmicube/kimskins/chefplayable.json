@@ -1,0 +1,15 @@
+{
+	"type": "playerSkin",
+	"price": 120,
+	
+	"title": "Chef",
+	"song": "sauces-moogus",
+	"requirement": "A",
+	"hint": "Unlocked by receiving a rank of A or higher on Sauces Moogus.",
+	"description": "Grade A Chef.",
+	
+	"node": {
+		"direction": "east",
+		"parent": "root"
+	}
+}

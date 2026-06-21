@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="twin.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle instance 10000" x="0" y="312" width="144" height="150" frameX="0" frameY="-4" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10001" x="0" y="312" width="144" height="150" frameX="0" frameY="-4" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10002" x="292" y="156" width="144" height="152" frameX="0" frameY="-2" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10003" x="292" y="156" width="144" height="152" frameX="0" frameY="-2" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10004" x="0" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10005" x="0" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10006" x="146" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10007" x="146" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10008" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10009" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10010" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10011" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10012" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10013" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10014" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10015" x="146" y="312" width="144" height="150" frameX="0" frameY="-4" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10016" x="146" y="312" width="144" height="150" frameX="0" frameY="-4" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10017" x="292" y="310" width="144" height="152" frameX="0" frameY="-2" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10018" x="292" y="310" width="144" height="152" frameX="0" frameY="-2" frameWidth="144" frameHeight="154"/>
+	<SubTexture name="idle instance 10019" x="0" y="156" width="144" height="154"/>
+	<SubTexture name="idle instance 10020" x="0" y="156" width="144" height="154"/>
+	<SubTexture name="idle instance 10021" x="146" y="156" width="144" height="154"/>
+	<SubTexture name="idle instance 10022" x="146" y="156" width="144" height="154"/>
+	<SubTexture name="idle instance 10023" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10024" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10025" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10026" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10027" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10028" x="292" y="0" width="144" height="154"/>
+	<SubTexture name="idle instance 10029" x="292" y="0" width="144" height="154"/>
+</TextureAtlas>

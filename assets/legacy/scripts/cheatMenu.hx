@@ -1,4 +1,4 @@
-import flixel.ui.FlxButton;
+import flixel.addons.ui.FlxUIButton;
 
 public var dbGroup = new FlxSpriteGroup();
 
@@ -84,13 +84,40 @@ function onCreatePost()
 	var hint = new FlxText(0, 692, FlxG.width, '[ TAB / pause menu to toggle ]', 9);
 	hint.setFormat(Paths.font('vcr.ttf', false), 9, 0xFF004400, 'center');
 	dbGroup.add(hint);
+
 }
 
+var warping:Bool = false;
 function onUpdate()
 {
 	if (ClientPrefs.inDevMode || PlayState.chartingMode)
 	{
-		if (FlxG.keys.pressed.THREE) playbackRate = 2;
-		if (FlxG.keys.released.THREE) playbackRate = 1;
+		if (FlxG.keys.pressed.THREE)
+		{
+			playbackRate = (FlxG.keys.pressed.SHIFT ? .5 : 2);
+			warping = true;
+		}
+		else if (warping)
+		{
+			playbackRate = 1;
+			warping = false;
+		}
+	}
+}
+
+function recalculateMiddlescroll():Void
+{
+	for (playField in playFields)
+	{
+		if (playField.isPlayer)
+		{
+			modManager.setValue('opponentSwap', ClientPrefs.middleScroll ? .5 : 0, playField.ID);
+			
+			continue;
+		}
+		
+		playField.visible = !ClientPrefs.middleScroll;
+		
+		modManager.setValue('alpha', ClientPrefs.middleScroll ? 1 : 0, playField.ID);
 	}
 }

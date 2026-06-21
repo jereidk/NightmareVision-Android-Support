@@ -1,0 +1,19 @@
+{
+	"type": "pet",
+	"price": 42000,
+	
+	"title": "Golden Nug",
+
+	"node": {
+		"direction": "north",
+		"parent": "birdpostor"
+	},
+	"hint": "Holy shit.",
+	"description": "How could you.",
+	
+	"color": [
+		255,
+		241,
+		0
+	]
+}

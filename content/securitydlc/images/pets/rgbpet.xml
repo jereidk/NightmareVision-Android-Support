@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="rgbpet.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle instance 10000" x="127" y="141" width="127" height="135" frameX="0" frameY="-4" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10001" x="127" y="141" width="127" height="135" frameX="0" frameY="-4" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10002" x="127" y="278" width="126" height="136" frameX="0" frameY="-3" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10003" x="127" y="278" width="126" height="136" frameX="0" frameY="-3" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10004" x="0" y="141" width="125" height="138" frameX="0" frameY="-1" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10005" x="0" y="141" width="125" height="138" frameX="0" frameY="-1" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10006" x="0" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10007" x="0" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10008" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10009" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10010" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10011" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10012" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10013" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+	<SubTexture name="idle instance 10014" x="127" y="0" width="125" height="139" frameX="0" frameY="0" frameWidth="127" frameHeight="139"/>
+</TextureAtlas>

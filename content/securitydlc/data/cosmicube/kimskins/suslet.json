@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 160,
+	
+	"title": "Suslet",
+	"node": {
+		"direction": "north",
+		"parent": "rgbpet"
+	},
+	"hint": "Oh my god oh my god.",
+	"description": "It's a worm, but with legs, except no legs.",
+	
+	"color": [
+		111,
+		218,
+		254
+	]
+}

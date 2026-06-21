@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 51,
+	
+	"title": "Alien",
+	"node": {
+		"direction": "south",
+		"parent": "gruntus"
+	},
+	"hint": "Invasive species.",
+	"description": "An extremely mysterious species of yellow-skinned bipeds from an unknown planet.",
+	
+	"color": [
+		255,
+		212,
+		82
+	]
+}

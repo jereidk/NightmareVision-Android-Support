@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 199,
+	
+	"title": "SUSfriend",
+	"hint": "That's the closest you'll get to the real thing!",
+	"description": "Run away.",
+	
+	"node": {
+		"direction": "south",
+		"parent": "LIMEGREENPlayable"
+	}
+}

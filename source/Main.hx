@@ -18,7 +18,7 @@ class Main extends Sprite
 	public static final PSYCH_VERSION:String = '0.5.2h';
 	public static final NMV_VERSION:String = '1.0';
 	public static final FUNKIN_VERSION:String = '0.2.7';
-	public static final LEGACY_VERSION:String = 'v' + NMV_VERSION;
+	public static final LEGACY_VERSION:String = '1.1.1b';
 	
 	public static final startMeta =
 		{
@@ -82,6 +82,24 @@ class Main extends Sprite
 		FlxG.signals.gameResized.add(onResize);
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}
+		#end
+
+		#if sys
+		FlxG.stage.window.onClose.add(function() {
+			@:privateAccess MusicBeatState.addPlayTimeDelta();
+			ClientPrefs.flush();
+			Sys.println('saved data');
+			funkin.Mods.writeModList();
+			Sys.println('saved mods');
+
+			#if hxvlc
+			hxvlc.util.Handle.dispose(); // this is jsut from base game ok
+			#end
+
+			Sys.println('GOOD BYE CRUEL WORLD');
+
+			Sys.exit(0);
+		});
 		#end
 	}
 	

@@ -1,0 +1,100 @@
+{
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				7,
+				174
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "idle",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				11,
+				174
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "left",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				3,
+				173
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				5,
+				174
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "up",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				2,
+				174
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "right",
+			"indices": []
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWNmiss",
+			"flipX": false,
+			"indices": [],
+			"name": "dmiss"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/bfblack",
+	"position": [
+		-180,
+		290
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bfblack",
+	"gameover_character": "genericDeath",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13947844,
+	"camera_position": [
+		10,
+		-43
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [0, 80],
+		"backlit": true,
+		"finaleHealthBarColor": ["0xFF2B2C3C", "0xFF1A182E", "0xFF485E84"]
+	}
+}

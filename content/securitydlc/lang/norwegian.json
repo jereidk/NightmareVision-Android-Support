@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*fniser*",
+		"cutscene_dontlied1": "Du tar ikke meg i dag!",
+		"cutscene_dontlied2": "Neeerd!",
+		
+		"yellowspeaker_name": "Høytaler Gul",
+        "yellowspeaker_hint": "Gjør ferdig dine oppdrag!",
+        "yellowspeaker_desc": "Vær så snill, slutt å være så lat!",
+        "blackspeaker_name": "Høytaler Svart",
+        "blackspeaker_hint": "En trussel til din trygghet",
+        "blackspeaker_desc": "For en mareritt (for noen).",
+        "whitespeaker_name": "Høytaler Hvit",
+        "whitespeaker_hint": "Nyfunnet selvtillit.",
+        "whitespeaker_desc": "Han må virkelig slutte å gjømme bak den der.",
+        "triplespeaker_name": "Høytaler Triple Trouble",
+        "triplespeaker_hint": "HøytalerLåses opp ved å få en karakter av A eller høyere på Triple Threat.",
+        "triplespeaker_desc": "Det ser ikke ut som at du helt skjønner.",
+        "speakermungus_name": "Høytaler Mungus & Jorsawsee",
+        "speakermungus_hint": "Perfekt pute.",
+        "speakermungus_desc": "Inkluderer den populære basketball spilleren!",
+        "alien_name": "Romvesen", //alien homimid reference
+        "alien_hint": "Invanderende arter.",
+        "alien_desc": "Et ekstremt mystisk art av tobeinte gul-hudet skapninger fra en ukjent planet.",
+        "aquarium_name": "Akvarium", //fish in an aquarium
+        "aquarium_hint": "Redningstjeneste", //because the fish got saved
+        "aquarium_desc": "Pust inn det nye livet!",
+        "bfweird_name": "Rar BF",
+        "bfweird_hint": "DLC Ekslusiv",
+        "bfweird_desc": "Noe UPDOG business foregår her...", //reference to UPDOG
+        "gfweird_name": "Weird GF",
+        "gfweird_hint": "DLC Ekslusiv",
+        "gfweird_desc": "Et nytt lakk med maling!",
+        "birdpostor_name": "Birdpostor",
+        "birdpostor_hint": "Ikke la den hakke deg.",
+        "birdpostor_desc": "Er det ikke fint å bare gå ut og mate noen fugler!",
+        "blake_name": "Blake",
+        "blake_hint": "Å herre gud.",
+        "blake_desc": "Få denne fyren på en tredemølle!!",
+        "bobby_name": "Bobby",
+        "bobby_hint": "Han er garantert ikke en Impostor!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+        "bobby_desc": "Uansett om at han var en, så ville ikke han vært en, fordi han ikke er en!",
+        "chefplayable_name": "Kokk",
+        "chefplayable_hint": "Låses opp ved å få en karakter av A eller høyere på Sauces Moogus.",
+        "chefplayable_desc": "Førsteklasses Kokk.",
+        "deadnoob49_name": "Død Noob49",
+        "deadnoob49_hint": "Bare kast den ut på baksiden.",
+        "deadnoob49_desc": "Savnet person, ikke savnet lenger!",
+        "detectiveplayer_name": "Detektiv",
+        "detectiveplayer_hint": "Låses opp ved å få en karakter av A eller høyere på Suspect.",
+        "detectiveplayer_desc": "Å få den \"Crewmaten\" til å innrømme det var en utfordring.", //reference to Crewmate Challenge (cancelled mod)
+        "evilbf_name": "ONDSKAPSFULL BF",
+        "evilbf_hint": "Hvos ONDSKAPSFULL kan noen være?",
+        "evilbf_desc": "Holy crap! Han har en kniv!.. Det er alt.",
+        "fatogus_name": "Fatogus",
+        "fatogus_hint": "Brruuuup.",
+        "fatogus_desc": "Unnskyld...",
+        "yellow-ghost_name": "Spøkelse Gul",
+        "yellow-ghost_hint": "Hva hvis du blir ferdig med dine oppdrag istedenfor???",
+        "yellow-ghost_desc": "Hvorfor dør hun hele tiden?!",
+        "twin_name": "Tvilling",
+        "twin_hint": "Best bros.",
+        "twin_desc": "For alltid og alltid!",
+        "tuesdayplayable_name": "Tomongus",
+        "tuesdayplayable_hint": "De gjor HVEM spillbar?!",
+        "tuesdayplayable_desc": "ÅÅÅÅÅÅ",
+        "tawny_name": "Tawny",
+        "tawny_hint": "Ikke bli lurt.", //reference to a mod Fakeout!
+        "tawny_desc": "Så mye tortur.", //because i drew tawny getting tortured a lot
+        "suslet_name": "Suslet", //pokemon Wiglet
+        "suslet_hint": "Å herre gud å herre gud.",
+        "suslet_desc": "Det er en orm, med bein, men uten bein.", //doesnt mean anything
+        "sneep_name": "Sneep",
+        "sneep_hint": "Du vil ikke vite hva han har gjort.",
+        "sneep_desc": "Den eneste Sneep farget karakteren!",
+        "shit_name": "Shit",
+        "shit_hint": "Låses opp ved å få en karakter av F eller høyere på Triple Threat.",
+        "shit_desc": "Han skal ikke bli undervurdert.", //refence to a mod TRIFFLE, changed to "underestimated" as theres no real translation for trifle
+        "rgbpet_name": "RGBKamerat",
+        "rgbpet_hint": "Tilpasning? På denne tiden?",
+        "rgbpet_desc": "Personlig tilpasset til din karakter farge eller healthbar farge.",
+        "noob49player_name": "Noob49",
+        "noob49player_hint": "Låses opp ved å spille ferdig DLC Uken.",
+        "noob49player_desc": "Bare stem den karen ut allerede.",
+        "looksie_name": "Looksie",
+        "looksie_hint": "La oss ta en titt.",
+        "looksie_desc": "Jeg kan titte på klokka.", //both are gibberish
+        "longusgang_name": "Longus' Gang",
+        "longusgang_hint": "Kommer som en gruppe.",
+        "longusgang_desc": "Visse du at disse 3 har vært sammen hele tiden?",
+        "littlermungus_name": "Enda Mindre Mungus",
+        "littlermungus_hint": "De blir bare mindre hele tiden.",
+        "littlermungus_desc": "Det er også bursdagen hans i dag!",
+        "LIMEGREENPlayable_name": "JADSPOSTOR",
+        "LIMEGREENPlayable_hint": "LIME GRØNN HVA???",
+        "LIMEGREENPlayable_desc": "JADS.",
+        "kickflip_name": "David Pummel",
+        "kickflip_hint": "Vontastic!", //reference to a person named Von
+        "kickflip_desc": "Utrolig! Rad! Perfekt!", //because it does kickflips
+        "gumpymando_name": "Gumpy & Yarlowmando",
+        "gumpymando_hint": "Det er for mange av dem! Stopp!!",
+        "gumpymando_desc": "Den første heter Gumpy og den andre er Yarlowmando.",
+        "gruntus_name": "Gruntus", //grunt from madness combat
+        "gruntus_hint": "Kaotisk Slåssing!", //madness combat
+        "gruntus_desc": "Jeg- umm... Det er nerme.. nokk?",
+        "greypet_name": "Grå Mini Crewmate",
+        "greypet_hint": "Låses opp ved å få en karakter av A eller høyere på 49.",
+        "greypet_desc": "Er det der... en potensiell morder?",
+        "goldennug_name": "Gylden Nug",
+        "goldennug_hint": "Holy shit.",
+        "goldennug_desc": "Hvordan.", //the pet costs 42000 beans
+        "tinyhenry_name": "Henry Stickmin",
+        "tinyhenry_hint": "Røveren, borte i en Flash.", //reference to Flash games
+        "tinyhenry_desc": "Ikke FAIL!",
+        "bfblack_name": "SUSfriend", //black impostor in a bf cap playable
+        "bfblack_hint": "Det er det nærmeste du får til den ekte tingen!",
+        "bfblack_desc": "Løp.",
+
+        //dialogue
+        "dialogue_490": "så det var dlc'en!",
+        "dialogue_491": "hjelp meg hjelp meg <:(",
+        "dialogue_492": "hvor er sønnen min? har du sett sønnen min!??",
+        "dialogue_493": "han er rett der",
+        "dialogue_494": "jeg vet jeg bare tuller med deg.",
+        "dialogue_495": "vent",
+        "dialogue_496": "DIN BITCH SØNN DREPTE MEG",
+        "dialogue_497": "TO GANGER",
+        "dialogue_498": "For noe tull, han ville aldri gjort noe sånt!",
+        "dialogue_499": "jeg gjor aldri det.",
+        "dialogue_4910": "Ser du?",
+        "dialogue_4911": " : (",
+        "dialogue_4912": "Men kan du tro det? Jeg får min helt egen uke!",
+        "dialogue_4913": "Helt for megselv!",
+        "dialogue_4914": "yeah lykke til kompis.",
+        "dialogue_dontlied0": "whew!! jeg er glad at e klarte å rømme unda den Svarte Impostoren akkuratt i tide.",
+        "dialogue_dontlied1": "vent..............",
+        "dialogue_dontlied2": "Å herre gud!",
+        "dialogue_dontlied3": "det er lilla!!",
+        "dialogue_dontlied4": "Jeg er Lilla.",
+        "dialogue_dontlied5": "jeg elsker deg lilla",
+        "dialogue_suspect0": "Ditt er en massakre.", //this dialogue is unused, but might get readded in the future
+        "dialogue_suspect1": "så...",
+        "dialogue_suspect2": "gjor du det?",
+        "dialogue_suspect3": "Hva?",
+        "dialogue_suspect4": "Selvfølgelig ikket.",
+        "dialogue_suspect5": "okay sjef men hvem gjor det.",
+        "dialogue_suspect6": "Jeg har en teori.",
+        "dialogue_suspect7": "Jeg tror Svart drepte de.", //black impostor
+        "dialogue_suspect8": "men du er svart", //both detective and black impostor are black among us characters
+        "dialogue_suspect9": "Hm...",
+        "dialogue_detective": "Dektektiv",
+        "dialogue_minigrey": "Mini Grå",
+        "dialogue_noob49": "Noob49",
+        "dialogue_pico": "Pico",
+        "dialogue_purple": "Lilla" //gender neutral if you can (or plural yeah)
+	}
+}

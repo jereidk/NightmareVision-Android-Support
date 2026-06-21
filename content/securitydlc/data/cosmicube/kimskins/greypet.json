@@ -1,0 +1,20 @@
+{
+	"type": "pet",
+	"price": 100,
+	
+	"title": "Grey Mini Crewmate",
+	"node": {
+		"direction": "north",
+		"parent": "noob49player"
+	},
+	"hint": "Unlocked by receiving a rank of A or higher on 49.",
+	"description": "Is that... a potential killer?",
+	"song": "49",
+	"requirement": "A",
+
+	"color": [
+		89,
+		88,
+		122
+	]
+}

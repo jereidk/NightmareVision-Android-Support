@@ -1,0 +1,17 @@
+{
+    "name": "dialogue_purple",
+    "side": 0,
+    "asset": "purple",
+    "boxColor": "0xFFA82BC7",
+    "boxShadeColor": "0xFF500F8F", 
+    "icon": "purple",
+    "sound": "porpol",
+    "animations": [
+        {
+        "anim": "purple",
+        "name": "purple purple",
+        "loop": false,
+        "offsets": [0,0]
+        }
+    ]
+}

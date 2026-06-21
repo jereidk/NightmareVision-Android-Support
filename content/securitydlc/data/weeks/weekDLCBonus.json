@@ -1,0 +1,16 @@
+{
+	"songs": [
+		["Trot Away", "horsemate", [128, 109, 21], "horsemate", "DeepFriedBolognese, Kakow0", [], 150, false],
+		["Triple Threat", "tt2", [255, 0, 0], "triplethreat", "seotoo", ["49", "don't-lied", "suspect", "trot-away"], 0, true]
+	],
+	
+	"section": "dlc",
+	
+	"storyName": "",
+	"weekName": "DLC Week (Bonus)",
+	
+	"startUnlocked": false,
+	"hideStoryMode": true,
+	"hideFreeplay": false,
+	"currency": "pentacle"
+}

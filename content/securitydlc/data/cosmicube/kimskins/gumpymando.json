@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 150,
+	
+	"title": "Gumpy and Yarlowmando",
+	"node": {
+		"direction": "south",
+		"parent": "alien"
+	},
+	"hint": "There's too many of them! Stop it!!",
+	"description": "The first one is named Gumpy and the second one is Yarlowmando.",
+	
+	"color": [
+		255,
+		212,
+		82
+	]
+}

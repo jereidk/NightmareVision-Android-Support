@@ -1,0 +1,15 @@
+{
+	"type": "playerSkin",
+	"price": 100,
+	
+	"title": "Shit",
+	"hint": "Unlocked by receiving a rank of F or higher on Triple Threat.",
+	"description": "He's not to trifle with.",
+	"song": "triple-threat",
+	"requirement": "F",
+	
+	"node": {
+		"direction": "north",
+		"parent": "greypet"
+	}
+}

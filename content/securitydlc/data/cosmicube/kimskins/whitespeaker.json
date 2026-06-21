@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 300,
+	
+	"title": "Speaker White",
+	"hint": "Newfound confidence.",
+	"description": "He's got to stop hiding behind that.",
+	
+	"node": {
+		"direction": "south",
+		"parent": "yellowspeaker"
+	}
+}

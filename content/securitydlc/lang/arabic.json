@@ -1,0 +1,168 @@
+{
+    "translation_credits": "GamerZone & Ilyas & AsserelrefaeyYT",
+    "special": [
+        "smallerDialogue",
+        "rightToLeft"
+    ],
+    "font_replacement": {
+        "vcr.ttf": "ar.ttf",
+        "liber.ttf": "ar.ttf",
+        "liberbold.ttf": "arBold.ttf",
+        "AmaticSC-Bold.ttf": "ar.ttf"
+    },
+    "lang": {
+        "cutscene_dontlied0": "*ﻞﻬﺻ*",
+		"cutscene_dontlied1": "!مﻮﻴﻟﺍ ﻲﺑ كﺎﺴﻣﻹﺍ ﻦﻣ ﻦﻜﻤﺘﺗ ﻦﻟ",
+		"cutscene_dontlied2": "!ﻪﻠﺑﺃ",
+
+        "yellowspeaker_name": "ﺔﻋﺎﻤﺴﻟﺍ ﻰﻠﻋ ءاﺮﻔﺼﻟﺍ",
+        "yellowspeaker_hint": "!ﻚﺗﺎﻤﻬﻣ ﻲﻬﻧﺃ",
+        "yellowspeaker_desc": "!ﺖﻗﻮﻟﺍ ﻊﻴﻴﻀﺗ ﻦﻋ ﻒﻗﻮﺗ",
+        "blackspeaker_name": "ﺔﻋﺎﻤﺴﻟﺍ ﻰﻠﻋ دﻮﺳﻷﺍ",
+        "blackspeaker_hint": "ﻚﺘﻣﻼﺴﻟ ﺪﻳﺪﻬﺗ",
+        "blackspeaker_desc": ".(ﺾﻌﺒﻠﻟ ﻂﻘﻓ) سﻮﺑﺎﻛ ﻦﻣ ﻪﻟ ﺎﻳ",
+        "whitespeaker_name": "ﺔﻋﺎﻤﺴﻟﺍ ﻰﻠﻋ ﺾﻴﺑﻷﺍ",
+        "whitespeaker_hint": ".ﻪﺘﻘﺛ ﻞﻣﺎﻛ ﻲﻓ",
+        "whitespeaker_desc": ".ﺎﻬﻔﻠﺧ ءﺎﺒﺘﺧﻹﺍ ﻦﻋ ﻒﻗﻮﺘﻟﺍ ﻪﻴﻠﻋ",
+        "triplespeaker_name": "ﺔﻋﺎﻤﺴﻟﺍ ﻰﻠﻋ ﻲﺛﻼﺜﻟﺍ",
+        "triplespeaker_hint": ".ﻰﻠﻋﺃ وﺃ A ﺔﺒﺗﺮﺑ \"ﺖﻳﺮﺛ ﻞﺒﻳﺮﺗ\" ﺔﻴﻨﻏﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "triplespeaker_desc": ".ﺮﻣﻷﺍ ﻢﻬﻔﺗ ﻚﻧﺃ وﺪﺒﻳ ﻻ",
+        "speakermungus_name": "سﺎﻐﻧﺎﻣ ﺔﻋﺎﻤﺳ ﻰﻠﻋ ﻲﺳﻭﺎﺳﺭﻮﺟ",
+        "speakermungus_hint": ".ﺔﺤﻳﺮﻣ ةﺩﺎﺳﻭ",
+        "speakermungus_desc": "!فﺮﺘﺤﻤﻟﺍ ﺔﻠﺴﻟﺍ ةﺮﻛ ﺐﻋﻻ ﻊﻣ ﻲﺗﺄﻳ",
+        "alien_name": "ﻲﺋﺎﻀﻔﻟﺍ ﻦﺋﺎﻛ", //alien homimid reference
+        "alien_hint": ".ﺐﻛﺍﻮﻜﻟﺍ وﺰﻐﺗ تﺎﻨﺋﺎﻛ",
+        "alien_desc": ".لﻮﻬﺠﻣ ﺐﻛﻮﻛ ﻦﻣ ﺮﻔﺻﻷﺍ ﺪﻠﺠﻟﺍ تﺍﺫ ﻞﺟﺭﻷﺍ ﺔﻴﺋﺎﻨﺛ تﺎﻨﺋﺎﻜﻟﺍ ﻦﻣ ﺔﻳﺎﻐﻠﻟ ﺾﻣﺎﻏ عﻮﻧ",
+        "aquarium_name": "ﻚﻤﺴﻟﺍ ضﻮﺣ", //fish in an aquarium
+        "aquarium_hint": ".ةﺪﺠﻨﻟﺍ ﺖﺋﺎﺟ", //because the fish got saved
+        "aquarium_desc": "!نﻮﻜﻟﺍ ﻲﻓ ﺎﻣ ﺮﻐﺻﺃ ﺖﻨﻛ ﻮﻟ ...ﻖﻳﺮﻄﻟﺍ ﻲﻓ ﺎﻧﺃ",
+        "bfweird_name": "ﺐﻳﺮﻐﻟﺍ ﺪﻨﻳﺮﻔﻳﻮﺑ",
+        "bfweird_hint": "DLCلﺍ ﻲﻓ ﻂﻘﻓ",
+        "bfweird_desc": "...ﺎﻨﻫ ثﺪﺤﻳ اﺫﺎﻣ", //reference to UPDOG
+        "gfweird_name": "ﺔﺒﻳﺮﻐﻟﺍ ﺪﻨﻳﺮﻔﻟﺮﻴﺟ",
+        "gfweird_hint": "DLCلﺍ ﻲﻓ ﻂﻘﻓ",
+        "gfweird_desc": "!ةﺪﻳﺪﺟ نﺍﻮﻟﺄﺑ",
+        "birdpostor_name": "ﺮﺘﺳﻮﺒﻣﻹﺍ ﺮﺋﺎﻄﻟﺍ",
+        "birdpostor_hint": ".ﻚﺳﺃﺭ ﻰﻠﻋ ﺮﻘﻨﺗ ﺎﻬﻋﺪﺗ ﻻ",
+        "birdpostor_desc": "؟رﻮﻴﻄﻟﺍ مﺎﻌﻃﺇ ﺐﺤﺗ ﻻﺃ",
+        "blake_name": "ﻚﻴﻠﺑ",
+        "blake_hint": ".ﻲﻬﻟﺇ ﺎﻳ",
+        "blake_desc": "!!ﻼﻴﻠﻗ نﺮﻤﺘﻳ نﺄﺑ هﺮﺒﺧﺃ",
+        "bobby_name": "ﻲﺑﻮﺑ",
+        "bobby_hint": "!ﺮﺘﺳﻮﺒﻣﻹﺍ ﺲﻴﻟ ﺎﻌﺒﻃ ﻮﻫ", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+        "bobby_desc": "!ﺮﺘﺳﻮﺒﻣﻹﺍ ﺲﻴﻟ ﻮﻬﻓ ،ﺮﺘﺳﻮﺒﻣﻹﺍ نﺎﻛ اﺫﺇ ﻰﺘﺣﻭ",
+        "chefplayable_name": "خﺎﺒﻄﻟﺍ",
+        "chefplayable_hint": ".ﻰﻠﻋﺃ وﺃ A ﺔﺒﺗﺮﺑ \"سﺎﺟﻮﻣ ﺲﻴﺳﻮﺳ\" ﺔﻴﻨﻏﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "chefplayable_desc": ".خﺎﺒﻄﻟﺍ ﻢﻴﻗ",
+        "deadnoob49_name": "ﺖﻴﻤﻟﺍ 49 بﻭﻮﻧ",
+        "deadnoob49_hint": "؟ﺎﻨﻫ ﻞﻌﻔﻳ اﺫﺎﻣ",
+        "deadnoob49_desc": "!اﺩﻮﻘﻔﻣ ﺪﻌﻳ ﻢﻟ ﻦﻜﻟﻭ ،اﺩﻮﻘﻔﻣ نﺎﻛ",
+        "detectiveplayer_name": "ﻖﻘﺤﻤﻟﺍ",
+        "detectiveplayer_hint": ".ﻰﻠﻋﺃ وﺃ A ﺔﺒﺗﺮﺑ \"ﺖﻜﻴﺒﺳﺎﺳ\" ﺔﻴﻨﻏﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "detectiveplayer_desc": ".فﺮﺘﻌﻳ \"ءيﺮﺒﻟﺍ\" اﺬﻫ ﻞﻌﺠﻧ نﺃ ﺐﻌﺼﻟﺍ ﻦﻣ نﺎﻛ", //reference to Crewmate Challenge (cancelled mod)
+        "evilbf_name": "ﺮﻳﺮﺸﻟﺍ ﺪﻨﻳﺮﻔﻳﻮﺑ",
+        "evilbf_hint": "؟ﺺﺨﺸﻟﺍ اﺬﻫ ﺮﺷ رﺍﺪﻘﻣ ﺎﻣ",
+        "evilbf_desc": ".ءﻲﺷ ﻞﻛ اﺬﻫ ..!ﻦﻴﻜﺳ هﺪﻨﻋ !ﻲﻬﻟﺇ ﺎﻳ",
+        "fatogus_name": "ﻦﻴﻤﺴﻟﺍ ﺮﻴﻐﺼﻟﺍ",
+        "fatogus_hint": ".اﻮﻔﻋ",
+        "fatogus_desc": "...ﻲﻧﺭﺬﻋﺇ",
+        "yellow-ghost_name": "ﺢﺒﺸﻟﺍ ءاﺮﻔﺼﻟﺍ",
+        "yellow-ghost_hint": "???ﻚﻣﺎﻬﻣ ﻦﻴﻬﻨﺗ ﻻ ﺎﻤﻟ",
+        "yellow-ghost_desc": "!?تﻮﻤﻟﺍ ﻲﻓ ﺮﻤﺘﺴﺗ اﺫﺎﻤﻟ",
+        "twin_name": "ﻢﺋﻮﺘﻟﺍ",
+        "twin_hint": ".نﺍﻮﺧﺃ ﻞﻀﻓﺃ",
+        "twin_desc": "!ﺎﻌﻣ ﺪﺑﻸﻟ",
+        "tuesdayplayable_name": "سﻮﺠﻧﻮﻣﻮﺗ",
+        "tuesdayplayable_hint": "!؟ﺔﺣﺎﺘﻤﻟﺍ تﺎﻴﺼﺨﺸﻟﺍ ﻦﻣ ﺢﺒﺻﺃ ﻦﻣ",
+        "tuesdayplayable_desc": "ﻒﻳﺮﻇ ﻦﻣ ﻪﻟﺎﻳ",
+        "tawny_name": "ﻲﻧﻭﺎﺗ",
+        "tawny_hint": ".عﺪﺨﻨﺗ ﻻ", //reference to a mod Fakeout!
+        "tawny_desc": ".بﺍﺬﻌﻟﺍ ﻦﻣ ﺮﻴﺜﻛ", //because i drew tawny getting tortured a lot
+        "suslet_name": "ﺖﻴﻠﺳﺎﺳ", //pokemon Wiglet
+        "suslet_hint": ".لﻮﻬﻠﻟ ﺎﻳ لﻮﻬﻠﻟ ﺎﻳ",
+        "suslet_desc": ".ﻞﺟﺭﺃ ﻼﺑ ﻦﻜﻟ ،ﻞﺟﺭﺃ ﺎﻫﺪﻨﻋ ،ةﺩﻭﺩ", //doesnt mean anything
+        "sneep_name": "ﺐﻴﻴﻨﺳ",
+        "sneep_hint": ".ﻞﻌﻓ ﺎﻣ ﻢﻠﻌﺗ نﺃ ﺪﻳﺮﺗ ﻻ",
+        "sneep_desc": ".ﺪﺟﻮﻳ نﻮﻠﻟﺍ اﺬﻫ نﺃ ﻢﻠﻋﺃ ﻦﻛﺃ ﻢﻟ",
+        "shit_name": "ﺖﻴﺷ",
+        "shit_hint": ".ﻰﻠﻋﺃ وﺃ F ﺔﺒﺗﺮﺑ \"ﺖﻳﺮﺛ ﻞﺒﻳﺮﺗ\" ﺔﻴﻨﻏﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "shit_desc": ".ﻪﺑ ﻒﺨﺘﺴﺗ ﻻ", //refence to a mod TRIFFLE
+        "rgbpet_name": "نﻮﻠﻤﻟﺍ ﻖﻓﺍﺮﻤﻟﺍ",
+        "rgbpet_hint": "؟نﺎﻣﺰﻟﺍﻭ ﺖﻗﻮﻟﺍ اﺬﻫ ﻲﻓ ؟نﻮﻠﻟﺍ رﺎﻴﺘﺧﺇ ﺔﻳﺮﺣ",
+        "rgbpet_desc": ".ﻚﺘﻴﺼﺨﺷ نﻮﻟ ﺐﺴﺣ ﺮﻴﻐﺘﻳ",
+        "noob49player_name": "49 بﻭﻮﻧ",
+        "noob49player_hint": ".\"ﺲﻠﻳﺇ ﺮﻳﻮﻣﺎﺳ\" عﻮﺒﺳﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "noob49player_desc": ".ﺺﺨﺸﻟﺍ ﻚﻟﺫ ﻰﻠﻋ ﻮﺗﻮﺻ",
+        "looksie_name": "ﻲﺴﻛﻮﻟ",
+        "looksie_hint": ".ةﺮﻈﻧ ﻲﻠﻘﻠﻨﻟ",
+        "looksie_desc": ".ﻲﺴﻔﻨﺑ ىﺭﺃ فﻮﺳ", //both are gibberish
+        "longusgang_name": "ﺲﺠﻧﻮﻟ ﺔﻠﺷ",
+        "longusgang_hint": ".ﺔﻋﻮﻤﺠﻣ ﻲﻓ نﻮﺗﺄﻳ",
+        "longusgang_desc": "؟ﺖﻗﻮﻟﺍ اﺬﻫ لﺍﻮﻃ ﺎﻌﻣ اﻮﻧﺎﻛ ﺔﺛﻼﺜﻟﺍ ءﻻﺆﻫ نﺃ ﻢﻠﻌﺗ ﻞﻫ",
+        "littlermungus_name": "ﺮﻐﺻﻷﺍ سﺎﺠﻧﺎﻣ",
+        "littlermungus_hint": ".ةﺮﻣ ﻞﻛ ﻊﻣ نﻭﺮﻐﺼﻳ",
+        "littlermungus_desc": "!ﺎﻀﻳﺃ هﺩﻼﻴﻣ مﻮﻳ ﻪﻧﺇ",
+        "LIMEGREENPlayable_name": "ﺮﺘﺳﻮﺑﺩﺎﺟ",
+        "LIMEGREENPlayable_hint": "؟؟؟اﺫﺎﻣ ﻲﻧﻮﻤﻴﻟ ﺮﻀﺧﺃ",
+        "LIMEGREENPlayable_desc": ".سﺩﺎﺟ",
+        "kickflip_name": "ﻞﻣﺎﺑ ﺪﻴﻔﻳﺩ",
+        "kickflip_hint": "!ﻲﻟﺎﻴﺧ", //reference to a person named Von
+        "kickflip_desc": "!ﻲﻟﺎﺜﻣ !ﻞﻫﺬﻣ !ﻊﺋﺍﺭ", //because it does kickflips
+        "gumpymando_name": "وﺪﻧﺎﻣﻮﻟﺭﺎﻳﻭ ﻲﺒﻣﺎﺟ",
+        "gumpymando_hint": "!!ﻚﻟﺫ ﻦﻋ اﻮﻔﻗﻮﺗ !اﺪﺟ ﺮﻴﺒﻛ ﻢﻫﺩﺪﻋ",
+        "gumpymando_desc": ".\"وﺪﻧﺎﻣﻮﻟﺭﺎﻳ\" ﻰﻋﺪﻳ ﻲﻧﺎﺜﻟﺍﻭ \"ﻲﺒﻣﺎﺟ\" ﻰﻋﺪﻳ لﻭﻷﺍ",
+        "gruntus_name": "سﺎﺘﻧﺍﺮﺟ", //grunt from madness combat
+        "gruntus_hint": "!ﺔﻳﻮﺿﻮﻓ ﺔﻛﺮﻌﻣ", //madness combat
+        "gruntus_desc": "؟ﺔﻳﺎﻔﻛ ﺐﻳﺮﻗ اﺬﻫ ﻞﻫ",
+        "greypet_name": "يﺩﺎﻣﺮﻟﺍ ﺮﻴﻐﺼﻟﺍ ءﺎﻀﻔﻟﺍ ﻞﺟﺭ",
+        "greypet_hint": ".ﻰﻠﻋﺃ وﺃ A ﺔﺒﺗﺮﺑ \"49\" ﺔﻴﻨﻏﺃ ﺔﻤﻳﺰﻫ ﺪﻌﺑ ﺢﺘﻔﻳ",
+        "greypet_desc": "؟ﻞﺗﺎﻗ ﺮﻴﻐﺼﻟﺍ اﺬﻫ نﺃ ﻞﻤﺘﺤﻳ ﻞﻫ",
+        "goldennug_name": "ﺔﻴﺒﻫﺬﻟﺍ جﺎﺟﺪﻟﺍ ﺔﻌﻄﻗ",
+        "goldennug_hint": ".لﻮﻫﺬﻣ ﺎﻧﺃ",
+        "goldennug_desc": "؟ﺎﻬﺋﺍﺮﺷ ﻚﻨﻜﻤﻳ ﻒﻴﻛ", //the pet costs 42000 beans
+        "tinyhenry_name": "ﻦﻤﻜﻴﺘﺳ يﺮﻨﻴﻫ",
+        "tinyhenry_hint": ".ﺮﺼﺒﻟﺍ ﺢﻤﻟ ﻲﻓ ﻰﻔﺘﺧﺇ ﺺﻟ", //reference to Flash games
+        "tinyhenry_desc": "!ﺮﺴﺨﺗ ﻻ",
+        "bfblack_name": "ﺪﻨﻳﺮﻔﺳﺎﺳ", //black impostor in a bf cap playable
+        "bfblack_hint": "!ﺔﻴﻘﻴﻘﺤﻟﺍ ﺔﺨﺴﻨﻠﻟ ءﻲﺷ بﺮﻗﺃ",
+        "bfblack_desc": ".بﺮﻫﺃ",
+        
+        //dialogue
+        "dialogue_490": "!DLCلﺍ ﻮﻫ اﺬﻫ اﺫﺇ",
+        "dialogue_491": "(:< ﻲﻧﺪﻋﺎﺳ ﻲﻧﺪﻋﺎﺳ",
+        "dialogue_492": "؟؟!ﻲﻨﺑﺇ ﺖﻔﺷ ؟ﻲﻨﺑﺇ ﻦﻳﺃ",
+        "dialogue_493": "كﺎﻨﻫ ﺎﻴﻓﺮﺣ ﻪﻧﺇ",
+        "dialogue_494": ".كﺎﻌﻣ فﺮﺨﺑ ﺎﻧﺃ اﻮﻳﺃ",
+        "dialogue_495": "ةﺪﺣﺍﻭ ﺔﻘﻴﻗﺩ",
+        "dialogue_496": "!ﻲﻨﻠﺘﻗ لﻮﺒﻬﻤﻟﺍ ﻚﻨﺑﺇ",
+        "dialogue_497": "!ﻦﻴﺗﺮﻣ",
+        "dialogue_498": "!ﻚﻟﺬﻛ ﺎﺌﻴﺷ ﻞﻌﻔﻳ ﻦﻟ ،ﻲﻘﻄﻨﻣ ﺮﻴﻏ",
+        "dialogue_499": ".اﺪﻛ ﺶﺘﻠﻤﻋ ﺎﻣ ﺎﻧﺃ",
+        "dialogue_4910": "?ﻒﻳﺎﺷ",
+        "dialogue_4911": ": ( ﻲﻨﺘﻠﻋﺯ",
+        "dialogue_4912": "!!ﻲﻟ ﻞﻣﺎﻛ عﻮﺒﺳﺃ ﻰﻠﻋ ﻞﺼﺣﺄﺳ ؟ﻚﻟﺫ قﺪﺼﺗ ﻞﻫ",
+        "dialogue_4913": "!ﺎﻴﻟ ﻮﻠﻛ",
+        "dialogue_4914": ".ﻮﻓﻮﺸﺗ ﻲﻟﺇ ﻲﺷﺎﻣ",
+        "dialogue_dontlied0": "!ﺐﺳﺎﻨﻤﻟﺍ ﺖﻗﻮﻟﺍ ﻲﻓ دﻮﺳﻷﺍ ﺮﺘﺳﻮﺒﻣﻹﺍ ﻦﻣ تﻮﺠﻧ ﻲﻨﻧﻷ ﺪﻴﻌﺳ ﺎﻧﺃ ﻢﻛ !مﻼﺳ ﺎﻳ",
+        "dialogue_dontlied1": "......................................ةﺪﺣﺍﻭ ﺔﻈﺤﻟ",
+        "dialogue_dontlied2": "!يﻮﻬﻟﺎﻳ",
+        "dialogue_dontlied3": "!!ﻲﺠﺴﻔﻨﺑ",
+        "dialogue_dontlied4": ".ﻲﺠﺴﻔﻨﺒﻟﺍ ﺎﻧﺃ",
+        "dialogue_dontlied5": "ﻲﺠﺴﻔﻨﺑ ﺎﻳ ﻚﺒﺤﺑ",
+        "dialogue_suspect0": "؟ﺎﻨﻫ ﻞﺼﺣ اﺫﺎﻣ", //this dialogue is unused, but might get readded in the future
+        "dialogue_suspect1": "...ﺐﻴﻃ",
+        "dialogue_suspect2": "?ﺎﻬﺘﻠﻤﻋ ﺖﻧﺇ",
+        "dialogue_suspect3": "?اﺫﺎﻣ",
+        "dialogue_suspect4": ".ﻻ ﻊﺒﻄﻟﺎﺑ",
+        "dialogue_suspect5": "؟ﺎﻬﻠﻤﻋ ﻦﻴﻣ ،ﺮﻴﺒﻛ ﺎﻳ ﻲﺷﺎﻣ",
+        "dialogue_suspect6": ".ةﺮﻜﻓ يﺪﻨﻋ",
+        "dialogue_suspect7": ".ﻢﻬﻠﺘﻗ دﻮﺳﻷﺍ نﺃ ﻊﻗﻮﺗﺃ", //black impostor
+        "dialogue_suspect8": "؟دﻮﺳﺃ ﺖﻧﺇ ﺶﻣ ﺲﺑ", //both detective and black impostor are black among us characters
+        "dialogue_suspect9": "...ﻢﻫ",
+        "dialogue_detective": "ﻖﻘﺤﻤﻟﺍ",
+        "dialogue_minigrey": "ﺮﻴﻐﺼﻟﺍ يﺩﺎﻣﺮﻟﺍ",
+        "dialogue_noob49": "49 بﻭﻮﻧ",
+        "dialogue_pico": "ﻮﻜﻴﺑ",
+        "dialogue_purple": "ﻲﺠﺴﻔﻨﺒﻟﺍ" //gender neutral if you can (or plural yeah)
+    }
+}

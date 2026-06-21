@@ -1,0 +1,10 @@
+:detective:normal:dialogue_suspect0
+:picodlc:serious:dialogue_suspect1
+:picodlc:serious:dialogue_suspect2
+:detective:what:dialogue_suspect3
+:detective:normal:dialogue_suspect4
+:picodlc:normal:dialogue_suspect5
+:detective:think:dialogue_suspect6
+:detective:normal:dialogue_suspect7
+:picodlc:serious:dialogue_suspect8
+:detective:think:dialogue_suspect9

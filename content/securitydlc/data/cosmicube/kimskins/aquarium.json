@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 230,
+	
+	"title": "Aquarium",
+	"node": {
+		"direction": "north",
+		"parent": "fatogus"
+	},
+	"hint": "Rescue Service",
+	"description": "Breathe in the new life!",
+	
+	"color": [
+		123,
+		233,
+		240
+	]
+}

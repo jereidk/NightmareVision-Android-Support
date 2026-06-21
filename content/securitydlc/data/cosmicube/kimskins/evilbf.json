@@ -1,0 +1,13 @@
+{
+	"type": "playerSkin",
+	"price": 200,
+	
+	"title": "EVIL BF",
+	"hint": "How EVIL can one be?",
+	"description": "Holy crap! He's got a knife!.. That's it.",
+	
+	"node": {
+		"direction": "north",
+		"parent": "gfweird"
+	}
+}

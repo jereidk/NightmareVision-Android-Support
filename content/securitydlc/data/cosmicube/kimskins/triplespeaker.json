@@ -1,0 +1,16 @@
+{
+	"type": "speakerSkin",
+	"price": 500,
+	
+	"title": "Speaker Triple Trouble",
+	"hint": "Unlocked by receiving a rank of A or higher on Triple Threat.",
+	"description": "You don't seem to understand.",
+	"song": "triple-threat",
+	"requirement": "A",
+	
+	
+	"node": {
+		"direction": "south",
+		"parent": "speakermungus"
+	}
+}

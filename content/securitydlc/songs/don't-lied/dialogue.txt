@@ -1,0 +1,6 @@
+:bf:neutral:dialogue_dontlied0
+:bf:neutral:dialogue_dontlied1
+:bf:happy:dialogue_dontlied2
+:bf:happy:dialogue_dontlied3
+:purple:purple:dialogue_dontlied4
+:bf:sad:dialogue_dontlied5

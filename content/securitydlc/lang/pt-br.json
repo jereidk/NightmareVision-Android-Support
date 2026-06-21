@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*risada*",
+		"cutscene_dontlied1": "Você não vai me pegar hoje!",
+		"cutscene_dontlied2": "Neeerd!",
+		
+        "yellowspeaker_name": "Amarelo no Alto-falante",
+        "yellowspeaker_hint": "Termine suas tarefas logo!",
+        "yellowspeaker_desc": "Por favor, chega de preguiça!",
+        "blackspeaker_name": "Preto no Alto-falante",
+        "blackspeaker_hint": "Uma ameaça para sua segurança",
+        "blackspeaker_desc": "Um grande pesadelo (só para alguns).",
+        "whitespeaker_name": "Branco no Alto-falante",
+        "whitespeaker_hint": "Confidência descoberta.",
+        "whitespeaker_desc": "Ele tem que parar de ficar se escondendo atrás daquilo.",
+        "triplespeaker_name": "Triple Trouble no Alto-falante",
+        "triplespeaker_hint": "Destrancado recebendo uma nota de A ou maior em Triple Threat.",
+        "triplespeaker_desc": "Você não parece entender muito.",
+        "speakermungus_name": "Mungus e Jorsawsee no Alto-falante",
+        "speakermungus_hint": "Travesseiro perfeito.",
+        "speakermungus_desc": "Vem incluso com o famoso jogador de basquete!",
+        "alien_name": "Alien", //alien homimid reference
+        "alien_hint": "Espécie invasiva.",
+        "alien_desc": "Uma espécie extremamente misteriosa de bípedes amarelos de outro planeta",
+        "aquarium_name": "Aquário", //fish in an aquarium
+        "aquarium_hint": "Serviço de Resgate", //because the fish got saved
+        "aquarium_desc": "Respire seu fôlego na nova vida!",
+        "bfweird_name": "BF Estranho",
+        "bfweird_hint": "Exclusivo à DLC",
+        "bfweird_desc": "Alguma suspeita UPDOG aqui...", //reference to UPDOG
+        "gfweird_name": "GF Estranha",
+        "gfweird_hint": "Exclusivo à DLC",
+        "gfweird_desc": "Uma nova camada de tinta!",
+        "birdpostor_name": "Impássaro",
+        "birdpostor_hint": "Não deixe-o te bicar.",
+        "birdpostor_desc": "Ai, que bom é dar uma saida e alimentar as aves!",
+        "blake_name": "Blake",
+        "blake_hint": "Ai meu Deus.",
+        "blake_desc": "Bota esse cara numa esteira!!",
+        "bobby_name": "Bobby",
+        "bobby_hint": "Ele definitivamente não é o Impostor!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+        "bobby_desc": "Mesmo que fosse, ainda não seria, porque ele não é!",
+        "chefplayable_name": "Chefe",
+        "chefplayable_hint": "Destrancado recebendo uma nota de A ou maior em Sauces Moogus.",
+        "chefplayable_desc": "Cozinheiro de primeira linha.",
+        "deadnoob49_name": "Noob49 Morto",
+        "deadnoob49_hint": "Só joga isso no lixo.",
+        "deadnoob49_desc": "Um desaparecido virou aparecido!",
+        "detectiveplayer_name": "Detetive",
+        "detectiveplayer_hint": "Destrancado recebendo uma nota de A ou maior em Suspect.",
+        "detectiveplayer_desc": "Fazer aquele \"Tripulante\" confessar foi um Desafio.", //reference to Crewmate Challenge (cancelled mod)
+        "evilbf_name": "BF MALVADO",
+        "evilbf_hint": "O quão MALVADO alguém pode ser?",
+        "evilbf_desc": "Eita! Ele tem uma faca!... só isso mesmo.",
+        "fatogus_name": "Gordôgus",
+        "fatogus_hint": "Brruuuup.",
+        "fatogus_desc": "Com licensa...",
+        "yellow-ghost_name": "Amarelo Fantasma",
+        "yellow-ghost_hint": "Que tal você terminar as tarefas ao invés disso???",
+        "yellow-ghost_desc": "E por que ela fica morrendo?!",
+        "twin_name": "Gêmeo",
+        "twin_hint": "Melhores irmãos.",
+        "twin_desc": "Para sempre e todo sempre!",
+        "tuesdayplayable_name": "Tomongus",
+        "tuesdayplayable_hint": "Eles fizeram QUEM jogável?!",
+        "tuesdayplayable_desc": "AWWWWW",
+        "tawny_name": "Tawny",
+        "tawny_hint": "Não deixem te \"Iludir!\"", //reference to a mod Fakeout!
+        "tawny_desc": "Que tanta tortura.", //because i drew tawny getting tortured a lot
+        "suslet_name": "Suslet", //pokemon Wiglet
+        "suslet_hint": "Ai meu Deus ai meu Deus.",
+        "suslet_desc": "É só uma minhoca, mas com pernas, ou... sem pernas?", //doesnt mean anything
+        "sneep_name": "Sneep",
+        "sneep_hint": "Você não quer saber o que ele fez.",
+        "sneep_desc": "O unico personagem de cor Sneep!",
+        "shit_name": "Merda",
+        "shit_hint": "Destrancado recebendo uma nota de F ou maior em Triple Threat",
+        "shit_desc": "Não \"Trifle\" com ele!", //refence to a mod TRIFFLE
+        "rgbpet_name": "PetRGB",
+        "rgbpet_hint": "Customização? Nesse dia e época?",
+        "rgbpet_desc": "Personalizado de acordo com sua cor de personagem ou barra de vida!",
+        "noob49player_name": "Noob49",
+        "noob49player_hint": "Destrancado completando a Semana DLC.",
+        "noob49player_desc": "Só ejeta esse cara logo.",
+        "looksie_name": "Looksie",
+        "looksie_hint": "Vamos ver uma olhadinha.",
+        "looksie_desc": "Eu vou olhar ao assistir.", //both are gibberish
+        "longusgang_name": "Gangue dos Longus",
+        "longusgang_hint": "Eles vem em lotes!",
+        "longusgang_desc": "Você sabia que esses 3 tem uma longa história amorosa?",
+        "littlermungus_name": "Mungus Minininho",
+        "littlermungus_hint": "Estão ficando cada vez menores.",
+        "littlermungus_desc": "Além disso, é o aniversário dele também!",
+        "LIMEGREENPlayable_name": "JADSPOSTOR",
+        "LIMEGREENPlayable_hint": "VERDE LIMÃO QUE???",
+        "LIMEGREENPlayable_desc": "JADS.",
+        "kickflip_name": "David Pummel",
+        "kickflip_hint": "Vontástico!", //reference to a person named Von
+        "kickflip_desc": "IncríVon! InacreditáVon! MaraVonlhoso!", //because it does kickflips
+        "gumpymando_name": "Gumpy e Yarlowmando",
+        "gumpymando_hint": "Há muitos, demais! Parem com isso!!",
+        "gumpymando_desc": "O primeiro se chama Gumpy e o segundo se chama Yarlowmando.",
+        "gruntus_name": "Gruntus", //grunt from madness combat
+        "gruntus_hint": "Confronto Caótico!", //madness combat
+        "gruntus_desc": "Tipo- Meio que... Tá.. quase lá?",
+        "greypet_name": "Mini Cinza Tripulante",
+        "greypet_hint": "Destrancado recebendo uma nota de A ou maior em 49.",
+        "greypet_desc": "Isso é... possivelmente um assassino?",
+        "goldennug_name": "Franguinho Dourado",
+        "goldennug_hint": "Puta merda.",
+        "goldennug_desc": "Como você pôde.", //the pet costs 42000 beans
+        "tinyhenry_name": "Henry Stickmin",
+        "tinyhenry_hint": "O ladrão, sumido em um Flash.", //reference to Flash games
+        "tinyhenry_desc": "Não FALHE!",
+        "bfblack_name": "SUSfriend", //black impostor in a bf cap playable
+        "bfblack_hint": "Isso é o mais proximo do original que você vai encontrar!",
+        "bfblack_desc": "Fuja.",
+
+        // dialogue
+        "dialogue_490": "e essa foi a dlc!",
+        "dialogue_491": "me ajuda me ajuda <:(",
+        "dialogue_492": "cade o meu filho? tu viu o meu filho por ai!??",
+        "dialogue_493": "ele ta do seu lado cara.",
+        "dialogue_494": "To sabendo, só to enchendo teu saco",
+        "dialogue_495": "espera",
+        "dialogue_496": "SEU FILHO DESGRAÇADO ME MATOU",
+        "dialogue_497": "DUAS! VEZES!",
+        "dialogue_498": "Que isso, ele nunca faria tal coisa!",
+        "dialogue_499": "eu nunca fiz isso",
+        "dialogue_4910": "Viu?",
+        "dialogue_4911": " : (",
+        "dialogue_4912": "Mas eu não consigo acreditar! Eu to ganhando uma Semana inteira!",
+        "dialogue_4913": "Só pra mim!",
+        "dialogue_4914": "aham, boa sorte meu chapa",
+        "dialogue_dontlied0": "nossa!! ainda bem que eu escapei do Preto bem a tempo, ein!",
+        "dialogue_dontlied1": "perae..............",
+        "dialogue_dontlied2": "ai meu deus!",
+        "dialogue_dontlied3": "é o roxo!!",
+        "dialogue_dontlied4": "Eu sou o Roxo.",
+        "dialogue_dontlied5": "eu te amo roxo",
+        "dialogue_suspect0": "Isso é um massacre.", //this dialogue is unused, but might get readded in the future
+        "dialogue_suspect1": "então...",
+        "dialogue_suspect2": "foi tu?",
+        "dialogue_suspect3": "Que?",
+        "dialogue_suspect4": "Claro que não.",
+        "dialogue_suspect5": "ok chefia, então quem foi.",
+        "dialogue_suspect6": "Eu tenho uma ideia.",
+        "dialogue_suspect7": "Eu acho que foi o Preto que matou.", //black impostor
+        "dialogue_suspect8": "mas tu que é preto", //both detective and black impostor are black among us characters
+        "dialogue_suspect9": "Hm...",
+        "dialogue_detective": "Detetive",
+        "dialogue_minigrey": "Mini Cinza",
+        "dialogue_noob49": "Noob49",
+        "dialogue_pico": "Pico",
+        "dialogue_purple": "Roxo" //gender neutral if you can (or plural yeah)
+	}
+}

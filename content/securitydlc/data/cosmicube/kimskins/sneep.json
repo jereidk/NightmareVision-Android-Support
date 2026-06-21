@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 123,
+	
+	"title": "Sneep",
+	"node": {
+		"direction": "west",
+		"parent": "root"
+	},
+	"hint": "You wouldn't want to know what he's done.",
+	"description": "The only Sneep colored character!",
+	
+	"color": [
+		190,
+		164,
+		222
+	]
+}

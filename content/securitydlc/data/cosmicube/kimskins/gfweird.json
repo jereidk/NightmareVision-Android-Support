@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 100,
+	
+	"title": "Weird GF",
+	"hint": "DLC Exclusive",
+	"description": "A new coat of paint!",
+	
+	"node": {
+		"direction": "north",
+		"parent": "bfweird"
+	}
+}

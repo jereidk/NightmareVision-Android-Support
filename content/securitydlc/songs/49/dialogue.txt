@@ -1,0 +1,15 @@
+:bf:happy:dialogue_490
+:noob49:sad:dialogue_491
+:noob49:sad:dialogue_492
+:bf:neutral:dialogue_493
+:noob49:normal:dialogue_494
+:bf:realization:dialogue_495
+:bf:mad:dialogue_496
+:bf:mad:dialogue_497
+:noob49:normal:dialogue_498
+:minigrey:kid:dialogue_499
+:noob49:normal:dialogue_4910
+:bf:sad:dialogue_4911
+:noob49:happy:dialogue_4912
+:noob49:happy:dialogue_4913
+:bf:neutral:dialogue_4914

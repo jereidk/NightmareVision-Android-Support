@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*เสียงขำเล็กน้อย*",
+		"cutscene_dontlied1": "วันนี้มึงจับกูไม่ได้หรอก",
+		"cutscene_dontlied2": "ไอ้กากกกกกกก",
+		
+        "yellowspeaker_name": "สีเหลืองบนลำโพง",
+        "yellowspeaker_hint": "ไปทำงานไป!",
+        "yellowspeaker_desc": "ขอร้องเหอะ หยุดขี้เกียจดิ!",
+        "blackspeaker_name": "สีดำบนลำโพง",
+        "blackspeaker_hint": "ภัยคุกคามต่อความปลอดภัยของคุณ",
+        "blackspeaker_desc": "ฝันร้าย (สำหรับใครบางคน)",
+        "whitespeaker_name": "สีขาวบนลำโพง",
+        "whitespeaker_hint": "ความมั่นหน้านี้หาไม่ได้อีกแล้วล่ะ!",
+        "whitespeaker_desc": "เขาต้องหยุดซ่อนข้างหลังลำโพงนั่นสักวันแหละนะ...",
+        "triplespeaker_name": "สามหน่อบนลำโพง",
+        "triplespeaker_hint": "ปลดล็อกโดยการได้แรงค์ A ขึ้นไปในเพลง Triple Threat",
+        "triplespeaker_desc": "นายดูไม่เข้าใจเลยนะ",
+        "speakermungus_name": "Mungus และ Jorsawsee บนลำโพง",
+        "speakermungus_hint": "หมอนนอนสบาย",
+        "speakermungus_desc": "มีนักบาสด้วยนะ!",
+        "alien_name": "คนต่างด้าว", //alien homimid reference
+        "alien_hint": "เอเลี่ยนบุกโลก",
+        "alien_desc": "เป็นสิ่งมีชีวิตสองขาที่น่าสงสัย มาจากดาวเคราะห์อื่น",
+        "aquarium_name": "ปลาวัน", //fish in an aquarium
+        "aquarium_hint": "มาช่วยแล้วจ้า!", //because the fish got saved
+        "aquarium_desc": "หายใจให้เต็มปอด!.. หรือเหงือก",
+        "bfweird_name": "บอยเฟรนด์ ประหลาด",
+        "bfweird_hint": "DLC Exclusive",
+        "bfweird_desc": "หน้าตาดูเกี่ยวกับ UPDOG นะ", //reference to UPDOG
+        "gfweird_name": "เกิร์ลเฟรนด์ ประหลาด",
+        "gfweird_hint": "DLC Exclusive",
+        "gfweird_desc": "มาในรูปแบบใหม่!!",
+        "birdpostor_name": "นกสองหัว",
+        "birdpostor_hint": "อย่าให้มันจิกนายละกัน",
+        "birdpostor_desc": "ออกไปให้อาหารนกบ้างล่ะ!",
+        "blake_name": "Blake",
+        "blake_hint": "หนักเท่าไหร่วะน่ะ!",
+        "blake_desc": "พาเขาไปลดน้ำหนักเดี๋ยวนี้เลย!!",
+        "bobby_name": "Bobby",
+        "bobby_hint": "เขาไม่ใช่ฆาตกรแน่นอน!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+        "bobby_desc": "ถึงแม้เขาจะเป็น เขาก็ไม่ใช่ เพราะเขาไม่ได้เป็น!!!",
+        "chefplayable_name": "Chefogus",
+        "chefplayable_hint": "ปลดล็อกโดยการได้แรงค์ A ขึ้นไปในเพลง Sauces Moogus",
+        "chefplayable_desc": "เชฟ 3 ดาว",
+        "deadnoob49_name": "Noob49 แต่เน่าแล้ว",
+        "deadnoob49_hint": "เอาไปทิ้งข้างหลังเถอะ",
+        "deadnoob49_desc": "คนหาย ไม่หายแล้ว!",
+        "detectiveplayer_name": "นักสืบ",
+        "detectiveplayer_hint": "ปลดล็อกโดยการได้แรงค์ A ขึ้นไปในเพลง Suspect",
+        "detectiveplayer_desc": "การทำให้ \"Crewmate\" คนนั้นรับสารภาพมันช่าง ยากเหลือเกิน", //reference to Crewmate Challenge (cancelled mod)
+        "evilbf_name": "บอยเฟรนด์คนชั่ว",
+        "evilbf_hint": "คนคนนึงจะชั่วได้แค่ไหนกันเชียว",
+        "evilbf_desc": "เขามีมีด!!!!... มีแค่มีดแหละ",
+        "fatogus_name": "ไออ้วน",
+        "fatogus_hint": "(เสียงเรอ)",
+        "fatogus_desc": "โทษๆ",
+        "yellow-ghost_name": "ผีสีเหลือง",
+        "yellow-ghost_hint": "ไปทำงานดีกว่ามั้ย???",
+        "yellow-ghost_desc": "ทำไมเธอตายตลอดเลยเนี่ย?!",
+        "twin_name": "ฝาแฝด",
+        "twin_hint": "เขาเป็นเพื่อนกัน",
+        "twin_desc": "ตลอดไป!",
+        "tuesdayplayable_name": "Tomongus",
+        "tuesdayplayable_hint": "พวกเขาทำให้ใครเล่นได้นะ!!!???",
+        "tuesdayplayable_desc": "โคตรน่ารักเลยยยยย",
+        "tawny_name": "Tawny",
+        "tawny_hint": "อย่าโดนหลอกล่ะ!", //reference to a mod Fakeout!
+        "tawny_desc": "ทรมานเต็มที่", //because i drew tawny getting tortured a lot
+        "suslet_name": "Suslet", //pokemon Wiglet
+        "suslet_hint": "โห!",
+        "suslet_desc": "มันเหมือนหนอน แต่มีขา แล้วก็... ไม่มีขา", //doesnt mean anything
+        "sneep_name": "Sneep",
+        "sneep_hint": "นายไม่อยากรู้หรอกว่าเขาทำ อะไรมาบ้าง",
+        "sneep_desc": "ตัวละครสี Sneep หนึ่งเดียวในโลก!",
+        "shit_name": "สีขี้",
+        "shit_hint": "ปลดล็อกโดยการได้แรงค์ F ขึ้นไปในเพลง Triple Threat",
+        "shit_desc": "อย่าดมตัวเขา มันไม่ดี >:(", //refence to a mod TRIFFLE
+        "rgbpet_name": "Crewmate หลากสี",
+        "rgbpet_hint": "การปรับแต่งหรอ? ในยุคสมันนี้เนี่ยนะ!?",
+        "rgbpet_desc": "ปรับแต่งสีลูกตัวน้อย ของคุณตามสีตัวละครหรือสีแถบเลือดของผู้เล่น",
+        "noob49player_name": "Noob49",
+        "noob49player_hint": "ปลดล็อกโดยการชนะสัปดาห์ DLC",
+        "noob49player_desc": "โหวตเขาออกเถอะ",
+        "looksie_name": "น้องแอบมอง",
+        "looksie_hint": "เรามาดูมอง",
+        "looksie_desc": "ฉันจะดูมองมา", //both are gibberish
+        "longusgang_name": "แกงค์ Longus'",
+        "longusgang_hint": "มาพร้อมกัน 3 คน",
+        "longusgang_desc": "นายรู้รึป่าวว่า 3 คนนี้เค้าเดตกันมาตลอดเลยนะ!",
+        "littlermungus_name": "Mungus ตัวจิ๋ว",
+        "littlermungus_hint": "ตัวเล็กลงทุกทีเลย",
+        "littlermungus_desc": "วันนี้ก็วันเกิดเค้าเหมือนกันนะ!",
+        "LIMEGREENPlayable_name": "JADSPOSTOR",
+        "LIMEGREENPlayable_hint": "ฆาตกรชื่อว่าอะไรนะ???",
+        "LIMEGREENPlayable_desc": "JADS",
+        "kickflip_name": "David Pummel",
+        "kickflip_hint": "เยี่ยมยอด!", //reference to a person named Von
+        "kickflip_desc": "สุดยอด! ดีมาก! เพอร์เฟกต์เลย!", //because it does kickflips
+        "gumpymando_name": "Gumpy กับ Yarlowmando",
+        "gumpymando_hint": "พวกเขามีหลายตัวเกินไปแล้ว! หยุดพวกเขาสักทีสิ!!",
+        "gumpymando_desc": "ตัวแรกชื่อ Gumpy ส่วนตัวที่สองชื่อ Yarlowmando",
+        "gruntus_name": "Gruntus", //grunt from madness combat
+        "gruntus_hint": "การต่อสู้ที่รุนแรงและดุเดือด!!", //madness combat
+        "gruntus_desc": "ฉัน- เอิ่ม... ก็ใกล้ตัวจริง.. พออยู่มั้ง?",
+        "greypet_name": "ลูกสีเทา",
+        "greypet_hint": "ปลดล็อกโดยการได้แรงค์ A ขึ้นไปในเพลง 49",
+        "greypet_desc": "นั่นมัน... นักฆ่าในอนาคตเห็นๆ เลย!",
+        "goldennug_name": "นักเก็ตทอง",
+        "goldennug_hint": "ไอ้เชี่ย!",
+        "goldennug_desc": "ซื้อได้ไงวะ", //the pet costs 42000 beans
+        "tinyhenry_name": "เฮนรี่ สติกมิน",
+        "tinyhenry_hint": "นักปล้น วิ่งเร็วเหมือนเดอะแฟลช", //reference to Flash games
+        "tinyhenry_desc": "อย่าเฟลนะ!",
+        "bfblack_name": "บอยเฟรนด์ *โคตร* น่าสงสัย", //black impostor in a bf cap playable
+        "bfblack_hint": "ใกล้ตัวจริงที่สุดที่นายจะได้แล้วล่ะ!",
+        "bfblack_desc": "วิ่ง.",
+		
+		// dialogue
+        "dialogue_490": "และนี่คือ DLC สินะ",
+        "dialogue_491": "คุณครับช่วยผมด้วย ช่วยผมด้วยยย! <:(",
+        "dialogue_492": "ลูกของผมอยู่ไหน คุณเห็นลูกของผมไหมครับ!??",
+        "dialogue_493": "ลุกคุณอยู่นั้นไง",
+        "dialogue_494": "กูรู้ กูแค่หยอกเล่นกับมึงเฉยๆ",
+        "dialogue_495": "เดี้ยวนะ...",
+        "dialogue_496": "ลูกมึงเคยฆ่ากู..",
+        "dialogue_497": "สองครั้งแล้วนิ!!!",
+        "dialogue_498": "ไม่มีทางหรอก เขาไม่เคยทำอะไรแบบนั้นแน่นอน!",
+        "dialogue_499": "ผมไม่เคยทำนะคับ",
+        "dialogue_4910": "เห็นไหมละ",
+        "dialogue_4911": " : (",
+        "dialogue_4912": "มึงเชื่อไหม กูได้เพลงเป็นของตัวเองหมดเลย!",
+        "dialogue_4913": "ของกูทั้งหมดเลย!",
+        "dialogue_4914": "เออ โชคดีละกัน",
+        "dialogue_dontlied0": "เห้ออ! โชคดีที่กูหนีจากไอ้ดำนั้นพอดี",
+        "dialogue_dontlied1": "เดี้ยวนะ...",
+        "dialogue_dontlied2": "เห้ย!",
+        "dialogue_dontlied3": "นายคือสีม่วงนี่!!",
+        "dialogue_dontlied4": "ฉันคือสีม่วง",
+        "dialogue_dontlied5": "ผมรักคุณนะครับสีม่วง...",
+        "dialogue_suspect0": "นี่มันบ้ามากเลย", //this dialogue is unused, but might get readded in the future
+        "dialogue_suspect1": "แล้ว...",
+        "dialogue_suspect2": "มึงทำหรอ?",
+        "dialogue_suspect3": "ไร?",
+        "dialogue_suspect4": "ไม่หรอก",
+        "dialogue_suspect5": "เค แล้วใครทำอะ",
+        "dialogue_suspect6": "กูนึกออกละ",
+        "dialogue_suspect7": "กูว่าคนฆ่าคือสีดำ", //black impostor
+        "dialogue_suspect8": "แล้วมึงก็สีดำไม่ใช่หรอ", //both detective and black impostor are black among us characters
+        "dialogue_suspect9": "อืม...",
+        "dialogue_detective": "นักสืบ",
+        "dialogue_minigrey": "สีเทาตัวน้อย",
+        "dialogue_noob49": "Noob49",
+        "dialogue_pico": "ปิโก้",
+        "dialogue_purple": "สีม่วง" //gender neutral if you can (or plural yeah)
+    }
+}

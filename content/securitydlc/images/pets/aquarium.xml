@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="aquarium.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle copy instance 10000" x="0" y="639" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10001" x="0" y="639" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10002" x="238" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10003" x="238" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10004" x="469" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10005" x="469" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10006" x="700" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10007" x="700" y="0" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10008" x="235" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10009" x="235" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10010" x="466" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10011" x="466" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10012" x="697" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10013" x="697" y="215" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10014" x="233" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10015" x="233" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10016" x="233" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10017" x="0" y="0" width="236" height="210" frameX="0" frameY="-3" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10018" x="0" y="0" width="236" height="210" frameX="0" frameY="-3" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10019" x="0" y="0" width="236" height="210" frameX="0" frameY="-3" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10020" x="0" y="212" width="233" height="211" frameX="-1" frameY="-2" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10021" x="0" y="212" width="233" height="211" frameX="-1" frameY="-2" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10022" x="0" y="425" width="231" height="212" frameX="-2" frameY="-1" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10023" x="0" y="425" width="231" height="212" frameX="-2" frameY="-1" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10024" x="464" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10025" x="464" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10026" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10027" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10028" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10029" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10030" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10031" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+	<SubTexture name="idle copy instance 10032" x="695" y="430" width="229" height="213" frameX="-3" frameY="0" frameWidth="236" frameHeight="213"/>
+</TextureAtlas>

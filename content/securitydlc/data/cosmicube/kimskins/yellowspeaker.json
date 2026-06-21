@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 200,
+	
+	"title": "Speaker Yellow",
+	"hint": "Get your tasks done!",
+	"description": "Please, quit slacking!",
+	
+	"node": {
+		"direction": "south",
+		"parent": "chefplayable"
+	}
+}

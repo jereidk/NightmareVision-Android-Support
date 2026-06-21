@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 209,
+
+	"title": "David Pummel",
+	"node": {
+		"direction": "south",
+		"parent": "tawny"
+	},
+	"hint": "Vontastic!",
+	"description": "Incredible! Rad! Perfect!",
+	
+	"color": [
+		107,
+		47,
+		188
+	]
+}

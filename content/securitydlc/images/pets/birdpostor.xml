@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="birdpostor.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle instance 10000" x="238" y="0" width="236" height="216" frameX="0" frameY="-7" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10001" x="238" y="0" width="236" height="216" frameX="0" frameY="-7" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10002" x="0" y="0" width="236" height="217" frameX="0" frameY="-6" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10003" x="0" y="0" width="236" height="217" frameX="0" frameY="-6" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10004" x="706" y="0" width="229" height="221" frameX="-4" frameY="-2" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10005" x="706" y="0" width="229" height="221" frameX="-4" frameY="-2" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10006" x="706" y="223" width="226" height="223" frameX="-6" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10007" x="706" y="223" width="226" height="223" frameX="-6" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10008" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10009" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10010" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10011" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10012" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10013" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10014" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10015" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10016" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10017" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10018" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10019" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10020" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10021" x="0" y="219" width="229" height="222" frameX="-4" frameY="-1" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10022" x="0" y="219" width="229" height="222" frameX="-4" frameY="-1" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10023" x="238" y="218" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10024" x="238" y="218" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10025" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10026" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+	<SubTexture name="idle instance 10027" x="476" y="0" width="228" height="223" frameX="-5" frameY="0" frameWidth="236" frameHeight="223"/>
+</TextureAtlas>

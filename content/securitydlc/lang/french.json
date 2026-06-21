@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*ricanes*",
+		"cutscene_dontlied1": "Tu ne m'auras pas aujourd'hui!",
+		"cutscene_dontlied2": "Neeerd!",
+		
+		"yellowspeaker_name": "Système de son avec Jaune",
+		"yellowspeaker_hint": "Finis tes tâches!",
+		"yellowspeaker_desc": "Steuplait, arrêtes de niaiser!",
+		"blackspeaker_name": "Système de son avec Noir",
+		"blackspeaker_hint": "Un danger plus qu'autre chose",
+		"blackspeaker_desc": "Quel cauchemar... (seulement pour certains).",
+		"whitespeaker_name": "Système de son avec Blanc",
+		"whitespeaker_hint": "Confiance nouvellement acquise.",
+		"whitespeaker_desc": "Il faut vraiment qu'il arrête de s'y cacher...",
+		"triplespeaker_name": "Système de son triple trouble",
+		"triplespeaker_hint": "Débloqué lorsqu'un rang A ou plus est obtenu dans Triple Threat.",
+		"triplespeaker_desc": "T'as pas l'air de comprendre.",
+		"speakermungus_name": "Système de son avec Mungus et Jorsawsee",
+		"speakermungus_hint": "Un oreiller parfait.",
+		"speakermungus_desc": "Vient avec le joueur de basket célebre!",
+		"alien_name": "Extraterrestre", //alien homimid reference
+		"alien_hint": "Espèce invasive.",
+		"alien_desc": "Une super mystérieuse espèce jaune à deux pattes venant d'une planète inconnue.",
+		"aquarium_name": "Aquarium", //fish in an aquarium
+		"aquarium_hint": "Service de sauvetage", //because the fish got saved
+		"aquarium_desc": "Prends une grande inspiration!",
+		"bfweird_name": "BF bizarre",
+		"bfweird_hint": "Exclusif au DLC",
+		"bfweird_desc": "Il y a des activités UPDOG ici...", //reference to UPDOG
+		"gfweird_name": "GF bizarre",
+		"gfweird_hint": "Exclusive au DLC",
+		"gfweird_desc": "Une nouvelle couleur!",
+		"birdpostor_name": "Oiseauposteur",
+		"birdpostor_hint": "Le laisse pas te becqueter.",
+		"birdpostor_desc": "N'est-ce pas super d'aller dehors et nourrir les oiseaux!",
+		"blake_name": "Blake",
+		"blake_hint": "Oh mon dieu.",
+		"blake_desc": "Mettez le sur un tapis roulant!!",
+		"bobby_name": "Bobby",
+		"bobby_hint": "Ce n'est définitivement pas un imposteur!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+		"bobby_desc": "Même s'il en était un, ce ne serais pas vrais. Parce qu'il n'en est pas un!",
+		"chefplayable_name": "Chef",
+		"chefplayable_hint": "Débloqué lorsqu'un rang A ou plus est obtenu dans Sauces Moogus.",
+		"chefplayable_desc": "Chef professionnel.",
+		"deadnoob49_name": "Noob49 mort",
+		"deadnoob49_hint": "À la poubelle!",
+		"deadnoob49_desc": "Personne recherchée, puis trouvée!",
+		"detectiveplayer_name": "Détective",
+		"detectiveplayer_hint": "Débloqué lorsqu'un rang A ou plus est obtenu dans Suspect.",
+		"detectiveplayer_desc": "Forcer ce \"Coéquipier\" à une confession était un défi.", //reference to Crewmate Challenge (cancelled mod)
+		"evilbf_name": "BF Méchant",
+		"evilbf_hint": "À quel point une personne peut-elle être diabolique?",
+		"evilbf_desc": "WOAW! Il a un couteau!.. C'est tout.",
+		"fatogus_name": "Groséquipier",
+		"fatogus_hint": "Buuuurpp.",
+		"fatogus_desc": "Mes excuses...",
+		"yellow-ghost_name": "Jaune fantôme",
+		"yellow-ghost_hint": "Peux tu juste finir tes tâches à la place???",
+		"yellow-ghost_desc": "Pourquoi elle meurt toujours?!",
+		"twin_name": "Jumeaux",
+		"twin_hint": "Les meilleurs copains.",
+		"twin_desc": "Jusqu'à la fin des temps!",
+		"tuesdayplayable_name": "Tomongus",
+		"tuesdayplayable_hint": "Ils te laissent jouer en tant que QUI?!",
+		"tuesdayplayable_desc": "AWWWWW",
+		"tawny_name": "Tawny",
+		"tawny_hint": "Ne sois pas trompé.", //reference to a mod Fakeout!
+		"tawny_desc": "Tellement de torture.", //because i drew tawny getting tortured a lot
+		"suslet_name": "Suslet", //pokemon Wiglet
+		"suslet_hint": "Oh mon dieu oh mon dieu.",
+		"suslet_desc": "C'est comme un ver, mais avec des jambes, sauf qu'il n'a pas de jambes.", //doesnt mean anything
+		"sneep_name": "Sneep",
+		"sneep_hint": "Tu ne veux pas savoir ce qu'il a fait.",
+		"sneep_desc": "Le seul personnage de couleur sneep!",
+		"shit_name": "Merde!",
+		"shit_hint": "Débloqué lorsqu'un rang F ou plus est obtenu dans Triple threat.",
+		"shit_desc": "Faut pas niaiser la.", //refence to a mod TRIFFLE
+		"rgbpet_name": "RGBestiole",
+		"rgbpet_hint": "De la personnalisation? Dans le gros '26?",
+		"rgbpet_desc": "Personnalise le à la couleur de ton personnage ou de ta barre de vie.",
+		"noob49player_name": "Noob49",
+		"noob49player_hint": "Débloqué lorsque la semaine DLC est battue.",
+		"noob49player_desc": "Votez pour lui svp.",
+		"looksie_name": "Looksie",
+		"looksie_hint": "Va on voir.",
+		"looksie_desc": "Je vais regard un vue.", //both are gibberish
+		"longusgang_name": "Le groupe Longus'",
+		"longusgang_hint": "Viennent ensemble.",
+		"longusgang_desc": "Saviez-vous que ces trois-là sortaient ensemble?",
+		"littlermungus_name": "Encore plus petit mungus",
+		"littlermungus_hint": "Ils rappetissent à chaque fois.",
+		"littlermungus_desc": "C'est aussi sa fête aujourd'hui!",
+		"LIMEGREENPlayable_name": "JADSPOSTEUR",
+		"LIMEGREENPlayable_hint": "VERT LIME POUR TOUJOURS!!!!",
+		"LIMEGREENPlayable_desc": "JADS.",
+		"kickflip_name": "David Pummel",
+		"kickflip_hint": "Voncroyable!", //reference to a person named Von
+		"kickflip_desc": "Incroyable! Woa! Parfait!", //because it does kickflips
+		"gumpymando_name": "Gumpy et Yarlowmando",
+		"gumpymando_hint": "Ils sont trop nombreux! arrêtez les!!",
+		"gumpymando_desc": "Le premier s'appelle Gumpy et le deuxièmme c'est Yarlowmando.",
+		"gruntus_name": "Gruntus", //grunt from madness combat
+		"gruntus_hint": "Combat chaotique!", //madness combat
+		"gruntus_desc": "Je- umm... c'est assé.. proche?",
+		"greypet_name": "mini coéquipier Gris",
+		"greypet_hint": "Débloqué lorsqu'un rang A ou plus est obtenu dans 49.",
+		"greypet_desc": "Es-ce qu'il va devenir un meurtrier ou...?",
+		"goldennug_name": "Nug dorée",
+		"goldennug_hint": "Putain.",
+		"goldennug_desc": "C'est beaucoup trop.", //the pet costs 42000 beans
+		"tinyhenry_name": "Henry Stickmin",
+		"tinyhenry_hint": "Le voleur. Parti en un clin d'oeil.", //reference to Flash games
+		"tinyhenry_desc": "Ne rate pas ton COUP!",
+		"bfblack_name": "SUSfriend", //black impostor in a bf cap playable
+		"bfblack_hint": "C'est probablement le plus proche de la vraie chose!",
+		"bfblack_desc": "Cours.",
+		
+		// dialogue
+		"dialogue_490": "donc voila le dlc!",
+		"dialogue_491": "à l'aide à l'aide <:(",
+		"dialogue_492": "où est mon fils? avez-vous vu mon fils!??",
+		"dialogue_493": "il est juste la",
+		"dialogue_494": "je sais lol c'tait une blague haha.",
+		"dialogue_495": "attend",
+		"dialogue_496": "TON ABRUTI DE FILS M'A TUÉ",
+		"dialogue_497": "DEUX FOIS",
+		"dialogue_498": "Bah voyons, il ne ferait jamais une chose pareille!",
+		"dialogue_499": "j'ai jamais fais ça.",
+		"dialogue_4910": "tu vois?",
+		"dialogue_4911": " : (",
+		"dialogue_4912": "pouvez-vous y croire? J'ai une semain complète!",
+		"dialogue_4913": "juste pour moi!",
+		"dialogue_4914": "ouais mec bonne chance.",
+		"dialogue_dontlied0": "woa!! comme je suis content d'avoir échappé à l'imposteur noir à temps.",
+		"dialogue_dontlied1": "attend..............",
+		"dialogue_dontlied2": "oh mon dieu!",
+		"dialogue_dontlied3": "c'est violet!!",
+		"dialogue_dontlied4": "je suis violet.",
+		"dialogue_dontlied5": "je t'aimes trop violet",
+		"dialogue_suspect0": "C'est un massacre.", //this dialogue is unused, but might get readded in the future
+		"dialogue_suspect1": "donc...",
+		"dialogue_suspect2": "c'est ta faute?",
+		"dialogue_suspect3": "quoi?",
+		"dialogue_suspect4": "'sur que non.",
+		"dialogue_suspect5": "Okay boss, c'est qui qui l'a fait.",
+		"dialogue_suspect6": "J'en ai une petit idée.",
+		"dialogue_suspect7": "Je pense que Noir les a tués.", //black impostor
+		"dialogue_suspect8": "mais t'es noir...", //both detective and black impostor are black among us characters
+		"dialogue_suspect9": "Hm...",
+		"dialogue_detective": "Détective",
+		"dialogue_minigrey": "Mini Gris",
+		"dialogue_noob49": "Noob49",
+		"dialogue_pico": "Pico",
+		"dialogue_purple": "Violet" //gender neutral if you can (or plural yeah)
+	}
+}

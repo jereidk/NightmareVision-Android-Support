@@ -1,0 +1,29 @@
+{
+    "name": "dialogue_detective",
+    "side": 0,
+    "asset": "detective",
+    "boxColor": "0xFF342F43",
+    "boxShadeColor": "0xFF15141A", 
+    "icon": "detective",
+    "sound": "detective",
+    "animations": [
+        {
+        "anim": "normal",
+        "name": "detective normal",
+        "loop": false,
+        "offsets": [0,15]
+        },
+        {
+        "anim": "what",
+        "name": "detective what",
+        "loop": false,
+        "offsets": [0,15]
+        },
+        {
+        "anim": "think",
+        "name": "detective think",
+        "loop": false,
+        "offsets": [0,15]
+        }
+    ]
+}

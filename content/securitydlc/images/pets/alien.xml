@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="alien.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle instance 10000" x="0" y="0" width="150" height="191" frameX="0" frameY="-5" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10001" x="0" y="0" width="150" height="191" frameX="0" frameY="-5" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10002" x="152" y="0" width="149" height="192" frameX="0" frameY="-4" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10003" x="152" y="0" width="149" height="192" frameX="0" frameY="-4" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10004" x="290" y="194" width="143" height="195" frameX="-5" frameY="-1" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10005" x="290" y="194" width="143" height="195" frameX="-5" frameY="-1" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10006" x="0" y="193" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10007" x="0" y="193" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10008" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10009" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10010" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10011" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10012" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+	<SubTexture name="idle instance 10013" x="145" y="194" width="143" height="196" frameX="-5" frameY="0" frameWidth="150" frameHeight="196"/>
+</TextureAtlas>

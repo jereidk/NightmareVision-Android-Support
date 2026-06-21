@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 137,
+	
+	"title": "Tawny",
+	"node": {
+		"direction": "south",
+		"parent": "littlermungus"
+	},
+	"hint": "Don't get faked out.",
+	"description": "So much torture.",
+	
+	"color": [
+		164,
+		131,
+		120
+	]
+}

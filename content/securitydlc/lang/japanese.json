@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*くすくす*",
+		"cutscene_dontlied1": "今日は捕まらないぜ！",
+		"cutscene_dontlied2": "ダッッッサ！",
+		
+		"yellowspeaker_name": "スピーカー Yellow",
+		"yellowspeaker_hint": "タスクを終わらせろ！",
+		"yellowspeaker_desc": "いいから、サボるな！！",
+		"blackspeaker_name": "スピーカー Black",
+		"blackspeaker_hint": "命の保証はないぞ",
+		"blackspeaker_desc": "まさに悪夢（一部の人にとっては）",
+		"whitespeaker_name": "スピーカー White",
+		"whitespeaker_hint": "新たな自信。",
+		"whitespeaker_desc": "いつまでもそこに隠れてちゃダメだぞ。",
+		"triplespeaker_name": "スピーカー Triple Trouble",
+		"triplespeaker_hint": "Triple ThreatでAランク以上を獲得する",
+		"triplespeaker_desc": "君は何もわかっていないようだね。",
+		"speakermungus_name": "スピーカー Mungus & Jorsawsee",
+		"speakermungus_hint": "最高の枕。",
+		"speakermungus_desc": "あの有名なバスケ選手も付いてくる！",
+		"alien_name": "エイリアン", //alien homimid reference
+		"alien_hint": "外来種。",
+		"alien_desc": "未知の惑星からやってきた、謎に包まれた黄色い肌の二足歩行種族。",
+		"aquarium_name": "アクアリウム", //fish in an aquarium
+		"aquarium_hint": "レスキューサービス", //because the fish got saved
+		"aquarium_desc": "新しい命を吸い込もう！",
+		"bfweird_name": "奇妙なBF",
+		"bfweird_hint": "DLC限定",
+		"bfweird_desc": "例の「UPDOG」案件…", //reference to UPDOG
+		"gfweird_name": "奇妙なGF",
+		"gfweird_hint": "DLC限定",
+		"gfweird_desc": "塗り直したばっかり！",
+		"birdpostor_name": "バードポスター",
+		"birdpostor_hint": "突かれないように気をつけて。",
+		"birdpostor_desc": "外に出て鳥にエサをやる。それだけで気分最高だろ！",
+		"blake_name": "Blake",
+		"blake_hint": "なんてこった。",
+		"blake_desc": "誰かこいつをランニングマシンに乗せてくれ！！",
+		"bobby_name": "Bobby",
+		"bobby_hint": "彼は絶対にインポスターじゃない！", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+		"bobby_desc": "仮にそうだとしても、彼はインポスターじゃない。だって違うんだから！",
+		"chefplayable_name": "Chef",
+		"chefplayable_hint": "Sauces MoogusでAランク以上を獲得する",
+		"chefplayable_desc": "超一流のシェフ。",
+		"deadnoob49_name": "Noob49の死体",
+		"deadnoob49_hint": "裏の方に放り投げとけ。",
+		"deadnoob49_desc": "行方不明者、発見！（もう「不明」じゃない！）",
+		"detectiveplayer_name": "Detective",
+		"detectiveplayer_hint": "SuspectでAランク以上を獲得する",
+		"detectiveplayer_desc": "あの\"クルーメイト\" を自白させるのは一苦労だったよ。", //reference to Crewmate Challenge (cancelled mod)
+		"evilbf_name": "EVIL BF",
+		"evilbf_hint": "どれだけ邪悪になれるかな？",
+		"evilbf_desc": "ウワッ！ナイフ持ってるぞ！...それだけだ。",
+		"fatogus_name": "Fatogus",
+		"fatogus_hint": "ゲプッ....",
+		"fatogus_desc": "失礼...",
+		"yellow-ghost_name": "ゴースト Yellow",
+		"yellow-ghost_hint": "いいからタスク終わらせなよ？？？",
+		"yellow-ghost_desc": "なんで彼女は死に続けるの？！",
+		"twin_name": "Twin",
+		"twin_hint": "最高のブラザー。",
+		"twin_desc": "いつまでも一緒！",
+		"tuesdayplayable_name": "Tomongus",
+		"tuesdayplayable_hint": "まさかアイツをプレイアブルにするなんて？！",
+		"tuesdayplayable_desc": "かわいいいい",
+		"tawny_name": "Tawny",
+		"tawny_hint": "フェイントに引っかかるなよ。", //reference to a mod Fakeout!
+		"tawny_desc": "拷問まみれ。", //because i drew tawny getting tortured a lot
+		"suslet_name": "Suslet", //pokemon Wiglet
+		"suslet_hint": "ウワアアアアなんてこった！",
+		"suslet_desc": "ミミズみたいだけど足がある、いや足はないけど", //doesnt mean anything
+		"sneep_name": "Sneep",
+		"sneep_hint": "彼が何をしたか、知らないほうが身のためだ。",
+		"sneep_desc": "唯一の「スニープ色」のキャラ！",
+		"shit_name": "Shit",
+		"shit_hint": "Triple ThreatでFランク以上を獲得する",
+		"shit_desc": "怒らせないほうがいいぞ。", //refence to a mod TRIFFLE
+		"rgbpet_name": "RGBPet",
+		"rgbpet_hint": "今の時代にカスタマイズだって？",
+		"rgbpet_desc": "キャラの色や体力ゲージの色に合わせて変化するぞ。",
+		"noob49player_name": "Noob49",
+		"noob49player_hint": "DLC Weekをクリアする。",
+		"noob49player_desc": "さっさとアイツを追放しちまえ。",
+		"looksie_name": "Looksie",
+		"looksie_hint": "ちょっと見てみよう。",
+		"looksie_desc": "見てみるみる", //both are gibberish
+		"longusgang_name": "Longusの仲間たち",
+		"longusgang_hint": "まとめてお届け。",
+		"longusgang_desc": "この3人がずっと付き合ってたって知ってた？",
+		"littlermungus_name": "Littler Mungus",
+		"littlermungus_hint": "どんどん小さくなっていくな。",
+		"littlermungus_desc": "しかも今日は彼の誕生日！",
+		"LIMEGREENPlayable_name": "JADSPOSTOR",
+		"LIMEGREENPlayable_hint": "ライムグリーンがなんだって？？？",
+		"LIMEGREENPlayable_desc": "JADS。",
+		"kickflip_name": "David Pummel",
+		"kickflip_hint": "最高だぜ！", //reference to a person named Von
+		"kickflip_desc": "信じられない！イカしてる！パーフェクト！", //because it does kickflips
+		"gumpymando_name": "GumpyとYarlowmando",
+		"gumpymando_hint": "多すぎるぞ！いい加減にしろ！！",
+		"gumpymando_desc": "一人目がGumpy、二人目がYarlowmando.",
+		"gruntus_name": "Gruntus", //grunt from madness combat
+		"gruntus_hint": "混沌の戦場！", //madness combat
+		"gruntus_desc": "えーと...まあ、大体合ってる...か？",
+		"greypet_name": "Grey Mini Crewmate",
+		"greypet_hint": "49でAランク以上を獲得する",
+		"greypet_desc": "まさか...殺人鬼の卵か？",
+		"goldennug_name": "Golden Nug",
+		"goldennug_hint": "マジかよ。",
+		"goldennug_desc": "よくそんなことできたな。", //the pet costs 42000 beans
+		"tinyhenry_name": "Henry Stickmin",
+		"tinyhenry_hint": "あの泥棒は、閃光のように消えちまった。", //reference to Flash games
+		"tinyhenry_desc": "失敗するなよ！",
+		"bfblack_name": "SUSfriend", //black impostor in a bf cap playable
+		"bfblack_hint": "本物に一番近いのはこいつだ！",
+		"bfblack_desc": "逃げろ。",
+		
+		// dialogue
+		"dialogue_490": "へえ、これがDLCか！",
+		"dialogue_491": "助けて...誰か助けて <:(",
+		"dialogue_492": "俺の息子はどこだ！？見かけなかったか？！",
+		"dialogue_493": "そこにいるだろ。",
+		"dialogue_494": "知ってるよ。ちょっとからかっただけだ",
+		"dialogue_495": "てか待て",
+		"dialogue_496": "俺はお前のクソ息子に殺されてんだよ！！",
+		"dialogue_497": "しかも二回もだ！！！",
+		"dialogue_498": "バカ言えよ、うちの子がそんなことするわけないだろ",
+		"dialogue_499": "ぼくやってないもん",
+		"dialogue_4910": "ほらな？",
+		"dialogue_4911": " : (",
+		"dialogue_4912": "んなことより信じられるか？俺専用のウィークができたんだぜ！",
+		"dialogue_4913": "まるまる俺一人の出番だ！",
+		"dialogue_4914": "そりゃよかったな頑張れよー",
+		"dialogue_dontlied0": "ふう！間一髪でBlack Impostorから逃げ切れたわ。",
+		"dialogue_dontlied1": "あれ...",
+		"dialogue_dontlied2": "おい嘘だろ！？",
+		"dialogue_dontlied3": "Purpleじゃねーか！！",
+		"dialogue_dontlied4": "僕はPurpleだよ",
+		"dialogue_dontlied5": "愛してるぜPurple...",
+		"dialogue_suspect0": "ひどい惨状だ...", //this dialogue is unused, but might get readded in the future
+		"dialogue_suspect1": "で...",
+		"dialogue_suspect2": "あんたがやったのか？",
+		"dialogue_suspect3": "はぁ?",
+		"dialogue_suspect4": "そんなわけないだろ。",
+		"dialogue_suspect5": "じゃあ名探偵さんよ、誰がやったってんだ？",
+		"dialogue_suspect6": "心当たりがある。.",
+		"dialogue_suspect7": "犯人はBlackだと思う。", //black impostor
+		"dialogue_suspect8": "けど、あんたもBlackだろ。", //both detective and black impostor are black among us characters
+		"dialogue_suspect9": "ふーむ...",
+		"dialogue_detective": "Detective",
+		"dialogue_minigrey": "Mini Grey",
+		"dialogue_noob49": "Noob49",
+		"dialogue_pico": "Pico",
+		"dialogue_purple": "Purple" //gender neutral if you can (or plural yeah)
+	}
+}

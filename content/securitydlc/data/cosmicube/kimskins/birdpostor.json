@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 150,
+	
+	"title": "Birdpostor",
+	"node": {
+		"direction": "north",
+		"parent": "twin"
+	},
+	"hint": "Don't let it peck you.",
+	"description": "Isn't it nice, to just go outside and feed some birds!",
+	
+	"color": [
+		111,
+		218,
+		254
+	]
+}

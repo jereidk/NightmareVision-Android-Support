@@ -1,0 +1,14 @@
+{
+	"type": "playerSkin",
+	"price": 207,
+	
+	"title": "Detective",
+	"node": {
+		"direction": "north",
+		"parent": "bobby"
+	},
+	"hint": "Unlocked by receiving a rank of A or higher on Suspect.",
+	"description": "Getting that \"Crewmate\" to confess was a Challenge.",
+	"song": "Suspect",
+	"requirement": "A"
+}

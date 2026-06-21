@@ -1,0 +1,85 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-244,
+				-45
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "hIDLE"
+		},
+		{
+			"offsets": [
+				-127,
+				-54
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "hLEFT"
+		},
+		{
+			"offsets": [
+				-190,
+				-67
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "hDOWN"
+		},
+		{
+			"offsets": [
+				-216,
+				3
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "hUP"
+		},
+		{
+			"offsets": [
+				-236,
+				-43
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "hRIGHT"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/cosmicube/tinyhenry",
+	"position": [
+		-180,
+		300
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "tinyhenry",
+	"gameover_character": "genericDeath",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -2692097,
+	"camera_position": [
+		10,
+		-43
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
+	"scale": 1,
+	"_editor_isPlayer": true,
+	"flags": {
+		"turbulenceOffset": [0, 30]
+	}
+}

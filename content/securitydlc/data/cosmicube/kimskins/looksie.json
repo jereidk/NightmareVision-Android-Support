@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 150,
+	
+	"title": "Looksie",
+	"node": {
+		"direction": "west",
+		"parent": "gruntus"
+	},
+	"hint": "Let's take a see.",
+	"description": "I'll look a watch.",
+	
+	"color": [
+		208,
+		227,
+		255
+	]
+}

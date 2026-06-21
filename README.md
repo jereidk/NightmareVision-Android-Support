@@ -1,4 +1,4 @@
-# VS Impostor Legacy — Android Port
+# VS Impostor Legacy — Android Port (1.1.1)
 
 Unofficial Android port of the **VS Impostor Legacy** mod, built on the [NightmareVision engine](https://github.com/NMVTeam/NightmareVision).
 

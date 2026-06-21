@@ -1,0 +1,23 @@
+{
+	"songs": [
+		["49", "noob49", [90, 91, 255], "noob49", "Ra_TanG"],
+		["Don't Lied", "purple", [153, 55, 123], "purple", "Kakow0"],
+		["Suspect", "detective", [90, 91, 123], "detective", "rodreal"]
+	],
+	
+	"section": "dlc",
+	
+	"storyName": "Somewhere Else",
+	"weekName": "DLC Week",
+	"weekBefore": "week3",
+	
+	"startUnlocked": false,
+	"hideStoryMode": false,
+	"hideFreeplay": false,
+	"currency": "pentacle",
+
+	"node": {
+		"parent": "week3",
+		"direction": "north"
+	}
+}

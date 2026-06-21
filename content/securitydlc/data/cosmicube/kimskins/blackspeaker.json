@@ -1,0 +1,14 @@
+{
+	"type": "speakerSkin",
+	"price": 400,
+	
+	"title": "Speaker Black",
+	"hint": "Threat to your safety",
+	"description": "What a nightmare (only for some).",
+	
+	
+	"node": {
+		"direction": "south",
+		"parent": "whitespeaker"
+	}
+}

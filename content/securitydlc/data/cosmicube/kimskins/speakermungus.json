@@ -1,0 +1,13 @@
+{
+	"type": "speakerSkin",
+	"price": 210,
+	
+	"title": "Speaker Mungus & Jorsawsee",
+	"hint": "Perfect pillow.",
+	"description": "Comes with the famous basketball player!",
+	
+	"node": {
+		"direction": "south",
+		"parent": "bfblack"
+	}
+}

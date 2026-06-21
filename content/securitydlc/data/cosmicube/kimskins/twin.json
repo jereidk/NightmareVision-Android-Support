@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 120,
+	
+	"title": "Twin",
+	"node": {
+		"direction": "north",
+		"parent": "looksie"
+	},
+	"hint": "Best bros.",
+	"description": "Forever and ever!",
+	
+	"color": [
+		111,
+		218,
+		254
+	]
+}

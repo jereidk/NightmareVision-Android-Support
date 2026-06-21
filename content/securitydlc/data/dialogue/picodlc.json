@@ -1,0 +1,25 @@
+{
+	"name": "dialogue_pico",
+	"side": 2,
+	"asset": "picodlc",
+	"boxColor": "0xFF83EC5B",
+	"boxShadeColor": "0xFF0E965C", 
+	"icon": "pico",
+	"sound": "pico",
+	"animations": [
+		{
+			"anim": "serious",
+			"name": "pico normal",
+			"loop": false,
+			"fps": 30,
+			"offsets": [0, 8] 
+		},
+		{
+			"anim": "normal",
+			"name": "pico happy",
+			"loop": false,
+			"fps": 30,
+			"offsets": [-2, 18] 
+		}
+	]
+}

@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 280,
+	
+	"title": "Fatogus",
+	"node": {
+		"direction": "north",
+		"parent": "suslet"
+	},
+	"hint": "Brruuuup.",
+	"description": "Excuse me...",
+	
+	"color": [
+		111,
+		218,
+		254
+	]
+}

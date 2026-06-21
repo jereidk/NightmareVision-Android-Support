@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="minigreya.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="minigrey kid0000" x="0" y="85" width="99" height="78" frameX="0" frameY="-3" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0001" x="0" y="85" width="99" height="78" frameX="0" frameY="-3" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0002" x="101" y="85" width="99" height="78" frameX="0" frameY="-3" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0003" x="101" y="85" width="99" height="78" frameX="0" frameY="-3" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0004" x="98" y="0" width="95" height="83" frameX="-2" frameY="0" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0005" x="98" y="0" width="95" height="83" frameX="-2" frameY="0" frameWidth="99" frameHeight="83"/>
+	<SubTexture name="minigrey kid0006" x="0" y="0" width="96" height="83" frameX="-2" frameY="0" frameWidth="99" frameHeight="83"/>
+</TextureAtlas>

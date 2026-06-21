@@ -29,6 +29,8 @@ dump/*
 !.vscode/extensions.json
 /content
 !content/NMV-Base-Game
+!content/securitydlc
+!content/mods-go-here.txt
 
 # Claude Code worktrees
 .claude/worktrees/

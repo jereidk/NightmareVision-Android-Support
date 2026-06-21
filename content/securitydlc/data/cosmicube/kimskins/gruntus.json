@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 200,
+	
+	"title": "Gruntus",
+	"node": {
+		"direction": "west",
+		"parent": "rgbpet"
+	},
+	"hint": "Chaos Fighting!",
+	"description": "I- umm... That's close.. enough?",
+	
+	"color": [
+		203,
+		203,
+		203
+	]
+}

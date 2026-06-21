@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 200,
+	
+	"title": "Longus' Gang",
+	"node": {
+		"direction": "south",
+		"parent": "gumpymando"
+	},
+	"hint": "Comes in a batch.",
+	"description": "Did you know these 3 were dating this whole time?",
+	
+	"color": [
+		255,
+		102,
+		102
+	]
+}

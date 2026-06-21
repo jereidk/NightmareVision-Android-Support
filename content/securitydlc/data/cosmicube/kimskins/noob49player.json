@@ -1,0 +1,14 @@
+{
+	"type": "playerSkin",
+	"price": 249,
+	
+	"title": "Noob49",
+	"hint": "Unlocked by completing DLC Week.",
+	"description": "Just vote that guy out already.",
+	"week": "weekDLC",
+	
+	"node": {
+		"direction": "east",
+		"parent": "LIMEGREENPlayable"
+	}
+}

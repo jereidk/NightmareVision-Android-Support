@@ -1,0 +1,18 @@
+{
+	"type": "pet",
+	"price": 10,
+	
+	"title": "Littler Mungus",
+	"node": {
+		"direction": "south",
+		"parent": "sneep"
+	},
+	"hint": "They're getting smaller every time.",
+	"description": "It's also his birthday today!",
+	
+	"color": [
+		231,
+		12,
+		27
+	]
+}

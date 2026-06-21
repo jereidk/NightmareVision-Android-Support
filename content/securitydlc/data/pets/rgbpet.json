@@ -1,0 +1,9 @@
+{
+	"flags": {
+		"rgb": true,
+		"variants": {
+			"running": "rgbpetrun",
+			"falling": "rgbpetfall"
+		}
+	}
+}

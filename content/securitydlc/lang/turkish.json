@@ -1,0 +1,157 @@
+{
+	"lang": {
+		"cutscene_dontlied0": "*kıkırdamalar*",
+		"cutscene_dontlied1": "Beni bugün yakalamayacaksın!",
+		"cutscene_dontlied2": "İneeek!",
+		
+        "yellowspeaker_name": "Hoparlör Sarı",
+        "yellowspeaker_hint": "Görevlerini tamamla!",
+        "yellowspeaker_desc": "Lütfen kaytarmayı bırak!",
+        "blackspeaker_name": "Hoparlör Siyah",
+        "blackspeaker_hint": "Güvenliğine tehdit",
+        "blackspeaker_desc": "Ne kabus ama (bazılarına).",
+        "whitespeaker_name": "Hoparlör Beyaz",
+        "whitespeaker_hint": "Yeni keşfedilmiş öz güven.",
+        "whitespeaker_desc": "Şunun arkasında saklanmayı kesmesi lazım.",
+        "triplespeaker_name": "Üçlü Bela Hoparlörü",
+        "triplespeaker_hint": "Triple Threat'de A veya daha yüksek bir derece alarak açılır.",
+        "triplespeaker_desc": "Anlamış gibi durmuyorsun.",
+        "speakermungus_name": "Hoparlör Mungus & Jorsawsee",
+        "speakermungus_hint": "Mükemmel yastık.",
+        "speakermungus_desc": "Yanında ünlü basketbol oyuncusuyla gelir!",
+        "alien_name": "Uzaylı", //alien homimid reference
+        "alien_hint": "İstilacı tür.",
+        "alien_desc": "Bilinmeyen bir gezegenden gelen gizemli bir tür olan sarı ciltli iki ayaklı yaratık.",
+        "aquarium_name": "Akvaryum", //fish in an aquarium
+        "aquarium_hint": "Kurtarma Servisi", //because the fish got saved
+        "aquarium_desc": "Yeni hayatına nefes al!",
+        "bfweird_name": "Bi' Garip BF",
+        "bfweird_hint": "DLC Özel",
+        "bfweird_desc": "UPDOG işler dönüyor burada...", //reference to UPDOG
+        "gfweird_name": "Bi' Garip GF",
+        "gfweird_hint": "DLC Özel",
+        "gfweird_desc": "Yeni bir kat boya!",
+        "birdpostor_name": "Kuşpostor",
+        "birdpostor_hint": "Seni gagalamasına izin verme.",
+        "birdpostor_desc": "Dışarı çıkıp biraz kuş beslemek hoş değil mi!",
+        "blake_name": "Blake",
+        "blake_hint": "Aman tanrım.",
+        "blake_desc": "Şu adamı koşu bandına sokun!!",
+        "bobby_name": "Bobby",
+        "bobby_hint": "O kesinlikle bir impostor değil!", //https://www.youtube.com/watch?v=KByREO4gB0M&list=RDKByREO4gB0M&start_radio=1
+        "bobby_desc": "Olsa bile, olmazdı zaten, çünkü impostor değil ki!",
+        "chefplayable_name": "Şef",
+        "chefplayable_hint": "Sauces Moogus'da A veya daha yüksek bir derece alarak açılır..",
+        "chefplayable_desc": "10 Numara Şef.",
+        "deadnoob49_name": "Ölü Noob49",
+        "deadnoob49_hint": "Çöpe at gitsin.",
+        "deadnoob49_desc": "Kayıp kişi, artık kayıp değil!",
+        "detectiveplayer_name": "Dedektif",
+        "detectiveplayer_hint": "Suspect'de A veya daha yüksek bir derece alarak açılır.",
+        "detectiveplayer_desc": "O \"Crewmate'e\" itiraf ettirmek bir Meydan Okuma'ydı.", //reference to Crewmate Challenge (cancelled mod)
+        "evilbf_name": "KÖTÜCÜL BF",
+        "evilbf_hint": "Biri ne kadar KÖTÜ olabilir ki?",
+        "evilbf_desc": "Eyvah! Bıçağı var!.. Bu kadar.",
+        "fatogus_name": "Şişkongus",
+        "fatogus_hint": "Brruuuup.",
+        "fatogus_desc": "Pardon...",
+        "yellow-ghost_name": "Hayalet Sarı",
+        "yellow-ghost_hint": "Görevlerini bitirmeye ne dersin???",
+        "yellow-ghost_desc": "Neden ölüp duruyor?!",
+        "twin_name": "İkiz",
+        "twin_hint": "En iyi kardeşler.",
+        "twin_desc": "Sonsuza dek!",
+        "tuesdayplayable_name": "Tomongus",
+        "tuesdayplayable_hint": "KİM oynanabilir oldu dedin?!",
+        "tuesdayplayable_desc": "AYYYYY",
+        "tawny_name": "Tawny",
+        "tawny_hint": "Kanayim deme sakın.", //reference to a mod Fakeout!
+        "tawny_desc": "Çok fazla işkence.", //because i drew tawny getting tortured a lot
+        "suslet_name": "Şüplet", //pokemon Wiglet
+        "suslet_hint": "Aman tanrım aman tarım.",
+        "suslet_desc": "Bir solucan, ve bacağı var, ama bacağı yok.", //doesnt mean anything
+        "sneep_name": "Sneep",
+        "sneep_hint": "Ne yaptı bilmek istemezsin.",
+        "sneep_desc": "Tek Sneep renkli karakter!",
+        "shit_name": "Bok",
+        "shit_hint": "Triple Threat'de F veya daha yüksek bir derece alarak açılır.",
+        "shit_desc": "Dalga geçilesi biri değil.", //refence to a mod TRIFFLE
+        "rgbpet_name": "RGBDost",
+        "rgbpet_hint": "Özelleştirme? Bu yılda mı?",
+        "rgbpet_desc": "Karakter veya can barı rengine göre özelleştirilmiş.",
+        "noob49player_name": "Noob49",
+        "noob49player_hint": "DLC haftası tamamlanarak açılır.",
+        "noob49player_desc": "Şu adamı oylayın gitsin.",
+        "looksie_name": "Bakacık",
+        "looksie_hint": "Bi' bakalım.",
+        "looksie_desc": "Bi' bakacağım.", //both are gibberish
+        "longusgang_name": "Uzungus Çetesi",
+        "longusgang_hint": "Grubuyla beraber gelir.",
+        "longusgang_desc": "Bu üçünün bunca zamandır çıktığını biliyor muydun?",
+        "littlermungus_name": "Munguscukcuk",
+        "littlermungus_hint": "Her seferinde daha da küçülüyorlar.",
+        "littlermungus_desc": "Aynı zamanda bugün doğum günü!",
+        "LIMEGREENPlayable_name": "JADSPOSTOR",
+        "LIMEGREENPlayable_hint": "LİMON YEŞİLİ Mİ NEE???",
+        "LIMEGREENPlayable_desc": "JADS.",
+        "kickflip_name": "David Pummel",
+        "kickflip_hint": "Vontastik!", //reference to a person named Von
+        "kickflip_desc": "Muazzam! Dehşet! Harika!", //because it does kickflips
+        "gumpymando_name": "Gumpy ve Yarlowmando",
+        "gumpymando_hint": "Çok fazlalar! Durdur şunu!!",
+        "gumpymando_desc": "Birincisinin adı Gumpy ve diğeri de Yarlowmando.",
+        "gruntus_name": "Gruntus", //grunt from madness combat
+        "gruntus_hint": "Kaos Dövüşü!", //madness combat
+        "gruntus_desc": "Ben- umm... Yeterince.. yakın herhalde?",
+        "greypet_name": "Gri Mini Crewmate",
+        "greypet_hint": "49'da A veya daha yüksek bir derece alarak açılır..",
+        "greypet_desc": "O... potansiyel bir katil mi?",
+        "goldennug_name": "Altın Nug",
+        "goldennug_hint": "Hassiktir.",
+        "goldennug_desc": "Nasıl yaparsın.", //the pet costs 42000 beans
+        "tinyhenry_name": "Henry Stickmin",
+        "tinyhenry_hint": "Hırsız, bir flaşta gitti.", //reference to Flash games
+        "tinyhenry_desc": "BAŞARISIZ olma!",
+        "bfblack_name": "ŞÜPfriend", //black impostor in a bf cap playable
+        "bfblack_hint": "Gerçek şeye en yakın buna sahip olacaksınız!",
+        "bfblack_desc": "Kaç.",
+		
+        //dialogue
+        "dialogue_490": "bu dlc olsa gerek!",
+        "dialogue_491": "yardım edin yardım edin <:(",
+        "dialogue_492": "oğlum nerede? oğlumu gördünüz mü!??",
+        "dialogue_493": "orada duruyor",
+        "dialogue_494": "Biliyorum seninle taşşak geçiyordum.",
+        "dialogue_495": "bekle",
+        "dialogue_496": "PİÇ KURUSU OĞLUN BENİ ÖLDÜRDÜ",
+        "dialogue_497": "İKİ KERE",
+        "dialogue_498": "Saçmalık, o asla öyle bir şey yapmaz!",
+        "dialogue_499": "ben asla öyle bir şey yapmam.",
+        "dialogue_4910": "Gördün mü?",
+        "dialogue_4911": " : (",
+        "dialogue_4912": "Ama İnanabiliyor musun? Kendi haftama sahibim!",
+        "dialogue_4913": "Tamamen bana ait!",
+        "dialogue_4914": "aynen bol şans dostum.",
+        "dialogue_dontlied0": "fiyuv!! Siyah Impostor'dan tam zamanında kaçtığım için mutluyum.",
+        "dialogue_dontlied1": "bekle..............",
+        "dialogue_dontlied2": "aman tanrım!",
+        "dialogue_dontlied3": "bu mor!!",
+        "dialogue_dontlied4": "Ben Mor.",
+        "dialogue_dontlied5": "seni seviyorum mor",
+        "dialogue_suspect0": "Bu bir katliam.", //this dialogue is unused, but might get readded in the future
+        "dialogue_suspect1": "yani...",
+        "dialogue_suspect2": "sen mi yaptın?",
+        "dialogue_suspect3": "Ne?",
+        "dialogue_suspect4": "Tabii ki hayır.",
+        "dialogue_suspect5": "pekala patron o zaman kim yaptı.",
+        "dialogue_suspect6": "Bir fikrim var.",
+        "dialogue_suspect7": "Bence siyah öldürdü.", //black impostor
+        "dialogue_suspect8": "ama sen de siyahsın", //both detective and black impostor are black among us characters
+        "dialogue_suspect9": "Hm...",
+        "dialogue_detective": "Dedektif",
+        "dialogue_minigrey": "Mini Gri",
+        "dialogue_noob49": "Noob49",
+        "dialogue_pico": "Pico",
+        "dialogue_purple": "Mor" //gender neutral if you can (or plural yeah)
+	}
+}

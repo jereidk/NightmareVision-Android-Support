@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="picodlc.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="pico happy0000" x="189" y="1" width="186" height="272" frameX="0" frameY="-3" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0001" x="378" y="1" width="184" height="274" frameX="-1" frameY="-1" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0002" x="378" y="1" width="184" height="274" frameX="-1" frameY="-1" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0003" x="1" y="1" width="185" height="276" frameX="-1" frameY="0" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0004" x="1" y="1" width="185" height="276" frameX="-1" frameY="0" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0005" x="189" y="276" width="184" height="273" frameX="-2" frameY="-1" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0006" x="189" y="276" width="184" height="273" frameX="-2" frameY="-1" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico happy0007" x="189" y="1" width="186" height="272" frameX="0" frameY="-3" frameWidth="186" frameHeight="276"/>
+	<SubTexture name="pico normal0000" x="376" y="544" width="186" height="264" frameX="-2" frameY="0" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0001" x="376" y="544" width="186" height="264" frameX="-2" frameY="0" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0002" x="1" y="280" width="185" height="262" frameX="-1" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0003" x="1" y="280" width="185" height="262" frameX="-1" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0004" x="1" y="280" width="185" height="262" frameX="-1" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0005" x="1" y="552" width="187" height="262" frameX="0" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0006" x="1" y="552" width="187" height="262" frameX="0" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0007" x="1" y="552" width="187" height="262" frameX="0" frameY="-2" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0008" x="376" y="278" width="187" height="263" frameX="-1" frameY="-1" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0009" x="376" y="278" width="187" height="263" frameX="-1" frameY="-1" frameWidth="188" frameHeight="264"/>
+	<SubTexture name="pico normal0010" x="376" y="278" width="187" height="263" frameX="-1" frameY="-1" frameWidth="188" frameHeight="264"/>
+</TextureAtlas>
