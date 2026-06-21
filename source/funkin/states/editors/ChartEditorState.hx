@@ -257,6 +257,11 @@ class ChartEditorState extends MusicBeatState
 	public var shiftStrumlineTransform:Dynamic = null;
 	public var swapStrumlineTransform:Dynamic = null;
 
+	#if mobile
+	var chartMobileBtns:Array<FlxSprite> = [];
+	var chartMobilePlayLbl:flixel.text.FlxText = null;
+	#end
+
 	public function updateVolume():Void {}
 	public function copySection():Void {}
 	public function pasteSection():Void {}
@@ -534,10 +539,35 @@ class ChartEditorState extends MusicBeatState
 		lastSong = currentSongName;
 		
 		updateGrid();
-		
+
+		#if mobile
+		final btnW = 55;
+		final btnH = 55;
+		final btnGap = 4;
+		final totalW = 5 * btnW + 4 * btnGap;
+		final startX = FlxG.width - totalW - 6;
+		final startY = 6;
+		final btnLabels = ['<<', 'PLY', '>>', 'UND', 'OPT'];
+		for (i in 0...5)
+		{
+			final bx = startX + i * (btnW + btnGap);
+			final btn = new FlxSprite(bx, startY).makeGraphic(btnW, btnH, 0xCC000033);
+			btn.scrollFactor.set();
+			btn.camera = camHUD;
+			add(btn);
+			chartMobileBtns.push(btn);
+			final lbl = new flixel.text.FlxText(bx, startY + Std.int((btnH - 16) / 2), btnW, btnLabels[i]);
+			lbl.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
+			lbl.scrollFactor.set();
+			lbl.camera = camHUD;
+			add(lbl);
+			if (i == 1) chartMobilePlayLbl = lbl;
+		}
+		#end
+
 		super.create();
 	}
-	
+
 	function createFriends()
 	{
 		// temp
@@ -2101,6 +2131,45 @@ class ChartEditorState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		if (chartMobilePlayLbl != null)
+			chartMobilePlayLbl.text = FlxG.sound.music.playing ? 'PSE' : 'PLY';
+
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.justPressed)
+			{
+				for (i in 0...chartMobileBtns.length)
+				{
+					final btn = chartMobileBtns[i];
+					if (touch.viewX >= btn.x && touch.viewX < btn.x + btn.width
+						&& touch.viewY >= btn.y && touch.viewY < btn.y + btn.height)
+					{
+						switch (i)
+						{
+							case 0: changeSection(curSec - 1);
+							case 1: if (FlxG.sound.music.time < (FlxG.sound.music.length - endOffset)) togglePause();
+							case 2: changeSection(curSec + 1);
+							case 3: undo();
+							case 4:
+								autosaveSong();
+								toggleMusic(false);
+								openSubState(new ChartingOptionsSubmenuOLD());
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		if (FlxG.android.justReleased.BACK)
+		{
+			autosaveSong();
+			toggleMusic(false);
+			openSubState(new ChartingOptionsSubmenuOLD());
+		}
+		#end
+
 		if (camPos != null) camPos.setPosition(strumLine.x + CAM_OFFSET, strumLine.y);
 		
 		bg.scale.x = bg.scale.y = (1 / FlxG.camera.zoom);
@@ -3875,15 +3944,20 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 		});
 		changeSelection();
 		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
+		#end
 	}
-	
+
 	override public function update(elapsed:Float)
 	{
-		if (FlxG.keys.justPressed.ESCAPE && canexit)
+		if ((FlxG.keys.justPressed.ESCAPE || controls.BACK) && canexit)
 		{
 			close();
 		}
-		
+
 		var upP = controls.UI_UP_P;
 		var downP = controls.UI_DOWN_P;
 		var accepted = controls.ACCEPT;

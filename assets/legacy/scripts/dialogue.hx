@@ -535,16 +535,25 @@ function dialogueUpdate(elapsed:Float)
 		if (dialogueEnded)
 		{
 			if (dialogueList.length > 0) refreshDialogue(true);
-			else
-			{
-				goodBialogue();
-			}
+			else goodBialogue();
 		}
-		else
+		else swagDialogue.skip();
+	}
+	#if mobile
+	for (touch in FlxG.touches.list)
+	{
+		if (touch.justReleased)
 		{
-			swagDialogue.skip();
+			if (dialogueEnded)
+			{
+				if (dialogueList.length > 0) refreshDialogue(true);
+				else goodBialogue();
+			}
+			else swagDialogue.skip();
+			break;
 		}
 	}
+	#end
 }
 
 function goodBialogue()
