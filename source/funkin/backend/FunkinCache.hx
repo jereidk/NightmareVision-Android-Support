@@ -161,7 +161,12 @@ class FunkinCache
 	{
 		if (allowGPU && ClientPrefs.gpuCaching)
 		{
+			// On Android, OpenGL ES context is destroyed when the app is backgrounded.
+			// OpenFL can only restore textures if the CPU pixel buffer (image) still exists.
+			// disposeImage() permanently deletes it, leaving textures blank after resume.
+			#if !android
 			bitmap.disposeImage();
+			#end
 		}
 		
 		var newGraphic:FlxGraphic = FlxGraphic.fromBitmapData(bitmap, false, key);
