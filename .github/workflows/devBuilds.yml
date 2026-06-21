@@ -355,11 +355,8 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
-          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
-            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
-            /tmp/ndk-wrap/arm-linux-androideabi-ar
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
@@ -593,11 +590,8 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
-          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
-            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
-            /tmp/ndk-wrap/arm-linux-androideabi-ar
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
