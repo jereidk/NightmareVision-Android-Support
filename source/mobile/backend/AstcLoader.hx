@@ -29,6 +29,11 @@ import lime.utils.UInt8Array;
  * listener that re-uploads every tracked ASTC texture when the GL context
  * comes back, patching the existing RectangleTexture handles in-place so
  * all live BitmapData instances automatically see fresh GPU data.
+ *
+ * PNG fallback: if the .astc file is missing when the context is restored
+ * (e.g. DLC uninstalled, SD-card corruption), the loader falls back to the
+ * original PNG and switches that entry permanently to PNG-restore mode so
+ * future restore cycles also use the PNG.
  */
 @:access(openfl.display3D.textures.TextureBase)
 @:access(openfl.display3D.Context3D)
@@ -44,10 +49,25 @@ class AstcLoader
 	// ASTC header size in bytes
 	static inline final HEADER_SIZE:Int = 16;
 
+	// Compressed payloads at or below this size are kept in RAM so context
+	// restoration can skip the disk re-read for small/medium textures.
+	// At ASTC 8×8 this covers textures up to ~1024×1024.
+	// Larger spritemaps re-read from disk on restore (lower RAM overhead vs.
+	// occasional resume stutter is the accepted tradeoff).
+	static inline final BYTES_CACHE_LIMIT:Int = 512 * 1024; // 512 KB
+
 	#if (android && cpp)
-	// Keyed by PNG path (= FunkinCache cache key). Stores everything needed
-	// to re-upload the ASTC texture after an OpenGL context loss/restore cycle.
-	static var _recovery:Map<String, {astcPath:String, rectTex:RectangleTexture, width:Int, height:Int, glFormat:Int}> = [];
+	// Keyed by PNG path (= FunkinCache cache key).
+	// glFormat == 0 is the PNG-fallback sentinel — valid ASTC entries always
+	// arrive here with glFormat != 0 (blockSizeToGlFormat guards this).
+	static var _recovery:Map<String, {
+		astcPath:    String,
+		rectTex:     RectangleTexture,
+		width:       Int,
+		height:      Int,
+		glFormat:    Int,
+		cachedBytes: Null<haxe.io.Bytes>
+	}> = [];
 	static var _listenerInstalled:Bool = false;
 	#end
 
@@ -182,12 +202,19 @@ class AstcLoader
 			var result = _loadInternal(astcPath, bytes);
 			if (result == null) return null;
 
+			// Keep the compressed bytes in RAM for small textures so context
+			// restoration can skip the disk I/O round-trip. The bytes reference
+			// is shared (no copy) — we just prevent it from being GC'd.
+			var payloadSize = bytes.length - HEADER_SIZE;
+			var cached:Null<haxe.io.Bytes> = (payloadSize <= BYTES_CACHE_LIMIT) ? bytes : null;
+
 			_recovery.set(cacheKey, {
-				astcPath: astcPath,
-				rectTex:  result.rectTex,
-				width:    result.width,
-				height:   result.height,
-				glFormat: result.glFormat
+				astcPath:    astcPath,
+				rectTex:     result.rectTex,
+				width:       result.width,
+				height:      result.height,
+				glFormat:    result.glFormat,
+				cachedBytes: cached
 			});
 
 			return result.bitmap;
@@ -287,9 +314,14 @@ class AstcLoader
 
 	/**
 	 * Called when the Stage3D context is created or recreated after context loss.
-	 * Re-uploads every tracked ASTC texture and patches the existing RectangleTexture
-	 * handles in-place so all live BitmapData instances automatically see fresh GPU data.
-	 * On the initial CONTEXT3D_CREATE (before any ASTC textures are loaded), the
+	 *
+	 * For each tracked texture:
+	 *   • glFormat != 0 (ASTC mode): uses cachedBytes if available (no I/O for
+	 *     small textures), else re-reads from disk/APK. On missing file, falls
+	 *     through to PNG fallback.
+	 *   • glFormat == 0 (PNG fallback mode): re-uploads from the original PNG.
+	 *
+	 * On the initial CONTEXT3D_CREATE (before any ASTC textures are loaded) the
 	 * recovery map is empty and this function returns immediately.
 	 */
 	static function _onContextRestored(_:Dynamic):Void
@@ -304,36 +336,63 @@ class AstcLoader
 
 		for (cacheKey => entry in _recovery)
 		{
-			// Re-read the source bytes (filesystem first, then bundled assets).
-			var bytes:Null<haxe.io.Bytes> = null;
-			try
+			// PNG fallback mode — the .astc was missing on a previous restore;
+			// this entry now permanently uses the PNG source.
+			if (entry.glFormat == 0)
 			{
-				if (sys.FileSystem.exists(entry.astcPath))
-					bytes = sys.io.File.getBytes(entry.astcPath);
-				else if (OflAssets.exists(entry.astcPath))
-					bytes = OflAssets.getBytes(entry.astcPath);
+				if (_restoreFromPng(context3D, cacheKey))
+					restored++;
+				else
+				{
+					toRemove.push(cacheKey);
+					failed++;
+				}
+				continue;
 			}
-			catch (e:Dynamic) {}
+
+			// ASTC mode: prefer in-RAM cached bytes (small textures), otherwise
+			// re-read from disk/APK to avoid an I/O stall only when necessary.
+			var bytes:Null<haxe.io.Bytes> = entry.cachedBytes;
+			if (bytes == null)
+			{
+				try
+				{
+					if (sys.FileSystem.exists(entry.astcPath))
+						bytes = sys.io.File.getBytes(entry.astcPath);
+					else if (OflAssets.exists(entry.astcPath))
+						bytes = OflAssets.getBytes(entry.astcPath);
+				}
+				catch (e:Dynamic) {}
+			}
 
 			if (bytes == null)
 			{
-				Logger.log('AstcLoader: context restore — ${entry.astcPath} not found, removing from tracking', WARN);
-				toRemove.push(cacheKey);
-				failed++;
+				// .astc file disappeared (DLC removed, SD-card corruption, etc.).
+				// Attempt PNG fallback so live sprites are not permanently black.
+				Logger.log('AstcLoader: context restore — ${entry.astcPath} missing, trying PNG fallback', WARN);
+				if (_restoreFromPng(context3D, cacheKey))
+					restored++;
+				else
+				{
+					toRemove.push(cacheKey);
+					failed++;
+				}
 				continue;
 			}
 
 			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat);
 			if (freshTex == null)
 			{
+				// GL upload error (driver-side failure). PNG fallback won't help
+				// since the context itself may be in a bad state. Skip and log.
 				failed++;
 				continue;
 			}
 
 			// The old __textureID is a dead handle after context loss; the driver
-			// already freed all GPU resources. Just overwrite with the fresh handle.
-			// The BitmapData holds a reference to this same RectangleTexture object,
-			// so the renderer will automatically use the new handle on the next draw.
+			// already freed all GPU resources. Overwrite with the fresh handle.
+			// The BitmapData holds a reference to this same RectangleTexture, so
+			// the renderer automatically uses the new handle on the next draw.
 			entry.rectTex.__textureID = freshTex;
 			restored++;
 		}
@@ -343,6 +402,57 @@ class AstcLoader
 
 		if (restored > 0 || failed > 0)
 			Logger.log('AstcLoader: context restored — $restored textures re-uploaded, $failed failed', WARN);
+	}
+
+	/**
+	 * Restores a tracked texture from its PNG counterpart.
+	 *
+	 * Creates a temporary RectangleTexture, uploads the PNG BitmapData to it
+	 * via OpenFL's standard path (handles BGRA/RGBA format internally), then
+	 * transfers the GL handle to entry.rectTex. Sets the temporary wrapper's
+	 * __textureID to 0 so any future cleanup call on it is a harmless no-op
+	 * (gl.deleteTexture(0) is defined as a no-op by the GL spec).
+	 *
+	 * Permanently marks the entry as PNG mode (glFormat = 0) so all subsequent
+	 * context-restore cycles also re-upload from PNG without retrying the ASTC.
+	 */
+	static function _restoreFromPng(context3D:Context3D, cacheKey:String):Bool
+	{
+		var entry = _recovery.get(cacheKey);
+		if (entry == null) return false;
+
+		var pngBitmap:Null<BitmapData> = null;
+		try
+		{
+			if (sys.FileSystem.exists(cacheKey))
+				pngBitmap = BitmapData.fromFile(cacheKey);
+			else if (OflAssets.exists(cacheKey))
+				pngBitmap = OflAssets.getBitmapData(cacheKey);
+		}
+		catch (e:Dynamic) {}
+
+		if (pngBitmap == null)
+		{
+			Logger.log('AstcLoader: PNG fallback failed for $cacheKey — file not found', WARN);
+			return false;
+		}
+
+		// Upload PNG pixels via OpenFL's standard path (format conversion handled
+		// internally) into a temporary RectangleTexture, then steal its GL handle.
+		var tempTex:RectangleTexture = context3D.createRectangleTexture(
+			pngBitmap.width, pngBitmap.height, Context3DTextureFormat.BGRA, false);
+		tempTex.uploadFromBitmapData(pngBitmap);
+		var handle = tempTex.__textureID;
+		tempTex.__textureID = 0; // orphan wrapper — handle ownership moves to entry.rectTex
+		entry.rectTex.__textureID = handle;
+		pngBitmap.dispose();
+
+		// Mark entry as PNG mode for all future context-restore cycles.
+		entry.glFormat = 0;
+		entry.cachedBytes = null; // ASTC bytes no longer needed
+
+		Logger.log('AstcLoader: PNG fallback succeeded for $cacheKey', WARN);
+		return true;
 	}
 
 	/**
