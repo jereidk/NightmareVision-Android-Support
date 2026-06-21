@@ -70,8 +70,6 @@ class WindowUtil
 		openfl.system.System.exit(0);
 	}
 
-	public static function resetWindow():Void {}
-	
 	#if FEATURE_DEBUG_TRACY
 	/**
 	 * Initialize the tracy profiler

@@ -138,7 +138,7 @@ function onCreatePost()
 	lightoverlay.zIndex = 4;
 	finaleDarkFG.zIndex = 5;
 	
-	game.opponentStrums.visible = false;
+	opponentStrums.visible = false;
 	modManager.setValue("alpha", 1, 1);
 	refreshZ();
 	

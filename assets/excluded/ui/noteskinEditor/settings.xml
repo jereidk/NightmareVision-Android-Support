@@ -8,8 +8,8 @@
                         <label text="Note Splash Texture" verticalAlign="center" />
                         <textfield placeholder="noteSplashes" width="225" id="splashTexture" tooltip="Texture used for Note Splashes"/>
 
-                        <label text="NOte Texture" verticalAlign="center" />
-                        <textfield placeholder="NOTE_assets" width="225" id="noteTexture" tooltip="Texture used on note field."/>    
+                        <label text="Player Texture" verticalAlign="center" />
+                        <textfield placeholder="NOTE_assets" width="225" id="playerTexture" tooltip="Texture used on PLAYER's note field"/>    
 
                         <label text="Opponent Texture" verticalAlign="center" />
                         <textfield placeholder="NOTE_assets" width="225" id="opponentTexture" tooltip="Texture used on OPPONENT's note field"/>  
@@ -33,6 +33,10 @@
                             <label text="Key Count" verticalAlign="center" horizontalAlign="center"/>
                             <number-stepper pos="4" id="keycount"  step="1" min="1" max="16"/>    
                         </vbox>
+                        <vbox>
+                            <label text="Lane Count" verticalAlign="center" horizontalAlign="center"/>
+                            <number-stepper pos="1" id="lanecount" step="1" min="1" max="8"/>
+                        </vbox>
                     </hbox>
 
                     <spacer height="1"/>
@@ -43,6 +47,28 @@
                     <checkbox text="Anti-aliasing Enabled?" id="antialiasingBox"/>
                 </vbox>
             </hbox>
+        </box>
+        <box text="Pixel Settings">
+            <vbox>
+                    <label text="Pixel Sustains Suffix" verticalAlign="center" />
+                    <hbox style="justify-content:space-evenly">
+                        <textfield placeholder="ENDS" width="300" id="pixSus" tooltip="Texture used for the Sustain Notes in a pixel noteskin."/>
+                        <spacer width="5"/>
+                        <checkbox text="Pixel Noteskin?" id="isPixel" verticalAlign="center" tooltip="If enabled, your noteskin will load based on pixel division instead of via a spritesheet."/>
+                    </hbox>
+                    <spacer height="2"/>
+                    <hbox style="justify-content:space-evenly">
+                        <vbox>
+                            <label text="Width Division Factor"  verticalAlign="center" horizontalAlign="center"/>
+                            <number-stepper pos="4" id="widthDiv" verticalAlign="center" horizontalAlign="center" precision="0" min ="1" max="16" step="1" tooltip="Width division factor used for pixel noteskins. FOR CHANGES TO APPEAR IN-EDITOR, RELOAD THE TEXTURE"/>
+                        </vbox>
+                        <spacer width="10"/>
+                        <vbox>
+                            <label text="Height Division Factor"  verticalAlign="center" horizontalAlign="center"/>
+                            <number-stepper pos="4" id="heightDiv" verticalAlign="center" horizontalAlign="center" precision="0" min ="1" max="16" step="1" tooltip="Height division factor used for pixel noteskins. obsFOR CHANGES TO APPEAR IN-EDITOR, RELOAD THE TEXTURE"/>
+                        </vbox>                    
+                    </hbox>
+            </vbox>
         </box>
         <box text="Animations">
             <vbox>
