@@ -84,7 +84,7 @@ class Init extends FlxState
 		// path, making ASTC compression safe to use even when .astc and .png
 		// coexist in the same texture-atlas directory.
 		final _animListOrig = animate.FlxAnimateAssets.list;
-		animate.FlxAnimateAssets.list = (path, type, lib, subs) -> {
+		animate.FlxAnimateAssets.list = function(path:String, ?type:openfl.utils.AssetType, ?lib:String, subs:Bool = false) {
 			var r = _animListOrig(path, type, lib, subs);
 			return r == null ? [] : r.filter(f -> !f.endsWith('.astc'));
 		};

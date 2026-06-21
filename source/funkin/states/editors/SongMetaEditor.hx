@@ -42,7 +42,8 @@ class SongMetaEditor extends UISubState
 		
 		root.camera = CameraUtil.lastCamera;
 		
-		iconDummy = new HealthIcon().changeIcon('face');
+		iconDummy = new HealthIcon();
+		iconDummy.changeIcon('face');
 		add(iconDummy);
 		iconDummy.visible = false;
 		

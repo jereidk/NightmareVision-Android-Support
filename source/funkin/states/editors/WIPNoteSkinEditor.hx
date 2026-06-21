@@ -251,7 +251,7 @@ class WIPNoteSkinEditor extends UIState
 		}
 		
 		uiElements.settingsBox.reloadTextures.onClick = (ui) -> {
-			skin.noteTexture = skin.data.noteTexture = uiElements.settingsBox.noteTexture.value;
+			skin.noteTexture = skin.data.noteTexture = uiElements.settingsBox.playerTexture.value;
 			// helper.data.playerSkin = uiElements.settingsBox.playerTexture.value;
 			// helper.data.opponentSkin = uiElements.settingsBox.opponentTexture.value;
 			// helper.data.extraSkin = uiElements.settingsBox.extraTexture.value;
@@ -356,7 +356,7 @@ class WIPNoteSkinEditor extends UIState
 	
 	function refreshUIValues()
 	{
-		uiElements.settingsBox.noteTexture.value = skin.data.noteTexture;
+		uiElements.settingsBox.playerTexture.value = skin.data.noteTexture;
 		uiElements.settingsBox.splashTexture.value = skin.data.splashTexture;
 		//
 		uiElements.settingsBox.opponentTexture.value = 'unused';
@@ -515,7 +515,7 @@ class WIPNoteSkinEditor extends UIState
 					tempAnimArray.push(ToolKitUtils.makeSimpleDropDownItem(anim.anim));
 				}
 				uiElements.settingsBox.animationsDropdown.populateList(tempAnimArray);
-				uiElements.settingsBox.noteTexture.value = skin.data.noteTexture;
+				uiElements.settingsBox.playerTexture.value = skin.data.noteTexture;
 				// uiElements.settingsBox.opponentTexture.value = helper.data.opponentSkin;
 				// uiElements.settingsBox.extraTexture.value = helper.data.extraSkin;
 				refreshAnimFields(0);
