@@ -32,7 +32,7 @@
 
     <assets path="assets" include="*.ttf|*.otf" type="binary" nocompress="true"/>
 
-    <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
+    <assets path='content/NMV-Base-Game' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
     <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
 
     <!--OpenAL config-->    <!-- appreciate you cyn0x8 and smokey for finding this -->
