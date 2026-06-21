@@ -103,7 +103,8 @@ class FNAFState extends MusicBeatState
 	override function create()
 	{
 		super.create();
-		
+		FunkinAssets.cache.clearStoredMemory();
+
 		if (ClientPrefs.fnafHintCode == '')
 		{
 			var hintCodes = [

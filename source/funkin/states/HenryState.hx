@@ -31,7 +31,8 @@ class HenryState extends MusicBeatState
 	override function create()
 	{
 		super.create();
-		
+		FunkinAssets.cache.clearStoredMemory();
+
 		freezeFrame = new FlxSprite(0, 0).loadGraphic(Paths.image(ext + 'finalframe'));
 		freezeFrame.width = FlxG.width;
 		freezeFrame.height = FlxG.height;

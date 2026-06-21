@@ -168,7 +168,8 @@ class MainMenuState extends MusicBeatState
 		FlxG.mouse.visible = true;
 		
 		super.create();
-		
+		FunkinAssets.cache.clearStoredMemory();
+
 		if (fromTitle)
 		{
 			redMenu.x = FlxG.width + 120;
