@@ -10,6 +10,8 @@ import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.Assets as OflAssets;
 import openfl.events.Event;
+import openfl.text.TextField;
+import openfl.text.TextFormat;
 import lime.utils.UInt8Array;
 #end
 
@@ -540,6 +542,71 @@ class AstcLoader
 	{
 		if (!pngPath.endsWith('.png')) return null;
 		return pngPath.substr(0, pngPath.length - 4) + '.astc';
+	}
+
+	/**
+	 * Reads only the ASTC header to extract width/height without uploading to GPU.
+	 * Used to size the error placeholder correctly when a texture fails to load.
+	 * Returns null if the file does not exist or the header is invalid.
+	 */
+	public static function peekDimensions(astcPath:String):Null<{w:Int, h:Int}>
+	{
+		#if (android && cpp)
+		try
+		{
+			var bytes:Null<haxe.io.Bytes> = null;
+			if (sys.FileSystem.exists(astcPath))
+				bytes = sys.io.File.getBytes(astcPath);
+			else if (OflAssets.exists(astcPath))
+				bytes = OflAssets.getBytes(astcPath);
+
+			if (bytes == null || bytes.length < HEADER_SIZE) return null;
+			if (bytes.get(0) != MAGIC_0 || bytes.get(1) != MAGIC_1
+				|| bytes.get(2) != MAGIC_2 || bytes.get(3) != MAGIC_3) return null;
+
+			var w = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
+			var h = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
+			if (w <= 0 || h <= 0) return null;
+			return {w: w, h: h};
+		}
+		catch (e:Dynamic) { return null; }
+		#else
+		return null;
+		#end
+	}
+
+	/**
+	 * Creates a solid-grey BitmapData with a red-bordered box and white error text.
+	 * Used as a visible placeholder when a texture is missing in ASTC-only mode.
+	 * Falls back silently to plain grey if text rendering fails.
+	 */
+	public static function createErrorBitmap(width:Int, height:Int, msg:String):BitmapData
+	{
+		if (width  <= 0) width  = 128;
+		if (height <= 0) height = 128;
+
+		var bmd = new BitmapData(width, height, true, 0xFF808080);
+
+		try
+		{
+			var fontSize:Int = Std.int(Math.max(8, Math.min(18, height / 6)));
+
+			var tf = new TextField();
+			tf.width  = width;
+			tf.height = height;
+			tf.wordWrap  = true;
+			tf.multiline = true;
+			tf.defaultTextFormat = new TextFormat('_sans', fontSize, 0xFFFFFF, true);
+			tf.text = msg;
+
+			bmd.draw(tf);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('AstcLoader: createErrorBitmap draw failed — $e', WARN);
+		}
+
+		return bmd;
 	}
 
 	#end // android && cpp

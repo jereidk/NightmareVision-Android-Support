@@ -129,6 +129,24 @@ class FunkinAssets
 		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(path)) bitmap = BitmapData.fromFile(path);
 		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
 
+		// ASTC-only mode: both ASTC and PNG are missing on an ASTC-capable device.
+		// Return a visible grey placeholder instead of null so getGraphic() does not
+		// silently fall back to the flixel logo. Dimensions are sourced from the ASTC
+		// header when the file exists (e.g. GL upload failure); otherwise 128×128.
+		#if (android && cpp)
+		if (bitmap == null && mobile.backend.AstcSupport.isSupported)
+		{
+			var astcPath = mobile.backend.AstcLoader.deriveAstcPath(path);
+			var dims = astcPath != null ? mobile.backend.AstcLoader.peekDimensions(astcPath) : null;
+			var label = 'ASTC Not Found\n${haxe.io.Path.withoutDirectory(path)}';
+			return mobile.backend.AstcLoader.createErrorBitmap(
+				dims != null ? dims.w : 128,
+				dims != null ? dims.h : 128,
+				label
+			);
+		}
+		#end
+
 		return bitmap;
 	}
 	
