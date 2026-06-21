@@ -56,8 +56,12 @@ class StorageSystem
 	}
 	
 	/**
-	 * Requests Android storage permissions and verifies external assets.
-	 * @return Bool Returns TRUE if the game boot should halt (permissions pending or full extract), FALSE if ready to play.
+	 * Requests Android storage permissions and creates the app's external directory.
+	 * Returns TRUE if the boot should halt (MANAGE permission flow pending), FALSE if ready.
+	 *
+	 * No APK extraction is performed here — all base-game assets are readable directly
+	 * from the APK via Assets.xxx(). External storage is used only for crash logs,
+	 * save files, user mods placed by the player, and DLC downloaded at runtime.
 	 */
 	public static function getPermissions():Bool
 	{
@@ -75,76 +79,28 @@ class StorageSystem
 		{
 			PermissionUtils.requestPermissions(['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE']);
 		}
-		
+
 		if (VERSION.SDK_INT >= VERSION_CODES.R)
 		{
-			if (!Environment.isExternalStorageManager()) 
+			if (!Environment.isExternalStorageManager())
 			{
 				Interface.requestSetting('MANAGE_APP_ALL_FILES_ACCESS_PERMISSION');
 				return true;
 			}
 		}
-		
+
 		try
 		{
 			var path = getDirectory();
 			if (!FileSystem.exists(path)) FileSystem.createDirectory(path);
-			
-			if (!FileSystem.exists(path + "assets") || !FileSystem.exists(path + "content"))
-			{
-				startApkCopy();
-				return true;
-			}
-
-			return false;
 		}
 		catch (e:Dynamic)
 		{
 			trace("Storage Error: " + e);
 		}
 		#end
-		
-		return false; // If not Android, or no interruption needed, proceed.
-	}
-	
-	/**
-	 * Synchronously extracts APK assets to external storage on the main thread.
-	 * This MUST run on the main thread — Assets.getBytes() calls into lime's native
-	 * asset pipeline and is not safe from background threads (lime caches and the
-	 * Android AssetManager wrapper are not thread-safe in the hxcpp context).
-	 * The screen will appear frozen during extraction; that is expected for a
-	 * one-time setup that takes 1–2 minutes.
-	 */
-	private static function startApkCopy():Void
-	{
-		#if android
-		PopUp.showAlert("First-Time Setup",
-			"VS IMPOSTOR: LEGACY needs to extract game files from the APK.\n" +
-			"This happens once and may take 1–2 minutes.\n\n" +
-			"Please do not close the app. The screen may freeze during extraction.",
-			"Begin");
 
-		var success = true;
-		try
-		{
-			copyFromAPK("assets/", null, true);
-			copyFromAPK("content/", null, true);
-		}
-		catch (e:Dynamic)
-		{
-			trace("Extraction error: " + e);
-			success = false;
-		}
-
-		if (success)
-			PopUp.showConfirm("Setup Complete!",
-				"All game files have been extracted.\nTap Restart to start playing.",
-				"Restart", "Later",
-				function() { lime.system.System.exit(0); });
-		else
-			PopUp.showAlert("Extraction Failed",
-				"An error occurred during setup. Please reinstall the game.", "OK");
-		#end
+		return false;
 	}
 	
 	/**

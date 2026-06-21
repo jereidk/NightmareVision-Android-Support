@@ -133,23 +133,20 @@ class FunkinAssets
 	public static function readDirectory(directory:String):Array<String>
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		return FileSystem.exists(directory) ? FileSystem.readDirectory(directory) : []; // doing a check because i want this to maintain parity with ther assets variation
-		#else
+		if (FileSystem.exists(directory)) return FileSystem.readDirectory(directory);
+		#end
 		if (directory.trim().length == 0) return [];
 		var dir = Assets.list().filter(string -> string.contains(directory));
 		return dir.map(string -> string.replace(directory, '').replace('/', ''));
-		#end
 	}
-	
+
 	public static function isDirectory(directory:String):Bool
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		return FileSystem.isDirectory(directory);
-		#else
-		// this method is a bit chopped...
+		if (FileSystem.exists(directory)) return FileSystem.isDirectory(directory);
+		#end
 		if (directory.trim().length == 0) return false;
 		return Assets.list().filter(path -> return path != directory && path.startsWith(directory)).length != 0;
-		#end
 	}
 	
 	/**
