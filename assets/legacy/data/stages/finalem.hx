@@ -52,7 +52,7 @@ function onLoad()
 	
 	var bg0:FlxSprite = new FlxSprite(-600, -400).makeScaledGraphic(3000, 2000, 0xFF0D0A1B);
 	
-	var bgScale = 1.3;
+	var bgScale = 2.6; // props sheet halved (0.5x); 2x to restore original visual size
 	
 	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props', 'dead');
 	bg1.scrollFactor.set(0.8, 0.8);
@@ -76,7 +76,7 @@ function onLoad()
 	bg5.scale.set(bgScale, bgScale);
 	
 	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props', 'dark');
-	dark.scale.set(1.3, 1.3);
+	dark.scale.set(2.6, 2.6);
 	dark.blend = BlendMode.MULTIPLY;
 	
 	finaleLight = new FlxSprite(-230, -200);
