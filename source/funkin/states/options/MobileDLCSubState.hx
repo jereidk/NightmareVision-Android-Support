@@ -94,7 +94,7 @@ class MobileDLCSubState extends MusicBeatSubstate
     override function create()
     {
         // Semi-transparent overlay
-        var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
+        var bg = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
         add(bg);
 
         // Title

@@ -174,7 +174,7 @@ class FNAFState extends MusicBeatState
 		FlxG.cameras.add(hudCam, false);
 		applyCameraFilters();
 		
-		dlgBlackScreen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		dlgBlackScreen = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		dlgBlackScreen.scrollFactor.set(0, 0);
 		dlgBlackScreen.cameras = [hudCam];
 		add(dlgBlackScreen);
@@ -999,7 +999,7 @@ class FNAFState extends MusicBeatState
 		compMusicImg.visible = false;
 		compMusicLabel.visible = false;
 		
-		var black = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		var black = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		black.scrollFactor.set(0, 0);
 		black.cameras = [hudCam];
 		add(black);
@@ -1430,7 +1430,7 @@ class FNAFState extends MusicBeatState
 		if (!exiting && !videoPlaying && !screenZooming && FlxG.keys.justPressed.ESCAPE)
 		{
 			exiting = true;
-			var fade = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+			var fade = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 			fade.scrollFactor.set(0, 0);
 			fade.cameras = [hudCam];
 			fade.alpha = 0;

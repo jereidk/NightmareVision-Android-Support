@@ -60,7 +60,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		}
 		name += (difficulty == 1 ? '' : ' (' + Difficulty.difficulties[difficulty] + ')');
 		
-		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		bg = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		bg.alpha = 0;
 		bg.scrollFactor.set();
 		add(bg);

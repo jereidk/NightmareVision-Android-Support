@@ -43,7 +43,7 @@ class PauseSubState extends MusicBeatSubstate
 		pauseGroup = new FlxSpriteGroup();
 		pauseGroup.cameras = [cam];
 		
-		pauseBG = new FlxSprite().makeGraphic(1283, 720, FlxColor.BLACK);
+		pauseBG = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		pauseBG.alpha = 0;
 		pauseGroup.add(pauseBG);
 		
