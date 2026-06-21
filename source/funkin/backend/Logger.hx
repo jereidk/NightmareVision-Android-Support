@@ -84,6 +84,7 @@ class Logger
 		
 		#if sys
 		Sys.println(output);
+		GameLogger.write(output);
 		#else
 		trace(output); // idk others lol!
 		#end

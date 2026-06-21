@@ -18,6 +18,12 @@ class Init extends FlxState
 {
 	override public function create():Void
 	{
+		// Start the rolling log file before anything else so every subsequent
+		// log line (crash detection, prefs load, mod init, etc.) is captured.
+		#if android
+		funkin.backend.GameLogger.init();
+		#end
+
 		// ── Crash detection (runs before anything else) ───────────────────────
 		#if android
 		final _crashLogPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
