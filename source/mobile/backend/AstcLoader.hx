@@ -195,7 +195,7 @@ class AstcLoader
 	 * Loads ASTC bytes, wraps in BitmapData, and registers in the recovery map
 	 * so the texture survives an OpenGL context loss/restore cycle.
 	 */
-	static function _loadAndTrack(cacheKey:String, astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
+	static function _loadAndTrack(pngPath:String, astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
 	{
 		try
 		{
@@ -208,7 +208,7 @@ class AstcLoader
 			var payloadSize = bytes.length - HEADER_SIZE;
 			var cached:Null<haxe.io.Bytes> = (payloadSize <= BYTES_CACHE_LIMIT) ? bytes : null;
 
-			_recovery.set(cacheKey, {
+			_recovery.set(pngPath, {
 				astcPath:    astcPath,
 				rectTex:     result.rectTex,
 				width:       result.width,
@@ -334,17 +334,22 @@ class AstcLoader
 		var failed = 0;
 		var toRemove:Array<String> = [];
 
-		for (cacheKey => entry in _recovery)
+		// pngPath (the map key) is the original PNG asset path, which doubles as
+		// the FunkinCache cache key. This loop is synchronous: small textures skip
+		// I/O via cachedBytes; large ones (> BYTES_CACHE_LIMIT) re-read from disk.
+		// If testing reveals a noticeable resume stutter, stagger 1-2 textures per
+		// frame with a FlxTimer queue — _recovery stays the authoritative source.
+		for (pngPath => entry in _recovery)
 		{
 			// PNG fallback mode — the .astc was missing on a previous restore;
 			// this entry now permanently uses the PNG source.
 			if (entry.glFormat == 0)
 			{
-				if (_restoreFromPng(context3D, cacheKey))
+				if (_restoreFromPng(context3D, pngPath))
 					restored++;
 				else
 				{
-					toRemove.push(cacheKey);
+					toRemove.push(pngPath);
 					failed++;
 				}
 				continue;
@@ -370,11 +375,11 @@ class AstcLoader
 				// .astc file disappeared (DLC removed, SD-card corruption, etc.).
 				// Attempt PNG fallback so live sprites are not permanently black.
 				Logger.log('AstcLoader: context restore — ${entry.astcPath} missing, trying PNG fallback', WARN);
-				if (_restoreFromPng(context3D, cacheKey))
+				if (_restoreFromPng(context3D, pngPath))
 					restored++;
 				else
 				{
-					toRemove.push(cacheKey);
+					toRemove.push(pngPath);
 					failed++;
 				}
 				continue;
@@ -416,24 +421,28 @@ class AstcLoader
 	 * Permanently marks the entry as PNG mode (glFormat = 0) so all subsequent
 	 * context-restore cycles also re-upload from PNG without retrying the ASTC.
 	 */
-	static function _restoreFromPng(context3D:Context3D, cacheKey:String):Bool
+	static function _restoreFromPng(context3D:Context3D, pngPath:String):Bool
 	{
-		var entry = _recovery.get(cacheKey);
+		var entry = _recovery.get(pngPath);
 		if (entry == null) return false;
 
 		var pngBitmap:Null<BitmapData> = null;
 		try
 		{
-			if (sys.FileSystem.exists(cacheKey))
-				pngBitmap = BitmapData.fromFile(cacheKey);
-			else if (OflAssets.exists(cacheKey))
-				pngBitmap = OflAssets.getBitmapData(cacheKey);
+			// Mirrors FunkinAssets.getBitmapData: filesystem first (external
+			// storage / mods, absolute path), then OflAssets for APK-bundled
+			// assets (relative path — not on the real filesystem, so
+			// sys.FileSystem.exists returns false and we fall through).
+			if (sys.FileSystem.exists(pngPath))
+				pngBitmap = BitmapData.fromFile(pngPath);
+			else if (OflAssets.exists(pngPath))
+				pngBitmap = OflAssets.getBitmapData(pngPath);
 		}
 		catch (e:Dynamic) {}
 
 		if (pngBitmap == null)
 		{
-			Logger.log('AstcLoader: PNG fallback failed for $cacheKey — file not found', WARN);
+			Logger.log('AstcLoader: PNG fallback failed for $pngPath — file not found', WARN);
 			return false;
 		}
 
@@ -451,7 +460,7 @@ class AstcLoader
 		entry.glFormat = 0;
 		entry.cachedBytes = null; // ASTC bytes no longer needed
 
-		Logger.log('AstcLoader: PNG fallback succeeded for $cacheKey', WARN);
+		Logger.log('AstcLoader: PNG fallback succeeded for $pngPath', WARN);
 		return true;
 	}
 
