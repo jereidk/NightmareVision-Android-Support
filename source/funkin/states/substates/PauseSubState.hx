@@ -147,7 +147,7 @@ class PauseSubState extends MusicBeatSubstate
 			}
 			else
 			{
-				FlxG.sound.play(Paths.sound('paneldisAppear'), 0.5);
+				FlxG.sound.play(Paths.sound('panelDisappear'), 0.5);
 				close();
 			}
 		}
