@@ -63,8 +63,6 @@ class FunkinCache
 		// 	}
 		// }
 		
-		Paths.tempAtlasFramesCache.clear();
-		
 		// clear all sounds that are cached
 		for (key in currentTrackedSounds.keys())
 		{
@@ -87,6 +85,7 @@ class FunkinCache
 		{
 			if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 			{
+				Paths.tempAtlasFramesCache.remove(key);
 				removeFromCache(key);
 			}
 		}
