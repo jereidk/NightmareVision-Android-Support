@@ -165,7 +165,7 @@ function onCreatePost()
 	
 	gf.scrollFactor.set(0.7, 0.7);
 	
-	var speedlinesPath = Paths.getPath('images/' + ext + 'speedlines.png', null, true);
+	var speedlinesPath = Paths.getPath('images/' + ext + 'speedlines.png', null, PathsTestMode.NORMAL);
 	if (FunkinAssets.exists(speedlinesPath))
 	{
 		speedlines = new FlxBackdrop().loadGraphic(Paths.image(ext + 'speedlines'));
