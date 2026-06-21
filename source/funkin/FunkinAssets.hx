@@ -119,10 +119,14 @@ class FunkinAssets
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
 		if (FileSystem.exists(path)) return true;
-		else
 		#end
 		if (Assets.exists(path, type)) return true;
-		else return false;
+		// Assets.exists() only matches file assets, not directories.
+		// Fall back to a prefix scan so callers that check if a directory
+		// "exists" in the APK (e.g. WeekData scanning assets/data/weeks/)
+		// get a correct answer even when nothing has been extracted.
+		final prefix = StringTools.endsWith(path, '/') ? path : (path + '/');
+		return Assets.list(type).exists(a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
@@ -136,8 +140,25 @@ class FunkinAssets
 		if (FileSystem.exists(directory)) return FileSystem.readDirectory(directory);
 		#end
 		if (directory.trim().length == 0) return [];
-		var dir = Assets.list().filter(string -> string.contains(directory));
-		return dir.map(string -> string.replace(directory, '').replace('/', ''));
+		// Normalize to trailing slash so the prefix strip is clean.
+		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
+		// Extract the first path component after the prefix (file or folder name).
+		// Deduplicate so a folder with many files appears only once.
+		final seen = new haxe.ds.StringMap<Bool>();
+		final result:Array<String> = [];
+		for (a in Assets.list())
+		{
+			if (!StringTools.startsWith(a, prefix)) continue;
+			var rel = a.substring(prefix.length);
+			final slash = rel.indexOf('/');
+			final entry = slash >= 0 ? rel.substring(0, slash) : rel;
+			if (entry.length > 0 && !seen.exists(entry))
+			{
+				seen.set(entry, true);
+				result.push(entry);
+			}
+		}
+		return result;
 	}
 
 	public static function isDirectory(directory:String):Bool
@@ -146,7 +167,8 @@ class FunkinAssets
 		if (FileSystem.exists(directory)) return FileSystem.isDirectory(directory);
 		#end
 		if (directory.trim().length == 0) return false;
-		return Assets.list().filter(path -> return path != directory && path.startsWith(directory)).length != 0;
+		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
+		return Assets.list().exists(a -> StringTools.startsWith(a, prefix));
 	}
 	
 	/**
