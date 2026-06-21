@@ -66,6 +66,9 @@ class OptionsState extends MusicBeatState
 	
 	var bottomControls:AmongControls;
 
+	var editorsButton:Null<FlxSprite> = null;
+	var editorsButtonLabel:Null<FlxText> = null;
+
 	#if mobile
 	var dlcButton:FlxSprite;
 	var dlcButtonLabel:FlxText;
@@ -215,6 +218,18 @@ class OptionsState extends MusicBeatState
 			], true);
 			bottomControls.zIndex = 12;
 			add(bottomControls);
+
+			editorsButton = new FlxSprite(640, 618);
+			editorsButton.makeGraphic(292, 60, 0xFF162442);
+			editorsButton.antialiasing = ClientPrefs.globalAntialiasing;
+			add(editorsButton);
+
+			editorsButtonLabel = new FlxText(640, 618, 292, 'Editors');
+			editorsButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			editorsButtonLabel.borderSize = 2;
+			editorsButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
+			editorsButtonLabel.y += Math.round((60 - editorsButtonLabel.height) / 2);
+			add(editorsButtonLabel);
 
 			#if mobile
 			dlcButton = new FlxSprite(952, 618);
@@ -392,6 +407,12 @@ class OptionsState extends MusicBeatState
 				}
 				else FlxG.switchState(MainMenuState.new);
 				return;
+			}
+
+			if (editorsButton != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(editorsButton) && !blockAllInput && !blockInput)
+			{
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
 			}
 
 			#if mobile
