@@ -16,9 +16,10 @@ import lime.utils.UInt8Array;
  * Loads raw ASTC texture files (16-byte header + compressed blocks) into
  * OpenFL BitmapData backed by a GPU-side compressed texture.
  *
- * ASTC files are placed in a mirror folder: assets/astc/<same-path>.astc
- * alongside the original assets/…/foo.png.  The original PNGs are never
- * touched.  On devices that do not expose GL_KHR_texture_compression_astc_ldr
+ * ASTC files live next to their PNG counterpart with a .astc extension:
+ *   assets/images/characters/bf.png  →  assets/images/characters/bf.astc
+ * The original PNGs are never touched and always serve as fallback.
+ * On devices that do not expose GL_KHR_texture_compression_astc_ldr
  * the loader returns null and the caller falls through to the PNG.
  */
 @:access(openfl.display3D.textures.TextureBase)
@@ -212,29 +213,16 @@ class AstcLoader
 
 	/**
 	 * Derives the ASTC file path from a PNG asset path.
+	 * The .astc file lives next to the .png — only the extension changes.
 	 *
-	 *   assets/game/images/foo.png
-	 *     → assets/astc/game/images/foo.astc
-	 *
-	 *   /sdcard/.ImpostorLegacy/assets/game/images/foo.png
-	 *     → /sdcard/.ImpostorLegacy/assets/astc/game/images/foo.astc
+	 *   assets/images/characters/bf.png  →  assets/images/characters/bf.astc
+	 *   /sdcard/.ImpostorLegacy/assets/images/bf.png
+	 *     → /sdcard/.ImpostorLegacy/assets/images/bf.astc
 	 */
 	public static function deriveAstcPath(pngPath:String):Null<String>
 	{
 		if (!pngPath.endsWith('.png')) return null;
-
-		var stem = pngPath.substr(0, pngPath.length - 4);
-
-		// Full filesystem path: /prefix/assets/rest
-		var idx = stem.indexOf('/assets/');
-		if (idx >= 0)
-			return stem.substring(0, idx) + '/assets/astc/' + stem.substring(idx + '/assets/'.length) + '.astc';
-
-		// Relative path: assets/rest
-		if (stem.startsWith('assets/'))
-			return 'assets/astc/' + stem.substring('assets/'.length) + '.astc';
-
-		return null;
+		return pngPath.substr(0, pngPath.length - 4) + '.astc';
 	}
 
 	#end // android && cpp
