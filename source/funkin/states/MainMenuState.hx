@@ -81,13 +81,16 @@ class MainMenuState extends MusicBeatState
 		else if (FlxG.sound.music == null) FunkinSound.playMusic(Paths.music('freakyMenu'), 0);
 
 		initStateScript();
-		
+		Logger.log('MMS CP1: starFG', NOTICE);
+
 		starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
 		add(starFG);
-		
+		Logger.log('MMS CP2: starBG', NOTICE);
+
 		starBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
 		add(starBG);
-		
+		Logger.log('MMS CP3: logo', NOTICE);
+
 		logo = new FlxSprite(0, -5);
 		logo.frames = Paths.getSparrowAtlas('logoBumpin');
 		logo.animation.addByPrefix('bump', 'logo bumpin', 24, false);
@@ -96,43 +99,48 @@ class MainMenuState extends MusicBeatState
 		logo.updateHitbox();
 		logo.screenCenter(X);
 		logo.x += 20;
-		
+
 		add(logo);
-		
+		Logger.log('MMS CP4: buildPanel', NOTICE);
+
 		buildPanel();
-		
+		Logger.log('MMS CP5: redMenu', NOTICE);
+
 		var redTargetX:Float = 630;
 		var greenTargetX:Float = -225;
-		
+
 		redMenu = new FlxSprite(redTargetX, 70);
 		redMenu.frames = Paths.getSparrowAtlas('menu/main/redmenu');
 		redMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		redMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		redMenu.animation.play('idle');
-		
+		Logger.log('MMS CP6: greenMenu', NOTICE);
+
 		greenMenu = new FlxSprite(greenTargetX, 100);
 		greenMenu.frames = Paths.getSparrowAtlas('menu/main/greenmenu');
 		greenMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		greenMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		greenMenu.animation.play('idle');
-		
+		Logger.log('MMS CP7: glow/vignette', NOTICE);
+
 		if (ClientPrefs.finaleState != ACTIVE)
 		{
 			add(redMenu);
 			add(greenMenu);
 		}
-		
+
 		var glow = new FlxSprite().loadGraphic(Paths.image(ClientPrefs.finaleState == ACTIVE ? 'menu/main/glowEVIL' : 'menu/main/glow'));
 		glow.scale.set(1.1, 1.1);
 		glow.updateHitbox();
 		glow.screenCenter();
 		glow.blend = ADD;
 		add(glow);
-		
+
 		var vignette = new FlxSprite().loadGraphic(Paths.image('menu/main/vignette'));
 		vignette.scrollFactor.set();
 		vignette.active = false;
 		add(vignette);
+		Logger.log('MMS CP8: text/controls', NOTICE);
 		
 		if (ClientPrefs.finaleState == ACTIVE)
 		{
@@ -175,10 +183,12 @@ class MainMenuState extends MusicBeatState
 		
 		Conductor.bpm = 102;
 		Conductor.bpmChangeMap.resize(0);
-		
+
 		FlxG.mouse.visible = true;
-		
+		Logger.log('MMS CP9: super.create', NOTICE);
+
 		super.create();
+		Logger.log('MMS CP10: post super.create', NOTICE);
 
 		if (fromTitle)
 		{
