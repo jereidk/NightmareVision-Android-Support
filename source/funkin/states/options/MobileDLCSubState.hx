@@ -592,7 +592,7 @@ class MobileDLCSubState extends MusicBeatSubstate
                           || (item.id == "__install_local__" && DLCManager.taskState == DLCTaskState.BUSY
                               && DLCManager.activeTaskId != "_registry" && DLCManager.activeTaskId != "");
             if (activeDown) {
-                _actionTexts[i].text  = "Downloading...";
+                _actionTexts[i].text  = "[" + DLCManager.taskProgress + "%]";
                 _actionTexts[i].color = FlxColor.YELLOW;
             } else if (item.id == "__install_local__") {
                 _actionTexts[i].text  = "[Open file picker]";

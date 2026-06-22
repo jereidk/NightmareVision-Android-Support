@@ -238,19 +238,36 @@ class DLCManager {
 
             try {
                 _mkdirs(cachePath);
-                _setProgress(5, "Downloading " + entry.name + "...");
+                _setProgress(5, "Downloading " + entry.name + " (" + entry.sizeMb + " MB)...");
 
                 var http:Http  = new Http(entry.downloadUrl);
                 var bytes:Null<Bytes> = null;
                 var error = "";
-                http.onBytes = (b) -> bytes = b;
-                http.onError = (e) -> error = e;
-                http.request(false);
+                var downloadFinished = false;
+                http.onBytes = (b) -> { bytes = b; downloadFinished = true; };
+                http.onError = (e) -> { error = e; downloadFinished = true; };
+
+                var downloadStartTime = haxe.Timer.stamp();
+                http.request(true);  // Asincrónico — permite actualizar progreso
+
+                // Esperar a que termine, mostrando progreso estimado
+                while (!downloadFinished && error == "") {
+                    Sys.sleep(0.2);
+                    var elapsed = haxe.Timer.stamp() - downloadStartTime;
+                    // Asume ~20s para descargar el DLC; muestra progreso estimado 5-55%
+                    var estimatedPercent = Std.int(Math.min(55, (elapsed / 20.0) * 50.0)) + 5;
+                    _setProgress(estimatedPercent, "Downloading " + entry.name + " (" + entry.sizeMb + " MB)...");
+                }
 
                 if (error != "") throw "Download failed: " + error;
                 if (bytes == null || bytes.length == 0) throw "Download returned an empty file";
 
-                _setProgress(60, "Verifying integrity...");
+                var downloadedMB = bytes.length / (1024.0 * 1024.0);
+                var elapsed = haxe.Timer.stamp() - downloadStartTime;
+                var speedMBs = elapsed > 0 ? downloadedMB / elapsed : 0.0;
+                _setProgress(60, 'Downloaded ${Std.int(downloadedMB)}/${entry.sizeMb} MB (${Std.int(speedMBs)} MB/s)');
+
+                _setProgress(65, "Verifying integrity...");
 
                 if (entry.sha256 != null && entry.sha256 != "") {
                     var actual = haxe.crypto.Sha256.make(bytes).toHex();
@@ -258,7 +275,7 @@ class DLCManager {
                         throw "SHA-256 mismatch.\nExpected: " + entry.sha256 + "\nGot: " + actual;
                 }
 
-                _setProgress(65, "Saving archive...");
+                _setProgress(68, "Saving archive...");
                 File.saveBytes(zipPath, bytes);
 
                 _setProgress(70, "Installing...");
