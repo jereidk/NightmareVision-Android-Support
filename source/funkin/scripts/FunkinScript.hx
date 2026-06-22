@@ -34,7 +34,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		{
 			final file = '$path.$extension';
 			
-			final targetPath = Paths.getPath(file, mode);
+			final targetPath = Paths.getPath(file, null, true, mode);
 			if (FunkinAssets.exists(targetPath)) return targetPath;
 		}
 		return path;
@@ -56,8 +56,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		var prefix = '[$prefix$fileName:$lineNumber]';
 		
 		final modPath:String = Paths.mods(Mods.currentModDirectory + '/');
-		if (fileName.startsWith(modPath)) prefix = prefix.replace(modPath, '');
-		#if ASSET_REDIRECT else if (fileName.startsWith(Paths.trail)) prefix = prefix.replace(Paths.trail, ''); #end
+		if (fileName.contains(modPath)) prefix = prefix.replace(modPath, '');
 		
 		return '$prefix - $x';
 	}
@@ -108,9 +107,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
+	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
 	{
-		return new FunkinScript(script, name, additionalVars, shareables, modFolder);
+		return new FunkinScript(script, name, additionalVars, shareables);
 	}
 	
 	/**
@@ -120,13 +119,11 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
+	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables)
 	{
 		name ??= file;
 		
-		modFolder ??= Paths.getModFolder(file, 'scripts');
-		
-		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables, modFolder);
+		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables);
 	}
 	
 	/**
@@ -134,15 +131,12 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 */
 	@:noCompletion public var __garbage:Bool = false;
 	
-	public var modFolder:Null<String>;
-	
-	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
+	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
 	{
 		super(script, {name: name, autoRun: false, autoPreset: false}, shareables);
 		
 		(cast interp : InterpEx).parent = FlxG.state;
-		
-		this.modFolder = modFolder;
+		// interp = new InterpEx(FlxG.state);
 		
 		preset();
 		
@@ -200,7 +194,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 				}
 				catch (e:haxe.Exception)
 				{
-					funkin.backend.Logger.log('[Script:$func] ${e.message}\n${e.stack}', ERROR);
+					#if sys
+					Sys.println(e.message);
+					#end
 				}
 				
 				for (key in defaultShit.keys())
@@ -218,7 +214,6 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	override function preset()
 	{
 		super.preset();
-		
 		#if hl
 		set('Math', hl.HLFixes.HLMath);
 		set('Std', hl.HLFixes.HLStd);
@@ -229,8 +224,6 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		}));
 		#end
 		
-		for (k => v in funkin.data.Defines.defines) parser.preprocesorValues.set(k, v);
-		
 		set("StringTools", StringTools);
 		set("Date", Date);
 		set("Sys", Sys);
@@ -238,7 +231,6 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("Type", Type);
 		set("script", this);
 		set("Dynamic", Dynamic);
-		set('modFolder', modFolder);
 		
 		set('StringMap', haxe.ds.StringMap);
 		set('IntMap', haxe.ds.IntMap);
@@ -249,7 +241,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("Assets", lime.utils.Assets);
 		set("OpenFlAssets", openfl.utils.Assets);
 		set("FunkinAssets", FunkinAssets);
-
+		
 		set('curBpm', Conductor.bpm);
 		set('Function_Cancel', funkin.scripting.ScriptConstants.CANCEL_FUNC);
 		set('Function_Halt', funkin.scripting.ScriptConstants.HALT_FUNC);
@@ -291,7 +283,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set('Controls', funkin.input.Controls);
 		set('controls', funkin.input.Controls.instance);
 		set('IS_ANDROID', #if android true #else false #end);
-
+		
 		// abstracts
 		set("FlxTextAlign", funkin.utils.MacroUtil.buildAbstract(flixel.text.FlxText.FlxTextAlign));
 		set('FlxAxes', funkin.utils.MacroUtil.buildAbstract(flixel.util.FlxAxes));

@@ -22,13 +22,13 @@ class PluginsManager
 	public static function populate():Void
 	{
 		clear();
-		for (file in Paths.listAllFilesInDirectory('scripts/plugins/', LOOSE))
+		for (file in Paths.listAllFilesInDirectory('scripts/plugins/'))
 		{
 			if (FunkinScript.isHxFile(file))
 			{
 				final scriptName = file.withoutDirectory().withoutExtension();
 				
-				var script = FunkinScript.fromFile(file, scriptName, loadedScripts.scriptShareables);
+				var script = FunkinScript.fromFile(file, scriptName);
 				if (script.__garbage)
 				{
 					script = FlxDestroyUtil.destroy(script);
@@ -56,7 +56,6 @@ class PluginsManager
 	public static function clear():Void
 	{
 		loadedScripts.clear(true);
-		loadedScripts.scriptShareables.clear();
 	}
 	
 	/**
