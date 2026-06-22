@@ -834,6 +834,11 @@ class PlayState extends MusicBeatState
 		addMobileControls(false, true);
 		if (hitbox != null) hitbox.visible = false;
 		if (virtualPad != null) virtualPad.visible = false;
+		if (ClientPrefs.gameInputMode == 'Tap Notes')
+		{
+			noteTapInput = new mobile.controls.NoteTapInput(notes);
+			add(noteTapInput);
+		}
 
 		mobilePauseBtn = new FlxSprite();
 		mobilePauseBtn.makeGraphic(55, 55, 0x88000000);

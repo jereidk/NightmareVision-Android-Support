@@ -843,8 +843,10 @@ class Controls extends FlxActionSet
 	@:noCompletion
 	private function get_gameplayRequest():Dynamic
 	{
-		if (funkin.backend.MusicBeatState.instance != null && funkin.backend.MusicBeatState.instance.hitbox != null)
-			return funkin.backend.MusicBeatState.instance.hitbox;
+		final state = funkin.backend.MusicBeatState.instance;
+		if (state == null) return null;
+		if (state.hitbox != null) return state.hitbox;
+		if (state.noteTapInput != null) return state.noteTapInput;
 		return null;
 	}
 	#end

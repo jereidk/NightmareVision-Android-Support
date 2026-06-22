@@ -489,7 +489,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
 		if (sel != null && sel.id == 'nav')
 			return 'nav:' + ClientPrefs.navInputMode;
-		return 'game:' + (ClientPrefs.gameInputMode == 'Virtual Pad' ? 'pad' : ClientPrefs.hitboxLayout);
+		return switch (ClientPrefs.gameInputMode)
+		{
+			case 'Virtual Pad': 'game:pad';
+			case 'Tap Notes':   'game:tap';
+			default:             'game:' + ClientPrefs.hitboxLayout;
+		};
 	}
 
 	/** Rebuilds the canvas only when its context (selection / value) changes. */
@@ -580,9 +585,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'game', kind: 'string',
 			label: Lang.str('opt_gameinput', 'Gameplay Input'),
-			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox splits the screen into tap zones. Virtual Pad shows an on-screen D-pad.'),
-			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad')],
-			stored:  ['Hitbox', 'Virtual Pad']
+			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: tap zones over the screen. Virtual Pad: on-screen D-pad. Tap Notes: tap note sprites directly.'),
+			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_tap', 'Tap Notes')],
+			stored:  ['Hitbox', 'Virtual Pad', 'Tap Notes']
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')
@@ -600,7 +605,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.')
 			});
 		}
-		else
+		else if (ClientPrefs.gameInputMode == 'Virtual Pad')
 		{
 			_opts.push({
 				id: 'padAlpha', kind: 'percent',
@@ -608,6 +613,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.')
 			});
 		}
+		// Tap Notes: no extra options — notes are tapped directly, no overlay to configure.
 
 		if (_sel >= _opts.length) _sel = _opts.length - 1;
 		if (_sel < 0) _sel = 0;
@@ -688,7 +694,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// ── Preview canvas ───────────────────────────────────────────────────────
 
 	function _currentOpacity():Float
-		return (ClientPrefs.gameInputMode == 'Hitbox') ? ClientPrefs.hitboxAlpha : ClientPrefs.virtualPadAlpha;
+		return switch (ClientPrefs.gameInputMode)
+		{
+			case 'Hitbox':     ClientPrefs.hitboxAlpha;
+			case 'Tap Notes':  0.75; // fixed demo alpha — no user-configurable opacity
+			default:           ClientPrefs.virtualPadAlpha;
+		};
 
 	// Navigation previews are illustrative (fixed alpha); gameplay previews track
 	// the live opacity setting so the slider is reflected in real time.
@@ -732,6 +743,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_buildPadPreview();
 			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
+		}
+		else if (ClientPrefs.gameInputMode == 'Tap Notes')
+		{
+			_buildTapNotesPreview();
+			_modeText.text = Lang.str('preview_mode_tap', 'Tap Notes');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
 		{
@@ -787,6 +803,26 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		final colW = CANVAS_W / 4;
 		for (i in 0...4)
 			_addZone(CANVAS_X + i * colW, CANVAS_Y, colW, CANVAS_H, i);
+	}
+
+	/**
+	 * Tap Notes preview: falling note shapes at staggered heights across the
+	 * four lanes — no background zones, so it reads as "tap the sprites, not a zone."
+	 */
+	function _buildTapNotesPreview():Void
+	{
+		final colW:Float  = CANVAS_W / 4;
+		final noteW:Float = colW * 0.70;
+		final noteH:Float = 34;
+		final xPad:Float  = (colW - noteW) * 0.5;
+		// Staggered Y fractions so notes look like they're at different beat positions.
+		final yFracs:Array<Float> = [0.60, 0.75, 0.45, 0.62];
+		for (i in 0...4)
+		{
+			final nx = CANVAS_X + i * colW + xPad;
+			final ny = CANVAS_Y + yFracs[i] * CANVAS_H;
+			_addZoneC(nx, ny, noteW, noteH, ZONE_COLORS[i], ZONE_LABELS[i]);
+		}
 	}
 
 	function _buildTwoThumbPreview():Void
