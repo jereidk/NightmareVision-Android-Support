@@ -78,6 +78,16 @@ class Init extends FlxState
 		animate.FlxAnimateAssets.getBitmapData = (path) -> cast funkin.FunkinAssets.getBitmapData(path);
 		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
 		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (_:Dynamic) return cast null; };
+		// Hide .astc files from FlxAnimate's folder scanner so spritemap image
+		// selection always resolves to the .png counterpart. The getBitmapData
+		// override above then transparently loads the .astc GPU texture for that
+		// path, making ASTC compression safe to use even when .astc and .png
+		// coexist in the same texture-atlas directory.
+		final _animListOrig = animate.FlxAnimateAssets.list;
+		animate.FlxAnimateAssets.list = (path, type, lib, subs) -> {
+			var r = _animListOrig(path, type, lib, subs);
+			return r == null ? [] : r.filter(f -> !f.endsWith('.astc'));
+		};
 
 		// load settings/save
 		funkin.input.Controls.init();

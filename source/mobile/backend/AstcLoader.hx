@@ -352,6 +352,18 @@ class AstcLoader
 		// frame with a FlxTimer queue — _recovery stays the authoritative source.
 		for (pngPath => entry in _recovery)
 		{
+			// If the graphic is no longer in FlxG.bitmap the sprite that owned it was
+			// destroyed without going through FunkinCache.removeFromCache (e.g.
+			// FlxAnimateSpritemapCollection.destroySpritemaps calls FlxG.bitmap.remove
+			// directly). There is nothing left to restore — skip the GPU upload and
+			// evict this entry so _recovery stays lean. FunkinCache will finish its own
+			// cleanup on the next clearUnusedMemory call.
+			if (!FlxG.bitmap.checkCache(pngPath))
+			{
+				toRemove.push(pngPath);
+				continue;
+			}
+
 			// PNG fallback mode — the .astc was missing on a previous restore;
 			// this entry now permanently uses the PNG source.
 			if (entry.glFormat == 0)
