@@ -134,7 +134,11 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 + "Exception: " + throwable + "\n\n"
                 + "Callstack:\n" + sw.toString();
 
-            writeCrashLog(sCrashLogPath, report);
+            // Guard against install() not having been called yet (sCrashLogPath is null).
+            // In that case we skip writing but still forward to the original handler.
+            if (sCrashLogPath != null && !sCrashLogPath.isEmpty()) {
+                writeCrashLog(sCrashLogPath, report);
+            }
         } catch (Throwable ignored) {
             // If writing fails we still forward to the original handler.
         }
@@ -170,11 +174,13 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
             if (buf.size() == 0) return null;
 
-            String tombPath = sCrashLogPath.replace("crash.log", "tombstone.pb");
-            File f = new File(tombPath);
-            if (f.getParentFile() != null && !f.getParentFile().exists())
-                f.getParentFile().mkdirs();
-            FileOutputStream fos = new FileOutputStream(f);
+            // Use File API to construct tombstone path, avoiding edge cases
+            // with String.replace() if path contains "crash.log" multiple times.
+            File crashFile = new File(sCrashLogPath);
+            File tombFile = new File(crashFile.getParent(), "tombstone.pb");
+            if (tombFile.getParentFile() != null && !tombFile.getParentFile().exists())
+                tombFile.getParentFile().mkdirs();
+            FileOutputStream fos = new FileOutputStream(tombFile);
             buf.writeTo(fos);
             fos.close();
 
