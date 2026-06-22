@@ -58,17 +58,19 @@ class MainMenuState extends MusicBeatState
 	override function create()
 	{
 		Mods.currentModDirectory = null;
-		
+
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence("In the Menus");
 		#end
 		Lang.reloadLangFile();
-		
+
+		FunkinAssets.cache.clearStoredMemory();
+
 		persistentUpdate = persistentDraw = true;
-		
+
 		if (ClientPrefs.finaleState == ACTIVE) FunkinSound.playMusic(Paths.music('finaleMenu'), 0);
 		else if (FlxG.sound.music == null) FunkinSound.playMusic(Paths.music('freakyMenu'), 0);
-		
+
 		initStateScript();
 		
 		starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
@@ -168,7 +170,6 @@ class MainMenuState extends MusicBeatState
 		FlxG.mouse.visible = true;
 		
 		super.create();
-		FunkinAssets.cache.clearStoredMemory();
 
 		if (fromTitle)
 		{
