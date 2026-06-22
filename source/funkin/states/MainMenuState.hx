@@ -64,6 +64,15 @@ class MainMenuState extends MusicBeatState
 		#end
 		Lang.reloadLangFile();
 
+		// Free previous state's assets before loading this state's assets.
+		// Must run before ANY Paths.image/getSparrowAtlas calls so that shared
+		// assets (starFG, starBG, logoBumpin) are revived from the previous tier
+		// instead of reloaded, and so clearStoredMemory's _evictPrevious() never
+		// disposes textures that our own sprites are still holding references to.
+		// (The original placement after super.create() at line 171 was wrong —
+		// it moved all just-loaded graphics into _prevGraphics, which the next
+		// state's clearStoredMemory()/_evictPrevious() would then dispose while
+		// MainMenuState sprites still held live GPU texture references → native crash.)
 		FunkinAssets.cache.clearStoredMemory();
 
 		persistentUpdate = persistentDraw = true;
