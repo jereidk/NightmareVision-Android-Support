@@ -477,26 +477,42 @@ class MobileDLCSubState extends MusicBeatSubstate
                 downloadable: false
             });
         } else {
+            // Hardcoded securitydlc entry from GitHub release
+            var securityDLCEntry:DLCEntry = {
+                id:          "securitydlc",
+                name:        "VS Impostor Legacy – Security DLC",
+                description: "Additional story content for VS Impostor Legacy. Required for the Security weeks.",
+                author:      "JereiDK",
+                version:     "1.0.0",
+                sizeMb:      131,
+                downloadUrl: "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/dlc-v1/securitydlc.zip",
+                sha256:      "c53d7014868050cc3708bf2433335358751a47ae0a2299aee9ad9f46e302ab26"
+            };
+            var inst = DLCManager.isDLCInstalled(securityDLCEntry.id);
+            var sizeStr = securityDLCEntry.sizeMb > 0 ? "  •  " + securityDLCEntry.sizeMb + " MB" : "";
+            _items.push({
+                id:           securityDLCEntry.id,
+                label:        securityDLCEntry.name,
+                sub:          "by " + securityDLCEntry.author + sizeStr,
+                installed:    inst,
+                downloadable: !inst
+            });
+
+            // Also load any DLCs from the registry if it's available (for future extensibility)
             if (DLCManager.registryData != null) {
                 for (e in DLCManager.registryData.dlcs) {
-                    var inst = DLCManager.isDLCInstalled(e.id);
-                    var sizeStr = e.sizeMb > 0 ? "  •  " + e.sizeMb + " MB" : "";
-                    _items.push({
-                        id:           e.id,
-                        label:        e.name,
-                        sub:          "by " + e.author + sizeStr,
-                        installed:    inst,
-                        downloadable: !inst
-                    });
+                    if (e.id != "securitydlc") {  // Don't duplicate hardcoded entry
+                        var inst2 = DLCManager.isDLCInstalled(e.id);
+                        var sizeStr2 = e.sizeMb > 0 ? "  •  " + e.sizeMb + " MB" : "";
+                        _items.push({
+                            id:           e.id,
+                            label:        e.name,
+                            sub:          "by " + e.author + sizeStr2,
+                            installed:    inst2,
+                            downloadable: !inst2
+                        });
+                    }
                 }
-            }
-            if (_items.length == 0) {
-                var ts  = DLCManager.taskState;
-                var msg = ts == DLCTaskState.BUSY      ? "Loading DLC list..."
-                        : DLCManager.registryData != null ? "No community DLCs available yet."
-                        : "Could not load DLC list. Check your connection.";
-                var sub = ts == DLCTaskState.FAILED ? "Press Accept to retry." : "";
-                _items.push({id: "", label: msg, sub: sub, installed: false, downloadable: false});
             }
         }
 

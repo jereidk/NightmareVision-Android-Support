@@ -1,16 +1,4 @@
 {
 	"schemaVersion": 1,
-	"dlcs": [
-		{
-			"id": "securitydlc",
-			"name": "VS Impostor Legacy – Security DLC",
-			"description": "Additional story content for VS Impostor Legacy. Required for the Security weeks.",
-			"author": "JereiDK",
-			"version": "1.0.0",
-			"sizeMb": 127,
-			"downloadUrl": "REPLACE_WITH_GITHUB_RELEASE_URL/securitydlc.zip",
-			"sha256": "",
-			"tags": ["story", "week", "security"]
-		}
-	]
+	"dlcs": []
 }
