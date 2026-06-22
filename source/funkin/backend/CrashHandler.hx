@@ -18,6 +18,15 @@ class CrashHandler
 		#if cpp
 		untyped __global__.__hxcpp_set_critical_error_handler(onCriticalError);
 		#end
+		#if android
+		{
+			final logPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
+			final prevCrash = mobile.backend.JavaCrashWrapper.readPreviousNativeCrash();
+			if (prevCrash != null)
+				Logger.log('Previous session ended abnormally:\n$prevCrash', WARN);
+			mobile.backend.JavaCrashWrapper.install(logPath);
+		}
+		#end
 	}
 	
 	static function onCriticalError(message:String):Void

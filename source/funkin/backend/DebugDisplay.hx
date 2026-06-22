@@ -75,8 +75,20 @@ class DebugDisplay extends Sprite
 		
 		instance = new DebugDisplay(10, 3, 0xFFFFFF);
 		instance.visible = instance.displayType != FpsDisplayMode.DISABLED;
-		instance.mouseEnabled = false;
 		instance.mouseChildren = false;
+		#if mobile
+		instance.mouseEnabled = true;
+		instance.addEventListener(openfl.events.MouseEvent.CLICK, function(_) {
+			ClientPrefs.fpsDisplayType = switch (ClientPrefs.fpsDisplayType) {
+				case 'Disabled': 'Simple';
+				case 'Simple':   'Advanced';
+				default:         'Disabled';
+			};
+			ClientPrefs.flushSave();
+		});
+		#else
+		instance.mouseEnabled = false;
+		#end
 
 		var parent = FlxG.game.parent;
 		parent.addChild(instance);
