@@ -190,6 +190,7 @@ class MainMenuState extends MusicBeatState
 		super.create();
 		Logger.log('MMS CP10: post super.create', NOTICE);
 
+		Logger.log('MMS CP11: fromTitle check', NOTICE);
 		if (fromTitle)
 		{
 			redMenu.x = FlxG.width + 120;
@@ -199,17 +200,24 @@ class MainMenuState extends MusicBeatState
 			playPanelIntro();
 			fromTitle = false;
 		}
-		
+
+		Logger.log('MMS CP12: updateMenuSelection', NOTICE);
 		updateMenuSelection();
-		
+
+		Logger.log('MMS CP13: shinies', NOTICE);
 		var shinies:Int = ProgressionUtil.getShinies();
 		for (i => shiny in menuShinies) shiny.visible = (i < shinies);
-		
+
+		Logger.log('MMS CP14: onCreatePost', NOTICE);
 		scriptGroup.call('onCreatePost', []);
+		Logger.log('MMS CP15: onCreatePost done', NOTICE);
 
 		#if mobile
+		Logger.log('MMS CP16: addVirtualPad', NOTICE);
 		addVirtualPad(LEFT_FULL, A_B);
+		Logger.log('MMS CP17: addVirtualPadCamera', NOTICE);
 		addVirtualPadCamera();
+		Logger.log('MMS CP18: create done', NOTICE);
 		#end
 	}
 
