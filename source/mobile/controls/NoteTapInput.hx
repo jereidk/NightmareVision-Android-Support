@@ -3,7 +3,7 @@ package mobile.controls;
 #if mobile
 import flixel.FlxBasic;
 import flixel.FlxG;
-import flixel.group.FlxTypedGroup;
+import flixel.group.FlxGroup.FlxTypedGroup;
 import funkin.objects.note.Note;
 import mobile.backend.flixel.input.FlxMobileInputID;
 
