@@ -20,10 +20,18 @@ class MobileSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option = new Option(Lang.str('opt_gameinput', 'Gameplay Input'),
-			Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox splits the screen into four tap zones.\nVirtual Pad shows an on-screen D-pad.'),
+			Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox splits the screen into tap zones.\nVirtual Pad shows an on-screen D-pad.'),
 			'gameInputMode', 'string', 'Hitbox',
 			[Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad')],
 			['Hitbox', 'Virtual Pad']);
+		addOption(option);
+
+		var option = new Option(
+			Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
+			Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones when using Hitbox mode.\nFour Lanes: four equal columns across the full screen.\nTwo Thumb: 2×2 grid — left thumb covers LEFT and DOWN, right thumb covers UP and RIGHT.'),
+			'hitboxLayout', 'string', 'Four Lanes',
+			[Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb')],
+			['Four Lanes', 'Two Thumb']);
 		addOption(option);
 
 		var option = new Option(Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),

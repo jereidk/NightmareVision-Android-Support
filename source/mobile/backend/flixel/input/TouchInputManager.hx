@@ -52,6 +52,25 @@ class TouchInputManager extends FlxTypedSpriteGroup<FlxButton>
 		return checkArrayState(ids, JUST_RELEASED);
 	}
 
+	/**
+	 * Returns the millisecond timestamp (haxe.Timer.stamp() × 1000) of the last
+	 * press event for the given input ID, captured inside the button's onDown
+	 * handler rather than at frame boundaries. Returns 0 if the button has never
+	 * been pressed or the ID is not mapped.
+	 */
+	public function getPressTimestampMs(id:FlxMobileInputID):Float
+	{
+		var btn = activeButtons.get(id);
+		return btn != null ? btn.pressTimestampMs : 0.0;
+	}
+
+	/** Returns the millisecond timestamp of the last release for the given input ID. */
+	public function getReleaseTimestampMs(id:FlxMobileInputID):Float
+	{
+		var btn = activeButtons.get(id);
+		return btn != null ? btn.releaseTimestampMs : 0.0;
+	}
+
 
 	/**
 	 * Checks the status of a specific button, or handles special cases such as ANY and NONE
