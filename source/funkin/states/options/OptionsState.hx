@@ -24,7 +24,6 @@ class OptionsState extends MusicBeatState
 		'graphics',
 		'visualsui',
 		'misc',
-		#if mobile 'mobile', #end
 		'credits'
 	];
 	
@@ -73,6 +72,9 @@ class OptionsState extends MusicBeatState
 	var dlcButton:FlxSprite;
 	var dlcButtonLabel:FlxText;
 	var dlcPadHint:FlxText;
+
+	var mobileButton:FlxSprite;
+	var mobileButtonLabel:FlxText;
 	#end
 	
 	public function openSelectedSubstate(label:String)
@@ -232,6 +234,21 @@ class OptionsState extends MusicBeatState
 			add(editorsButtonLabel);
 
 			#if mobile
+			// Dedicated Mobile-controls button (independent of the category list,
+			// like the Editors / DLC buttons). Sits in the gap left clear by the
+			// on-screen pads (between the left D-pad and the Editors button).
+			mobileButton = new FlxSprite(340, 618);
+			mobileButton.makeGraphic(292, 60, 0xFF2A1640);
+			mobileButton.antialiasing = ClientPrefs.globalAntialiasing;
+			add(mobileButton);
+
+			mobileButtonLabel = new FlxText(340, 618, 292, Lang.str('opt_category_mobile'));
+			mobileButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			mobileButtonLabel.borderSize = 2;
+			mobileButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
+			mobileButtonLabel.y += Math.round((60 - mobileButtonLabel.height) / 2);
+			add(mobileButtonLabel);
+
 			dlcButton = new FlxSprite(952, 618);
 			dlcButton.makeGraphic(292, 60, 0xFF162C16);
 			dlcButton.antialiasing = ClientPrefs.globalAntialiasing;
@@ -319,6 +336,7 @@ class OptionsState extends MusicBeatState
 		#if mobile
 		if (dlcButtonLabel != null) dlcButtonLabel.text = Lang.str('opt_category_dlc');
 		if (dlcPadHint != null) dlcPadHint.text = 'C  -  ' + Lang.str('opt_category_dlc');
+		if (mobileButtonLabel != null) mobileButtonLabel.text = Lang.str('opt_category_mobile');
 		#end
 
 		scriptGroup.call('onRefreshLang', []);
@@ -416,6 +434,12 @@ class OptionsState extends MusicBeatState
 			}
 
 			#if mobile
+			if (mobileButton != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(mobileButton) && !blockAllInput && !blockInput)
+			{
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				openSelectedSubstate('mobile');
+			}
+
 			var dlcTouched:Bool = dlcButton.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton);
 			var dlcPadPressed:Bool = (virtualPad != null && virtualPad.buttonC != null && virtualPad.buttonC.justPressed);
 			if ((dlcTouched || dlcPadPressed) && !blockAllInput && !blockInput)
