@@ -26,7 +26,6 @@ typedef PreviewZone =
 	border:FlxSprite,
 	fill:FlxSprite,
 	label:FlxText,
-	colorIdx:Int,
 	pressed:Bool,
 	curA:Float
 }
@@ -108,6 +107,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _touchingZone:Bool = false;
 	var _dragging:Bool = false;
 
+	// Preview context: the canvas previews navigation when the 'nav' option is
+	// selected, otherwise the gameplay scheme. `_lastSig` drives rebuilds.
+	var _previewIsNav:Bool = false;
+	var _lastSig:String = '';
+
+	// Touchable reset button (in addition to the RESET control).
+	var _resetBtn:FlxSprite;
+	var _resetLabel:FlxText;
+
 	// ── Derived geometry ───────────────────────────────────────────────────────
 	inline function rightArrowX():Float return OPT_X + OPT_W - 36;
 	inline function ctrlX():Float        return rightArrowX() - 8 - CTRL_W;
@@ -141,6 +149,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		help.borderSize = 1;
 		add(help);
 
+		_buildResetButton();
+
 		super.create();
 
 		#if mobile
@@ -150,8 +160,21 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		_rebuildOptions();
 		_rebuildPreview();
+		_lastSig = _previewSig();
 		_selY = OPT_Y0 + _sel * OPT_H;
 		_updateRows();
+	}
+
+	function _buildResetButton():Void
+	{
+		_resetBtn = new FlxSprite(1086, 22).makeGraphic(172, 44, FlxColor.fromRGB(96, 28, 28));
+		add(_resetBtn);
+
+		_resetLabel = new FlxText(1086, 22, 172, Lang.str('reset_defaults', 'RESET'));
+		_resetLabel.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.fromRGB(255, 210, 210), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_resetLabel.borderSize = 1.5;
+		_resetLabel.y += Math.round((44 - _resetLabel.height) / 2);
+		add(_resetLabel);
 	}
 
 	function _buildHeader():Void
@@ -250,8 +273,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		super.update(elapsed);
 
 		_time += elapsed;
+		_refreshPreviewIfNeeded();
 		_updatePreview(elapsed);
 		_updateSelectionVisuals(elapsed);
+
+		// Subtle hover feedback on the reset button.
+		final overReset = FlxG.mouse.overlaps(_resetBtn);
+		_resetBtn.color = overReset ? FlxColor.fromRGB(150, 40, 40) : FlxColor.fromRGB(96, 28, 28);
 
 		if (controls.BACK)
 		{
@@ -359,6 +387,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	{
 		if (!FlxG.mouse.justPressed) return;
 
+		// Touchable reset button.
+		if (FlxG.mouse.overlaps(_resetBtn))
+		{
+			_resetDefaults();
+			return;
+		}
+
 		// Preview zones — "test" tap.
 		for (i in 0..._zones.length)
 		{
@@ -441,18 +476,31 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		FunkinSound.play(Paths.sound('scrollMenu'));
 
-		// Layout / input changes alter both the visible options and the preview.
-		if (opt.id == 'game')
-		{
-			_rebuildOptions();
-			_rebuildPreview();
-		}
-		else if (opt.id == 'layout')
-		{
-			_rebuildPreview();
-		}
+		// Changing the gameplay input alters which options are visible; the
+		// preview itself is refreshed from its signature each frame.
+		if (opt.id == 'game') _rebuildOptions();
 
 		_updateRows();
+	}
+
+	/** A short string describing what the canvas should currently show. */
+	function _previewSig():String
+	{
+		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
+		if (sel != null && sel.id == 'nav')
+			return 'nav:' + ClientPrefs.navInputMode;
+		return 'game:' + (ClientPrefs.gameInputMode == 'Virtual Pad' ? 'pad' : ClientPrefs.hitboxLayout);
+	}
+
+	/** Rebuilds the canvas only when its context (selection / value) changes. */
+	function _refreshPreviewIfNeeded():Void
+	{
+		final sig = _previewSig();
+		if (sig != _lastSig)
+		{
+			_lastSig = sig;
+			_rebuildPreview();
+		}
 	}
 
 	function _resetDefaults():Void
@@ -465,8 +513,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		ClientPrefs.virtualPadAlpha = 0.5;
 
 		_rebuildOptions();
-		_rebuildPreview();
-		_updateRows();
+		_updateRows(); // preview refreshes from its signature next frame
 
 		FunkinSound.play(Paths.sound('cancelMenu'));
 		if (ClientPrefs.hapticFeedback) mobile.backend.AndroidUtils.vibrate(20);
@@ -643,8 +690,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	function _currentOpacity():Float
 		return (ClientPrefs.gameInputMode == 'Hitbox') ? ClientPrefs.hitboxAlpha : ClientPrefs.virtualPadAlpha;
 
-	inline function _idleAlpha():Float  return Math.max(_currentOpacity() * 0.35, 0.12);
-	inline function _pressAlpha():Float return Math.max(_currentOpacity(), 0.30);
+	// Navigation previews are illustrative (fixed alpha); gameplay previews track
+	// the live opacity setting so the slider is reflected in real time.
+	inline function _idleAlpha():Float  return _previewIsNav ? 0.30 : Math.max(_currentOpacity() * 0.35, 0.12);
+	inline function _pressAlpha():Float return _previewIsNav ? 0.85 : Math.max(_currentOpacity(), 0.30);
 
 	function _clearZones():Void
 	{
@@ -661,7 +710,25 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	{
 		_clearZones();
 
-		if (ClientPrefs.gameInputMode == 'Virtual Pad')
+		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
+		_previewIsNav = (sel != null && sel.id == 'nav');
+
+		final navPrefix = Lang.str('preview_nav', 'Navigation') + '  ·  ';
+
+		if (_previewIsNav)
+		{
+			if (ClientPrefs.navInputMode == 'Virtual Pad')
+			{
+				_buildNavPadPreview();
+				_modeText.text = navPrefix + Lang.str('choice_navinput_pad', 'Virtual Pad');
+			}
+			else
+			{
+				_buildNavTouchPreview();
+				_modeText.text = navPrefix + Lang.str('choice_navinput_touch', 'Touch');
+			}
+		}
+		else if (ClientPrefs.gameInputMode == 'Virtual Pad')
 		{
 			_buildPadPreview();
 			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
@@ -679,6 +746,40 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		_demoIdx = 0;
 		_demoTimer = 0.0;
+	}
+
+	/** Touch navigation: a mock menu whose highlighted row cycles (tap to pick). */
+	function _buildNavTouchPreview():Void
+	{
+		final pad = 20.0;
+		final n   = 4;
+		final gap = 12.0;
+		final w   = CANVAS_W - pad * 2;
+		final rowH = (CANVAS_H - pad * 2 - gap * (n - 1)) / n;
+
+		for (i in 0...n)
+			_addZoneC(CANVAS_X + pad, CANVAS_Y + pad + i * (rowH + gap), w, rowH, 0xFF35C8FF, '');
+	}
+
+	/** Virtual-pad navigation: the on-screen D-pad plus A / B action buttons. */
+	function _buildNavPadPreview():Void
+	{
+		final sx = CANVAS_W / FlxG.width;
+		final sy = CANVAS_H / FlxG.height;
+		final bw = 134 * sx;
+		final bh = 134 * sy;
+
+		inline function place(gx:Float, gy:Float, color:Int, label:String)
+			_addZoneC(CANVAS_X + gx * sx, CANVAS_Y + gy * sy, bw, bh, color, label);
+
+		// D-pad (UP / DOWN drive menu scrolling).
+		place(105, FlxG.height - 345, 0xFF00FF00, 'UP');
+		place(0,   FlxG.height - 243, 0xFFFF00FF, 'L');
+		place(207, FlxG.height - 243, 0xFFFF0000, 'R');
+		place(105, FlxG.height - 135, 0xFF00FFFF, 'DOWN');
+		// Action buttons (A confirm, B back).
+		place(FlxG.width - 258, FlxG.height - 135, 0xFFFFCB00, 'B');
+		place(FlxG.width - 132, FlxG.height - 135, 0xFFFF0000, 'A');
 	}
 
 	function _buildFourLanesPreview():Void
@@ -716,10 +817,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		place(105, FlxG.height - 135, 1); // DOWN
 	}
 
-	function _addZone(x:Float, y:Float, w:Float, h:Float, colorIdx:Int):Void
-	{
-		final col = ZONE_COLORS[colorIdx];
+	inline function _addZone(x:Float, y:Float, w:Float, h:Float, colorIdx:Int):Void
+		_addZoneC(x, y, w, h, ZONE_COLORS[colorIdx], ZONE_LABELS[colorIdx]);
 
+	function _addZoneC(x:Float, y:Float, w:Float, h:Float, col:Int, label:String):Void
+	{
 		// Border tile (constant, so the layout always reads even at low opacity).
 		var border = new FlxSprite(x, y).makeGraphic(Std.int(w), Std.int(h), FlxColor.WHITE);
 		border.color = col;
@@ -735,12 +837,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		fill.alpha = _idleAlpha();
 		add(fill);
 
-		var lbl = new FlxText(x, y + h / 2 - 11, w, ZONE_LABELS[colorIdx]);
+		var lbl = new FlxText(x, y + h / 2 - 11, w, label);
 		lbl.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		lbl.borderSize = 1.5;
 		add(lbl);
 
-		_zones.push({border: border, fill: fill, label: lbl, colorIdx: colorIdx, pressed: false, curA: _idleAlpha()});
+		_zones.push({border: border, fill: fill, label: lbl, pressed: false, curA: _idleAlpha()});
 	}
 
 	function _updatePreview(elapsed:Float):Void
