@@ -296,9 +296,13 @@ class ProgressionUtil
 	public static function getShinies():Int
 	{
 		CosmicubeData.reload(false);
-		
+
 		var songs = allImpostorSongs;
-		var cubeItems = CosmicubeData.cosmicubeItems.get('impostor').filter(i -> !i.completionExcluded);
+		// null-guard: get() returns null if 'impostor' cube wasn't loaded (e.g. asset path
+		// resolution failure); calling .filter() on null is SIGSEGV in HXCPP.
+		final _rawImpostor = CosmicubeData.cosmicubeItems.get('impostor');
+		trace('getShinies: cosmicubeItems[impostor]=' + (_rawImpostor == null ? 'NULL' : _rawImpostor.length + ' items'));
+		var cubeItems = (_rawImpostor ?? []).filter(i -> !i.completionExcluded);
 		var skins = cubeItems.filter(i -> i.type == 'playerSkin' || i.type == 'speakerSkin');
 		var pets = cubeItems.filter(i -> i.type == 'pet');
 		var awards = GameFlags.getAwards();

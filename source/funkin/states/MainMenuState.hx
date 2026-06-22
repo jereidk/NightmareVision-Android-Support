@@ -204,9 +204,11 @@ class MainMenuState extends MusicBeatState
 		Logger.log('MMS CP12: updateMenuSelection', NOTICE);
 		updateMenuSelection();
 
-		Logger.log('MMS CP13: shinies', NOTICE);
+		Logger.log('MMS CP13a: before getShinies', NOTICE);
 		var shinies:Int = ProgressionUtil.getShinies();
+		Logger.log('MMS CP13b: getShinies=' + shinies + ' menuShinies.length=' + menuShinies.length, NOTICE);
 		for (i => shiny in menuShinies) shiny.visible = (i < shinies);
+		Logger.log('MMS CP13c: shiny loop done', NOTICE);
 
 		Logger.log('MMS CP14: onCreatePost', NOTICE);
 		scriptGroup.call('onCreatePost', []);
