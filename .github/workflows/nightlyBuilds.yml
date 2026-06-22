@@ -226,9 +226,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
-          key: hxcpp-cache-android-nightly-${{ github.sha }}
+          key: hxcpp-cache-android-nightly-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-cache-android-nightly-
+            hxcpp-cache-android-nightly-${{ runner.os }}-
 
       - name: Compile
         env:
@@ -465,9 +465,9 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm64-${{ github.sha }}
+          key: hxcpp-android-arm64-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-
+            hxcpp-android-arm64-${{ runner.os }}-
 
       - name: Compile
         env:
@@ -706,9 +706,9 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm32-${{ github.sha }}
+          key: hxcpp-android-arm32-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm32-
+            hxcpp-android-arm32-${{ runner.os }}-
 
       - name: Compile
         env:
