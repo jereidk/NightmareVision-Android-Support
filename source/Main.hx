@@ -78,7 +78,10 @@ class Main extends Sprite
 		#end
 		
 		DebugDisplay.init();
-		
+		#if mobile
+		mobile.backend.MobileDebugPlugin.register();
+		#end
+
 		FlxG.signals.gameResized.add(onResize);
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}

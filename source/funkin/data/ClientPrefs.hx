@@ -165,6 +165,9 @@ class ClientPrefs
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
 	@saveVar public static var hapticFeedback:Bool = true;
+
+	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb'. */
+	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	#end
 
 	// gameplay ------------------------------------------------------------------------//

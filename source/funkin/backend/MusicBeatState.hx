@@ -18,6 +18,7 @@ import funkin.scripts.*;
 import flixel.group.FlxGroup;
 import mobile.controls.MobileHitbox;
 import mobile.controls.MobileVirtualPad;
+import mobile.controls.NoteTapInput;
 #end
 
 class MusicBeatState extends FlxUIState
@@ -45,6 +46,7 @@ class MusicBeatState extends FlxUIState
 	#if mobile
 	public var hitbox:MobileHitbox;
 	public var virtualPad:MobileVirtualPad;
+	public var noteTapInput:Null<NoteTapInput> = null;
 
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
@@ -94,6 +96,9 @@ class MusicBeatState extends FlxUIState
 				return;
 			}
 
+			// Tap Notes: NoteTapInput is created externally (needs the notes group).
+			if (ClientPrefs.gameInputMode == 'Tap Notes') return;
+
 			hitbox = new MobileHitbox();
 			hitboxCam = new FlxCamera();
 			hitboxCam.bgColor.alpha = 0;
@@ -124,6 +129,12 @@ class MusicBeatState extends FlxUIState
 		{
 			FlxG.cameras.remove(hitboxCam);
 			hitboxCam = FlxDestroyUtil.destroy(hitboxCam);
+		}
+
+		if (noteTapInput != null)
+		{
+			remove(noteTapInput);
+			noteTapInput = FlxDestroyUtil.destroy(noteTapInput);
 		}
 	}
 	#end
