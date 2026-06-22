@@ -1,0 +1,33 @@
+{
+  "_comment": "Configuration for tools/convert_astc.py",
+  "_doc": {
+    "block_overrides": "Map of filename substrings to ASTC block size. Applied before edge_energy analysis.",
+    "excludes": "List of filename substrings. Matching files are NEVER converted (left as PNG).",
+    "block_sizes": "4x4 = best quality (sprites/characters), 6x6 = good quality, 8x8 = default, 10x10 = smooth backgrounds only"
+  },
+
+  "block_overrides": {
+    "NOTE_assets":  "4x4",
+    "Arrows":       "4x4",
+    "icon-":        "4x4",
+    "GF_assets":    "6x6",
+    "greenmenu":    "10x10",
+    "menuBGBlue":   "10x10",
+    "stageBack":    "10x10",
+    "stageFront":   "8x8"
+  },
+
+  "excludes": [
+    "pixel",
+    "Pixel",
+    "PIXEL",
+    "font",
+    "Font",
+    "icon.png",
+    "icon-hd.png",
+    "logo.png",
+    "preloader",
+    "Preloader",
+    "loading"
+  ]
+}
