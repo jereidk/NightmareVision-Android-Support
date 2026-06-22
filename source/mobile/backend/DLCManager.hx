@@ -240,24 +240,18 @@ class DLCManager {
                 _mkdirs(cachePath);
                 _setProgress(5, "Downloading " + entry.name + " (" + entry.sizeMb + " MB)...");
 
+                // haxe.Http.request(post) is blocking on sys/cpp targets — request(false)
+                // performs a GET (required for GitHub release assets). Progress updates
+                // during the transfer aren't available through this API, so we report a
+                // single "downloading" state, then jump to verification once it returns.
                 var http:Http  = new Http(entry.downloadUrl);
                 var bytes:Null<Bytes> = null;
                 var error = "";
-                var downloadFinished = false;
-                http.onBytes = (b) -> { bytes = b; downloadFinished = true; };
-                http.onError = (e) -> { error = e; downloadFinished = true; };
+                http.onBytes = (b) -> bytes = b;
+                http.onError = (e) -> error = e;
 
                 var downloadStartTime = haxe.Timer.stamp();
-                http.request(true);  // Asincrónico — permite actualizar progreso
-
-                // Esperar a que termine, mostrando progreso estimado
-                while (!downloadFinished && error == "") {
-                    Sys.sleep(0.2);
-                    var elapsed = haxe.Timer.stamp() - downloadStartTime;
-                    // Asume ~20s para descargar el DLC; muestra progreso estimado 5-55%
-                    var estimatedPercent = Std.int(Math.min(55, (elapsed / 20.0) * 50.0)) + 5;
-                    _setProgress(estimatedPercent, "Downloading " + entry.name + " (" + entry.sizeMb + " MB)...");
-                }
+                http.request(false);
 
                 if (error != "") throw "Download failed: " + error;
                 if (bytes == null || bytes.length == 0) throw "Download returned an empty file";

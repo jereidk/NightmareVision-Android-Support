@@ -426,10 +426,8 @@ class MobileDLCSubState extends MusicBeatSubstate
                 FunkinSound.play(Paths.sound('scrollMenu'));
                 _updateRows();
             }
-        } else if (item.downloadable && DLCManager.registryData != null) {
-            var entry:Null<DLCEntry> = null;
-            for (e in DLCManager.registryData.dlcs)
-                if (e.id == item.id) { entry = e; break; }
+        } else if (item.downloadable && _dlcCatalog.exists(item.id)) {
+            var entry:Null<DLCEntry> = _dlcCatalog.get(item.id);
             if (entry != null) {
                 DLCManager.downloadAndInstallAsync(entry);
                 _blockInput = true;
