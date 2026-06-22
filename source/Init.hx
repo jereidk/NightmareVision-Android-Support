@@ -62,7 +62,7 @@ class Init extends FlxState
 				}
 				else
 				{
-					funkin.backend.Logger.log('Crash detection: no previous crash found', INFO);
+					funkin.backend.Logger.log('Crash detection: no previous crash found', NOTICE);
 				}
 			}
 		}

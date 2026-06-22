@@ -93,7 +93,7 @@ class CrashHandler
 			#end
 		}
 		#end
-		Logger.log('CrashHandler: all handlers installed and active', INFO);
+		Logger.log('CrashHandler: all handlers installed and active', NOTICE);
 	}
 
 	static function onCriticalError(message:String):Void
