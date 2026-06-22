@@ -125,18 +125,23 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
-        try {
-            StringWriter sw = new StringWriter();
-            throwable.printStackTrace(new PrintWriter(sw));
+        // sCrashLogPath is always non-null when this handler is active (install()
+        // sets it before registering the handler), but guard defensively so a
+        // corrupted state never prevents forwarding to the original handler.
+        if (sCrashLogPath != null && !sCrashLogPath.isEmpty()) {
+            try {
+                StringWriter sw = new StringWriter();
+                throwable.printStackTrace(new PrintWriter(sw));
 
-            String report = "Java/JNI crash\n"
-                + "Thread: " + thread.getName() + "\n\n"
-                + "Exception: " + throwable + "\n\n"
-                + "Callstack:\n" + sw.toString();
+                String report = "Java/JNI crash\n"
+                    + "Thread: " + thread.getName() + "\n\n"
+                    + "Exception: " + throwable + "\n\n"
+                    + "Callstack:\n" + sw.toString();
 
-            writeCrashLog(sCrashLogPath, report);
-        } catch (Throwable ignored) {
-            // If writing fails we still forward to the original handler.
+                writeCrashLog(sCrashLogPath, report);
+            } catch (Throwable ignored) {
+                // If writing fails we still forward to the original handler.
+            }
         }
 
         if (sOriginalHandler != null)
@@ -170,7 +175,9 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
             if (buf.size() == 0) return null;
 
-            String tombPath = sCrashLogPath.replace("crash.log", "tombstone.pb");
+            // Derive sibling path; use File.getParent() to avoid String.replace()
+            // matching "crash.log" more than once if it appears elsewhere in the path.
+            String tombPath = new File(sCrashLogPath).getParent() + File.separator + "tombstone.pb";
             File f = new File(tombPath);
             if (f.getParentFile() != null && !f.getParentFile().exists())
                 f.getParentFile().mkdirs();

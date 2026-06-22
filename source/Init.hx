@@ -31,7 +31,9 @@ class Init extends FlxState
 		// Install Java-level uncaught exception handler. Catches JVM/JNI
 		// crashes that happen outside the Haxe exception pipeline and writes
 		// them to crash.log before the process dies.
-		try { mobile.backend.JavaCrashHandler.install(_crashLogPath); }
+		// JavaCrashWrapper uses lazy JNI init with error handling; by this point
+		// CrashHandler.init() has already called install(), so this is a no-op.
+		try { mobile.backend.JavaCrashWrapper.install(_crashLogPath); }
 		catch (_:Dynamic) {}
 
 		// 1. crash.log written by CrashHandler (Haxe exception) or by the
@@ -51,7 +53,7 @@ class Init extends FlxState
 				// 2. No crash.log → check Android's own exit record (API 30+).
 				//    This catches native SIGSEGV / OOM / ANR from the previous
 				//    session that killed the process before any handler could write.
-				final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
+				final nativeInfo = mobile.backend.JavaCrashWrapper.readPreviousNativeCrash();
 				if (nativeInfo != null && nativeInfo.length > 0)
 					mobile.backend.utils.PopUp.showAlert('Crash nativo detectado', nativeInfo, 'OK');
 			}
