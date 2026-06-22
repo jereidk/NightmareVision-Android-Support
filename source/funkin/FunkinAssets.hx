@@ -222,7 +222,15 @@ class FunkinAssets
 			cache.localTrackedAssets.push(key);
 			return cache.currentTrackedGraphics.get(key);
 		}
-		
+
+		// Held over from the previous state during a transition — revive it
+		// instead of reloading and re-decoding the bitmap from disk.
+		if (useCache)
+		{
+			final revived:Null<FlxGraphic> = cache.reviveGraphic(key);
+			if (revived != null) return revived;
+		}
+
 		var bitmap:Null<BitmapData> = getBitmapData(key);
 		
 		if (bitmap != null)
@@ -288,7 +296,14 @@ class FunkinAssets
 			cache.localTrackedAssets.push(key);
 			return cache.currentTrackedSounds.get(key);
 		}
-		
+
+		// Revive from the previous tier rather than reloading from disk.
+		if (useCache)
+		{
+			final revived:Null<Sound> = cache.reviveSound(key);
+			if (revived != null) return revived;
+		}
+
 		var sound:Null<Sound> = null;
 		
 		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(key)) sound = Sound.fromFile(key);

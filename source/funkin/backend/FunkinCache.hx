@@ -73,21 +73,21 @@ class FunkinCache
 		// Move non-permanent current graphics → previous.
 		for (key in [for (k in currentTrackedGraphics.keys()) k])
 		{
-			if (!currentTrackedGraphics.permanentKeys.contains(key))
-			{
-				_prevGraphics.set(key, currentTrackedGraphics.get(key));
-				currentTrackedGraphics.remove(key);
-			}
+			if (currentTrackedGraphics.permanentKeys.contains(key)) continue;
+
+			final graphic = currentTrackedGraphics.get(key);
+			if (graphic != null) _prevGraphics.set(key, graphic);
+			currentTrackedGraphics.remove(key);
 		}
 
 		// Move non-permanent current sounds → previous.
 		for (key in [for (k in currentTrackedSounds.keys()) k])
 		{
-			if (!currentTrackedSounds.permanentKeys.contains(key))
-			{
-				_prevSounds.set(key, currentTrackedSounds.get(key));
-				currentTrackedSounds.remove(key);
-			}
+			if (currentTrackedSounds.permanentKeys.contains(key)) continue;
+
+			final sound = currentTrackedSounds.get(key);
+			if (sound != null) _prevSounds.set(key, sound);
+			currentTrackedSounds.remove(key);
 		}
 
 		localTrackedAssets.resize(0);
@@ -202,6 +202,40 @@ class FunkinCache
 
 		if (_prevSounds.exists(key)) _prevSounds.remove(key);
 
+		return sound;
+	}
+
+	/**
+	 * If `key` is being held in the "previous" tier, move it back into the
+	 * current tier (re-marking it as in-use) and return it.
+	 *
+	 * This lets a freshly-entered state reuse an asset that the outgoing state
+	 * had cached, instead of reloading it from disk. Returns null when the key
+	 * is not present in the previous tier.
+	 */
+	public function reviveGraphic(key:String):Null<FlxGraphic>
+	{
+		final graphic = _prevGraphics.get(key);
+		if (graphic == null) return null;
+
+		_prevGraphics.remove(key);
+		currentTrackedGraphics.set(key, graphic);
+		localTrackedAssets.push(key);
+		return graphic;
+	}
+
+	/**
+	 * Sound counterpart to reviveGraphic(): promotes a sound from the previous
+	 * tier back to the current tier. Returns null if not held in previous.
+	 */
+	public function reviveSound(key:String):Null<Sound>
+	{
+		final sound = _prevSounds.get(key);
+		if (sound == null) return null;
+
+		_prevSounds.remove(key);
+		currentTrackedSounds.set(key, sound);
+		localTrackedAssets.push(key);
 		return sound;
 	}
 

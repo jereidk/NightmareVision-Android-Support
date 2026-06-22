@@ -4,7 +4,6 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
-import flixel.util.FlxDestroyUtil;
 
 /**
  * Mobile settings panel with a live control-layout preview on the left side.
@@ -15,10 +14,13 @@ import flixel.util.FlxDestroyUtil;
 class MobileSettingsSubState extends BaseOptionsMenu
 {
 	// ─── Preview state ────────────────────────────────────────────────────────
+	// Kept in the upper-left so it clears the on-screen navigation pad, which
+	// super() places in the lower-left (its top button sits around y ≈ 375 on a
+	// 720-tall stage). Proportions stay roughly 16:9 to read as a game screen.
 	static final PREV_X:Float  = 14;
-	static final PREV_Y:Float  = 106;
+	static final PREV_Y:Float  = 104;
 	static final PREV_W:Int    = 448;
-	static final PREV_H:Int    = 400;
+	static final PREV_H:Int    = 232;
 
 	static final ZONE_ALPHA:Float = 0.72;
 
