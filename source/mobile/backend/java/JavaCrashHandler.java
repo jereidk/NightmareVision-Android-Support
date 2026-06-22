@@ -130,8 +130,11 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
         File file = new File(path);
         File parent = file.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
-        FileWriter fw = new FileWriter(file, false);
+        // Append mode (true) so a simultaneous Haxe-side write is not overwritten.
+        FileWriter fw = new FileWriter(file, true);
+        fw.write("--- JAVA CRASH [" + new java.util.Date() + "] ---\n");
         fw.write(content);
+        fw.write("\n\n");
         fw.close();
     }
 

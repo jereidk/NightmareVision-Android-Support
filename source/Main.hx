@@ -46,12 +46,19 @@ class Main extends Sprite
 	{
 		super();
 
+		// Register event listeners before anything else — no file I/O needed.
+		// This covers exceptions thrown by the storage / prefs init below.
+		#if (CRASH_HANDLER && !debug)
+		funkin.backend.CrashHandler.earlyInit();
+		#end
+
 		#if mobile
 		if (StorageSystem.getPermissions()) return;
 		Sys.setCwd(StorageSystem.getStorageDirectory());
 		#end
 
-		
+		// Full init: reads previous crash from ApplicationExitInfo and installs
+		// the Java-level UncaughtExceptionHandler. Requires storage to be ready.
 		#if (CRASH_HANDLER && !debug)
 		funkin.backend.CrashHandler.init();
 		#end
