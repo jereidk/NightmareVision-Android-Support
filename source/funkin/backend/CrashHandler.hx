@@ -80,12 +80,14 @@ class CrashHandler
 		earlyInit();
 		#if android
 		{
-			final logDir = mobile.backend.StorageSystem.getDirectory();
+			final logDir  = mobile.backend.StorageSystem.getDirectory();
 			final logPath = logDir + 'crash.log';
+			// install() must run first — it sets sCrashLogPath so the tombstone
+			// from readPreviousNativeCrash() knows where to save itself.
+			mobile.backend.JavaCrashWrapper.install(logPath);
 			final prevCrash = mobile.backend.JavaCrashWrapper.readPreviousNativeCrash();
 			if (prevCrash != null)
 				Logger.log('Previous session ended abnormally:\n$prevCrash', WARN);
-			mobile.backend.JavaCrashWrapper.install(logPath);
 			#if sys
 			_startWatchdog(logDir);
 			#end

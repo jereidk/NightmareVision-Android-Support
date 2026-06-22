@@ -6,9 +6,12 @@ import android.content.Context;
 import android.os.Build;
 import org.haxe.extension.Extension;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
@@ -23,18 +26,25 @@ import java.util.List;
  *  2. ApplicationExitInfo reader (API 30 / Android 11+) — reads Android's
  *     built-in record of why the PREVIOUS session ended (SIGSEGV, OOM, ANR…).
  *     Accessed via reflection so the file compiles against any SDK version.
+ *
+ *  3. Tombstone reader (API 31 / Android 12+) — saves the raw native tombstone
+ *     protobuf from the previous session to tombstone.pb.  The file is binary
+ *     but can be decoded offline with:
+ *       adb pull <path>/tombstone.pb && tombstone_proto_reader tombstone.pb
+ *     or inspected in Android Studio's "App Inspection > Crash" panel.
  */
 public class JavaCrashHandler extends Extension implements Thread.UncaughtExceptionHandler {
 
     private static Thread.UncaughtExceptionHandler sOriginalHandler;
-    private static String sCrashLogPath;
+    static String sCrashLogPath;   // package-private so tests can set it
     private static volatile boolean sInstalled = false;
 
     // ── public API called from Haxe via JNI ─────────────────────────────────
 
     /**
      * Install the Java-level uncaught exception handler.
-     * Must be called once at startup.
+     * Must be called once at startup, BEFORE readPreviousNativeCrash() so that
+     * sCrashLogPath is set when the tombstone is saved.
      *
      * @param crashLogPath absolute path where crash.log should be written
      */
@@ -47,9 +57,11 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     /**
-     * Read Android's ApplicationExitInfo (API 30 / Android 11+) for the most
-     * recent process exit from the previous session.  Uses reflection so this
-     * compiles against any compileSdkVersion.
+     * Read Android's ApplicationExitInfo (API 30+) for the most recent abnormal
+     * exit from the previous session.
+     *
+     * On API 31+ also saves the native tombstone protobuf to tombstone.pb
+     * alongside crash.log so it can be decoded offline.
      *
      * @return human-readable summary if the exit was abnormal, null otherwise
      */
@@ -82,12 +94,12 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             //   UNKNOWN=0, EXIT_SELF=1, SIGNALED=2, LOW_MEMORY=3,
             //   CRASH=4, CRASH_NATIVE=5, ANR=6, INITIALIZATION_FAILURE=7,
             //   PERMISSION_CHANGE=8, EXCESSIVE_RESOURCE_USAGE=9, USER_REQUESTED=10
-            // Skip clean/expected exits (UNKNOWN, EXIT_SELF, USER_REQUESTED).
+            // Skip clean/expected exits.
             if (reason == 0 || reason == 1 || reason == 10) return null;
 
-            Object desc = cls.getMethod("getDescription").invoke(info);
-            int importance = (int) cls.getMethod("getImportance").invoke(info);
-            int status    = (int) cls.getMethod("getStatus").invoke(info);
+            Object desc       = cls.getMethod("getDescription").invoke(info);
+            int    importance = (int) cls.getMethod("getImportance").invoke(info);
+            int    status     = (int) cls.getMethod("getStatus").invoke(info);
 
             StringBuilder sb = new StringBuilder("Crash detectado (sesión anterior)\n\n");
             sb.append("Tipo: ").append(reasonLabel(reason)).append("\n");
@@ -95,6 +107,13 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 sb.append("Descripción: ").append(desc).append("\n");
             sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
             sb.append("Código de salida: ").append(status).append("\n");
+
+            // API 31+: save the native tombstone / ANR trace protobuf to disk.
+            // The binary can be decoded offline:
+            //   adb pull <path>/tombstone.pb && tombstone_proto_reader tombstone.pb
+            String tombInfo = saveTombstone(info, cls);
+            if (tombInfo != null) sb.append(tombInfo);
+
             return sb.toString();
 
         } catch (Exception e) {
@@ -125,6 +144,47 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    /**
+     * Save the tombstone / ANR trace stream from ApplicationExitInfo to disk
+     * (API 31+).  The content is a binary protobuf (android.os.Tombstone) for
+     * native crashes and a text ANR trace for ANRs.
+     *
+     * Requires sCrashLogPath to be set by install() before this is called.
+     */
+    private static String saveTombstone(Object info, Class<?> cls) {
+        if (Build.VERSION.SDK_INT < 31) return null;
+        if (sCrashLogPath == null || sCrashLogPath.isEmpty()) return null;
+
+        try {
+            Method getTrace = cls.getMethod("getTraceInputStream");
+            Object streamObj = getTrace.invoke(info);
+            if (!(streamObj instanceof InputStream)) return null;
+
+            InputStream is = (InputStream) streamObj;
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int n;
+            while ((n = is.read(chunk)) != -1) buf.write(chunk, 0, n);
+            is.close();
+
+            if (buf.size() == 0) return null;
+
+            String tombPath = sCrashLogPath.replace("crash.log", "tombstone.pb");
+            File f = new File(tombPath);
+            if (f.getParentFile() != null && !f.getParentFile().exists())
+                f.getParentFile().mkdirs();
+            FileOutputStream fos = new FileOutputStream(f);
+            buf.writeTo(fos);
+            fos.close();
+
+            return "Tombstone guardado → tombstone.pb (" + buf.size() + " bytes)\n"
+                 + "  Decodificar: adb pull <ruta>/tombstone.pb && tombstone_proto_reader tombstone.pb\n";
+
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
 
     private static void writeCrashLog(String path, String content) throws IOException {
         File file = new File(path);
