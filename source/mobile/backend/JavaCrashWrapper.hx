@@ -12,6 +12,9 @@ package mobile.backend;
  * JNI method handles are created lazily on first use instead of at class-load
  * time, so a missing Java class or wrong signature fails gracefully rather than
  * crashing before any error handler is installed.
+ *
+ * _bound is only set true after a successful install() call so that a JNI
+ * init failure does not permanently block retries.
  */
 class JavaCrashWrapper
 {
@@ -42,9 +45,12 @@ class JavaCrashWrapper
 	public static function install(crashLogPath:String):Void
 	{
 		if (_bound) return;
-		_bound = true;
 		if (!_ensureJni()) return;
-		try { _install([crashLogPath]); }
+		try
+		{
+			_install([crashLogPath]);
+			_bound = true; // only mark bound after the call succeeds
+		}
 		catch (e:Dynamic) { funkin.backend.Logger.log('JavaCrashHandler.install failed: $e', WARN); }
 	}
 

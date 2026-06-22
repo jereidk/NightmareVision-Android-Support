@@ -200,9 +200,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 				}
 				catch (e:haxe.Exception)
 				{
-					#if sys
-					Sys.println(e.message);
-					#end
+					funkin.backend.Logger.log('[Script:$func] ${e.message}\n${e.stack}', ERROR);
 				}
 				
 				for (key in defaultShit.keys())

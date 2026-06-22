@@ -17,6 +17,38 @@ class CrashHandler
 	// in a tight loop. Reset to false when the user taps "continue".
 	static var _inFallback:Bool = false;
 
+	#if (android && sys)
+	// Updated every frame from the main thread via heartbeat().
+	// The watchdog background thread checks if this goes stale (main thread blocked).
+	static var _lastHeartbeat:Float = 0.0;
+
+	public static function heartbeat():Void
+	{
+		_lastHeartbeat = haxe.Timer.stamp();
+	}
+
+	static function _startWatchdog(logDir:String):Void
+	{
+		sys.thread.Thread.create(() -> {
+			while (true) {
+				Sys.sleep(1.0);
+				if (_lastHeartbeat > 0.0) {
+					final delta = haxe.Timer.stamp() - _lastHeartbeat;
+					if (delta > 8.0) {
+						final msg = 'ANR WARNING: main thread blocked ${Std.int(delta)}s — possible ANR!';
+						Sys.println(msg);
+						try {
+							var fo = sys.io.File.append(logDir + 'watchdog.log', false);
+							fo.writeString('[${Date.now().toString()}] $msg\n');
+							fo.close();
+						} catch (_:Dynamic) {}
+					}
+				}
+			}
+		});
+	}
+	#end
+
 	/**
 	 * Register event listeners only — no file I/O, safe to call before storage
 	 * permissions and directory init on mobile.
@@ -25,7 +57,13 @@ class CrashHandler
 	{
 		if (_listenersRegistered) return;
 		_listenersRegistered = true;
-		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onUncaughtError);
+		// loaderInfo may not be fully initialised this early on some OpenFL builds;
+		// wrap in try so we at least get the hxcpp handler even if this fails.
+		try
+		{
+			Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onUncaughtError);
+		}
+		catch (_:Dynamic) {}
 		#if cpp
 		untyped __global__.__hxcpp_set_critical_error_handler(onCriticalError);
 		#end
@@ -33,7 +71,8 @@ class CrashHandler
 
 	/**
 	 * Full init — calls earlyInit() then wires up the Java-level handlers on
-	 * Android (install UncaughtExceptionHandler + read previous session crash).
+	 * Android (install UncaughtExceptionHandler + read previous session crash)
+	 * and starts the ANR watchdog thread.
 	 * Requires storage to be available.
 	 */
 	public static function init()
@@ -41,11 +80,15 @@ class CrashHandler
 		earlyInit();
 		#if android
 		{
-			final logPath = mobile.backend.StorageSystem.getDirectory() + 'crash.log';
+			final logDir = mobile.backend.StorageSystem.getDirectory();
+			final logPath = logDir + 'crash.log';
 			final prevCrash = mobile.backend.JavaCrashWrapper.readPreviousNativeCrash();
 			if (prevCrash != null)
 				Logger.log('Previous session ended abnormally:\n$prevCrash', WARN);
 			mobile.backend.JavaCrashWrapper.install(logPath);
+			#if sys
+			_startWatchdog(logDir);
+			#end
 		}
 		#end
 	}
@@ -151,10 +194,17 @@ class CrashHandler
 	#if sys
 	static function _appendCrashLog(path:String, content:String):Void
 	{
-		final header = '--- CRASH [${Date.now().toString()}] ---\n';
-		var fo = sys.io.File.append(path, false);
-		fo.writeString(header + content + '\n\n');
-		fo.close();
+		try
+		{
+			final parent = haxe.io.Path.directory(path);
+			if (parent.length > 0 && !sys.FileSystem.exists(parent))
+				sys.FileSystem.createDirectory(parent);
+			final stamp = try Date.now().toString() catch (_:Dynamic) 'unknown';
+			var fo = sys.io.File.append(path, false);
+			fo.writeString('--- CRASH [$stamp] ---\n$content\n\n');
+			fo.close();
+		}
+		catch (_:Dynamic) {}
 	}
 	#end
 }

@@ -90,6 +90,11 @@ class Main extends Sprite
 		#end
 
 		FlxG.signals.gameResized.add(onResize);
+		#if android
+		// Feed the ANR watchdog thread — if this stops firing for > 8s, watchdog
+		// writes a warning to watchdog.log and logcat before Android's 10s ANR timeout.
+		FlxG.signals.preUpdate.add(funkin.backend.CrashHandler.heartbeat);
+		#end
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}
 		#end
