@@ -46,6 +46,7 @@ class Init extends FlxState
 				final log = sys.io.File.getContent(_crashLogPath);
 				sys.FileSystem.deleteFile(_crashLogPath);
 				final preview = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
+				funkin.backend.Logger.log('RECOVERED crash.log from previous session:\n$preview', WARN);
 				mobile.backend.utils.PopUp.showAlert('Crash detectado', preview, 'OK');
 			}
 			else
@@ -55,7 +56,14 @@ class Init extends FlxState
 				//    session that killed the process before any handler could write.
 				final nativeInfo = mobile.backend.JavaCrashWrapper.readPreviousNativeCrash();
 				if (nativeInfo != null && nativeInfo.length > 0)
+				{
+					funkin.backend.Logger.log('ApplicationExitInfo crash (previous session):\n$nativeInfo', WARN);
 					mobile.backend.utils.PopUp.showAlert('Crash nativo detectado', nativeInfo, 'OK');
+				}
+				else
+				{
+					funkin.backend.Logger.log('Crash detection: no previous crash found', INFO);
+				}
 			}
 		}
 		catch (_:Dynamic) {}

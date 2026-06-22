@@ -47,7 +47,8 @@ class FallbackState extends MusicBeatState
 		}
 		catch (e:Dynamic)
 		{
-			// FallbackState itself failed — log it directly without touching Flixel.
+			// FallbackState UI failed — log it but keep going so super.create()
+			// still runs and the state is at least minimally valid.
 			#if sys
 			Sys.println('CRITICAL: FallbackState.create() failed: $e');
 			try {
@@ -59,7 +60,22 @@ class FallbackState extends MusicBeatState
 			#end
 		}
 
-		super.create();
+		// super.create() in its own guard — if MusicBeatState init fails (scripts,
+		// audio, etc.) we log and swallow rather than triggering another onUncaughtError
+		// loop that would leave the state invisible (black screen).
+		try { super.create(); }
+		catch (e:Dynamic)
+		{
+			#if sys
+			Sys.println('CRITICAL: FallbackState.super.create() failed: $e');
+			try {
+				final logPath = #if android mobile.backend.StorageSystem.getDirectory() #else "./" #end + 'crash.log';
+				var fo = sys.io.File.append(logPath, false);
+				fo.writeString('--- FALLBACKSTATE SUPER.CREATE FAILED ---\n$e\n\n');
+				fo.close();
+			} catch (_:Dynamic) {}
+			#end
+		}
 	}
 	
 	override function update(elapsed:Float)

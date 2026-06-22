@@ -93,6 +93,7 @@ class CrashHandler
 			#end
 		}
 		#end
+		Logger.log('CrashHandler: all handlers installed and active', INFO);
 	}
 
 	static function onCriticalError(message:String):Void
@@ -100,11 +101,13 @@ class CrashHandler
 		// Write crash.log directly BEFORE throwing — if this is a stack overflow
 		// or memory corruption the Haxe exception machinery may not survive, so we
 		// capture something now rather than rely on onUncaughtError.
+		final report = 'C++ critical error: $message';
+		try { Logger.log('CRITICAL: $report', ERROR); } catch (_:Dynamic) {}
 		#if sys
 		try
 		{
 			final logPath = #if android mobile.backend.StorageSystem.getDirectory() #else "./" #end + 'crash.log';
-			_appendCrashLog(logPath, 'C++ critical error: $message');
+			_appendCrashLog(logPath, report);
 		}
 		catch (_:Dynamic) {}
 		#end
@@ -176,7 +179,11 @@ class CrashHandler
 
 		var fullReport = '$curFlxState\n\nException caught: $message\n\nCallstack:$callstackMessage';
 
-		// Write crash log before touching Flixel state — this survives double-faults
+		// Mirror to game.log first — crash.log may be on external storage that
+		// flushes slower; game.log is the authoritative developer log.
+		try { Logger.log('CRASH: $fullReport', ERROR); } catch (_:Dynamic) {}
+
+		// Write crash.log before touching Flixel state — survives double-faults
 		// and native crashes that kill the process before FallbackState renders.
 		#if sys
 		try
