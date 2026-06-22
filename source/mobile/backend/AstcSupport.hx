@@ -13,13 +13,22 @@ import lime.graphics.opengl.GL;
 class AstcSupport
 {
 	static var _isSupported:Null<Bool> = null;
+	static var _maxTextureSize:Int     = 4096; // conservative default
 
 	public static var isSupported(get, never):Bool;
+	/** Maximum GL texture dimension reported by the device GPU. */
+	public static var maxTextureSize(get, never):Int;
 
 	static inline function get_isSupported():Bool
 	{
 		if (_isSupported == null) check();
 		return _isSupported == true;
+	}
+
+	static inline function get_maxTextureSize():Int
+	{
+		if (_isSupported == null) check();
+		return _maxTextureSize;
 	}
 
 	/**
@@ -44,7 +53,14 @@ class AstcSupport
 		{
 			_isSupported = false;
 		}
-		Logger.log('ASTC texture compression: ${_isSupported == true ? "supported" : "not supported"}', NOTICE);
+		try
+		{
+			// 0x0D33 = GL_MAX_TEXTURE_SIZE
+			final v:Int = GL.getParameter(0x0D33);
+			if (v > 0) _maxTextureSize = v;
+		}
+		catch (_:Dynamic) {}
+		Logger.log('ASTC texture compression: ${_isSupported == true ? "supported" : "not supported"}  |  GL_MAX_TEXTURE_SIZE: $_maxTextureSize px', NOTICE);
 		#else
 		_isSupported = false;
 		#end
