@@ -75,6 +75,7 @@ class MobileDLCSubState extends MusicBeatSubstate
     var _installed:Array<{id:String, name:String, folder:String}> = [];
     var _lastTaskState:DLCTaskState = DLCTaskState.IDLE;
     var _items:Array<DLCListItem>   = [];
+    var _dlcCatalog:Map<String, DLCEntry> = [];  // All available DLCs (hardcoded + registry)
     var _pendingUninstallId:Null<String> = null;
     var _successTimer:Float = 0.0;
     var _scrollUpHint:FlxText;
@@ -448,6 +449,7 @@ class MobileDLCSubState extends MusicBeatSubstate
     function _rebuildItems():Void
     {
         _items = [];
+        _dlcCatalog = new Map();
 
         if (_tab == TAB_INSTALLED) {
             for (d in _installed) {
@@ -488,6 +490,8 @@ class MobileDLCSubState extends MusicBeatSubstate
                 downloadUrl: "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/dlc-v1/securitydlc.zip",
                 sha256:      "c53d7014868050cc3708bf2433335358751a47ae0a2299aee9ad9f46e302ab26"
             };
+            _dlcCatalog.set(securityDLCEntry.id, securityDLCEntry);
+
             var inst = DLCManager.isDLCInstalled(securityDLCEntry.id);
             var sizeStr = securityDLCEntry.sizeMb > 0 ? "  •  " + securityDLCEntry.sizeMb + " MB" : "";
             _items.push({
@@ -502,6 +506,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             if (DLCManager.registryData != null) {
                 for (e in DLCManager.registryData.dlcs) {
                     if (e.id != "securitydlc") {  // Don't duplicate hardcoded entry
+                        _dlcCatalog.set(e.id, e);
                         var inst2 = DLCManager.isDLCInstalled(e.id);
                         var sizeStr2 = e.sizeMb > 0 ? "  •  " + e.sizeMb + " MB" : "";
                         _items.push({
@@ -611,13 +616,12 @@ class MobileDLCSubState extends MusicBeatSubstate
         _scrollUpHint.visible   = (_scroll > 0);
         _scrollDownHint.visible = (_scroll + MAX_VIS < _items.length);
 
-        // Show description of selected Browse-tab entry
-        if (_tab == TAB_BROWSE && DLCManager.registryData != null && _items.length > 0) {
+        // Show description of selected Browse-tab entry (from catalog, including hardcoded entries)
+        if (_tab == TAB_BROWSE && _items.length > 0) {
             var selItem:Null<DLCListItem> = _items[_sel];
-            if (selItem != null && selItem.id != "") {
-                for (e in DLCManager.registryData.dlcs) {
-                    if (e.id == selItem.id) { _descText.text = e.description; break; }
-                }
+            if (selItem != null && selItem.id != "" && _dlcCatalog.exists(selItem.id)) {
+                var entry = _dlcCatalog.get(selItem.id);
+                _descText.text = entry.description;
             } else {
                 _descText.text = "";
             }
