@@ -183,8 +183,8 @@ class FunkinCache
 			// Scale it down proportionally so it fits; the UV atlas coordinates will
 			// be slightly off but the game will not crash.
 			final scale  = Math.min(_maxTex / bitmap.width, _maxTex / bitmap.height);
-			final newW   = Math.max(1, Math.round(bitmap.width  * scale));
-			final newH   = Math.max(1, Math.round(bitmap.height * scale));
+			final newW:Int = Std.int(Math.max(1, Math.round(bitmap.width  * scale)));
+			final newH:Int = Std.int(Math.max(1, Math.round(bitmap.height * scale)));
 			Logger.log('Oversized texture [$key]: ${bitmap.width}x${bitmap.height} exceeds GPU max ${_maxTex}px — scaling to ${newW}x${newH} (${Math.round(scale * 100)}%)', WARN);
 			var scaled = new BitmapData(newW, newH, bitmap.transparent, 0);
 			scaled.draw(bitmap, new openfl.geom.Matrix(scale, 0, 0, scale));
