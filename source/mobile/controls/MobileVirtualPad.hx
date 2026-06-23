@@ -7,6 +7,7 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxDestroyUtil;
 
 import mobile.backend.flixel.FlxButton;
+import mobile.backend.ScreenUtil;
 
 import openfl.utils.Assets;
 import openfl.display.BitmapData;
@@ -82,92 +83,100 @@ class MobileVirtualPad extends TouchInputManager
 		
 		var screenW = FlxG.width;
 		var screenH = FlxG.height;
-		var dPad2_X = 420; // Move para os lados (maior = mais para a direita)
-		var dPad2_Y = screenH - 620; // Move para cima/baixo (maior = mais para cima) só para mim n esquecer sempre q for mexer
+		var dPad2_X = safeLeft + 420; // Move para os lados (maior = mais para a direita)
+		var safe = ScreenUtil.safeArea();
+		var safeTop    = Std.int(safe.top);
+		var safeBottom = Std.int(safe.bottom);
+		var safeLeft   = Std.int(safe.left);
+		var safeRight  = Std.int(safe.right);
+		var baseY = screenH - safeBottom;
+		var dPad_X = safeLeft;
+		var actionX = screenW - safeRight;
+		var dPad2_Y = baseY - 620; // Move para cima/baixo (maior = mais para cima) só para mim n esquecer sempre q for mexer
 		
 		switch (DPad)
 		{
 			case UP_DOWN:
-				buttonUp = add(createButton(0, FlxG.height - 255, 'up', 0x00FF00, [UP, noteUP]));
-				buttonDown = add(createButton(0, FlxG.height - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+				buttonUp = add(createButton(dPad_X, baseY - 255, 'up', 0x00FF00, [UP, noteUP]));
+				buttonDown = add(createButton(dPad_X, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 			case LEFT_RIGHT:
-				buttonLeft = add(createButton(0, FlxG.height - 135, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-				buttonRight = add(createButton(127, FlxG.height - 135, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
+				buttonLeft = add(createButton(dPad_X, baseY - 135, 'left', 0xFF00FF, [LEFT, noteLEFT]));
+				buttonRight = add(createButton(dPad_X + 127, baseY - 135, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
 			case UP_LEFT_RIGHT:
-				buttonUp = add(createButton(105, FlxG.height - 243, 'up', 0x00FF00, [UP, noteUP]));
-				buttonLeft = add(createButton(0, FlxG.height - 135, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-				buttonRight = add(createButton(207, FlxG.height - 135, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
+				buttonUp = add(createButton(dPad_X + 105, baseY - 243, 'up', 0x00FF00, [UP, noteUP]));
+				buttonLeft = add(createButton(dPad_X, baseY - 135, 'left', 0xFF00FF, [LEFT, noteLEFT]));
+				buttonRight = add(createButton(dPad_X + 207, baseY - 135, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
 			case LEFT_FULL:
-				buttonUp = add(createButton(105, FlxG.height - 345, 'up', 0x00FF00, [UP, noteUP]));
-				buttonLeft = add(createButton(0, FlxG.height - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-				buttonRight = add(createButton(207, FlxG.height - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
-				buttonDown = add(createButton(105, FlxG.height - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+				buttonUp = add(createButton(dPad_X + 105, baseY - 345, 'up', 0x00FF00, [UP, noteUP]));
+				buttonLeft = add(createButton(dPad_X, baseY - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
+				buttonRight = add(createButton(dPad_X + 207, baseY - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
+				buttonDown = add(createButton(dPad_X + 105, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 			case CHART_EDITOR:
-                buttonUp = add(createButton(305, FlxG.height - 345, 'up', 0x00FF00, [UP, noteUP]));
-				buttonLeft = add(createButton(200, FlxG.height - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-				buttonRight = add(createButton(407, FlxG.height - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));		
-				buttonDown = add(createButton(305, FlxG.height - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+                buttonUp = add(createButton(dPad_X + 305, baseY - 345, 'up', 0x00FF00, [UP, noteUP]));
+				buttonLeft = add(createButton(dPad_X + 200, baseY - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
+				buttonRight = add(createButton(dPad_X + 407, baseY - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));		
+				buttonDown = add(createButton(dPad_X + 305, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 			case NONE:
 				// lmao
 			default:
-				buttonUp = add(createButton(0, FlxG.height - 255, 'up', 0x00FF00, [UP, noteUP]));
-				buttonDown = add(createButton(0, FlxG.height - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+				buttonUp = add(createButton(dPad_X, baseY - 255, 'up', 0x00FF00, [UP, noteUP]));
+				buttonDown = add(createButton(dPad_X, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 		}
 		switch (Action)
 		{
 			case A:
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case B:
-				buttonB = add(createButton(screenW - 132, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonB = add(createButton(actionX - 132, screenH - 135, 'b', 0xFFCB00, [B]));
 			case X:
-				buttonX = add(createButton(screenW - 132, screenH - 135, 'x', 0x99062D, [X]));
+				buttonX = add(createButton(actionX - 132, screenH - 135, 'x', 0x99062D, [X]));
 			case A_B:
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case A_B_C:
-				buttonC = add(createButton(screenW - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case STORYMENU:
-			    buttonR = add(createButton(screenW - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
-				buttonC = add(createButton(screenW - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+			    buttonR = add(createButton(actionX - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
+				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case FREEPLAY:
-			    buttonX = add(createButton(screenW - 258, screenH - 255, 'x', 0x99062D, [X]));
-			    buttonS = add(createButton(screenW - 132, screenH - 255, 's', 0xFDD6AB, [NONE]));
-			    buttonR = add(createButton(screenW - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
-				buttonC = add(createButton(screenW - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+			    buttonX = add(createButton(actionX - 258, baseY - 255, 'x', 0x99062D, [X]));
+			    buttonS = add(createButton(actionX - 132, baseY - 255, 's', 0xFDD6AB, [NONE]));
+			    buttonR = add(createButton(actionX - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
+				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case CHART_EDITOR:
-				buttonV = add(createButton(screenW - 258, screenH - 495, 'v', 0x49A9B2, [V]));
-				buttonS = add(createButton(screenW - 132, screenH - 615, 's', 0xFDD6AB, [NONE]));
-				buttonX = add(createButton(screenW - 132, screenH - 495, 'x', 0x99062D, [X]));
-				buttonD = add(createButton(screenW - 258, screenH - 255, 'd', 0x0078FF, [D]));
-				buttonC = add(createButton(screenW - 132, screenH - 375, 'c', 0x44FF00, [C]));
-				buttonY = add(createButton(screenW - 258, screenH - 375, 'y', 0x4A35B9, [Y]));
-				buttonZ = add(createButton(screenW - 132, screenH - 255, 'z', 0xCCB98E, [Z]));
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonV = add(createButton(actionX - 258, baseY - 495, 'v', 0x49A9B2, [V]));
+				buttonS = add(createButton(actionX - 132, baseY - 615, 's', 0xFDD6AB, [NONE]));
+				buttonX = add(createButton(actionX - 132, baseY - 495, 'x', 0x99062D, [X]));
+				buttonD = add(createButton(actionX - 258, baseY - 255, 'd', 0x0078FF, [D]));
+				buttonC = add(createButton(actionX - 132, baseY - 375, 'c', 0x44FF00, [C]));
+				buttonY = add(createButton(actionX - 258, baseY - 375, 'y', 0x4A35B9, [Y]));
+				buttonZ = add(createButton(actionX - 132, baseY - 255, 'z', 0xCCB98E, [Z]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case CHARACTER_EDITOR:
 				buttonUp2 = add(createButton(dPad2_X + 105, dPad2_Y, 'up', 0x00FF00, [UP, noteUP]));
 				buttonLeft2 = add(createButton(dPad2_X, dPad2_Y + 105, 'left', 0xFF00FF, [LEFT, noteLEFT]));
 				buttonRight2 = add(createButton(dPad2_X + 210, dPad2_Y + 105, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
 				buttonDown2 = add(createButton(dPad2_X + 105, dPad2_Y + 210, 'down', 0x00FFFF, [DOWN, noteDOWN]));
-				buttonV = add(createButton(screenW - 510, screenH - 255, 'v', 0x49A9B2, [V]));
-				buttonD = add(createButton(screenW - 510, screenH - 135, 'd', 0x0078FF, [D]));
-				buttonX = add(createButton(screenW - 384, screenH - 255, 'x', 0x99062D, [X]));
-				buttonC = add(createButton(screenW - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonY = add(createButton(screenW - 258, screenH - 255, 'y', 0x4A35B9, [Y]));
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonZ = add(createButton(screenW - 132, screenH - 255, 'z', 0xCCB98E, [Z]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonV = add(createButton(actionX - 510, baseY - 255, 'v', 0x49A9B2, [V]));
+				buttonD = add(createButton(actionX - 510, screenH - 135, 'd', 0x0078FF, [D]));
+				buttonX = add(createButton(actionX - 384, baseY - 255, 'x', 0x99062D, [X]));
+				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
+				buttonY = add(createButton(actionX - 258, baseY - 255, 'y', 0x4A35B9, [Y]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonZ = add(createButton(actionX - 132, baseY - 255, 'z', 0xCCB98E, [Z]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case NONE:
 				// lmao
 			default:
-				buttonB = add(createButton(screenW - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(screenW - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 		}
 		
 		scrollFactor.set();
