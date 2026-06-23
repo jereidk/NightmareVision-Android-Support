@@ -7,6 +7,7 @@ import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
+import openfl.display.BitmapData;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
@@ -584,15 +585,37 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	/**
 	 * Adds a circular zone preview element.
+	 * Uses FlxSprite with circular bitmap since _preview.graphics is not available.
 	 */
 	function _addZoneCircle(X:Float, Y:Float, radius:Float, colorIndex:Int):Void
 	{
-		var graphics = _preview.graphics;
 		var color = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000][colorIndex];
+		var diameter = Std.int(radius * 2);
 
-		graphics.beginFill(color, 0.5);
-		graphics.drawCircle(X, Y, radius);
-		graphics.endFill();
+		// Create a circular bitmap
+		var bitmap = new BitmapData(diameter, diameter, true, 0x00000000);
+		var cx = Std.int(radius);
+		var cy = Std.int(radius);
+
+		for (px in 0...diameter)
+		{
+			for (py in 0...diameter)
+			{
+				var dx = px - cx;
+				var dy = py - cy;
+				var dist = Math.sqrt(dx * dx + dy * dy);
+				if (dist <= radius)
+				{
+					bitmap.setPixel32(px, py, (color & 0x00FFFFFF) | 0x88000000);
+				}
+			}
+		}
+
+		var spr = new FlxSprite(X - radius, Y - radius).loadGraphic(bitmap);
+		spr.alpha = _idleAlpha();
+		add(spr);
+
+		_zones.push({spr: spr, label: null, colorIdx: colorIndex, pressed: false, curA: _idleAlpha()});
 	}
 
 	/**

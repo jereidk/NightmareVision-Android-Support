@@ -90,7 +90,6 @@ class MobileVirtualPad extends TouchInputManager
 		
 		var screenW = FlxG.width;
 		var screenH = FlxG.height;
-		var dPad2_X = safeLeft + 420; // Move para os lados (maior = mais para a direita)
 		var safe = ScreenUtil.safeArea();
 		var safeTop    = Std.int(safe.top);
 		var safeBottom = Std.int(safe.bottom);
@@ -99,6 +98,7 @@ class MobileVirtualPad extends TouchInputManager
 		var baseY = screenH - safeBottom;
 		var dPad_X = safeLeft;
 		var actionX = screenW - safeRight;
+		var dPad2_X = safeLeft + 420; // Move para os lados (maior = mais para a direita)
 		var dPad2_Y = baseY - 620; // Move para cima/baixo (maior = mais para cima) só para mim n esquecer sempre q for mexer
 		
 		switch (DPad)

@@ -329,11 +329,11 @@ class MobileHitbox extends TouchInputManager
 		hint.frames = Paths.getSparrowAtlas('NOTE_assets');
 
 		// Add animations if not already present
-		if (!hint.animation.has('static'))
+		if (!hint.animation.exists('static'))
 		{
 			hint.animation.addByPrefix('static', 'arrow${direction}0000', 24, false);
 		}
-		if (!hint.animation.has('pressed'))
+		if (!hint.animation.exists('pressed'))
 		{
 			hint.animation.addByPrefix('pressed', '${direction} press0000', 24, false);
 		}
