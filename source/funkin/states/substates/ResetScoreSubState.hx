@@ -32,7 +32,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 	var bgThing:FlxSprite;
 	var menuBackButton:FlxSprite;
 	var bottomControls:funkin.objects.menu.AmongControls;
-	var mouseMode:Bool = false;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	
 	var song:String;
 	var difficulty:Int;
@@ -230,7 +230,10 @@ class ResetScoreSubState extends MusicBeatSubstate
 			
 			if (controls.UI_LEFT_P || controls.UI_RIGHT_P)
 			{
+				#if !mobile
+				// Desktop: switch from mouse to keyboard
 				mouseMode = false;
+				#end
 				FlxG.sound.play(Paths.sound('scrollMenu'), 1);
 				onYes = !onYes;
 				updateOptions();

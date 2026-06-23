@@ -49,7 +49,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var canMove:Bool = false;
 	var isClosing:Bool = false;
 	var inGrid:Bool = false; // False is the base Locker UI, true is the Grid containing all of your items of a certain type.
-	var mouseMode:Bool = false;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	var overlayCameras:Array<FlxCamera>;
 	var overlayCamera:FlxCamera;
 	var gridCamera:FlxCamera;
@@ -1124,7 +1124,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		
 		if (canMove && !isClosing)
 		{
+			#if !mobile
+			// Desktop: allow switching between keyboard and mouse
 			if (FlxG.mouse.justMoved || FlxG.mouse.wheel != 0) mouseMode = true;
+			if (controlLEFT.PRESSED || controlRIGHT.PRESSED || controlUP.PRESSED || controlDOWN.PRESSED) mouseMode = false;
+			#end
 			
 			if (FlxG.mouse.justReleased)
 			{
@@ -1145,7 +1149,9 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			
 			if (inGrid)
 			{
+				#if !mobile
 				if (controlLEFT.PRESSED || controlRIGHT.PRESSED || controlUP.PRESSED || controlDOWN.PRESSED) mouseMode = false;
+				#end
 				
 				if (!mouseMode)
 				{
@@ -1157,12 +1163,16 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				
 				if (controls.ACCEPT)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					gridEquipCurrent();
 				}
 				if (controls.BACK)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					closeGrid();
 				}
 				
@@ -1214,7 +1224,9 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			}
 			else
 			{
+				#if !mobile
 				if (controls.UI_UP_P || controls.UI_DOWN_P) mouseMode = false;
+				#end
 				
 				if (controls.UI_DOWN_P || controls.UI_UP_P || FlxG.mouse.wheel != 0)
 				{
@@ -1226,12 +1238,16 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				
 				if (controls.ACCEPT)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					openGridForCategory(selectedCategory);
 				}
 				if (controls.BACK)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					confirmAndClose();
 				}
 				
