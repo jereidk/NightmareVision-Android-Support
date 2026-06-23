@@ -71,6 +71,62 @@ class TouchInputManager extends FlxTypedSpriteGroup<FlxButton>
 		return btn != null ? btn.releaseTimestampMs : 0.0;
 	}
 
+	/**
+	 * Returns the elapsed milliseconds since the given input was last pressed.
+	 * Returns -1 if the input has never been pressed or is not mapped.
+	 * Use this for timing-sensitive gameplay calculations.
+	 *
+	 * @param id The input ID to check
+	 * @return Time elapsed since last press in milliseconds, or -1 if unavailable
+	 */
+	public function getTimeSincePressMs(id:FlxMobileInputID):Float
+	{
+		var pressTs = getPressTimestampMs(id);
+		if (pressTs <= 0) return -1;
+		return (haxe.Timer.stamp() * 1000.0) - pressTs;
+	}
+
+	/**
+	 * Returns the elapsed milliseconds since the given input was last released.
+	 * Returns -1 if the input has never been released or is not mapped.
+	 *
+	 * @param id The input ID to check
+	 * @return Time elapsed since last release in milliseconds, or -1 if unavailable
+	 */
+	public function getTimeSinceReleaseMs(id:FlxMobileInputID):Float
+	{
+		var releaseTs = getReleaseTimestampMs(id);
+		if (releaseTs <= 0) return -1;
+		return (haxe.Timer.stamp() * 1000.0) - releaseTs;
+	}
+
+	/**
+	 * Returns whether the input was pressed within the given time window (in milliseconds).
+	 * Useful for checking "ghost taps" or forgiving input windows.
+	 *
+	 * @param id The input ID to check
+	 * @param windowMs Time window in milliseconds
+	 * @return True if pressed within the window
+	 */
+	public inline function wasPressedWithinMs(id:FlxMobileInputID, windowMs:Float):Bool
+	{
+		var elapsed = getTimeSincePressMs(id);
+		return elapsed >= 0 && elapsed <= windowMs;
+	}
+
+	/**
+	 * Returns whether the input was released within the given time window (in milliseconds).
+	 * Useful for checking quick tap releases.
+	 *
+	 * @param id The input ID to check
+	 * @param windowMs Time window in milliseconds
+	 * @return True if released within the window
+	 */
+	public inline function wasReleasedWithinMs(id:FlxMobileInputID, windowMs:Float):Bool
+	{
+		var elapsed = getTimeSinceReleaseMs(id);
+		return elapsed >= 0 && elapsed <= windowMs;
+	}
 
 	/**
 	 * Checks the status of a specific button, or handles special cases such as ANY and NONE

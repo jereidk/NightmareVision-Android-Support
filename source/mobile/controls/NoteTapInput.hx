@@ -29,6 +29,10 @@ class NoteTapInput extends FlxBasic
 	// touchPointID → lane currently held by that touch
 	var _heldTouches:Map<Int, Int> = new Map();
 
+	// Per-lane timestamps for precise timing (milliseconds)
+	var _lanePressTimestamps:Array<Float>    = [0.0, 0.0, 0.0, 0.0];
+	var _laneReleaseTimestamps:Array<Float>  = [0.0, 0.0, 0.0, 0.0];
+
 	/** Extra hit padding around each note sprite (px, in game-logical space). */
 	static inline final HIT_PAD:Float = 22;
 
@@ -58,6 +62,7 @@ class NoteTapInput extends FlxBasic
 					_heldTouches.set(touch.touchPointID, lane);
 					laneHeld[lane]        = true;
 					laneJustPressed[lane] = true;
+					_lanePressTimestamps[lane] = haxe.Timer.stamp() * 1000.0;
 				}
 			}
 			else if (touch.justReleased)
@@ -74,6 +79,7 @@ class NoteTapInput extends FlxBasic
 					{
 						laneHeld[lane]         = false;
 						laneJustReleased[lane] = true;
+						_laneReleaseTimestamps[lane] = haxe.Timer.stamp() * 1000.0;
 					}
 				}
 			}
