@@ -41,9 +41,12 @@ class FunkinRatioScaleMode extends RatioScaleMode
 		// Default: scale to fit (keeps 16:9, adds black bars)
 		// If aspectRatioMode is 'stretch' and not ultra-wide, stretch to fill
 		var doStretch:Bool = false;
+		var doExpand:Bool = false;
 		#if mobile
 		if (funkin.data.ClientPrefs.aspectRatioMode == 'stretch' && !isUltraWide)
 			doStretch = true;
+		else if (funkin.data.ClientPrefs.aspectRatioMode == 'expand')
+			doExpand = true;
 		#end
 		
 		var scaleY:Bool = realRatio < ratio;
@@ -72,7 +75,14 @@ class FunkinRatioScaleMode extends RatioScaleMode
 		}
 		#end
 		
-		if (scaleY)
+		if (doExpand)
+		{
+			// Expand mode: fill entire screen, center content, no zoom
+			// This makes the background show more on the sides without stretching
+			gameSize.x = Width;
+			gameSize.y = Height;
+		}
+		else if (scaleY)
 		{
 			gameSize.x = Width;
 			gameSize.y = Math.floor(gameSize.x / ratio);
