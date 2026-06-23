@@ -126,7 +126,16 @@ class FunkinAssets
 		#end
 
 		var bitmap:Null<BitmapData> = null;
-		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(path)) bitmap = BitmapData.fromFile(path);
+		#if (MODS_ALLOWED || ASSET_REDIRECT)
+		if (FileSystem.exists(path)) {
+			#if android
+			trace('DEBUG getBitmapData: trying BitmapData.fromFile for $path');
+			#end
+			bitmap = BitmapData.fromFile(path);
+			#if android
+			trace('DEBUG getBitmapData: BitmapData.fromFile result=${bitmap != null}');
+			#end
+		}
 		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
 
 		return bitmap;
