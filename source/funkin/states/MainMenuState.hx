@@ -25,7 +25,7 @@ class MainMenuState extends MusicBeatState
 	public static var fromTitle:Bool = false;
 	
 	var lockMovement:Bool = false;
-	var mouseMode:Bool = false;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	
 	static var curMenuItem:Int = 0;
 	static var lastSmallBtn:Int = 3;
@@ -441,8 +441,11 @@ class MainMenuState extends MusicBeatState
 		
 		if (FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
 		
+		#if !mobile
+		// Desktop: allow switching between keyboard and mouse
 		if (FlxG.keys.firstJustPressed() != FlxKey.NONE) mouseMode = false;
 		if (FlxG.mouse.justMoved) mouseMode = true;
+		#end
 		
 		if (!lockMovement && !introActive && mouseMode)
 		{
