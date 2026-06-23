@@ -58,25 +58,30 @@ class MainMenuState extends MusicBeatState
 	override function create()
 	{
 		Mods.currentModDirectory = null;
-		
+
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence("In the Menus");
 		#end
 		Lang.reloadLangFile();
-		
+
+		// Free previous state's assets before loading new ones. Must run before any
+		// Paths.image/getSparrowAtlas calls so that shared assets (starFG, starBG, logo)
+		// are revived from cache instead of reloaded, preventing double-allocation.
+		FunkinAssets.cache.clearStoredMemory();
+
 		persistentUpdate = persistentDraw = true;
-		
+
 		if (ClientPrefs.finaleState == ACTIVE) FunkinSound.playMusic(Paths.music('finaleMenu'), 0);
 		else if (FlxG.sound.music == null) FunkinSound.playMusic(Paths.music('freakyMenu'), 0);
-		
+
 		initStateScript();
-		
+
 		starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
 		add(starFG);
-		
+
 		starBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
 		add(starBG);
-		
+
 		logo = new FlxSprite(0, -5);
 		logo.frames = Paths.getSparrowAtlas('logoBumpin');
 		logo.animation.addByPrefix('bump', 'logo bumpin', 24, false);
@@ -85,61 +90,61 @@ class MainMenuState extends MusicBeatState
 		logo.updateHitbox();
 		logo.screenCenter(X);
 		logo.x += 20;
-		
+
 		add(logo);
-		
+
 		buildPanel();
-		
+
 		var redTargetX:Float = 630;
 		var greenTargetX:Float = -225;
-		
+
 		redMenu = new FlxSprite(redTargetX, 70);
 		redMenu.frames = Paths.getSparrowAtlas('menu/main/redmenu');
 		redMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		redMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		redMenu.animation.play('idle');
-		
+
 		greenMenu = new FlxSprite(greenTargetX, 100);
 		greenMenu.frames = Paths.getSparrowAtlas('menu/main/greenmenu');
 		greenMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		greenMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		greenMenu.animation.play('idle');
-		
+
 		if (ClientPrefs.finaleState != ACTIVE)
 		{
 			add(redMenu);
 			add(greenMenu);
 		}
-		
+
 		var glow = new FlxSprite().loadGraphic(Paths.image(ClientPrefs.finaleState == ACTIVE ? 'menu/main/glowEVIL' : 'menu/main/glow'));
 		glow.scale.set(1.1, 1.1);
 		glow.updateHitbox();
 		glow.screenCenter();
 		glow.blend = ADD;
 		add(glow);
-		
+
 		var vignette = new FlxSprite().loadGraphic(Paths.image('menu/main/vignette'));
 		vignette.scrollFactor.set();
 		vignette.active = false;
 		add(vignette);
-		
+
 		if (ClientPrefs.finaleState == ACTIVE)
 		{
 			for (icon in menuIcons)
 				icon.visible = false;
-				
+
 			refreshMenuLabelLayout();
 			menuLabels[0].color = 0xFFFF0000;
-			
+
 			menuButtons[0].animation.addByPrefix('idle', 'Big_buttonEVIL instance 1', 24, true);
 			menuButtons[0].animation.play('idle');
 			menuButtons[0].updateHitbox();
 			menuButtons[0].screenCenter(X);
 			menuButtons[0].y -= 15;
 		}
-		
+
 		final rtl:Bool = Lang.hasSpecial('rightToLeft');
-		
+
 		#if mobile
 		var portCredit = new FlxText(rtl ? 12 : 0, FlxG.height - 42, 0, 'Android port by Jere', 14);
 		portCredit.scrollFactor.set();
@@ -155,20 +160,19 @@ class MainMenuState extends MusicBeatState
 		versionShit.scrollFactor.set();
 		versionShit.setFormat(Paths.font('vcr.ttf', false), 16, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
-		
+
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'],
 			['enter', 'conf']
 		], false);
 		add(bottomControls);
-		
+
 		Conductor.bpm = 102;
 		Conductor.bpmChangeMap.resize(0);
-		
+
 		FlxG.mouse.visible = true;
-		
+
 		super.create();
-		FunkinAssets.cache.clearStoredMemory();
 
 		if (fromTitle)
 		{
