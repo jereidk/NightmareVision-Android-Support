@@ -222,17 +222,23 @@ class FunkinAssets
 	 * @param allowGPU If true and is enabled in settings, the graphic will be cached on in video memory
 	 */
 	public static function getGraphic(key:String, useCache:Bool = true, allowGPU:Bool = true):FlxGraphic
-	{
-		final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
-		
-		if (graphic != null)
 		{
-			return graphic;
-		}
-		
-		Logger.log('graphic ($key) was not found. Returning flixel-logo instead');
-		
-		return FlxG.bitmap.add('flixel/images/logo/default.png');
+			#if android
+			var cwd = Sys.getCwd();
+			var fullPath = cwd + key;
+			trace("DEBUG getGraphic: key=" + key + " cwd=" + cwd + " fullPath=" + fullPath + " exists=" + sys.FileSystem.exists(fullPath));
+			#end
+
+			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
+
+			if (graphic != null)
+			{
+				return graphic;
+			}
+
+			Logger.log('graphic ($key) was not found. Returning flixel-logo instead');
+
+			return FlxG.bitmap.add('flixel/images/logo/default.png');
 	}
 	
 	/**
