@@ -135,6 +135,15 @@ class FunkinAssets
 			#if android
 			trace('DEBUG getBitmapData: BitmapData.fromFile result=${bitmap != null}');
 			#end
+			// If relative path failed on Android, try with full path
+			#if android
+			if (bitmap == null) {
+				var fullPath = Sys.getCwd() + path;
+				trace('DEBUG getBitmapData: trying full path: $fullPath');
+				bitmap = BitmapData.fromFile(fullPath);
+				trace('DEBUG getBitmapData: full path result=${bitmap != null}');
+			}
+			#end
 		}
 		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
 
