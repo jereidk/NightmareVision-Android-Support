@@ -9,6 +9,7 @@ import flixel.util.FlxTimer;
 import flixel.addons.display.FlxBackdrop;
 
 import funkin.data.WeekData;
+import funkin.data.ClientPrefs;
 import funkin.objects.Alphabet;
 
 @:nullSafety
@@ -52,6 +53,13 @@ class TitleState extends MusicBeatState
 		// for some reason the plugin scripts dont run sometimes when first loaded. oh well
 		funkin.scripting.PluginsManager.prepareSignals();
 		funkin.scripting.PluginsManager.populate();
+
+		// Apply fullscreen/immersive mode on mobile
+		#if android
+		if (ClientPrefs.fullscreenMode > 0) {
+			mobile.backend.AndroidUtils.setFullscreen(ClientPrefs.fullscreenMode);
+		}
+		#end
 	}
 	
 	override public function create():Void

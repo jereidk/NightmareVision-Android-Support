@@ -166,8 +166,13 @@ class ClientPrefs
 
 	@saveVar public static var hapticFeedback:Bool = true;
 
-	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad'. */
+	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
+
+	/**
+	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
+	 */
+	@saveVar public static var fullscreenMode:Int = 0;
 	#end
 
 	// gameplay ------------------------------------------------------------------------//

@@ -337,6 +337,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'nav':    ClientPrefs.navInputMode;
 			case 'game':   ClientPrefs.gameInputMode;
 			case 'layout': ClientPrefs.hitboxLayout;
+			case 'fullscreen': ClientPrefs.fullscreenMode == 0 ? 'Off' : (ClientPrefs.fullscreenMode == 1 ? 'Status Bar' : 'Immersive');
 			default: '';
 		};
 
@@ -346,6 +347,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'nav':    ClientPrefs.navInputMode = v;
 			case 'game':   ClientPrefs.gameInputMode = v;
 			case 'layout': ClientPrefs.hitboxLayout = v;
+			case 'fullscreen':
+				ClientPrefs.fullscreenMode = v == 'Off' ? 0 : (v == 'Status Bar' ? 1 : 2);
+				#if android mobile.backend.AndroidUtils.setFullscreen(ClientPrefs.fullscreenMode); #end
 		}
 
 	function _getFloat(id:String):Float
@@ -367,6 +371,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	inline function _setBool(id:String, v:Bool):Void ClientPrefs.hapticFeedback = v;
 
+	inline function _getInt(id:String):Int return ClientPrefs.fullscreenMode;
+
+	inline function _setInt(id:String, v:Int):Void
+	{
+		ClientPrefs.fullscreenMode = v;
+		#if android mobile.backend.AndroidUtils.setFullscreen(v); #end
+	}
+
 	// ── Options model ──────────────────────────────────────────────────────────
 
 	function _rebuildOptions():Void
@@ -377,6 +389,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			id: 'haptic', kind: 'bool',
 			label: Lang.str('opt_haptic', 'Haptic Feedback'),
 			desc:  Lang.str('opt_haptic_desc', 'Vibrates briefly on each note hit.\nOnly fires when you are in control (not bot play).')
+		});
+
+		_opts.push({
+			id: 'fullscreen', kind: 'string',
+			label: Lang.str('opt_fullscreen', 'Fullscreen Mode'),
+			desc:  Lang.str('opt_fullscreen_desc', 'Controls the visibility of system bars.\nOff: normal. Status Bar: hides top bar. Full Immersive: hides all bars.'),
+			choices: [Lang.str('choice_fullscreen_off', 'Off'), Lang.str('choice_fullscreen_status', 'Status Bar'), Lang.str('choice_fullscreen_immersive', 'Full Immersive')],
+			stored:  ['Off', 'Status Bar', 'Immersive']
 		});
 
 		_opts.push({
