@@ -400,9 +400,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_opts.push({
 				id: 'layout', kind: 'string',
 				label: Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
-				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons.'),
-				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad')],
-				stored:  ['Four Lanes', 'Two Thumb', 'DPad']
+				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.'),
+				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad'), Lang.str('choice_hitboxlayout_arrows', 'Arrows')],
+				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows']
 			});
 			_opts.push({
 				id: 'hitboxAlpha', kind: 'percent',
@@ -506,6 +506,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_buildDPadPreview();
 			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_dpad', 'DPad');
 		}
+		else if (ClientPrefs.hitboxLayout == 'Arrows')
+		{
+			_buildArrowsPreview();
+			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_arrows', 'Arrows');
+		}
 		else
 		{
 			_buildFourLanesPreview();
@@ -564,6 +569,27 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		graphics.beginFill(color, 0.5);
 		graphics.drawCircle(X, Y, radius);
 		graphics.endFill();
+	}
+
+	/**
+	 * Builds a preview showing arrow buttons at the bottom of the canvas.
+	 */
+	function _buildArrowsPreview():Void
+	{
+		final arrowW = 40.0;
+		final arrowH = 30.0;
+		final spacing = 15.0;
+		final totalW = (arrowW + spacing) * 4 - spacing;
+		final startX = CANVAS_X + (CANVAS_W - totalW) / 2;
+		final y = CANVAS_Y + CANVAS_H - arrowH * 2;
+
+		// Draw 4 arrow rectangles in order: LEFT, DOWN, UP, RIGHT
+		var colors = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000];
+		for (i in 0...4)
+		{
+			var x = startX + i * (arrowW + spacing);
+			_addZone(x, y, arrowW, arrowH, i);
+		}
 	}
 
 	function _buildPadPreview():Void

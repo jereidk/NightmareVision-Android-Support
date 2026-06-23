@@ -6,6 +6,7 @@ import openfl.display.BitmapData;
 import mobile.backend.flixel.FlxButton;
 import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
+import funkin.backend.Paths;
 
 enum HitboxLayout
 {
@@ -21,6 +22,11 @@ enum HitboxLayout
 	 * Uses 4 circular buttons arranged in a diamond pattern per thumb.
 	 */
 	DPAD;
+	/**
+	 * Uses note-style arrow sprites as hitbox buttons.
+	 * Arrows are displayed at the bottom of the screen.
+	 */
+	ARROWS;
 }
 
 /**
@@ -52,6 +58,7 @@ class MobileHitbox extends TouchInputManager
 			case TWO_THUMB:  buildTwoThumb(safe);
 			case FOUR_LANES: buildFourLanes(safe);
 			case DPAD:       buildDPad(safe);
+			case ARROWS:     buildArrows(safe);
 		}
 
 		scrollFactor.set();
@@ -183,6 +190,115 @@ class MobileHitbox extends TouchInputManager
 	}
 
 	/**
+	 * Builds the Arrows layout - uses note-style arrow sprites as hitbox buttons.
+	 * Inspired by FunkinCrew's Arrows scheme.
+	 * Arrows are positioned at the bottom of the screen, centered.
+	 */
+	function buildArrows(safe:{top:Float, bottom:Float, left:Float, right:Float}):Void
+	{
+		var safeTop    = Std.int(safe.top);
+		var safeLeft   = Std.int(safe.left);
+		var safeRight  = Std.int(safe.right);
+
+		// Arrow dimensions matching NOTE_assets atlas
+		var hintWidth:Int = 157;
+		var hintHeight:Int = 154;
+		var noteSpacing:Int = 80;
+
+		// Calculate X position to center arrows
+		var totalWidth:Float = (hintWidth + noteSpacing) * 4 - noteSpacing;
+		var xPos:Float = (FlxG.width - totalWidth) / 2;
+
+		// Y position at bottom, above safe area
+		var yPos:Float = FlxG.height - safeTop - hintHeight * 2 - 24;
+
+		// Arrow directions in order: LEFT, DOWN, UP, RIGHT
+		var arrowNames:Array<String> = ['left', 'down', 'up', 'right'];
+		var arrowIDs:Array<Array<FlxMobileInputID>> = [
+			[FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT],
+			[FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN],
+			[FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP],
+			[FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]
+		];
+
+		for (i in 0...4)
+		{
+			var btn = createArrowHint(xPos + i * (hintWidth + noteSpacing), yPos, hintWidth, hintHeight, arrowNames[i], arrowIDs[i]);
+			add(btn);
+			buttons.push(btn);
+		}
+
+		buttonLeft  = buttons[0];
+		buttonDown  = buttons[1];
+		buttonUp    = buttons[2];
+		buttonRight = buttons[3];
+	}
+
+	/**
+	 * Creates a button with arrow sprite animation.
+	 * Uses the NOTE_assets atlas with 'static' and 'pressed' animations.
+	 */
+	private function createArrowHint(X:Float, Y:Float, Width:Int, Height:Int, direction:String, IDs:Array<FlxMobileInputID>):FlxButton
+	{
+		var hint:FlxButton = new FlxButton(X, Y, IDs);
+
+		// Load arrow sprites from NOTE_assets atlas
+		hint.frames = Paths.getSparrowAtlas('NOTE_assets');
+
+		// Add animations if not already present
+		if (!hint.animation.has('static'))
+		{
+			hint.animation.addByPrefix('static', 'arrow${direction}0000', 24, false);
+		}
+		if (!hint.animation.has('pressed'))
+		{
+			hint.animation.addByPrefix('pressed', '${direction} press0000', 24, false);
+		}
+
+		hint.animation.play('static');
+		hint.setGraphicSize(Width, Height);
+		hint.updateHitbox();
+
+		hint.solid = hint.moves = false;
+		hint.immovable = true;
+		hint.scrollFactor.set();
+
+		// Start invisible like other hitbox hints
+		hint.alpha = 0.00001;
+
+		// Animate on touch
+		var hintTween:FlxTween = null;
+
+		hint.onDown.callback = function()
+		{
+			hint.animation.play('pressed');
+			if (hintTween != null) hintTween.cancel();
+			hintTween = FlxTween.tween(hint, {alpha: 1.0}, 0.075, {
+				ease: FlxEase.circInOut,
+				onComplete: function(_) { hintTween = null; }
+			});
+		};
+
+		hint.onUp.callback = function()
+		{
+			hint.animation.play('static');
+			if (hintTween != null) hintTween.cancel();
+			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+				ease: FlxEase.circInOut,
+				onComplete: function(_) { hintTween = null; }
+			});
+		};
+
+		hint.onOut.callback = hint.onUp.callback;
+
+		#if FLX_DEBUG
+		hint.ignoreDrawDebug = true;
+		#end
+
+		return hint;
+	}
+
+	/**
 	 * Creates a circular hint button with outline effect.
 	 */
 	private function createHintCircle(X:Float, Y:Float, radius:Int, Color:FlxColor, IDs:Array<FlxMobileInputID>):FlxButton
@@ -272,6 +388,7 @@ class MobileHitbox extends TouchInputManager
 		{
 			case 'Two Thumb': TWO_THUMB;
 			case 'DPad':      DPAD;
+			case 'Arrows':    ARROWS;
 			default:          FOUR_LANES;
 		};
 	}
