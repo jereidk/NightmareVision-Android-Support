@@ -9,7 +9,7 @@ import openfl.display.BitmapData;
 import mobile.backend.flixel.FlxButton;
 import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
-import funkin.backend.Paths;
+import funkin.Paths;
 import funkin.data.ClientPrefs;
 
 enum HitboxLayout
