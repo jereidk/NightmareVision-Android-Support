@@ -401,8 +401,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				id: 'layout', kind: 'string',
 				label: Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
 				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.'),
-				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad'), Lang.str('choice_hitboxlayout_arrows', 'Arrows')],
-				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows']
+				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad'), Lang.str('choice_hitboxlayout_arrows', 'Arrows'), Lang.str('choice_hitboxlayout_triangle', 'Triangle')],
+				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle']
 			});
 			_opts.push({
 				id: 'hitboxAlpha', kind: 'percent',
@@ -511,6 +511,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_buildArrowsPreview();
 			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_arrows', 'Arrows');
 		}
+		else if (ClientPrefs.hitboxLayout == 'Triangle')
+		{
+			_buildTrianglePreview();
+			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_triangle', 'Triangle');
+		}
 		else
 		{
 			_buildFourLanesPreview();
@@ -590,6 +595,33 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			var x = startX + i * (arrowW + spacing);
 			_addZone(x, y, arrowW, arrowH, i);
 		}
+	}
+
+	/**
+	 * Builds a preview showing triangle buttons in two zones.
+	 */
+	function _buildTrianglePreview():Void
+	{
+		// Two zones: left (LEFT+DOWN) and right (UP+RIGHT)
+		var zoneHalf:Float = CANVAS_W / 2;
+
+		// Left zone: tall bar LEFT + bottom square DOWN
+		var leftBarW:Float = zoneHalf / 2;
+		var squareSize:Float = zoneHalf / 2;
+		var squareH:Float = CANVAS_H / 2;
+
+		// LEFT bar (full height, left portion)
+		_addZone(CANVAS_X, CANVAS_Y, leftBarW, CANVAS_H, 0);
+
+		// DOWN square (bottom half, right portion of left zone)
+		_addZone(CANVAS_X + leftBarW, CANVAS_Y + squareH, squareSize, squareH, 1);
+
+		// Right zone: top square UP + tall bar RIGHT
+		// UP square (top half, left portion of right zone)
+		_addZone(CANVAS_X + zoneHalf, CANVAS_Y, squareSize, squareH, 2);
+
+		// RIGHT bar (full height, right portion)
+		_addZone(CANVAS_X + zoneHalf + squareSize, CANVAS_Y, leftBarW, CANVAS_H, 3);
 	}
 
 	function _buildPadPreview():Void

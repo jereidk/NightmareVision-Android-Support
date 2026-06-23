@@ -2,11 +2,15 @@ package mobile.controls;
 
 import flixel.FlxG;
 import flixel.util.FlxDestroyUtil;
+import flixel.util.FlxColor;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 import openfl.display.BitmapData;
 import mobile.backend.flixel.FlxButton;
 import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
 import funkin.backend.Paths;
+import funkin.data.ClientPrefs;
 
 enum HitboxLayout
 {
@@ -27,6 +31,11 @@ enum HitboxLayout
 	 * Arrows are displayed at the bottom of the screen.
 	 */
 	ARROWS;
+	/**
+	 * Two zones with triangular hitbox buttons.
+	 * Left zone covers LEFT+DOWN, Right zone covers UP+RIGHT.
+	 */
+	TRIANGLE;
 }
 
 /**
@@ -59,6 +68,7 @@ class MobileHitbox extends TouchInputManager
 			case FOUR_LANES: buildFourLanes(safe);
 			case DPAD:       buildDPad(safe);
 			case ARROWS:     buildArrows(safe);
+			case TRIANGLE:   buildTriangle(safe);
 		}
 
 		scrollFactor.set();
@@ -78,10 +88,10 @@ class MobileHitbox extends TouchInputManager
 		var btnW:Int = Std.int(totalW / 4);
 
 		var data = [
-			{color: 0xFF00FF, ids: [FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT]},
-			{color: 0x00FFFF, ids: [FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN]},
-			{color: 0x00FF00, ids: [FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP]},
-			{color: 0xFF0000, ids: [FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]}
+			{color: getArrowColor(0), ids: [FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT]},
+			{color: getArrowColor(1), ids: [FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN]},
+			{color: getArrowColor(2), ids: [FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP]},
+			{color: getArrowColor(3), ids: [FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]}
 		];
 
 		for (i in 0...4)
@@ -111,10 +121,10 @@ class MobileHitbox extends TouchInputManager
 		// Top-left: LEFT  |  Top-right: UP
 		// Bot-left: DOWN  |  Bot-right: RIGHT
 		var positions = [
-			{x: safeLeft,           y: safeTop,          w: halfW, h: halfH, color: 0xFF00FF, ids: [FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT]},
-			{x: safeLeft,           y: safeTop + halfH,  w: halfW, h: halfH, color: 0x00FFFF, ids: [FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN]},
-			{x: safeLeft + halfW,   y: safeTop,          w: halfW, h: halfH, color: 0x00FF00, ids: [FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP]},
-			{x: safeLeft + halfW,   y: safeTop + halfH,  w: halfW, h: halfH, color: 0xFF0000, ids: [FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]}
+			{x: safeLeft,           y: safeTop,          w: halfW, h: halfH, color: getArrowColor(0), ids: [FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT]},
+			{x: safeLeft,           y: safeTop + halfH,  w: halfW, h: halfH, color: getArrowColor(1), ids: [FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN]},
+			{x: safeLeft + halfW,   y: safeTop,          w: halfW, h: halfH, color: getArrowColor(2), ids: [FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP]},
+			{x: safeLeft + halfW,   y: safeTop + halfH,  w: halfW, h: halfH, color: getArrowColor(3), ids: [FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]}
 		];
 
 		for (p in positions)
@@ -149,8 +159,13 @@ class MobileHitbox extends TouchInputManager
 		// Arranged in diamond pattern per thumb zone
 		var hintsAngles:Array<Float> = [Math.PI, Math.PI / 2, Math.PI * 1.5, 0];
 
-		// Colors per direction
-		var hintsColors:Array<FlxColor> = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000];
+		// Colors per direction using HSV from ClientPrefs
+		var hintsColors:Array<FlxColor> = [
+			getArrowColor(0),  // LEFT
+			getArrowColor(1),  // DOWN
+			getArrowColor(2),  // UP
+			getArrowColor(3)   // RIGHT
+		];
 
 		// IDs per direction (LEFT, DOWN, UP, RIGHT)
 		var hintsIDs:Array<Array<FlxMobileInputID>> = [
@@ -228,6 +243,74 @@ class MobileHitbox extends TouchInputManager
 			buttons.push(btn);
 		}
 
+		buttonLeft  = buttons[0];
+		buttonDown  = buttons[1];
+		buttonUp    = buttons[2];
+		buttonRight = buttons[3];
+	}
+
+	/**
+	 * Builds the Triangle layout - two zones with triangular buttons.
+	 * Inspired by FunkinCrew's DoubleThumbTriangle scheme.
+	 * Left zone covers LEFT+DOWN, Right zone covers UP+RIGHT.
+	 */
+	function buildTriangle(safe:{top:Float, bottom:Float, left:Float, right:Float}):Void
+	{
+		var safeTop   = Std.int(safe.top);
+		var safeLeft  = Std.int(safe.left);
+		var safeRight = Std.int(safe.right);
+
+		var screenHalf:Int = Std.int(FlxG.width / 2);
+
+		// Colors per direction using HSV from ClientPrefs: 0=LEFT, 1=DOWN, 2=UP, 3=RIGHT
+		var hintsColors:Array<FlxColor> = [
+			getArrowColor(0),  // LEFT
+			getArrowColor(1),  // DOWN
+			getArrowColor(2),  // UP
+			getArrowColor(3)   // RIGHT
+		];
+
+		// IDs per direction (LEFT, DOWN, UP, RIGHT)
+		var hintsIDs:Array<Array<FlxMobileInputID>> = [
+			[FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT],
+			[FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN],
+			[FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP],
+			[FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]
+		];
+
+		// Two thumb zones: 0=left side, 1=right side
+		for (thumb in 0...2)
+		{
+			var xOffset:Float = (thumb == 1) ? screenHalf : safeLeft;
+
+			// LEFT triangle (full height, left side of zone)
+			var leftW:Int = Std.int(FlxG.width / 4);
+			var btnLeft = createHintTriangle(xOffset, safeTop, leftW, FlxG.height - safeTop, hintsColors[0], hintsIDs[0], 'left');
+			add(btnLeft);
+			buttons.push(btnLeft);
+
+			// DOWN triangle (bottom half, left portion of zone)
+			var downW:Int = Std.int(FlxG.width / 2);
+			var downH:Int = Std.int((FlxG.height - safeTop) / 2);
+			var btnDown = createHintTriangle(xOffset, safeTop + downH, downW, downH, hintsColors[1], hintsIDs[1], 'down');
+			add(btnDown);
+			buttons.push(btnDown);
+
+			// UP triangle (top half, right portion of zone)
+			var upW:Int = Std.int(FlxG.width / 2);
+			var upH:Int = Std.int((FlxG.height - safeTop) / 2);
+			var btnUp = createHintTriangle(xOffset, safeTop, upW, upH, hintsColors[2], hintsIDs[2], 'up');
+			add(btnUp);
+			buttons.push(btnUp);
+
+			// RIGHT triangle (full height, right side of zone)
+			var rightW:Int = Std.int(FlxG.width / 4);
+			var btnRight = createHintTriangle(xOffset + rightW, safeTop, rightW, FlxG.height - safeTop, hintsColors[3], hintsIDs[3], 'right');
+			add(btnRight);
+			buttons.push(btnRight);
+		}
+
+		// Assign button references (left zone: 0=LEFT, 1=DOWN; right zone: 2=UP, 3=RIGHT)
 		buttonLeft  = buttons[0];
 		buttonDown  = buttons[1];
 		buttonUp    = buttons[2];
@@ -380,7 +463,98 @@ class MobileHitbox extends TouchInputManager
 		return hint;
 	}
 
+	/**
+	 * Creates a triangular hint button using HSV colors from ClientPrefs.
+	 * The triangle points in the direction specified (left, right, up, down).
+	 */
+	private function createHintTriangle(X:Float, Y:Float, Width:Int, Height:Int, Color:FlxColor, IDs:Array<FlxMobileInputID>, direction:String):FlxButton
+	{
+		var hint:FlxButton = new FlxButton(X, Y, IDs);
+
+		// Create triangular bitmap
+		var bitmap:BitmapData = new BitmapData(Width, Height, true, 0x00000000);
+
+		for (px in 0...Width)
+		{
+			for (py in 0...Height)
+			{
+				var isInside = false;
+
+				switch (direction)
+				{
+					case 'left':
+						// Triangle pointing LEFT - filled on the right side
+						var fillRatio:Float = px / Width;
+						isInside = py >= Height * (1 - fillRatio) / 2 && py <= Height * (1 + fillRatio) / 2;
+					case 'right':
+						// Triangle pointing RIGHT - filled on the left side
+						var fillRatio:Float = 1 - (px / Width);
+						isInside = py >= Height * (1 - fillRatio) / 2 && py <= Height * (1 + fillRatio) / 2;
+					case 'down':
+						// Triangle pointing DOWN - filled on the bottom
+						var fillRatio:Float = py / Height;
+						isInside = px >= Width * (1 - fillRatio) / 2 && px <= Width * (1 + fillRatio) / 2;
+					case 'up':
+						// Triangle pointing UP - filled on the top
+						var fillRatio:Float = 1 - (py / Height);
+						isInside = px >= Width * (1 - fillRatio) / 2 && px <= Width * (1 + fillRatio) / 2;
+				}
+
+				if (isInside)
+				{
+					bitmap.setPixel32(px, py, (Color & 0x00FFFFFF) | 0x88000000);
+				}
+			}
+		}
+
+		var bgGraphic:flixel.graphics.FlxGraphic = FlxG.bitmap.add(bitmap, false, "hitbox_triangle_" + direction + "_" + Width + "x" + Height);
+		hint.loadGraphic(bgGraphic);
+
+		hint.solid = hint.moves = false;
+		hint.immovable = true;
+		hint.scrollFactor.set();
+		hint.alpha = 0.00001;
+
+		var hintTween:FlxTween = null;
+
+		hint.onDown.callback = function()
+		{
+			if (hintTween != null) hintTween.cancel();
+			hintTween = FlxTween.tween(hint, {alpha: alphaTarget}, 0.075, {
+				ease: FlxEase.circInOut,
+				onComplete: function(_) { hintTween = null; }
+			});
+		};
+
+		hint.onUp.callback = function()
+		{
+			if (hintTween != null) hintTween.cancel();
+			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+				ease: FlxEase.circInOut,
+				onComplete: function(_) { hintTween = null; }
+			});
+		};
+
+		hint.onOut.callback = hint.onUp.callback;
+
+		#if FLX_DEBUG
+		hint.ignoreDrawDebug = true;
+		#end
+
+		return hint;
+	}
+
 	// ─── Helpers ───────────────────────────────────────────────────────────────
+
+	/**
+	 * Converts arrow HSV values from ClientPrefs to a FlxColor.
+	 * Index: 0=LEFT, 1=DOWN, 2=UP, 3=RIGHT
+	 */
+	static function getArrowColor(direction:Int):FlxColor
+	{
+		var hsv = ClientPrefs.arrowHSV[direction];
+		return FlxColor.fromHSB(hsv[0], (100 + hsv[1]) / 100, (100 + hsv[2]) / 100);
+	}
 
 	static function layoutFromPrefs():HitboxLayout
 	{
@@ -389,6 +563,7 @@ class MobileHitbox extends TouchInputManager
 			case 'Two Thumb': TWO_THUMB;
 			case 'DPad':      DPAD;
 			case 'Arrows':    ARROWS;
+			case 'Triangle':   TRIANGLE;
 			default:          FOUR_LANES;
 		};
 	}
