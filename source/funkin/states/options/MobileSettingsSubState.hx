@@ -394,9 +394,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'game', kind: 'string',
 			label: Lang.str('opt_gameinput', 'Gameplay Input'),
-			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox splits the screen into tap zones. Virtual Pad shows an on-screen D-pad.'),
-			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad')],
-			stored:  ['Hitbox', 'Virtual Pad']
+			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. Tap Notes: touch notes directly.'),
+			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_tapnotes', 'Tap Notes')],
+			stored:  ['Hitbox', 'Virtual Pad', 'Tap Notes']
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')
@@ -509,6 +509,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_buildPadPreview();
 			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
+		}
+		else if (ClientPrefs.gameInputMode == 'Tap Notes')
+		{
+			// No visual zones for tap notes - just touch the notes directly
+			_modeText.text = Lang.str('preview_mode_tapnotes', 'Tap Notes');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
 		{

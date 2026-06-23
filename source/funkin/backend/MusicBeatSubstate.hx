@@ -88,6 +88,10 @@ class MusicBeatSubstate extends FlxSubState
 				return;
 			}
 
+			// Tap Notes: no hitbox needed, NoteTapInput handles it separately
+			if (funkin.data.ClientPrefs.gameInputMode == 'Tap Notes') return;
+
+			// Hitbox mode (and any future modes)
 			hitbox = new MobileHitbox();
 			hitboxCam = new FlxCamera();
 			hitboxCam.bgColor.alpha = 0;
