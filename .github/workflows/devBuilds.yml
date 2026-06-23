@@ -14,6 +14,9 @@ jobs:
   Android:
     name: Build Android
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -221,12 +224,35 @@ jobs:
           fi
 
       - name: Cache hxcpp compile cache
+        id: hxcpp-cache
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
           key: hxcpp-cache-android-fat-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-cache-android-fat-${{ runner.os }}-
+
+      # Seed ~/.hxcpp_cache from build #86 artifact when there is no local cache.
+      # Reuses compiled .o files from the last successful devBuild on
+      # claude/impostor-legacy-android-79u6sz to avoid a full cold recompile.
+      - name: Download hxcpp cache seed (fat, build #86)
+        if: steps.hxcpp-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: hxcpp-cache-seed-android-fat
+          run-id: 27996603374
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/hxcpp-seed
+
+      - name: Extract hxcpp cache seed (fat)
+        if: steps.hxcpp-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          if [ -f /tmp/hxcpp-seed/hxcpp-cache-fat.tar.gz ]; then
+            tar -xzf /tmp/hxcpp-seed/hxcpp-cache-fat.tar.gz -C "$HOME"
+            echo "Restored ~/.hxcpp_cache from build #86 seed artifact"
+          fi
 
       - name: Compile
         env:
@@ -256,6 +282,9 @@ jobs:
   Android-ARM64:
     name: Build Android (ARM64)
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -456,6 +485,7 @@ jobs:
           fi
 
       - name: Cache hxcpp build artifacts (ARM64)
+        id: hxcpp-cache-arm64
         uses: actions/cache@v4
         with:
           path: |
@@ -465,6 +495,17 @@ jobs:
           key: hxcpp-android-arm64-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm64-${{ runner.os }}-
+
+      # Seed build artifact dirs from build #86 when there is no local cache.
+      - name: Download hxcpp build artifacts seed (ARM64, build #86)
+        if: steps.hxcpp-cache-arm64.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: hxcpp-cache-seed-android-arm64
+          run-id: 27996603374
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
 
       - name: Compile
         env:
@@ -491,6 +532,9 @@ jobs:
   Android-ARM32:
     name: Build Android (ARM32)
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -597,8 +641,11 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
@@ -693,6 +740,7 @@ jobs:
           fi
 
       - name: Cache hxcpp build artifacts (ARM32)
+        id: hxcpp-cache-arm32
         uses: actions/cache@v4
         with:
           path: |
@@ -702,6 +750,17 @@ jobs:
           key: hxcpp-android-arm32-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm32-${{ runner.os }}-
+
+      # Seed build artifact dirs from build #86 when there is no local cache.
+      - name: Download hxcpp build artifacts seed (ARM32, build #86)
+        if: steps.hxcpp-cache-arm32.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: hxcpp-cache-seed-android-arm32
+          run-id: 27996603374
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
 
       - name: Compile
         env:
