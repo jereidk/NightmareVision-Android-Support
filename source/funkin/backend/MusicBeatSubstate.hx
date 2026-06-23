@@ -45,10 +45,10 @@ class MusicBeatSubstate extends FlxSubState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false)
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
-		virtualPad = new MobileVirtualPad(DPad, Action);
+		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
 	}
 
@@ -83,7 +83,7 @@ class MusicBeatSubstate extends FlxSubState
 		{
 			if (funkin.data.ClientPrefs.gameInputMode == 'Virtual Pad')
 			{
-				addVirtualPad(LEFT_FULL, NONE, true);
+				addVirtualPad(LEFT_FULL, NONE, true, true); // last true = forGameplay
 				addVirtualPadCamera(DefaultDrawTarget);
 				return;
 			}

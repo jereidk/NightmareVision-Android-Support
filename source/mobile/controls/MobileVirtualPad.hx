@@ -15,6 +15,8 @@ import openfl.display.BitmapData;
 import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
 
+import funkin.data.ClientPrefs;
+
 #if MODS_ALLOWED
 import sys.FileSystem;
 #end
@@ -77,9 +79,14 @@ class MobileVirtualPad extends TouchInputManager
 	static var keyboardPressed:Bool = false;
 	static var gamepadPressed:Bool = false;
 	
-	public function new(DPad:MobileDPadMode, Action:MobileActionMode)
+	/** If true, this pad is for gameplay (not navigation) */
+	public var forGameplay(default, null):Bool = false;
+	
+	public function new(DPad:MobileDPadMode, Action:MobileActionMode, ?forGameplay:Bool = false)
 	{
 		super();
+		
+		this.forGameplay = forGameplay;
 		
 		var screenW = FlxG.width;
 		var screenH = FlxG.height;
@@ -232,6 +239,46 @@ class MobileVirtualPad extends TouchInputManager
 	{
 		super.update(elapsed);
 
+		// Auto-hide gameplay pad in menus when navInputMode = 'Touch'
+		// This allows native touch navigation in menus without interference
+		if (forGameplay && ClientPrefs.navInputMode == 'Touch')
+		{
+			if (this.visible)
+			{
+				this.visible = false;
+				for (btn in buttons)
+				{
+					btn.active = false;
+					btn.visible = false;
+				}
+			}
+			// Only show pad when keyboard or gamepad is pressed during gameplay
+			keyboardPressed = FlxG.keys.justPressed.ANY;
+			gamepadPressed = false;
+			if (FlxG.gamepads.numActiveGamepads > 0)
+			{
+				for (gamepad in FlxG.gamepads.getActiveGamepads())
+				{
+					if (gamepad.justPressed.ANY)
+					{
+						gamepadPressed = true;
+						break;
+					}
+				}
+			}
+			if (keyboardPressed || gamepadPressed)
+			{
+				this.visible = true;
+				for (btn in buttons)
+				{
+					btn.active = true;
+					btn.visible = true;
+				}
+			}
+			return;
+		}
+
+		// Normal behavior for non-gameplay pads or when Virtual Pad navigation is enabled
 		if (FlxG.touches.justStarted().length > 0)
 		{
 			if (!this.visible)
