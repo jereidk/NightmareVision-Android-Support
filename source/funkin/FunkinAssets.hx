@@ -126,8 +126,26 @@ class FunkinAssets
 		#end
 
 		var bitmap:Null<BitmapData> = null;
+
+		// On Android, Assets.getBitmapData is more reliable than BitmapData.fromFile
+		// because it handles the context/lazy loading properly. Try it first for
+		// files that might be bundled in the APK or cached by OpenFL.
+		#if android
+		if (Assets.exists(path, IMAGE)) {
+			#if android
+			trace('DEBUG getBitmapData: trying Assets.getBitmapData for $path');
+			#end
+			bitmap = Assets.getBitmapData(path, useCache);
+			#if android
+			trace('DEBUG getBitmapData: Assets.getBitmapData result=${bitmap != null}');
+			#end
+		}
+		#end
+
+		// If Assets didn't work or we're not on Android, try FileSystem + BitmapData.fromFile
+		// for external files (DLC, mods, etc.)
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(path)) {
+		if (bitmap == null && FileSystem.exists(path)) {
 			#if android
 			trace('DEBUG getBitmapData: trying BitmapData.fromFile for $path');
 			#end
@@ -135,17 +153,8 @@ class FunkinAssets
 			#if android
 			trace('DEBUG getBitmapData: BitmapData.fromFile result=${bitmap != null}');
 			#end
-			// If relative path failed on Android, try with full path
-			#if android
-			if (bitmap == null) {
-				var fullPath = Sys.getCwd() + path;
-				trace('DEBUG getBitmapData: trying full path: $fullPath');
-				bitmap = BitmapData.fromFile(fullPath);
-				trace('DEBUG getBitmapData: full path result=${bitmap != null}');
-			}
-			#end
 		}
-		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
+		#end
 
 		return bitmap;
 	}
