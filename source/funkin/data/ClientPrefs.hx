@@ -166,7 +166,7 @@ class ClientPrefs
 
 	@saveVar public static var hapticFeedback:Bool = true;
 
-	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb'. */
+	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	#end
 

@@ -400,9 +400,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_opts.push({
 				id: 'layout', kind: 'string',
 				label: Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
-				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid for two-thumb play.'),
-				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb')],
-				stored:  ['Four Lanes', 'Two Thumb']
+				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons.'),
+				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad')],
+				stored:  ['Four Lanes', 'Two Thumb', 'DPad']
 			});
 			_opts.push({
 				id: 'hitboxAlpha', kind: 'percent',
@@ -501,6 +501,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_buildTwoThumbPreview();
 			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_2t', 'Two Thumb');
 		}
+		else if (ClientPrefs.hitboxLayout == 'DPad')
+		{
+			_buildDPadPreview();
+			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_dpad', 'DPad');
+		}
 		else
 		{
 			_buildFourLanesPreview();
@@ -527,6 +532,38 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_addZone(CANVAS_X,      CANVAS_Y + hh, hw, hh, 1);
 		_addZone(CANVAS_X + hw, CANVAS_Y,      hw, hh, 2);
 		_addZone(CANVAS_X + hw, CANVAS_Y + hh, hw, hh, 3);
+	}
+
+	/**
+	 * Builds a circular DPad preview with two zones of 4 circular buttons each.
+	 */
+	function _buildDPadPreview():Void
+	{
+		final cx = CANVAS_X + CANVAS_W / 2;
+		final cy = CANVAS_Y + CANVAS_H / 2;
+		final radius = 30.0;
+		final zoneRadius = 20.0;
+
+		// Left zone: LEFT(π) and DOWN(π/2)
+		_addZoneCircle(cx - CANVAS_W / 4 + Math.cos(Math.PI) * zoneRadius, cy + Math.sin(Math.PI) * zoneRadius, radius, 0);
+		_addZoneCircle(cx - CANVAS_W / 4 + Math.cos(Math.PI / 2) * zoneRadius, cy + Math.sin(Math.PI / 2) * zoneRadius, radius, 1);
+
+		// Right zone: UP(1.5π) and RIGHT(0)
+		_addZoneCircle(cx + CANVAS_W / 4 + Math.cos(Math.PI * 1.5) * zoneRadius, cy + Math.sin(Math.PI * 1.5) * zoneRadius, radius, 2);
+		_addZoneCircle(cx + CANVAS_W / 4 + Math.cos(0) * zoneRadius, cy + Math.sin(0) * zoneRadius, radius, 3);
+	}
+
+	/**
+	 * Adds a circular zone preview element.
+	 */
+	function _addZoneCircle(X:Float, Y:Float, radius:Float, colorIndex:Int):Void
+	{
+		var graphics = _preview.graphics;
+		var color = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000][colorIndex];
+
+		graphics.beginFill(color, 0.5);
+		graphics.drawCircle(X, Y, radius);
+		graphics.endFill();
 	}
 
 	function _buildPadPreview():Void
