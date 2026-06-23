@@ -113,6 +113,9 @@ class ClientPrefs
 	// Users can enable it explicitly at their own risk (see GPU Caching option warning).
 	@saveVar public static var gpuCaching:Bool = #if android false #else true #end;
 
+	// Aspect ratio mode for scaling: 'fit' = keep 16:9 with black bars, 'stretch' = fill screen
+	@saveVar public static var aspectRatioMode:String = 'fit';
+
 	@saveVar public static var globalAntialiasing:Bool = true;
 	
 	@saveVar public static var lowQuality:Bool = false;

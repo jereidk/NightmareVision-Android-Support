@@ -3,6 +3,9 @@ package funkin.backend;
 import flixel.FlxG;
 import flixel.system.scaleModes.RatioScaleMode;
 import flixel.math.FlxPoint;
+import flixel.util.FlxAxes;
+import flixel.util.FlxHorizontalAlign;
+import flixel.util.FlxVerticalAlign;
 
 #if mobile
 import mobile.backend.ScreenUtil;
@@ -21,13 +24,30 @@ class FunkinRatioScaleMode extends RatioScaleMode
 	public static var notchSize:FlxPoint = FlxPoint.get(0, 0);
 	#end
 	
+	/**
+	 * The maximum aspect ratio to allow before adding black bars.
+	 * Default: 21:9 (2.33) for ultra-wide screens.
+	 */
+	public static var maxAspectRatio:Float = 21.0 / 9.0;
+	
 	public override function updateGameSize(Width:Int, Height:Int):Void
 	{
 		var ratio:Float = width / height;
 		var realRatio:Float = Width / Height;
 		
+		// Check if screen is wider than max aspect ratio
+		var isUltraWide:Bool = realRatio > maxAspectRatio;
+		
+		// Default: scale to fit (keeps 16:9, adds black bars)
+		// If aspectRatioMode is 'stretch' and not ultra-wide, stretch to fill
+		var doStretch:Bool = false;
+		#if mobile
+		if (funkin.data.ClientPrefs.aspectRatioMode == 'stretch' && !isUltraWide)
+			doStretch = true;
+		#end
+		
 		var scaleY:Bool = realRatio < ratio;
-		if (fillScreen)
+		if (fillScreen || doStretch)
 		{
 			scaleY = !scaleY;
 		}
@@ -86,6 +106,26 @@ class FunkinRatioScaleMode extends RatioScaleMode
 		notchPosition.set(0, 0);
 		notchSize.set(0, 0);
 		#end
+	}
+	
+	/**
+	 * Resets the scale mode to apply preference changes immediately.
+	 * Called when aspectRatioMode preference changes.
+	 */
+	public static function resetScaleMode():Void
+	{
+		if (FlxG.scaleMode != null)
+		{
+			var mode = cast(FlxG.scaleMode, FunkinRatioScaleMode);
+			if (mode != null)
+			{
+				mode.width = null;
+				mode.height = null;
+				mode.resetSize();
+				@:privateAccess
+				FlxG.game.onResize(null);
+			}
+		}
 	}
 	
 	private inline function get_width():Null<Int> return this.width == null ? FlxG.initialWidth : this.width;
