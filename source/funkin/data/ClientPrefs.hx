@@ -172,7 +172,6 @@ class ClientPrefs
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
 	 */
-	@saveVar public static var fullscreenMode:Int = 0;
 	#end
 
 	// gameplay ------------------------------------------------------------------------//

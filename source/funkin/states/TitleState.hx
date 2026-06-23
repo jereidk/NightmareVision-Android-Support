@@ -54,12 +54,6 @@ class TitleState extends MusicBeatState
 		funkin.scripting.PluginsManager.prepareSignals();
 		funkin.scripting.PluginsManager.populate();
 
-		// Apply fullscreen/immersive mode on mobile
-		#if android
-		if (ClientPrefs.fullscreenMode > 0) {
-			mobile.backend.AndroidUtils.setFullscreen(ClientPrefs.fullscreenMode);
-		}
-		#end
 	}
 	
 	override public function create():Void
