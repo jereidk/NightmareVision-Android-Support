@@ -11,6 +11,9 @@ import flixel.graphics.FlxGraphic;
 import flixel.system.FlxAssets;
 
 import funkin.backend.FunkinCache;
+#if (android && sys)
+import mobile.backend.StorageSystem;
+#end
 
 /**
  * backend for retrieving and caching assets
@@ -149,7 +152,15 @@ class FunkinAssets
 			#if android
 			trace('DEBUG getBitmapData: trying BitmapData.fromFile for $path');
 			#end
-			bitmap = BitmapData.fromFile(path);
+			// On Android, BitmapData.fromFile needs the full path with storage directory
+			var loadPath = path;
+			#if (android && sys)
+			// Build full path: storageDir + path
+			// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
+			loadPath = StorageSystem.getDirectory() + path;
+			trace('DEBUG getBitmapData: using full path: $loadPath');
+			#end
+			bitmap = BitmapData.fromFile(loadPath);
 			#if android
 			trace('DEBUG getBitmapData: BitmapData.fromFile result=${bitmap != null}');
 			#end
