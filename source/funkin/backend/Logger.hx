@@ -8,6 +8,10 @@ using funkin.backend.Logger.Ansi;
 
 import funkin.backend.plugins.DebugTextPlugin;
 
+#if android
+import mobile.backend.StorageSystem;
+#end
+
 enum abstract Severity(Int) to Int
 {
 	var PRINT;
@@ -121,12 +125,16 @@ class Logger
 	public static function writeDump(content:String, folder:String, fileName:String) // this isnt really a log.
 	{
 		#if sys
-		if (!FileSystem.exists(folder) && !FileSystem.isDirectory(folder))
+		var loadFolder = folder;
+		#if (android && sys)
+		loadFolder = StorageSystem.getDirectory() + folder;
+		#end
+		if (!FileSystem.exists(loadFolder) && !FileSystem.isDirectory(loadFolder))
 		{
-			FileSystem.createDirectory(folder);
+			FileSystem.createDirectory(loadFolder);
 		}
 		
-		final dumpPath = '$folder/$fileName' + '_' + Paths.sanitize(Date.now().toString()).replace(':', '_') + '.txt';
+		final dumpPath = '$loadFolder/$fileName' + '_' + Paths.sanitize(Date.now().toString()).replace(':', '_') + '.txt';
 		
 		try
 		{
