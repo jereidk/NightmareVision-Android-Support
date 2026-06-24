@@ -17,6 +17,8 @@ var ext = 'stages/misc/torture/';
 function onLoad()
 {	
 	torfloor = new FlxSprite(-1376.3, 494.65).loadGraphic(Paths.image(ext + 'tort_floor'));
+     torfloor.scale.set(2, 2); // tort_floor resized 50%, compensate with 2x scale
+     torfloor.updateHitbox();
 	torfloor.active = false;
 	add(torfloor);
 	
