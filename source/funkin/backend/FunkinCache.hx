@@ -11,10 +11,6 @@ import flixel.graphics.FlxGraphic;
 import openfl.display.BitmapData;
 import openfl.media.Sound;
 
-#if android
-import funkin.graphics.framebuffer.FixedBitmapData;
-#end
-
 class CacheMap<T>
 {
 	public function new() {}
@@ -154,10 +150,7 @@ class FunkinCache
 	 */
 	public function disposeGraphic(graphic:Null<FlxGraphic>)
 	{
-		#if android
-		if (graphic != null && graphic.bitmap != null && Std.isOfType(graphic.bitmap, FixedBitmapData))
-			cast(graphic.bitmap, FixedBitmapData).disposeGPU();
-		#end
+		if (graphic != null && graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
 		@:nullSafety(Off) FlxG.bitmap.remove(graphic);
 	}
 	
