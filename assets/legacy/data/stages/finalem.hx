@@ -52,7 +52,7 @@ function onLoad()
 	
 	var bg0:FlxSprite = new FlxSprite(-600, -400).makeScaledGraphic(3000, 2000, 0xFF0D0A1B);
 	
-	var bgScale = 1.3;
+	var bgScale = 2.6;
 	
 	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props', 'dead');
 	bg1.scrollFactor.set(0.8, 0.8);

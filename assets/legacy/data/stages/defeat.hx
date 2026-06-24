@@ -51,7 +51,7 @@ function onLoad()
 	add(bodies2);
 	
 	bodies = new FlxSprite(-4800, -900).loadFromSheet(ext + 'props', 'deadBG');
-	bodies.scale.set(5, 5);
+	bodies.scale.set(10, 10);
 	bodies.updateHitbox();
 	bodies.setGraphicSize(Std.int(bodies.width * 0.26));
 	bodies.antialiasing = ClientPrefs.globalAntialiasing;
@@ -126,7 +126,7 @@ function onCreatePost()
 	dadGroup.zIndex = 1;
 	boyfriendGroup.zIndex = 0;
 	bodiesfront = new FlxSprite(-3770, -250).loadFromSheet(ext + 'props', 'deadFG');
-	bodiesfront.scale.set(5, 5);
+	bodiesfront.scale.set(10, 10);
 	bodiesfront.updateHitbox();
 	bodiesfront.setGraphicSize(Std.int(bodiesfront.width * 0.3));
 	bodiesfront.antialiasing = ClientPrefs.globalAntialiasing;
