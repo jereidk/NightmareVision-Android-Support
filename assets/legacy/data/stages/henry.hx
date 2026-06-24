@@ -3,6 +3,8 @@ var ext = 'stages/henry/';
 function onLoad()
 {
 	var bg:FlxSprite = new FlxSprite(-1600, -300).loadGraphic(Paths.image(ext + 'stage'));
+        bg.scale.set(2, 2); // Stage resized 50%, compensate with 2x scale
+        bg.updateHitbox();
 	add(bg);
 }
 
