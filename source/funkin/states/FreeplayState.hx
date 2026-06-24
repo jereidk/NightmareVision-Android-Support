@@ -854,7 +854,17 @@ class FreeplayState extends AmongUIState
 		for (i in 0...tempweeks)
 		{
 			var w:String = weeks[i].section;
-			Mods.currentModDirectory = weeks[i].mod;
+			var currentMod:String = weeks[i].mod;
+			
+			// Check if this mod/DLC actually has a custom section image
+			// Only use the mod's image if it really exists
+			if (currentMod != null && currentMod.length > 0)
+			{
+				Mods.currentModDirectory = currentMod;
+				var hasCustomImage:Bool = Paths.fileExists(ext + 'sections/$w', LOOSE);
+				if (!hasCustomImage) currentMod = null;
+				Mods.currentModDirectory = currentMod;
+			}
 			
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
 			circ.setGraphicSize(-1, 71);
