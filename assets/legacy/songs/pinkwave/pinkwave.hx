@@ -2,6 +2,8 @@ function onCreatePost()
 {
 	pretenderDark = new FlxSprite(-800, -500); // This could probably be a solid graphic that gets its color changed based off of timers
 	pretenderDark.frames = Paths.getSparrowAtlas(ext + 'pretender_dark');
+      pretenderDark.scale.set(2, 2); // pretender_dark resized 50%, compensate with 2x scale
+      pretenderDark.updateHitbox();
 	pretenderDark.animation.addByPrefix('anim', 'amongdark', 24, false);
 	pretenderDark.animation.play('anim');
 	pretenderDark.alpha = 0.0001;
