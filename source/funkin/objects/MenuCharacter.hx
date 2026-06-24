@@ -8,6 +8,10 @@ import funkin.FunkinAssets;
 
 import flixel.FlxSprite;
 
+#if android
+import mobile.backend.StorageSystem;
+#end
+
 typedef MenuCharacterFile =
 {
 	var image:String;
@@ -56,7 +60,11 @@ class MenuCharacter extends FlxSprite
 				
 				#if MODS_ALLOWED
 				var path:String = Paths.modFolders(characterPath);
-				if (!FileSystem.exists(path))
+				var loadPath = path;
+				#if (android && sys)
+				if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
+				#end
+				if (!FileSystem.exists(loadPath))
 				{
 					path = Paths.getCorePath(characterPath);
 				}

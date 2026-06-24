@@ -13,6 +13,10 @@ import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.FlxGraphic;
 
+#if android
+import mobile.backend.StorageSystem;
+#end
+
 enum PathsTestMode
 {
 	/**
@@ -76,7 +80,11 @@ class Paths
 		{
 			final modPath:String = modFolders(file, mode);
 			
-			if (FileSystem.exists(modPath)) return modPath;
+			var loadPath = modPath;
+			#if (android && sys)
+			if (FileSystem.exists(modPath)) loadPath = StorageSystem.getDirectory() + modPath;
+			#end
+			if (FileSystem.exists(loadPath)) return modPath;
 		}
 		#end
 		
@@ -416,7 +424,11 @@ class Paths
 		if (checkMods)
 		{
 			final path:String = mods(directory);
-			if (FileSystem.exists(path)) folders.push(path);
+			var loadPath = path;
+			#if (android && sys)
+			if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
+			#end
+			if (FileSystem.exists(loadPath)) folders.push(path);
 			
 			if (overrideMode != null) mode = overrideMode;
 			
