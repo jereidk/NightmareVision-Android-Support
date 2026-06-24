@@ -180,6 +180,8 @@ function onLoad()
 	vines.animation.play('bop');
 	vines.antialiasing = true;
 	vines.scrollFactor.set(1.4, 1);
+        vines.scale.set(2, 2); // vines resized 50%, compensate with 2x scale
+        vines.updateHitbox();
 	
 	heartEmitter = new FlxEmitter(-1200, 1000);
 	
