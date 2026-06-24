@@ -262,9 +262,13 @@ class FunkinAssets
 	public static function getGraphic(key:String, useCache:Bool = true, allowGPU:Bool = true):FlxGraphic
 		{
 			#if android
-			var cwd = Sys.getCwd();
-			var fullPath = cwd + key;
-			trace("DEBUG getGraphic: key=" + key + " cwd=" + cwd + " fullPath=" + fullPath + " exists=" + sys.FileSystem.exists(fullPath));
+			var fullPath:String;
+			#if (android && sys)
+			fullPath = StorageSystem.getDirectory() + key;
+			#else
+			fullPath = Sys.getCwd() + key;
+			#end
+			trace("DEBUG getGraphic: key=" + key + " fullPath=" + fullPath + " exists=" + sys.FileSystem.exists(fullPath));
 			#end
 
 			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
