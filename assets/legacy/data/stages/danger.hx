@@ -155,6 +155,8 @@ function onCreatePost()
 	airSpeedlines.setPosition(-3352.1, -1035.95);
 	airSpeedlines.alpha = 0.2;
 	airSpeedlines.scrollFactor.set(1.3, 1.3);
+        airSpeedlines.scale.set(2, 2); // Speedlines resized 50%, compensate with 2x scale
+        airSpeedlines.updateHitbox();
 	add(airSpeedlines);
 }
 
