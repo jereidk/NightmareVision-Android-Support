@@ -185,7 +185,10 @@ class FunkinFilterRenderer implements IFlxDestroyable
       {
         if (bitmap != null)
         {
-          if (bitmap.__texture != null) bitmap.__texture.dispose();
+          #if android
+          if (Std.isOfType(bitmap, FixedBitmapData))
+            cast(bitmap, FixedBitmapData).disposeGPU();
+          #end
           bitmap.dispose();
         }
       }

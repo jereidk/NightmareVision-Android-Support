@@ -20,6 +20,21 @@ import openfl.Lib;
 @:access(openfl.display.OpenGLRenderer)
 class FixedBitmapData extends BitmapData
 {
+  /**
+   * Disposes of the GPU texture associated with this BitmapData.
+   * Call this before disposing the BitmapData to ensure GPU memory is freed.
+   */
+  public function disposeGPU():Void
+  {
+    #if android
+    if (__texture != null)
+    {
+      __texture.dispose();
+      __texture = null;
+    }
+    #end
+  }
+
   override function __drawGL(source:IBitmapDrawable, renderer:OpenGLRenderer):Void
   {
     if (Std.isOfType(source, DisplayObject))
