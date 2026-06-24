@@ -1,23 +1,23 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-4"?>
 <TextureAtlas imagePath="wallBP.png">
-	<!-- Created with Adobe Flash CS6 version 12.0.0.481 -->
+	<!-- Created with Adobe Flash CS3 version 6.0.0.240 -->
 	<!-- http://www.adobe.com/products/animate.html -->
-	<SubTexture name="Back wall and lava instância 10000" x="1" y="1" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10001" x="1" y="1" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10002" x="1" y="1" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10003" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10004" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10005" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10006" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10007" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10008" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10009" x="1" y="2965" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10010" x="1" y="2965" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10011" x="1" y="2965" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10012" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10013" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10014" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10015" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10016" x="1" y="1483" width="2518" height="1480"/>
-	<SubTexture name="Back wall and lava instância 10017" x="1" y="1483" width="2518" height="1480"/>
+	<SubTexture name="Back wall and lava instância 5000" x="1" y="1" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5000" x="1" y="1" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5001" x="1" y="1" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5001" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5002" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5002" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5003" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5003" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5004" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5004" x="1" y="1482" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5005" x="1" y="1482" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5005" x="1" y="1482" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5006" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5006" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5007" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5007" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5008" x="1" y="741" width="1259" height="740"/>
+	<SubTexture name="Back wall and lava instância 5008" x="1" y="741" width="1259" height="740"/>
 </TextureAtlas>
