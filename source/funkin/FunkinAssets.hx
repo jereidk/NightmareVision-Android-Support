@@ -135,13 +135,11 @@ class FunkinAssets
 		// files that might be bundled in the APK or cached by OpenFL.
 		#if android
 		if (Assets.exists(path, IMAGE)) {
-			#if android
-			trace('DEBUG getBitmapData: trying Assets.getBitmapData for $path');
-			#end
+			trace('[getBitmapData] Trying Assets.getBitmapData for: $path');
 			bitmap = Assets.getBitmapData(path, useCache);
-			#if android
-			trace('DEBUG getBitmapData: Assets.getBitmapData result=${bitmap != null}');
-			#end
+			trace('[getBitmapData] Assets.getBitmapData result=${bitmap != null}');
+		} else {
+			trace('[getBitmapData] NOT in Assets: $path');
 		}
 		#end
 
@@ -149,21 +147,19 @@ class FunkinAssets
 		// for external files (DLC, mods, etc.)
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
 		if (bitmap == null && FileSystem.exists(path)) {
-			#if android
-			trace('DEBUG getBitmapData: trying BitmapData.fromFile for $path');
-			#end
+			trace('[getBitmapData] Trying BitmapData.fromFile for: $path');
 			// On Android, BitmapData.fromFile needs the full path with storage directory
 			var loadPath = path;
 			#if (android && sys)
 			// Build full path: storageDir + path
 			// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
 			loadPath = StorageSystem.getDirectory() + path;
-			trace('DEBUG getBitmapData: using full path: $loadPath');
+			trace('[getBitmapData] Using full path: $loadPath');
 			#end
 			bitmap = BitmapData.fromFile(loadPath);
-			#if android
-			trace('DEBUG getBitmapData: BitmapData.fromFile result=${bitmap != null}');
-			#end
+			trace('[getBitmapData] BitmapData.fromFile result=${bitmap != null}');
+		} else if (bitmap == null) {
+			trace('[getBitmapData] FileSystem.exists=false for: $path');
 		}
 		#end
 
@@ -250,6 +246,15 @@ class FunkinAssets
 			return cache.cacheBitmap(key, bitmap, allowGPU);
 		}
 		
+		// Log failure details
+		#if android
+		trace("[FunkinAssets] getGraphicUnsafe FAILED for: " + key);
+		trace("  - BitmapData result was null");
+		trace("  - Key: " + key);
+		trace("  - FileSystem.exists: " + sys.FileSystem.exists(key));
+		trace("  - Assets.exists: " + Assets.exists(key, IMAGE));
+		#end
+		
 		return null;
 	}
 	
@@ -274,7 +279,26 @@ class FunkinAssets
 				return graphic;
 			}
 
-			Logger.log('graphic ($key) was not found. Returning flixel-logo instead');
+			Logger.log('graphic ($key) was not found. Returning flixel-logo instead', WARN);
+
+			// FALLBACK DIAGNOSTIC - Detailed logging for debugging
+			#if android
+			trace("[FunkinAssets] GRAPHIC FALLBACK TRIGGERED for: " + key);
+			trace("  Date: " + Date.now());
+			trace("  WHAT HAPPENED: The graphic was not found in any asset source.");
+			trace("  ATTEMPTED SOURCES:");
+			trace("    1. ASTC compressed override (mobile.backend.AstcLoader)");
+			trace("    2. Assets.getBitmapData() [APK bundled]");
+			trace("    3. FileSystem.exists() + BitmapData.fromFile() [external]");
+			trace("    4. Flixel internal cache");
+			trace("  DIAGNOSTIC:");
+			trace("    FileSystem.exists(key): " + sys.FileSystem.exists(key));
+			trace("    Assets.exists(key, IMAGE): " + Assets.exists(key, IMAGE));
+			trace("  ACTION: Returning Flixel logo as fallback.");
+			trace("  FIX: Check if file exists in assets/legacy/images/ and verify Project.xml includes it.");
+			#else
+			trace("[FunkinAssets] GRAPHIC FALLBACK TRIGGERED for: " + key);
+			#end
 
 			return FlxG.bitmap.add('flixel/images/logo/default.png');
 	}
