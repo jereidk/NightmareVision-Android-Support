@@ -114,17 +114,17 @@ class AstcLoader
 
 		var astcPath = deriveAstcPath(pngPath);
 		if (astcPath == null) {
-			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath', NOTICE);
+			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath, NOTICE);
 			return null;
 		}
 
-		Logger.log('[AstcLoader] Trying to load ASTC for: ' + pngPath', NOTICE);
-		Logger.log('[AstcLoader] ASTC path: ' + astcPath', NOTICE);
+		Logger.log('[AstcLoader] Trying to load ASTC for: ' + pngPath, NOTICE);
+		Logger.log('[AstcLoader] ASTC path: ' + astcPath, NOTICE);
 
 		// External storage (extracted APK assets, DLC overrides) takes priority.
 		if (sys.FileSystem.exists(astcPath))
 		{
-			Logger.log('[AstcLoader] Found in FileSystem: ' + astcPath', NOTICE);
+			Logger.log('[AstcLoader] Found in FileSystem: ' + astcPath, NOTICE);
 			try
 			{
 				var bytes = sys.io.File.getBytes(astcPath);
@@ -144,7 +144,7 @@ class AstcLoader
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
 		if (OflAssets.exists(astcPath))
 		{
-			Logger.log('[AstcLoader] Found in APK assets: ' + astcPath', NOTICE);
+			Logger.log('[AstcLoader] Found in APK assets: ' + astcPath, NOTICE);
 			var bytes = OflAssets.getBytes(astcPath);
 			if (bytes != null) {
 				Logger.log('[AstcLoader] Read ' + bytes.length + ' bytes from APK assets', NOTICE);
@@ -152,7 +152,7 @@ class AstcLoader
 			}
 		}
 
-		Logger.log('[AstcLoader] No ASTC found for: ' + pngPath', NOTICE);
+		Logger.log('[AstcLoader] No ASTC found for: ' + pngPath, NOTICE);
 		Logger.log('[AstcLoader] Will use PNG fallback', NOTICE);
 		return null;
 		#else
