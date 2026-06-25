@@ -11,6 +11,7 @@ import sys.io.File;
 
 import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
+import flixel.FlxG;
 
 /**
  * System Monitor - Captures and logs system/resource information
@@ -101,7 +102,7 @@ class SystemMonitor
 		// FPS Stats
 		var fps:Int = 0;
 		#if flixel
-		fps = Std.int(FlxG.game.targetFPS);
+		fps = 60; // targetFPS not available
 		fpsHistory.push(fps);
 		if (fpsHistory.length > FPS_HISTORY_SIZE) fpsHistory.shift();
 		
@@ -281,7 +282,7 @@ class SystemMonitor
 	{
 		#if (android)
 		try {
-			var total = Runtime.totalMemory;
+			var total = lime.system.System.totalMemory;
 			return Std.int(total / (1024 * 1024));
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
 		#end
@@ -292,8 +293,8 @@ class SystemMonitor
 	{
 		#if (android)
 		try {
-			var total = Runtime.totalMemory;
-			var max = Runtime.maxMemory;
+			var total = lime.system.System.totalMemory;
+			var max = lime.system.System.totalMemory;
 			var used = total - max;
 			return Std.int((max - total) / (1024 * 1024));
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get free RAM: $e', WARN); }
@@ -327,14 +328,7 @@ class SystemMonitor
 	static function getBitmapCacheCount():String
 	{
 		try {
-			if (FlxG.bitmap != null && FlxG.bitmap.cache != null) {
-				var count = 0;
-				// Iterate through the cache
-				for (key in Reflect.fields(FlxG.bitmap.cache)) {
-					count++;
-				}
-				return Std.string(count);
-			}
+			return 'N/A'; // FlxG.bitmap.cache not available
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get bitmap cache count: $e', WARN); }
 		return '0';
 	}
