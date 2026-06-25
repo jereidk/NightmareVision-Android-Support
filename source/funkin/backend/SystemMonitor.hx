@@ -262,7 +262,14 @@ class SystemMonitor
 	static function getOSInfo():String
 	{
 		#if android
-		return 'Android API ' + #if (android && openfl >= 19) openfl.utils.SystemResources.getAndroidSDKVersion() #else '?' #end;
+		try {
+			#if openfl_v22_up
+			return 'Android API ' + openfl.utils.SystemResources.getAndroidSDKVersion();
+			#else
+			return 'Android (legacy)';
+			#end
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get Android SDK version: $e', WARN); }
+		return 'Android';
 		#elseif (lime && lime_legacy)
 		return lime.system.System.platformVersion;
 		#else
