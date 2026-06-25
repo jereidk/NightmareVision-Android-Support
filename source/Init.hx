@@ -22,6 +22,21 @@ class Init extends FlxState
 		// log line (crash detection, prefs load, mod init, etc.) is captured.
 		#if android
 		funkin.backend.GameLogger.init();
+		funkin.backend.SystemMonitor.init();
+		funkin.backend.DebugDisplay.init();
+
+		// Register cache info plugin for DebugDisplay
+		funkin.backend.DebugDisplay.addPlugin(function():String {
+			var gCount = 0;
+			var sCount = 0;
+			var gpuEst = 0.0;
+			try {
+				for (_ in FunkinAssets.cache.currentTrackedGraphics.cache.keys()) gCount++;
+				for (_ in FunkinAssets.cache.currentTrackedSounds.cache.keys()) sCount++;
+				gpuEst = gCount * 0.5; // ~0.5MB average per texture
+			} catch (_) {}
+			return 'Graphics: $gCount | Sounds: $sCount | GPU: ~${Std.int(gpuEst)}MB';
+		});
 		#end
 
 		// ── Crash detection (runs before anything else) ───────────────────────
