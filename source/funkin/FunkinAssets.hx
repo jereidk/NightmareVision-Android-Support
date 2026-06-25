@@ -88,11 +88,7 @@ class FunkinAssets
 	public static function getBytes(path:String):Bytes
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = path;
-		#if (android && sys)
-		if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
-		#end
-		if (FileSystem.exists(loadPath)) return File.getBytes(loadPath);
+		if (FileSystem.exists(path)) return File.getBytes(path);
 		#end
 		if (Assets.exists(path)) return Assets.getBytes(path);
 		else
@@ -107,11 +103,7 @@ class FunkinAssets
 	public static function getContent(path:String):String
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = path;
-		#if (android && sys)
-		if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
-		#end
-		if (FileSystem.exists(loadPath)) return File.getContent(loadPath);
+		if (FileSystem.exists(path)) return File.getContent(path);
 		else
 		#end
 		if (Assets.exists(path)) return Assets.getText(path);
@@ -184,11 +176,7 @@ class FunkinAssets
 	public static function exists(path:String, ?type:AssetType):Bool
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = path;
-		#if (android && sys)
-		if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
-		#end
-		if (FileSystem.exists(loadPath)) return true;
+		if (FileSystem.exists(path)) return true;
 		#end
 		if (Assets.exists(path, type)) return true;
 		// Assets.exists() only matches file assets, not directories.
@@ -207,11 +195,7 @@ class FunkinAssets
 	public static function readDirectory(directory:String):Array<String>
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = directory;
-		#if (android && sys)
-		if (FileSystem.exists(directory)) loadPath = StorageSystem.getDirectory() + directory;
-		#end
-		if (FileSystem.exists(loadPath)) return FileSystem.readDirectory(loadPath);
+		if (FileSystem.exists(directory)) return FileSystem.readDirectory(directory);
 		#end
 		if (directory.trim().length == 0) return [];
 		// Normalize to trailing slash so the prefix strip is clean.
@@ -238,11 +222,7 @@ class FunkinAssets
 	public static function isDirectory(directory:String):Bool
 	{
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = directory;
-		#if (android && sys)
-		if (FileSystem.exists(directory)) loadPath = StorageSystem.getDirectory() + directory;
-		#end
-		if (FileSystem.exists(loadPath)) return FileSystem.isDirectory(loadPath);
+		if (FileSystem.exists(directory)) return FileSystem.isDirectory(directory);
 		#end
 		if (directory.trim().length == 0) return false;
 		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
@@ -282,13 +262,9 @@ class FunkinAssets
 	public static function getGraphic(key:String, useCache:Bool = true, allowGPU:Bool = true):FlxGraphic
 		{
 			#if android
-			var fullPath:String;
-			#if (android && sys)
-			fullPath = StorageSystem.getDirectory() + key;
-			#else
-			fullPath = Sys.getCwd() + key;
-			#end
-			trace("DEBUG getGraphic: key=" + key + " fullPath=" + fullPath + " exists=" + sys.FileSystem.exists(fullPath));
+			var cwd = Sys.getCwd();
+			var fullPath = cwd + key;
+			trace("DEBUG getGraphic: key=" + key + " cwd=" + cwd + " fullPath=" + fullPath + " exists=" + sys.FileSystem.exists(fullPath));
 			#end
 
 			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
@@ -340,12 +316,8 @@ class FunkinAssets
 		}
 		
 		var sound:Null<Sound> = null;
-		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		var loadPath = key;
-		#if (android && sys)
-		if (FileSystem.exists(key)) loadPath = StorageSystem.getDirectory() + key;
-		#end
-		if (FileSystem.exists(loadPath)) sound = Sound.fromFile(loadPath);
+		
+		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(key)) sound = Sound.fromFile(key);
 		else #end if (Assets.exists(key, SOUND)) sound = Assets.getSound(key, true);
 		
 		if (sound != null)
@@ -369,11 +341,7 @@ class FunkinAssets
 		// trace('gulp');
 		return null;
 		#else
-		var loadPath = key;
-		#if (android && sys)
-		if (FileSystem.exists(key)) loadPath = StorageSystem.getDirectory() + key;
-		#end
-		final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(loadPath);
+		final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(key);
 		
 		if (vorbisFile == null) return null;
 		

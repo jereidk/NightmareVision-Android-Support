@@ -9,10 +9,6 @@ import openfl.utils.Assets;
 
 import funkin.states.transitions.*;
 
-#if android
-import mobile.backend.StorageSystem;
-#end
-
 // modified from modern psych
 // much love okay
 
@@ -147,20 +143,12 @@ class Mods
 		var list:Array<String> = [];
 		#if MODS_ALLOWED
 		var modsFolder:String = Paths.mods();
-		var loadPath = modsFolder;
-		#if (android && sys)
-		if (FileSystem.exists(modsFolder)) loadPath = StorageSystem.getDirectory() + modsFolder;
-		#end
-		if (FileSystem.exists(loadPath))
+		if (FileSystem.exists(modsFolder))
 		{
-			for (folder in FileSystem.readDirectory(loadPath))
+			for (folder in FileSystem.readDirectory(modsFolder))
 			{
 				var path = haxe.io.Path.join([modsFolder, folder]);
-				var loadFilePath = path;
-				#if (android && sys)
-				if (FileSystem.exists(path)) loadFilePath = StorageSystem.getDirectory() + path;
-				#end
-				if (FileSystem.isDirectory(loadFilePath)
+				if (FileSystem.isDirectory(path)
 					&& !ignoreModFolders.contains(folder.toLowerCase())
 					&& !list.contains(folder)) list.push(folder);
 			}
@@ -198,11 +186,7 @@ class Mods
 	public static inline function directoriesWithFile(path:String, fileToFind:String, mods:Bool = true)
 	{
 		var foldersToCheck:Array<String> = [];
-		var loadPath = path + fileToFind;
-		#if (android && sys)
-		if (FileSystem.exists(path + fileToFind)) loadPath = StorageSystem.getDirectory() + path + fileToFind;
-		#end
-		if (FileSystem.exists(loadPath)) foldersToCheck.push(path + fileToFind);
+		if (FileSystem.exists(path + fileToFind)) foldersToCheck.push(path + fileToFind);
 		
 		#if MODS_ALLOWED
 		if (mods)
@@ -211,30 +195,18 @@ class Mods
 			for (mod in globalMods)
 			{
 				var folder:String = Paths.mods(mod + '/' + fileToFind);
-				var folderLoadPath = folder;
-				#if (android && sys)
-				if (FileSystem.exists(folder)) folderLoadPath = StorageSystem.getDirectory() + folder;
-				#end
-				if (FileSystem.exists(folderLoadPath) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
+				if (FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
 			}
 			
 			// Then "content/" main folder
 			var folder:String = Paths.mods(fileToFind);
-			var folderLoadPath = folder;
-			#if (android && sys)
-			if (FileSystem.exists(folder)) folderLoadPath = StorageSystem.getDirectory() + folder;
-			#end
-			if (FileSystem.exists(folderLoadPath) && !foldersToCheck.contains(folder)) foldersToCheck.push(Paths.mods(fileToFind));
+			if (FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(Paths.mods(fileToFind));
 			
 			// And lastly, the loaded mod's folder
 			if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
 			{
 				var folder:String = Paths.mods(Mods.currentModDirectory + '/' + fileToFind);
-				var folderLoadPath = folder;
-				#if (android && sys)
-				if (FileSystem.exists(folder)) folderLoadPath = StorageSystem.getDirectory() + folder;
-				#end
-				if (FileSystem.exists(folderLoadPath) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
+				if (FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
 			}
 		}
 		#end
@@ -247,11 +219,7 @@ class Mods
 		if (folder == null) folder = Mods.currentModDirectory;
 		
 		var path = Paths.mods(folder + '/meta.json');
-		var loadPath = path;
-		#if (android && sys)
-		if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
-		#end
-		if (FileSystem.exists(loadPath))
+		if (FileSystem.exists(path))
 		{
 			try
 			{
@@ -286,27 +254,20 @@ class Mods
 			final dat:Array<String> = mod.split('|');
 			final folder:String = dat[0], modEnabled:Bool = (dat[1] == '1');
 			
-			if (folder.trim().length > 0)
+			if (folder.trim().length > 0
+				&& FileSystem.exists(Paths.mods(folder))
+				&& FileSystem.isDirectory(Paths.mods(folder))
+				&& !all.contains(folder))
 			{
-				var modPath = Paths.mods(folder);
-				var loadPath = modPath;
-				#if (android && sys)
-				if (FileSystem.exists(modPath)) loadPath = StorageSystem.getDirectory() + modPath;
-				#end
-				if (FileSystem.exists(loadPath)
-					&& FileSystem.isDirectory(loadPath)
-					&& !all.contains(folder))
+				if (folder == top)
 				{
-					if (folder == top)
-					{
-						all.insert(0, folder);
-						(modEnabled ? enabled : disabled).insert(0, folder);
-					}
-					else
-					{
-						all.push(folder);
-						(modEnabled ? enabled : disabled).push(folder);
-					}
+					all.insert(0, folder);
+					(modEnabled ? enabled : disabled).insert(0, folder);
+				}
+				else
+				{
+					all.push(folder);
+					(modEnabled ? enabled : disabled).push(folder);
 				}
 			}
 		}
@@ -314,23 +275,16 @@ class Mods
 		// Scan for folders that aren't on modsList.txt yet
 		for (folder in getModDirectories())
 		{
-			if (folder.trim().length > 0)
+			if (folder.trim().length > 0
+				&& FileSystem.exists(Paths.mods(folder))
+				&& FileSystem.isDirectory(Paths.mods(folder))
+				&& !ignoreModFolders.contains(folder.toLowerCase())
+				&& !all.contains(folder))
 			{
-				var modPath = Paths.mods(folder);
-				var loadPath = modPath;
-				#if (android && sys)
-				if (FileSystem.exists(modPath)) loadPath = StorageSystem.getDirectory() + modPath;
-				#end
-				if (FileSystem.exists(loadPath)
-					&& FileSystem.isDirectory(loadPath)
-					&& !ignoreModFolders.contains(folder.toLowerCase())
-					&& !all.contains(folder))
-				{
-					write = true;
-					
-					all.push(folder);
-					enabled.push(folder);
-				}
+				write = true;
+				
+				all.push(folder);
+				enabled.push(folder);
 			}
 		}
 		

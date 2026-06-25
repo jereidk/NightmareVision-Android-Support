@@ -10,7 +10,6 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 
 import funkin.objects.*;
-import funkin.FunkinAssets;
 
 // safety and readability
 abstract CreditsData(Array<String>) from Array<String>
@@ -309,9 +308,9 @@ class CreditsState extends MusicBeatState
 			
 			var creditsFile:String = (folder != null && folder.trim().length > 0) ? Paths.mods(folder + '/data/credits.txt') : Paths.mods('data/credits.txt');
 			
-			if (FunkinAssets.exists(creditsFile))
+			if (FileSystem.exists(creditsFile))
 			{
-				var firstarray:Array<String> = FunkinAssets.getContent(creditsFile).split('\n');
+				var firstarray:Array<String> = File.getContent(creditsFile).split('\n');
 				for (i in firstarray)
 				{
 					var arr:Array<String> = i.replace('\\n', '\n').split("::");

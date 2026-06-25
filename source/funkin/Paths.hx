@@ -13,10 +13,6 @@ import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.FlxGraphic;
 
-#if android
-import mobile.backend.StorageSystem;
-#end
-
 enum PathsTestMode
 {
 	/**
@@ -80,11 +76,7 @@ class Paths
 		{
 			final modPath:String = modFolders(file, mode);
 			
-			var loadPath = modPath;
-			#if (android && sys)
-			if (FileSystem.exists(modPath)) loadPath = StorageSystem.getDirectory() + modPath;
-			#end
-			if (FileSystem.exists(loadPath)) return modPath;
+			if (FileSystem.exists(modPath)) return modPath;
 		}
 		#end
 		
@@ -424,11 +416,7 @@ class Paths
 		if (checkMods)
 		{
 			final path:String = mods(directory);
-			var loadPath = path;
-			#if (android && sys)
-			if (FileSystem.exists(path)) loadPath = StorageSystem.getDirectory() + path;
-			#end
-			if (FileSystem.exists(loadPath)) folders.push(path);
+			if (FileSystem.exists(path)) folders.push(path);
 			
 			if (overrideMode != null) mode = overrideMode;
 			
@@ -477,33 +465,17 @@ class Paths
 		
 		if (overrideMode != null) mode = overrideMode;
 		
-		// When no specific mod is set, only check global mods (not all enabled mods)
-		// This prevents DLC content from appearing when browsing base game content
-		var currentMod = Mods.currentModDirectory;
-		var noModSet = (currentMod == null || currentMod.length == 0);
-		
 		for (mod in Mods.enabled)
 		{
-			// Skip global mods in STRICT mode
 			if (Mods.globalMods.contains(mod))
 			{
 				if (mode == STRICT) continue;
 			}
-			// If mode is LOOSE, check all mods
-			else if (mode == LOOSE)
-			{
-				// Check all mods in LOOSE mode
-			}
-			// If no specific mod is set, only check global mods (skip other mods)
-			else if (noModSet)
+			else if (mode != LOOSE && mod != Mods.currentModDirectory)
 			{
 				continue;
 			}
-			// Otherwise check only the specified mod
-			else if (mod != currentMod)
-			{
-				continue;
-			}
+			
 			
 			final fileToCheck:String = mods('$mod/$key');
 			if (FunkinAssets.exists(fileToCheck)) return fileToCheck;

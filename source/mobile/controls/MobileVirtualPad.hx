@@ -16,7 +16,6 @@ import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
 
 import funkin.data.ClientPrefs;
-import mobile.backend.StorageSystem;
 
 #if MODS_ALLOWED
 import sys.FileSystem;
@@ -199,16 +198,12 @@ class MobileVirtualPad extends TouchInputManager
 		
 		#if MODS_ALLOWED
 		var modsPath:String = Paths.modFolders('mobile/virtualpad/${Graphic}.png');
-		var loadPath = modsPath;
-		#if (android && sys)
-		if (FileSystem.exists(modsPath)) loadPath = StorageSystem.getDirectory() + modsPath;
-		#end
-		if (FileSystem.exists(loadPath))
+		if (FileSystem.exists(modsPath))
 		{
 			cacheKey = modsPath;
 			graphic = FlxG.bitmap.get(cacheKey);
 			
-			if (graphic == null) graphic = FlxGraphic.fromBitmapData(BitmapData.fromFile(loadPath), false, cacheKey);
+			if (graphic == null) graphic = FlxGraphic.fromBitmapData(BitmapData.fromFile(modsPath), false, cacheKey);
 		}
 		else
 		#end
