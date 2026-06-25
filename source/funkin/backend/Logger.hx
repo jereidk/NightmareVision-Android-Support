@@ -86,18 +86,11 @@ class Logger
 			if (dotIdx >= 0) stateName = stateName.substring(dotIdx + 1);
 
 			// Check for substates
-			if (Std.isOfType(FlxG.state, flixel.FlxSubState))
-			{
-				var parentState = cast(FlxG.state, flixel.FlxSubState).parentState;
-				if (parentState != null)
-				{
-					var parentName = Type.getClassName(Type.getClass(parentState));
-					var parentDot = parentName.lastIndexOf(".");
-					stateName = (parentDot >= 0 ? parentName.substring(parentDot + 1) : parentName) + ">" + stateName;
-				}
-			}
-		}
-
+                        if (Std.isOfType(FlxG.state, flixel.FlxSubState))
+                        {
+                                stateName = "SubState>" + stateName;
+                        }
+                }
 		_cachedStateName = stateName;
 		return stateName;
 		#else
@@ -156,7 +149,7 @@ class Logger
 		if (pos != null && detailedPrefix)
 		{
 			// Check if file info is already in the output
-			if (output.indexOf(pos.fileName) < 0 && output.indexOf(pos.customParams) < 0)
+			if (output.indexOf(pos.fileName) < 0 && output.indexOf(Std.string(pos.customParams)) < 0)
 			{
 				// Add file:line at the end
 				output += ' @ ${pos.fileName}:${pos.lineNumber}';

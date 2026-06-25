@@ -133,7 +133,7 @@ class AstcLoader
 			}
 			catch (e:Dynamic)
 			{
-				Logger.log('[AstcLoader] ERROR reading FileSystem ASTC: ' + e', NOTICE);
+				Logger.log('[AstcLoader] ERROR reading FileSystem ASTC: ' + e, NOTICE);
 				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
 				return null;
 			}
