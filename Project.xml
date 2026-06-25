@@ -27,10 +27,11 @@
     <set name="BUILD_DIR" value="export/32bit" if="32bits" />
     <set name="BUILD_DIR" value="${BUILD_DIR}-tracy" if="FEATURE_DEBUG_TRACY"/>
 
+    <!-- Consolidated fonts in assets/fonts/ for cleaner APK structure -->
+    <assets path='assets/fonts' rename='assets/fonts' embed="false" />
+    
     <assets path='assets/embeds' rename='assets' embed="false" />
     <assets path="assets/legacy" rename="assets"/>
-
-    <assets path="assets" include="*.ttf|*.otf" type="binary" nocompress="true"/>
 
     <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
     <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
