@@ -128,10 +128,7 @@ class SystemMonitor
 
 		#if (openfl_v22_up)
 		try {
-			var totalMem = lime.system.System.totalMemory;
-			var freeMem = lime.system.System.freeMemory;
-			lines.push('  OpenFL Total: ' + formatBytes(totalMem));
-			lines.push('  OpenFL Free: ' + formatBytes(freeMem));
+			lines.push('  OpenFL Memory: N/A');
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get OpenFL memory info: $e', WARN); }
 		#end
 
@@ -282,8 +279,7 @@ class SystemMonitor
 	{
 		#if (android)
 		try {
-			var total = lime.system.System.totalMemory;
-			return Std.int(total / (1024 * 1024));
+			return 'N/A'; // Memory APIs not available
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
 		#end
 		return '?';
@@ -293,10 +289,7 @@ class SystemMonitor
 	{
 		#if (android)
 		try {
-			var total = lime.system.System.totalMemory;
-			var max = lime.system.System.totalMemory;
-			var used = total - max;
-			return Std.int((max - total) / (1024 * 1024));
+			return 'N/A'; // Memory APIs not available
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get free RAM: $e', WARN); }
 		#end
 		return '?';
@@ -325,29 +318,15 @@ class SystemMonitor
 	// ==================== FLIXEL HELPERS ====================
 
 	#if flixel
-	static function getBitmapCacheCount():String
-	{
-		try {
-			return 'N/A'; // FlxG.bitmap.cache not available
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get bitmap cache count: $e', WARN); }
-		return '0';
-	}
+	static function getBitmapCacheCount():String return 'N/A';
 
 	static function getEstimatedGPUMemory():String
 	{
 		try {
-			if (FlxG.bitmap != null) {
-				// Estimate based on cache count
-				var count = Std.parseInt(getBitmapCacheCount());
-				// Rough estimate: average texture ~512KB
-				return Std.int(count * 0.5) + ' MB (est.)';
-			}
+			return 'N/A'; // GPU memory API not available
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to estimate GPU memory: $e', WARN); }
 		return '0 MB';
 	}
-	#else
-	static function getBitmapCacheCount():String return 'N/A';
-	static function getEstimatedGPUMemory():String return 'N/A';
 	#end
 
 	static function getLoadedGraphicsCount():String
