@@ -11,6 +11,8 @@ import flixel.graphics.FlxGraphic;
 import openfl.display.BitmapData;
 import openfl.media.Sound;
 
+using funkin.backend.SystemMonitor;
+
 class CacheMap<T>
 {
 	public function new() {}
