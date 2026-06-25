@@ -108,52 +108,52 @@ class AstcLoader
 	{
 		#if (android && cpp)
 		if (!AstcSupport.isSupported) {
-			trace('[AstcLoader] ASTC not supported on this device');
+			Logger.log('[AstcLoader] ASTC not supported on this device', NOTICE);
 			return null;
 		}
 
 		var astcPath = deriveAstcPath(pngPath);
 		if (astcPath == null) {
-			trace('[AstcLoader] Cannot derive ASTC path from: ' + pngPath);
+			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath', NOTICE);
 			return null;
 		}
 
-		trace('[AstcLoader] Trying to load ASTC for: ' + pngPath);
-		trace('[AstcLoader] ASTC path: ' + astcPath);
+		Logger.log('[AstcLoader] Trying to load ASTC for: ' + pngPath', NOTICE);
+		Logger.log('[AstcLoader] ASTC path: ' + astcPath', NOTICE);
 
 		// External storage (extracted APK assets, DLC overrides) takes priority.
 		if (sys.FileSystem.exists(astcPath))
 		{
-			trace('[AstcLoader] Found in FileSystem: ' + astcPath);
+			Logger.log('[AstcLoader] Found in FileSystem: ' + astcPath', NOTICE);
 			try
 			{
 				var bytes = sys.io.File.getBytes(astcPath);
-				trace('[AstcLoader] Read ' + bytes.length + ' bytes from FileSystem');
+				Logger.log('[AstcLoader] Read ' + bytes.length + ' bytes from FileSystem', NOTICE);
 				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
 			catch (e:Dynamic)
 			{
-				trace('[AstcLoader] ERROR reading FileSystem ASTC: ' + e);
+				Logger.log('[AstcLoader] ERROR reading FileSystem ASTC: ' + e', NOTICE);
 				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
 				return null;
 			}
 		}
 
-		trace('[AstcLoader] Not in FileSystem, checking APK assets...');
+		Logger.log('[AstcLoader] Not in FileSystem, checking APK assets...', NOTICE);
 
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
 		if (OflAssets.exists(astcPath))
 		{
-			trace('[AstcLoader] Found in APK assets: ' + astcPath);
+			Logger.log('[AstcLoader] Found in APK assets: ' + astcPath', NOTICE);
 			var bytes = OflAssets.getBytes(astcPath);
 			if (bytes != null) {
-				trace('[AstcLoader] Read ' + bytes.length + ' bytes from APK assets');
+				Logger.log('[AstcLoader] Read ' + bytes.length + ' bytes from APK assets', NOTICE);
 				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
 		}
 
-		trace('[AstcLoader] No ASTC found for: ' + pngPath);
-		trace('[AstcLoader] Will use PNG fallback');
+		Logger.log('[AstcLoader] No ASTC found for: ' + pngPath', NOTICE);
+		Logger.log('[AstcLoader] Will use PNG fallback', NOTICE);
 		return null;
 		#else
 		return null;
