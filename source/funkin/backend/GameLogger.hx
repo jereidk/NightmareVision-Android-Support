@@ -41,7 +41,7 @@ class GameLogger
 				FileSystem.rename(logPath, oldPath);
 			}
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Sys.println('[GameLogger] Failed to rotate log: ' + Std.string(e)); }
 
 		_write('============================================================');
 		_write('SESSION START  ' + Date.now().toString());
@@ -90,7 +90,7 @@ class GameLogger
 			out.flush();
 			out.close();
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Sys.println('[GameLogger] Failed to write to log: ' + Std.string(e)); }
 		#end
 	}
 }

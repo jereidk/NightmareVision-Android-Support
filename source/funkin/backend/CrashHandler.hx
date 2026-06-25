@@ -88,7 +88,7 @@ class CrashHandler
 			final logPath = #if android mobile.backend.StorageSystem.getDirectory() #else "./" #end + 'crash.log';
 			sys.io.File.saveContent(logPath, fullReport);
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('CrashHandler: Failed to write crash log: $e', ERROR); }
 		#end
 
 		FlxG.switchState(() -> new FallbackState(fullReport, () -> FlxG.switchState(() -> new MainMenuState())));

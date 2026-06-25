@@ -7,6 +7,8 @@ import flixel.FlxG;
 import flixel.input.keyboard.FlxKey;
 
 import funkin.backend.math.Vector3;
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
 
 /**
  * Initiation state that prepares backend classes and returns to menus when finished
@@ -44,7 +46,9 @@ class Init extends FlxState
 					if (lastSounds.length < 3) lastSounds.push(key);
 				}
 				gpuEst = gCount * 0.5;
-			} catch (_) {}
+			} catch (e:Dynamic) {
+				Logger.log('Failed to get asset cache info: $e', WARN);
+			}
 
 			info = 'Loaded: $gCount graphics, $sCount sounds (GPU ~${Std.int(gpuEst)}MB)';
 			if (lastGraphics.length > 0) {
@@ -68,7 +72,7 @@ class Init extends FlxState
 		// crashes that happen outside the Haxe exception pipeline and writes
 		// them to crash.log before the process dies.
 		try { mobile.backend.JavaCrashHandler.install(_crashLogPath); }
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('Failed to install Java crash handler: $e', WARN); }
 
 		// 1. crash.log written by CrashHandler (Haxe exception) or by the
 		//    Java handler (JVM crash) during the previous session.
@@ -92,7 +96,7 @@ class Init extends FlxState
 					mobile.backend.utils.PopUp.showAlert('Crash nativo detectado', nativeInfo, 'OK');
 			}
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end
 		#end
 		// ──────────────────────────────────────────────────────────────────────
@@ -113,7 +117,7 @@ class Init extends FlxState
 		//   gets null instead (matches the original FlxAnimateAssets behaviour).
 		animate.FlxAnimateAssets.getBitmapData = (path) -> cast funkin.FunkinAssets.getBitmapData(path);
 		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
-		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (_:Dynamic) return cast null; };
+		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (e:Dynamic) { Logger.log('Failed to get text content for: $path - $e', WARN); return cast null; }; };
 		// Hide .astc files from FlxAnimate's folder scanner so spritemap image
 		// selection always resolves to the .png counterpart. The getBitmapData
 		// override above then transparently loads the .astc GPU texture for that

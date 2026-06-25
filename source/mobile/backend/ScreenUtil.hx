@@ -2,6 +2,9 @@ package mobile.backend;
 
 import openfl.geom.Rectangle;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
+
 /**
  * Reports device safe-area insets (notch / punch-hole cutouts) in HaxeFlixel
  * game coordinates. Always returns zeros on non-Android targets or devices
@@ -49,7 +52,7 @@ class ScreenUtil
 				right  = (_getRight([])  : Int) * scaleW;
 			}
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('ScreenUtil: Failed to get safe area insets: $e', WARN); }
 		#end
 
 		_cached = {top: top, bottom: bottom, left: left, right: right};
@@ -89,7 +92,7 @@ class ScreenUtil
 				}
 			}
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('ScreenUtil: Failed to get cutout dimensions: $e', WARN); }
 		#end
 
 		return result;

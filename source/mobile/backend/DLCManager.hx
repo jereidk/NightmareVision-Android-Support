@@ -15,6 +15,9 @@ import haxe.zip.Reader;
 
 using StringTools;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
+
 /**
  * Metadata for a downloadable DLC entry (from registry JSON).
  */
@@ -103,7 +106,7 @@ class DLCManager {
                         name:   meta.name != null ? Std.string(meta.name) : dir,
                         folder: full
                     });
-            } catch (_:Dynamic) {}
+            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to parse meta.json for $dir: $e', WARN); }
         }
         #end
         return result;
@@ -119,7 +122,7 @@ class DLCManager {
         for (d in getInstalledDLCs()) {
             if (d.id != id) continue;
             #if sys
-            try { _deleteDir(d.folder); return true; } catch (_:Dynamic) {}
+            try { _deleteDir(d.folder); return true; } catch (e:Dynamic) { Logger.log('DLCManager: Failed to uninstall DLC $id: $e', WARN); }
             #end
         }
         return false;
@@ -205,7 +208,7 @@ class DLCManager {
                 try {
                     if (zipPath.indexOf(".temp") >= 0 || zipPath.indexOf("dlc-import") >= 0)
                         if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath);
-                } catch (_:Dynamic) {}
+                } catch (e:Dynamic) { Logger.log('DLCManager: Failed to cleanup temp file: $e', WARN); }
 
                 _mutex.acquire();
                 taskState    = SUCCESS;
@@ -275,10 +278,10 @@ class DLCManager {
                 try {
                     http.customRequest(false, counter);
                 } catch (e:Dynamic) {
-                    try counter.close() catch (_:Dynamic) {}
+                    try counter.close() catch (ce:Dynamic) { Logger.log('DLCManager: Failed to close counter: $ce', WARN); }
                     throw "Download failed: " + Std.string(e);
                 }
-                try counter.close() catch (_:Dynamic) {}
+                try counter.close() catch (ce:Dynamic) { Logger.log('DLCManager: Failed to close counter: $ce', WARN); }
 
                 if (error != "") throw "Download failed: " + error;
                 if (!FileSystem.exists(zipPath) || FileSystem.stat(zipPath).size == 0)
@@ -308,7 +311,7 @@ class DLCManager {
                 activeTaskId = "";
                 _mutex.release();
             } catch (e:Dynamic) {
-                try { if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath); } catch (_:Dynamic) {}
+                try { if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath); } catch (de:Dynamic) { Logger.log('DLCManager: Failed to cleanup zip after error: $de', WARN); }
                 _mutex.acquire();
                 taskState    = FAILED;
                 taskProgress = 0;
@@ -384,7 +387,7 @@ class DLCManager {
                 if (meta.dlcId  == null)  { meta.dlcId  = entry.id; changed = true; }
                 if (meta.global != true)  { meta.global = true;      changed = true; }
                 if (changed) File.saveContent(metaPath, Json.stringify(meta));
-            } catch (_:Dynamic) {}
+            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to update meta.json: $e', WARN); }
         } else {
             var meta = {
                 name:        entry.name,
@@ -438,7 +441,7 @@ class DLCManager {
             if (part == "") continue;
             current = (current == "/" ? "/" : (current == "" ? "" : current + "/")) + part;
             if (!FileSystem.exists(current))
-                try { FileSystem.createDirectory(current); } catch (_:Dynamic) {}
+                try { FileSystem.createDirectory(current); } catch (e:Dynamic) { Logger.log('DLCManager: Failed to create directory $current: $e', WARN); }
         }
     }
     #end

@@ -9,6 +9,9 @@ import sys.FileSystem;
 import sys.io.File;
 #end
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
+
 /**
  * System Monitor - Captures and logs system/resource information
  * 
@@ -57,7 +60,7 @@ class SystemMonitor
 						FileSystem.deleteFile(logPath);
 					}
 				}
-			} catch (_:Dynamic) {}
+			} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to check log file: $e', WARN); }
 			
 			_write('============================================================');
 			_write('SYSTEM MONITOR START  ' + Date.now().toString());
@@ -66,7 +69,7 @@ class SystemMonitor
 			_write('  Platform: ' + getPlatform());
 			_write('  OS: ' + getOSInfo());
 			_write('');
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to initialize: $e', WARN); }
 		#end
 	}
 
@@ -128,7 +131,7 @@ class SystemMonitor
 			var freeMem = lime.system.System.freeMemory;
 			lines.push('  OpenFL Total: ' + formatBytes(totalMem));
 			lines.push('  OpenFL Free: ' + formatBytes(freeMem));
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get OpenFL memory info: $e', WARN); }
 		#end
 
 		// Flixel Bitmap Cache Stats
@@ -190,7 +193,8 @@ class SystemMonitor
 				// More GPU info if available
 				#end
 			}
-		} catch (_:Dynamic) {
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: Failed to get GPU context: $e', WARN);
 			_write('  Context: Not available');
 		}
 		#end
@@ -223,7 +227,7 @@ class SystemMonitor
 			out.writeString(timestamp() + ' ' + line + '\n');
 			out.flush();
 			out.close();
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to write to log file: $e', WARN); }
 		#end
 	}
 
@@ -272,7 +276,7 @@ class SystemMonitor
 		try {
 			var total = Runtime.totalMemory;
 			return Std.int(total / (1024 * 1024));
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
 		#end
 		return '?';
 	}
@@ -285,7 +289,7 @@ class SystemMonitor
 			var max = Runtime.maxMemory;
 			var used = total - max;
 			return Std.int((max - total) / (1024 * 1024));
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get free RAM: $e', WARN); }
 		#end
 		return '?';
 	}
@@ -295,7 +299,7 @@ class SystemMonitor
 		#if (openfl && html5 == false)
 		try {
 			return openfl.display.Caps.renderer;
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get renderer info: $e', WARN); }
 		#end
 		return 'N/A';
 	}
@@ -305,7 +309,7 @@ class SystemMonitor
 		#if (openfl && html5 == false)
 		try {
 			return openfl.display.Caps.driver;
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get driver info: $e', WARN); }
 		#end
 		return 'N/A';
 	}
@@ -324,7 +328,7 @@ class SystemMonitor
 				}
 				return Std.string(count);
 			}
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get bitmap cache count: $e', WARN); }
 		return '0';
 	}
 
@@ -337,7 +341,7 @@ class SystemMonitor
 				// Rough estimate: average texture ~512KB
 				return Std.int(count * 0.5) + ' MB (est.)';
 			}
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to estimate GPU memory: $e', WARN); }
 		return '0 MB';
 	}
 	#else
@@ -351,7 +355,7 @@ class SystemMonitor
 		try {
 			var list = openfl.Assets.list(openfl.utils.AssetType.IMAGE);
 			return Std.string(list.length);
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get loaded graphics count: $e', WARN); }
 		#end
 		return '?';
 	}
@@ -362,7 +366,7 @@ class SystemMonitor
 		try {
 			var list = openfl.Assets.list(openfl.utils.AssetType.SOUND);
 			return Std.string(list.length);
-		} catch (_:Dynamic) {}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get loaded sounds count: $e', WARN); }
 		#end
 		return '?';
 	}
