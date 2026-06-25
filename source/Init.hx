@@ -27,15 +27,36 @@ class Init extends FlxState
 
 		// Register cache info plugin for DebugDisplay
 		funkin.backend.DebugDisplay.addPlugin(function():String {
+			var info = '';
 			var gCount = 0;
 			var sCount = 0;
 			var gpuEst = 0.0;
+			var lastGraphics:Array<String> = [];
+			var lastSounds:Array<String> = [];
 			try {
-				for (_ in FunkinAssets.cache.currentTrackedGraphics.cache.keys()) gCount++;
-				for (_ in FunkinAssets.cache.currentTrackedSounds.cache.keys()) sCount++;
-				gpuEst = gCount * 0.5; // ~0.5MB average per texture
+				for (key in FunkinAssets.cache.currentTrackedGraphics.cache.keys()) {
+					gCount++;
+					// Solo los últimos 3 para no saturar
+					if (lastGraphics.length < 3) lastGraphics.push(key);
+				}
+				for (key in FunkinAssets.cache.currentTrackedSounds.cache.keys()) {
+					sCount++;
+					if (lastSounds.length < 3) lastSounds.push(key);
+				}
+				gpuEst = gCount * 0.5;
 			} catch (_) {}
-			return 'Graphics: $gCount | Sounds: $sCount | GPU: ~${Std.int(gpuEst)}MB';
+
+			info = 'Loaded: $gCount graphics, $sCount sounds (GPU ~${Std.int(gpuEst)}MB)';
+			if (lastGraphics.length > 0) {
+				info += '\nLast graphics:';
+				for (g in lastGraphics) {
+					// Solo nombre del archivo, no ruta completa
+					var shortName = g.split('/').pop().split('\\').pop();
+					if (shortName.length > 25) shortName = shortName.substr(0, 22) + '...';
+					info += '\n  - $shortName';
+				}
+			}
+			return info;
 		});
 		#end
 
