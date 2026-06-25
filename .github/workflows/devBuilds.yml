@@ -459,6 +459,12 @@ jobs:
             exit 1
           fi
 
+      - name: Apply Gradle ABI splits for ARM64
+        run: |
+          # Apply ABI filter to include only arm64-v8a
+          # This removes armeabi-v7a libraries from the APK
+          bash .github/scripts/patch-lime-gradle.sh arm64
+
       - name: Cache hxcpp build artifacts (ARM64)
         uses: actions/cache@v4
         with:
@@ -700,6 +706,12 @@ jobs:
             echo "ERROR: Missing Liblime 64 so"
             exit 1
           fi
+
+      - name: Apply Gradle ABI splits for ARM32
+        run: |
+          # Apply ABI filter to include only armeabi-v7a
+          # This removes arm64-v8a libraries from the APK
+          bash .github/scripts/patch-lime-gradle.sh armv7
 
       - name: Cache hxcpp build artifacts (ARM32)
         uses: actions/cache@v4
