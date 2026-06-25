@@ -87,7 +87,7 @@
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "bf",
-	"gameover_character": "bf-ghost-dead",
+	"gameover_character": "bf-defeat-dead-retro",
 	"vslice_sustains": true,
 	"flip_x": true,
 	"healthbar_colour": -13520687,
