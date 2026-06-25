@@ -242,21 +242,6 @@ jobs:
             haxelib run lime build android -release
           fi
 
-      - name: Package hxcpp compile cache for cross-branch seeding
-        if: success()
-        run: |
-          mkdir -p /tmp/hxcpp-seed
-          tar -czf /tmp/hxcpp-seed/hxcpp-cache-fat.tar.gz -C "$HOME" .hxcpp_cache 2>/dev/null || true
-
-      - name: Upload hxcpp cache seed (fat)
-        if: success()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: hxcpp-cache-seed-android-fat
-          path: /tmp/hxcpp-seed/hxcpp-cache-fat.tar.gz
-          retention-days: 90
-          if-no-files-found: warn
-
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -266,7 +251,11 @@ jobs:
 
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM64 (aarch64) — covers all modern Android devices (2019+).
-  # No ld.lld wrapper needed: the ARM32 sysroot issue does not affect arm64.
+  # NOTE: The -D ANDROID_ARM64_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
     name: Build Android (ARM64)
@@ -492,18 +481,6 @@ jobs:
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY
           fi
 
-      - name: Upload hxcpp build artifacts seed (ARM64)
-        if: success()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: hxcpp-cache-seed-android-arm64
-          path: |
-            export/release/android/obj
-            export/release/android/haxe
-            obj
-          retention-days: 90
-          if-no-files-found: warn
-
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -514,6 +491,11 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM32 (armeabi-v7a) — for older / low-end 32-bit devices.
   # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
+  # NOTE: The -D ANDROID_ARM32_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
     name: Build Android (ARM32)
@@ -740,18 +722,6 @@ jobs:
           else
             haxelib run lime build android -release -D ANDROID_ARM32_ONLY
           fi
-
-      - name: Upload hxcpp build artifacts seed (ARM32)
-        if: success()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: hxcpp-cache-seed-android-arm32
-          path: |
-            export/release/android/obj
-            export/release/android/haxe
-            obj
-          retention-days: 90
-          if-no-files-found: warn
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
