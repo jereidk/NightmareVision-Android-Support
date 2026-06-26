@@ -539,7 +539,6 @@ function dialogueUpdate(elapsed:Float)
 		}
 		else swagDialogue.skip();
 	}
-	#if mobile
 	for (touch in FlxG.touches.list)
 	{
 		if (touch.justReleased)
@@ -553,7 +552,6 @@ function dialogueUpdate(elapsed:Float)
 			break;
 		}
 	}
-	#end
 }
 
 function goodBialogue()
