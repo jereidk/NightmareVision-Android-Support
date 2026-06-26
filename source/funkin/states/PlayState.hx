@@ -576,17 +576,17 @@ class PlayState extends MusicBeatState
 		FlxG.camera.zoom = file.defaultZoom;
 		isPixelStage = file.isPixelStage;
 		
-		BF_X = file.boyfriend[0];
-		BF_Y = file.boyfriend[1];
+		BF_X = (file.boyfriend != null && file.boyfriend.length > 0) ? file.boyfriend[0] : 500;
+		BF_Y = (file.boyfriend != null && file.boyfriend.length > 1) ? file.boyfriend[1] : 100;
 		
-		GF_X = file.girlfriend[0];
-		GF_Y = file.girlfriend[1];
+		GF_X = (file.girlfriend != null && file.girlfriend.length > 0) ? file.girlfriend[0] : 0;
+		GF_Y = (file.girlfriend != null && file.girlfriend.length > 1) ? file.girlfriend[1] : 100;
 		
-		DAD_X = file.opponent[0];
-		DAD_Y = file.opponent[1];
+		DAD_X = (file.opponent != null && file.opponent.length > 0) ? file.opponent[0] : -500;
+		DAD_Y = (file.opponent != null && file.opponent.length > 1) ? file.opponent[1] : 100;
 		
-		PET_X = (file.pet == null ? (BF_X + 370) : file.pet[0]);
-		PET_Y = (file.pet == null ? (BF_Y + 849) : file.pet[1]);
+		PET_X = (file.pet != null && file.pet.length > 0) ? file.pet[0] : (BF_X + 370);
+		PET_Y = (file.pet != null && file.pet.length > 1) ? file.pet[1] : (BF_Y + 849);
 		
 		if (file.camera_speed != null) cameraSpeed = file.camera_speed;
 		
