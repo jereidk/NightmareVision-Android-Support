@@ -18,6 +18,7 @@ import funkin.states.*;
 import funkin.objects.*;
 import funkin.objects.Character;
 import funkin.objects.menu.AmongControls;
+import mobile.utils.MobileNavUtil;
 
 using StringTools;
 
@@ -122,6 +123,7 @@ class NoteOffsetState extends MusicBeatState
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -157,6 +159,37 @@ class NoteOffsetState extends MusicBeatState
 			barPercent = Math.max(delayMin, Math.min(barPercent, delayMax));
 			updateNoteDelay();
 		}
+		
+		#if mobile
+		// Touch/screen tap support for offset adjustment
+		if (MobileNavUtil.allowPointerNav())
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					if (touch.x < FlxG.width * 0.3)
+					{
+						// Left side: decrease offset
+						barPercent = Math.max(delayMin, Math.min(ClientPrefs.noteOffset - 1, delayMax));
+						updateNoteDelay();
+						holdTime = 0;
+					}
+					else if (touch.x > FlxG.width * 0.7)
+					{
+						// Right side: increase offset
+						barPercent = Math.max(delayMin, Math.min(ClientPrefs.noteOffset + 1, delayMax));
+						updateNoteDelay();
+						holdTime = 0;
+					}
+				}
+				else if (touch.justReleased)
+				{
+					holdTime = 0;
+				}
+			}
+		}
+		#end
 		
 		if (controls.RESET)
 		{
