@@ -1,6 +1,6 @@
 package funkin.states.options;
 
-import funkin.backend.MusicBeatSubState;
+import funkin.backend.MusicBeatSubstate;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -26,7 +26,7 @@ import funkin.Paths;
  * Substate for customizing Virtual Pad button positions.
  * Shows the 4 direction buttons and allows dragging them to new positions.
  */
-class VirtualPadCustomizerSubState extends MusicBeatSubState
+class VirtualPadCustomizerSubState extends MusicBeatSubstate
 {
 	static final DIR_NAMES = ['LEFT', 'DOWN', 'UP', 'RIGHT'];
 	static final DIR_COLORS = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000];
@@ -89,8 +89,8 @@ class VirtualPadCustomizerSubState extends MusicBeatSubState
 		// Handle dragging
 		if (FlxG.mouse.justPressed || _anyTouchJustPressed())
 		{
-			var mx = FlxG.mouse.x;
-			var my = FlxG.mouse.y;
+			var mx = _getPointerX();
+			var my = _getPointerY();
 			for (i in 0...dragButtons.length)
 			{
 				var btn = dragButtons[i];
@@ -107,18 +107,8 @@ class VirtualPadCustomizerSubState extends MusicBeatSubState
 
 		if (dragIdx >= 0 && (FlxG.mouse.pressed || _anyTouchPressed()))
 		{
-			var mx = FlxG.mouse.x;
-			var my = FlxG.mouse.y;
-			// Get the touch position if using touch
-			for (touch in FlxG.touches.list)
-			{
-				if (touch.pressed)
-				{
-					mx = touch.x;
-					my = touch.y;
-					break;
-				}
-			}
+			var mx = _getPointerX();
+			var my = _getPointerY();
 
 			dragButtons[dragIdx].x = mx - offsetX;
 			dragButtons[dragIdx].y = my - offsetY;
@@ -135,8 +125,8 @@ class VirtualPadCustomizerSubState extends MusicBeatSubState
 		// Button interactions
 		if (FlxG.mouse.justPressed || _anyTouchJustPressed())
 		{
-			var mx = FlxG.mouse.x;
-			var my = FlxG.mouse.y;
+			var mx = _getPointerX();
+			var my = _getPointerY();
 
 			if (_overlaps(saveBtn, mx, my))
 			{
@@ -154,6 +144,24 @@ class VirtualPadCustomizerSubState extends MusicBeatSubState
 		}
 	}
 
+	function _getPointerX():Float
+	{
+		#if mobile
+		if (MobileNavUtil.allowPointerNav() && FlxG.touches.list.length > 0)
+			return FlxG.touches.list[0].x;
+		#end
+		return FlxG.mouse.x;
+	}
+	
+	function _getPointerY():Float
+	{
+		#if mobile
+		if (MobileNavUtil.allowPointerNav() && FlxG.touches.list.length > 0)
+			return FlxG.touches.list[0].y;
+		#end
+		return FlxG.mouse.y;
+	}
+	
 	function _anyTouchJustPressed():Bool
 	{
 		for (touch in FlxG.touches.list)
