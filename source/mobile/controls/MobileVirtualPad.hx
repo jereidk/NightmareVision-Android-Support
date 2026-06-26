@@ -262,9 +262,6 @@ class MobileVirtualPad extends TouchInputManager
 		buttonDown = add(createButton(screenW - safeRight - 140, baseY - 140, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 	}
 	
-	private function createButton
-		refreshMappedButtons();
-	}
 	
 	private function createButton(X:Float, Y:Float, Graphic:String, Color:Int, IDs:Array<FlxMobileInputID>):FlxButton
 	{
