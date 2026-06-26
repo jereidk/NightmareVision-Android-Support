@@ -1,5 +1,6 @@
 package funkin.states;
 
+import mobile.utils.MobileNavUtil;
 import flixel.FlxG;
 import flixel.FlxSprite;
 
@@ -100,7 +101,7 @@ class AwardsState extends AmongUIState
 		turboGroup.add(controlLEFT);
 		turboGroup.add(controlRIGHT);
 		
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		backButton.setPosition(15, 15);
 		add(backButton).revive();
@@ -299,9 +300,12 @@ class AwardsState extends AmongUIState
 	{
 		refreshPlayTimeText();
 		
+		if (ClientPrefs.navInputMode == 'Touch')
+		{
 		if (FlxG.mouse.justMoved)
 		{
 			mouseControlActive = true;
+		}  // navInputMode == Touch
 		}
 		
 		if (controlUP.PRESSED || controlDOWN.PRESSED || controlLEFT.PRESSED || controlRIGHT.PRESSED || controls.BACK)

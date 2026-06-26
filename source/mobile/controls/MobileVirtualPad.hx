@@ -187,6 +187,82 @@ class MobileVirtualPad extends TouchInputManager
 		}
 		
 		scrollFactor.set();
+		// CUSTOM / RightFull layouts: override positions if configured
+		if (forGameplay)
+		{
+			if (ClientPrefs.virtualPadLayout == 'Custom')
+				_loadCustomPositions();
+			else if (ClientPrefs.virtualPadLayout == 'RightFull')
+				_rightSideLayout();
+		}
+		
+		refreshMappedButtons();
+	}
+	
+	/**
+	 * Load custom button positions from ClientPrefs.
+	 */
+	function _loadCustomPositions():Void
+	{
+		var dirs = ['left', 'down', 'up', 'right'];
+		var colors = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000];
+		var ids = [
+			[LEFT, noteLEFT],
+			[DOWN, noteDOWN],
+			[UP, noteUP],
+			[RIGHT, noteRIGHT]
+		];
+		
+		for (i in 0...4)
+		{
+			var pos = ClientPrefs.customPadPositions[i];
+			if (pos[0] < 0 || pos[1] < 0)
+			{
+				pos = _defaultPosition(i);
+				ClientPrefs.customPadPositions[i] = pos;
+			}
+
+			var btn = createButton(pos[0], pos[1], dirs[i], colors[i], ids[i]);
+			switch (i)
+			{
+				case 0: buttonLeft = add(btn);
+				case 1: buttonDown = add(btn);
+				case 2: buttonUp = add(btn);
+				case 3: buttonRight = add(btn);
+			}
+		}
+	}
+	
+	function _defaultPosition(i:Int):Array<Float>
+	{
+		var safe = ScreenUtil.safeArea();
+		var safeLeft = Std.int(safe.left);
+		var baseY = FlxG.height - Std.int(safe.bottom);
+		
+		return switch (i)
+		{
+			case 0: [safeLeft + 20, baseY - 220]; // LEFT
+			case 1: [safeLeft + 140, baseY - 140]; // DOWN
+			case 2: [safeLeft + 140, baseY - 300]; // UP
+			case 3: [safeLeft + 260, baseY - 220]; // RIGHT
+			default: [0, 0];
+		};
+	}
+	
+	function _rightSideLayout():Void
+	{
+		var screenW = FlxG.width;
+		var safe = ScreenUtil.safeArea();
+		var safeRight = Std.int(safe.right);
+		var baseY = FlxG.height - Std.int(safe.bottom);
+		
+		buttonUp = add(createButton(screenW - safeRight - 260, baseY - 300, 'up', 0x00FF00, [UP, noteUP]));
+		buttonLeft = add(createButton(screenW - safeRight - 20, baseY - 220, 'left', 0xFF00FF, [LEFT, noteLEFT]));
+		buttonRight = add(createButton(screenW - safeRight - 140, baseY - 220, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
+		buttonDown = add(createButton(screenW - safeRight - 140, baseY - 140, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+	}
+	
+	private function createButton
 		refreshMappedButtons();
 	}
 	

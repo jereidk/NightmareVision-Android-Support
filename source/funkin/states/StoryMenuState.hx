@@ -59,7 +59,7 @@ class StoryMenuState extends AmongUIState
 		DiscordClient.changePresence("Story Menu");
 		
 		PlayState.missLimit = false;
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		persistentUpdate = true;
 		
@@ -297,13 +297,16 @@ class StoryMenuState extends AmongUIState
 			}
 			#end
 
-			if (FlxG.mouse.justPressed)
+			if (MobileNavUtil.allowPointerNav())
 			{
-				wasPressingCruiser = FlxG.mouse.overlaps(cruiser);
-			}
-			else if (FlxG.mouse.justReleased && wasPressingCruiser && FlxG.mouse.overlaps(cruiser))
-			{
-				accept();
+				if (FlxG.mouse.justPressed)
+				{
+					wasPressingCruiser = FlxG.mouse.overlaps(cruiser);
+				}
+				else if (FlxG.mouse.justReleased && wasPressingCruiser && FlxG.mouse.overlaps(cruiser))
+				{
+					accept();
+				}
 			}
 			
 			var wDeadzone:Float = Math.min((800 - (FlxG.width + 800) * (1 - FlxG.camera.zoom)), (FlxG.camera.width - cruiser.width) * .5);

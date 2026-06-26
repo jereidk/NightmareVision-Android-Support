@@ -171,6 +171,8 @@ class ClientPrefs
 
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
+	@saveVar public static var virtualPadLayout:String = 'LeftFull';
+	@saveVar public static var customPadPositions:Array<Array<Float>> = [[-1,-1],[-1,-1],[-1,-1],[-1,-1]];
 
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive

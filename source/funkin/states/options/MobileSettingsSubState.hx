@@ -226,6 +226,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			final opt = _opts[_sel];
 			if (opt != null && opt.kind == 'bool') _changeSelected(1);
+			else if (opt != null && opt.kind == 'customize' && opt.id == 'vpadCustomize')
+				openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
 		}
 	}
 
@@ -326,6 +328,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_rebuildPreview();
 		}
+		else if (opt.id == 'vpadLayout')
+		{
+			_rebuildOptions();
+		}
+		else if (opt.id == 'vpadCustomize')
+		{
+			openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
+		}
 
 		_updateRows();
 	}
@@ -338,6 +348,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'nav':    ClientPrefs.navInputMode;
 			case 'game':   ClientPrefs.gameInputMode;
 			case 'layout': ClientPrefs.hitboxLayout;
+			case 'vpadLayout': ClientPrefs.virtualPadLayout;
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
 			default: '';
 		};
@@ -348,6 +359,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'nav':    ClientPrefs.navInputMode = v;
 			case 'game':   ClientPrefs.gameInputMode = v;
 			case 'layout': ClientPrefs.hitboxLayout = v;
+			case 'vpadLayout': ClientPrefs.virtualPadLayout = v;
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
@@ -422,6 +434,23 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				label: Lang.str('opt_padopacity', 'Pad Opacity'),
 				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.')
 			});
+
+		_opts.push({
+			id: 'vpadLayout', kind: 'string',
+			label: Lang.str('opt_vpadlayout', 'Pad Layout'),
+			desc:  Lang.str('opt_vpadlayout_desc', 'Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.'),
+			choices: [Lang.str('choice_vpad_leftfull', 'Left Side'), Lang.str('choice_vpad_rightfull', 'Right Side'), Lang.str('choice_vpad_custom', 'Custom')],
+			stored:  ['LeftFull', 'RightFull', 'Custom']
+		});
+
+		if (ClientPrefs.virtualPadLayout == 'Custom')
+		{
+			_opts.push({
+				id: 'vpadCustomize', kind: 'customize',
+				label: Lang.str('opt_vpadcustomize', 'Customize Pad'),
+				desc:  Lang.str('opt_vpadcustomize_desc', 'Open the pad customizer to drag buttons to new positions.')
+			});
+		}
 		}
 
 		#if mobile

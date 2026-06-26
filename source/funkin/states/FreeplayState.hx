@@ -1,6 +1,7 @@
 package funkin.states;
 
 import funkin.input.TurboControl;
+import mobile.utils.MobileNavUtil;
 
 import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
@@ -179,7 +180,7 @@ class FreeplayState extends AmongUIState
 		PlayState.missLimit = false;
 		
 		persistentUpdate = true;
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		initStateScript(); // unnecessary
 		
@@ -597,7 +598,7 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 				openSubState(new CosmeticsSubstate());
 			}
-			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
+			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
@@ -631,7 +632,7 @@ class FreeplayState extends AmongUIState
 			
 			for (c in circles)
 			{
-				if (FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
+				if (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
 				{
 					goToSection(c.ID);
 					
@@ -649,7 +650,7 @@ class FreeplayState extends AmongUIState
 		{
 			moveCard(c, smoothSelect);
 			
-			if (FlxG.mouse.y >= (upperBar.y + upperBar.height) && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed && !lockMovement && cutscenePhase == NONE)
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.y >= (upperBar.y + upperBar.height) && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed && !lockMovement && cutscenePhase == NONE)
 			{
 				if (curSelect != c.ID)
 				{

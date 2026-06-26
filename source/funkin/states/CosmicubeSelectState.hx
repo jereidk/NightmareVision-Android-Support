@@ -119,7 +119,7 @@ class CosmicubeSelectState extends AmongUIState
 		
 		final lerp:Float = Math.exp(-elapsed * 3);
 		
-		if (!lockMovement && FlxG.mouse.justPressed)
+		if (MobileNavUtil.allowPointerNav() && !lockMovement && FlxG.mouse.justPressed)
 		{
 			for (i => card in cards.members)
 			{
