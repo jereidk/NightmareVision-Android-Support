@@ -13,7 +13,7 @@ using StringTools;
 /**
  * Manages global scripts that persist across all states.
  *
- * Global scripts are loaded from `assets/scripts/global/` at startup and
+ * Global scripts are loaded from external storage `scripts/` (or APK assets at startup) and
  * survive state transitions — unlike per-state scripts which are destroyed
  * when the state changes.
  *
@@ -76,9 +76,9 @@ class GlobalScriptManager
 		#if sys
 		var checkedDirs = new haxe.ds.StringMap();
 
-		// Check external storage first (mobile only) — overrides APK versions
+		// Check external storage first (mobile only) — 'scripts/' overrides APK versions
 		#if mobile
-		var extDir = Path.addTrailingSlash(StorageSystem.getDirectory()) + 'assets/scripts/global/';
+		var extDir = Path.addTrailingSlash(StorageSystem.getDirectory()) + 'scripts/';
 		if (checkedDirs.get(extDir) == null)
 		{
 			checkedDirs.set(extDir, true);
