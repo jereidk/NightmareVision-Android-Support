@@ -93,7 +93,7 @@ class GlobalScriptManager
 			checkedDirs.set(globalDir, true);
 			_loadScriptsFrom(globalDir);
 		}
-		#endif
+		#end
 	}
 
 	/**
