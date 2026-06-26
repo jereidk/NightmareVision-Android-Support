@@ -194,6 +194,44 @@ class FunkinCache
 		return sound;
 	}
 	
+	/**
+	 * Clears assets matching a specific path prefix.
+	 * Useful for selective memory cleanup (e.g., freeplay songs, specific stages).
+	 * 
+	 * @param categoryPrefix Path prefix to match, e.g., "freeplay/" or "songs/week"
+	 * @param clearFromPermanent Whether to also remove from permanent cache (default: false)
+	 */
+	public function clearCategoryAssets(categoryPrefix:String, clearFromPermanent:Bool = false):Int
+	{
+		var clearedCount = 0;
+		
+		// Clear graphics
+		for (key in currentTrackedGraphics.keys())
+		{
+			if (key.contains(categoryPrefix))
+			{
+				if (!clearFromPermanent && currentTrackedGraphics.permanentKeys.contains(key))
+					continue;
+				removeFromCache(key);
+				clearedCount++;
+			}
+		}
+		
+		// Clear sounds
+		for (key in currentTrackedSounds.keys())
+		{
+			if (key.contains(categoryPrefix))
+			{
+				if (!clearFromPermanent && currentTrackedSounds.permanentKeys.contains(key))
+					continue;
+				removeFromCache(key);
+				clearedCount++;
+			}
+		}
+		
+		return clearedCount;
+	}
+	
 	public function toString():String
 	{
 		final bmpCache = [for (key in currentTrackedGraphics.keys()) key];

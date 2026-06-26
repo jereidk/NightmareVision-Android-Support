@@ -13,6 +13,10 @@ import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
 import flixel.FlxG;
 
+#if (android && cpp)
+import external.Native;
+#end
+
 /**
  * System Monitor - Captures and logs system/resource information
  * 
@@ -276,9 +280,9 @@ class SystemMonitor
 
 	static function getTotalRAM():String
 	{
-		#if (android)
+		#if (android && cpp)
 		try {
-			return 'N/A'; // Memory APIs not available
+			return 'N/A'; // Android doesn't expose total RAM easily
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
 		#end
 		return '?';
@@ -286,10 +290,13 @@ class SystemMonitor
 
 	static function getFreeRAM():String
 	{
-		#if (android)
+		#if (android && cpp)
 		try {
-			return 'N/A'; // Memory APIs not available
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get free RAM: $e', WARN); }
+			var bytes = Native.getTaskMemory();
+			if (bytes > 0) {
+				return Std.int(bytes / 1024 / 1024) + ' MB';
+			}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get task memory: $e', WARN); }
 		#end
 		return '?';
 	}
@@ -317,12 +324,32 @@ class SystemMonitor
 	// ==================== FLIXEL HELPERS ====================
 
 	#if flixel
-	static function getBitmapCacheCount():String return 'N/A';
+	static function getBitmapCacheCount():String
+	{
+		try {
+			var count = 0;
+			@:privateAccess
+			for (key in FlxG.bitmap._cache.keys()) {
+				count++;
+			}
+			return Std.string(count);
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get bitmap cache count: $e', WARN); }
+		return '?';
+	}
 
 	static function getEstimatedGPUMemory():String
 	{
 		try {
-			return 'N/A'; // GPU memory API not available
+			var count = 0;
+			@:privateAccess
+			for (key in FlxG.bitmap._cache.keys()) {
+				var graphic = FlxG.bitmap.get(key);
+				if (graphic != null && graphic.bitmap != null) {
+					count++;
+				}
+			}
+			// Rough estimate: ~0.5MB per texture on average
+			return Std.string(count * 0.5) + ' MB (est.)';
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to estimate GPU memory: $e', WARN); }
 		return '0 MB';
 	}
