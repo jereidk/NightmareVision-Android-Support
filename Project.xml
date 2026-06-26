@@ -28,7 +28,7 @@
     <set name="BUILD_DIR" value="${BUILD_DIR}-tracy" if="FEATURE_DEBUG_TRACY"/>
 
     <assets path='assets/embeds' rename='assets' embed="false" />
-    <assets path="assets/legacy" rename="assets"/>
+    <assets path="assets/legacy" rename="assets" embed="false" />
 
     <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
     <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
