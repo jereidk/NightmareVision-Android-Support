@@ -76,6 +76,7 @@ class MobileDLCSubState extends MusicBeatSubstate
     var _lastTaskState:DLCTaskState = DLCTaskState.IDLE;
     var _items:Array<DLCListItem>   = [];
     var _pendingUninstallId:Null<String> = null;
+	var _pendingReinstallId:Null<String> = null;
     var _successTimer:Float = 0.0;
     var _scrollUpHint:FlxText;
     var _scrollDownHint:FlxText;
@@ -231,7 +232,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         var ts = DLCManager.taskState;
         if (ts != _lastTaskState) {
             _lastTaskState = ts;
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             if (ts == DLCTaskState.SUCCESS || ts == DLCTaskState.FAILED) {
                 _blockInput = false;
                 _refreshInstalled();
@@ -275,7 +276,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         if (len == 0) return;
 
         if (controls.UI_UP_P) {
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             _sel = (_sel <= 0) ? len - 1 : _sel - 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -283,7 +284,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (controls.UI_DOWN_P) {
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             _sel = (_sel >= len - 1) ? 0 : _sel + 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -291,7 +292,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (controls.UI_LEFT_P || controls.UI_RIGHT_P) {
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             _tab   = (_tab == TAB_INSTALLED) ? TAB_BROWSE : TAB_INSTALLED;
             _sel    = 0;
             _scroll = 0;
@@ -321,7 +322,7 @@ class MobileDLCSubState extends MusicBeatSubstate
         // Tabs
         for (i in 0..._tabLabels.length) {
             if (i != _tab && FlxG.mouse.overlaps(_tabLabels[i])) {
-                _pendingUninstallId = null;
+                _pendingUninstallId = null; _pendingReinstallId = null;
                 _tab    = i;
                 _sel    = 0;
                 _scroll = 0;
@@ -338,7 +339,7 @@ class MobileDLCSubState extends MusicBeatSubstate
 
         // Scroll hints
         if (_scrollUpHint.visible && FlxG.mouse.overlaps(_scrollUpHint)) {
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             _sel = (_sel <= 0) ? len - 1 : _sel - 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -346,7 +347,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             return;
         }
         if (_scrollDownHint.visible && FlxG.mouse.overlaps(_scrollDownHint)) {
-            _pendingUninstallId = null;
+            _pendingUninstallId = null; _pendingReinstallId = null;
             _sel = (_sel >= len - 1) ? 0 : _sel + 1;
             _clampScroll();
             FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -364,7 +365,7 @@ class MobileDLCSubState extends MusicBeatSubstate
             var rowY = LIST_Y0 + i * ITEM_H;
             if (my >= rowY && my < rowY + ITEM_H) {
                 if (realIdx != _sel) {
-                    _pendingUninstallId = null;
+                    _pendingUninstallId = null; _pendingReinstallId = null;
                     _sel = realIdx;
                     _clampScroll();
                     FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -402,28 +403,61 @@ class MobileDLCSubState extends MusicBeatSubstate
         }
 
         if (item.installed) {
-            if (_pendingUninstallId == item.id) {
-                // Second press confirms — actually uninstall
-                _pendingUninstallId = null;
-                var ok = DLCManager.uninstallDLC(item.id);
-                FunkinSound.play(Paths.sound('cancelMenu'));
-                _refreshInstalled();
-                _rebuildItems();
-                _updateRows();
-                if (ok) {
-                    _uninstallMsg      = item.label + " removed.";
-                    _uninstallMsgOk    = true;
-                    _uninstallMsgTimer = 4.0;
+            if (_tab == TAB_BROWSE) {
+                // Reinstall flow in Browse tab
+                if (_pendingReinstallId == item.id) {
+                    _pendingReinstallId = null; _pendingUninstallId = null;
+                    // Uninstall first
+                    DLCManager.uninstallDLC(item.id);
+                    _refreshInstalled();
+                    // Then download & install
+                    var entry:Null<DLCEntry> = null;
+                    for (e in DLCManager.registryData.dlcs)
+                        if (e.id == item.id) { entry = e; break; }
+                    if (entry != null) {
+                        _uninstallMsg      = "Reinstalling " + item.label + "...";
+                        _uninstallMsgOk    = true;
+                        _uninstallMsgTimer = 0.0;
+                        DLCManager.downloadAndInstallAsync(entry);
+                        _blockInput = true;
+                        FunkinSound.play(Paths.sound('confirmMenu'));
+                        _updateRows();
+                    } else {
+                        _uninstallMsg      = "Could not find DLC entry in registry.";
+                        _uninstallMsgOk    = false;
+                        _uninstallMsgTimer = 5.0;
+                        _rebuildItems();
+                        _updateRows();
+                    }
                 } else {
-                    _uninstallMsg      = "Could not remove DLC. Check storage permissions.";
-                    _uninstallMsgOk    = false;
-                    _uninstallMsgTimer = 5.0;
+                    _pendingReinstallId = item.id; _pendingUninstallId = null;
+                    FunkinSound.play(Paths.sound('scrollMenu'));
+                    _updateRows();
                 }
             } else {
-                // First press — request confirmation
-                _pendingUninstallId = item.id;
-                FunkinSound.play(Paths.sound('scrollMenu'));
-                _updateRows();
+                if (_pendingUninstallId == item.id) {
+                    // Second press confirms — actually uninstall
+                    _pendingUninstallId = null; _pendingReinstallId = null;
+                    var ok = DLCManager.uninstallDLC(item.id);
+                    FunkinSound.play(Paths.sound('cancelMenu'));
+                    _refreshInstalled();
+                    _rebuildItems();
+                    _updateRows();
+                    if (ok) {
+                        _uninstallMsg      = item.label + " removed.";
+                        _uninstallMsgOk    = true;
+                        _uninstallMsgTimer = 4.0;
+                    } else {
+                        _uninstallMsg      = "Could not remove DLC. Check storage permissions.";
+                        _uninstallMsgOk    = false;
+                        _uninstallMsgTimer = 5.0;
+                    }
+                } else {
+                    // First press — request confirmation
+                    _pendingUninstallId = item.id; _pendingReinstallId = null;
+                    FunkinSound.play(Paths.sound('scrollMenu'));
+                    _updateRows();
+                }
             }
         } else if (item.downloadable && DLCManager.registryData != null) {
             var entry:Null<DLCEntry> = null;
@@ -577,12 +611,22 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _actionTexts[i].text  = "[Open file picker]";
                 _actionTexts[i].color = FlxColor.fromRGB(200, 200, 100);
             } else if (item.installed) {
-                if (_pendingUninstallId == item.id) {
-                    _actionTexts[i].text  = "[Confirm uninstall!]";
-                    _actionTexts[i].color = FlxColor.RED;
+                if (_tab == TAB_BROWSE) {
+                    if (_pendingReinstallId == item.id) {
+                        _actionTexts[i].text  = "[Confirm reinstall?]";
+                        _actionTexts[i].color = FlxColor.fromRGB(255, 180, 0);
+                    } else {
+                        _actionTexts[i].text  = "[Reinstall]";
+                        _actionTexts[i].color = FlxColor.fromRGB(255, 200, 100);
+                    }
                 } else {
-                    _actionTexts[i].text  = "[Uninstall]";
-                    _actionTexts[i].color = FlxColor.fromRGB(255, 110, 110);
+                    if (_pendingUninstallId == item.id) {
+                        _actionTexts[i].text  = "[Confirm uninstall!]";
+                        _actionTexts[i].color = FlxColor.RED;
+                    } else {
+                        _actionTexts[i].text  = "[Uninstall]";
+                        _actionTexts[i].color = FlxColor.fromRGB(255, 110, 110);
+                    }
                 }
             } else if (item.downloadable) {
                 _actionTexts[i].text  = "[Download]";
