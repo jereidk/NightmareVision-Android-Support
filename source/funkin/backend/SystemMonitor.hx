@@ -185,7 +185,7 @@ class SystemMonitor
 			// Context3D info
 			var context = openfl.display3D.Context3D.current;
 			if (context != null) {
-				lines.push('  Context: Active');
+				_write('  Context: Active');
 				#if (openfl_v22_up)
 				// More GPU info if available
 				#end

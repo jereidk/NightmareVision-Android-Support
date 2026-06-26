@@ -299,6 +299,9 @@ class Paths
 		
 		var frames = getAtlasFrames(firstKey, parentFolder, allowGPU, checkMods);
 		
+		// If first atlas failed, nothing to combine - return null early
+		if (frames == null) return null;
+		
 		if (keys.length != 0)
 		{
 			final originalCollection = frames;

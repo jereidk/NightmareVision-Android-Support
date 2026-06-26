@@ -178,7 +178,8 @@ class FunkinCache
 		newGraphic.persist = true;
 		newGraphic.destroyOnNoUse = false;
 		
-		localTrackedAssets.push(key);
+		// Prevent duplicates in localTrackedAssets
+		if (!Lambda.has(localTrackedAssets, key)) localTrackedAssets.push(key);
 		currentTrackedGraphics.set(key, newGraphic);
 		return newGraphic;
 	}
@@ -187,7 +188,8 @@ class FunkinCache
 	{
 		currentTrackedSounds.set(key, sound);
 		
-		localTrackedAssets.push(key);
+		// Prevent duplicates in localTrackedAssets
+		if (!Lambda.has(localTrackedAssets, key)) localTrackedAssets.push(key);
 		
 		return sound;
 	}
