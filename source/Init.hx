@@ -147,6 +147,7 @@ class Init extends FlxState
 		#if MODS_ALLOWED
 		funkin.Mods.pushGlobalMods();
 		funkin.Mods.loadTopMod();
+		funkin.FunkinAssets.invalidateAssetListCache(); // Refresh asset list after loading mods
 		#end
 		
 		// set some flixel settings

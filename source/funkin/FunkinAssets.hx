@@ -45,6 +45,17 @@ class FunkinAssets
 		}
 		return cached;
 	}
+
+	/**
+	 * Invalidates the cached asset list.
+	 * Call this after loading mods, installing DLC, or any operation
+	 * that may change the available assets on disk.
+	 */
+	public static function invalidateAssetListCache():Void
+	{
+		_assetListAllCache = null;
+		_assetListTypeCache = new haxe.ds.StringMap();
+	}
 	
 	/**
 	 * Safer alternative to directly using `haxe.Json.parse`
