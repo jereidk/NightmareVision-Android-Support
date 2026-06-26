@@ -2,7 +2,11 @@ package funkin.scripts;
 
 import flixel.FlxG;
 import flixel.util.FlxDestroyUtil;
+import haxe.io.Path;
 import funkin.backend.Logger;
+#if mobile
+import mobile.backend.StorageSystem;
+#end
 
 using StringTools;
 
@@ -70,10 +74,36 @@ class GlobalScriptManager
 	function _loadScripts():Void
 	{
 		#if sys
-		var globalDir = Paths.getCorePath('scripts/global/');
-		if (sys.FileSystem.exists(globalDir))
+		var checkedDirs = new haxe.ds.StringMap();
+
+		// Check external storage first (mobile only) — overrides APK versions
+		#if mobile
+		var extDir = Path.addTrailingSlash(StorageSystem.getDirectory()) + 'assets/scripts/global/';
+		if (checkedDirs.get(extDir) == null)
 		{
-			var files = sys.FileSystem.readDirectory(globalDir);
+			checkedDirs.set(extDir, true);
+			_loadScriptsFrom(extDir);
+		}
+		#end
+
+		// Check virtual assets path (APK) — lower priority
+		var globalDir = Paths.getCorePath('scripts/global/');
+		if (checkedDirs.get(globalDir) == null)
+		{
+			checkedDirs.set(globalDir, true);
+			_loadScriptsFrom(globalDir);
+		}
+		#endif
+	}
+
+	/**
+	 * Loads all `.hx` scripts from a given directory path.
+	 */
+	function _loadScriptsFrom(dirPath:String):Void
+	{
+		if (sys.FileSystem.exists(dirPath))
+		{
+			var files = sys.FileSystem.readDirectory(dirPath);
 			var loaded = 0;
 			for (file in files)
 			{
