@@ -9,8 +9,12 @@ import flixel.util.FlxTimer;
 
 import funkin.backend.MusicBeatSubstate;
 import funkin.states.PlayState;
+import funkin.states.StoryMenuState;
+import funkin.states.FreeplayState;
 import funkin.objects.Character;
 import funkin.objects.menu.AmongControls;
+import mobile.utils.MobileNavUtil;
+import flixel.input.touch.FlxTouch;
 
 /**
  * The substate that goes over the game whenever the player dies.
@@ -162,8 +166,9 @@ class GameOverSubstate extends MusicBeatSubstate
 			if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC) endBullshit();
 		}
 		
-		if (controls.BACK)
+		if (controls.BACK || _backTouchTriggered)
 		{
+			_backTouchTriggered = false;
 			if (PlayState.instance?.scripts.call('onGameOverCancel', []) != ScriptConstants.STOP_FUNC)
 			{
 				FlxG.sound.music.stop();
@@ -177,6 +182,20 @@ class GameOverSubstate extends MusicBeatSubstate
 			}
 		}
 		
+		#if mobile
+		// Touch zone support for Touch navigation mode
+		if (MobileNavUtil.allowPointerNav())
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					_handleTouch(touch);
+				}
+			}
+		}
+		#end
+
 		if (boyfriend.getAnimName() == 'firstDeath' && boyfriend.isAnimFinished() && startedDeath)
 		{
 			boyfriend.playAnim('deathLoop');
@@ -234,9 +253,35 @@ class GameOverSubstate extends MusicBeatSubstate
 		// PlayState.instance?.scripts.call('onGameOverConfirm', [true]); Commented bc i don't get the point of this call also makes things fucky
 	}
 	
+	#if mobile
+	var _backTouchTriggered:Bool = false;
+	
+	function _handleTouch(touch:FlxTouch):Void
+	{
+		// Left zone (< 33% width) -> BACK (return to menu)
+		// Right zone (> 33% width) -> ACCEPT (restart song)
+		if (touch.x < FlxG.width * 0.33)
+		{
+			_backTouchTriggered = true;
+		}
+		else
+		{
+			_backTouchTriggered = false;
+			if (!isEnding)
+			{
+				if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC)
+					endBullshit();
+			}
+		}
+	}
+	#end
+	
 	override function destroy()
 	{
 		instance = null;
+		#if mobile
+		_backTouchTriggered = false;
+		#end
 		super.destroy();
 	}
 }
