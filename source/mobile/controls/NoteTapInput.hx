@@ -34,7 +34,7 @@ class NoteTapInput extends FlxBasic
 	var _laneReleaseTimestamps:Array<Float>  = [0.0, 0.0, 0.0, 0.0];
 
 	/** Extra hit padding around each note sprite (px, in game-logical space). */
-	static inline final HIT_PAD:Float = 22;
+	static inline final HIT_PAD:Float = 45;
 
 	public function new(notes:FlxTypedGroup<Note>):Void
 	{

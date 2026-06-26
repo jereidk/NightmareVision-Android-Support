@@ -185,6 +185,10 @@ class MusicBeatState extends FlxUIState
 		
 		if (callOnLoad) scriptGroup.call('onLoad', []);
 		
+		// Notify global scripts about the new state
+		if (GlobalScriptManager.instance != null)
+			GlobalScriptManager.instance.onStateCreate(this);
+		
 		return scripted;
 	}
 	
@@ -324,6 +328,8 @@ class MusicBeatState extends FlxUIState
 		
 		final scriptArgs = [elapsed];
 		scriptGroup.call('onUpdate', scriptArgs);
+		if (GlobalScriptManager.instance != null)
+			GlobalScriptManager.instance.onUpdate(elapsed);
 		PluginsManager.callOnScripts('onUpdate', scriptArgs);
 		super.update(elapsed);
 	}

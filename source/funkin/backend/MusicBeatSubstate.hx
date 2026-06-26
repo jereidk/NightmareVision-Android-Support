@@ -160,6 +160,9 @@ class MusicBeatSubstate extends FlxSubState
 		
 		if (callOnLoad) scriptGroup.call('onLoad', []);
 		
+		if (GlobalScriptManager.instance != null)
+			GlobalScriptManager.instance.onStateCreate(this);
+		
 		return scripted;
 	}
 	

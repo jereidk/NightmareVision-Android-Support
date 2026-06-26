@@ -11,6 +11,7 @@ import flixel.FlxGame;
 import flixel.input.keyboard.FlxKey;
 
 import funkin.backend.DebugDisplay;
+import funkin.scripts.GlobalScriptManager;
 
 @:nullSafety(Strict)
 class Main extends Sprite
@@ -78,6 +79,7 @@ class Main extends Sprite
 		#end
 		
 		DebugDisplay.init();
+		GlobalScriptManager.init();
 		#if mobile
 		mobile.backend.MobileDebugPlugin.register();
 		#end
