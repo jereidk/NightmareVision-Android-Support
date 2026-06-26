@@ -124,7 +124,6 @@ class SystemMonitor
 		lines.push('[MEMORY]');
 		lines.push('  Total RAM: ' + getTotalRAM() + ' MB');
 		lines.push('  Free RAM: ' + getFreeRAM() + ' MB');
-		lines.push('  Used RAM: ~' + (getTotalRAM() - getFreeRAM()) + ' MB');
 
 		#if (openfl_v22_up)
 		try {
