@@ -99,6 +99,7 @@ class GlobalScriptManager
 	/**
 	 * Loads all `.hx` scripts from a given directory path.
 	 */
+	#if sys
 	function _loadScriptsFrom(dirPath:String):Void
 	{
 		if (sys.FileSystem.exists(dirPath))
@@ -125,8 +126,8 @@ class GlobalScriptManager
 			}
 			Logger.log('[GlobalScriptManager] Loaded $loaded global scripts', NOTICE);
 		}
-		#end
 	}
+	#end
 
 	/**
 	 * Updates the parent reference so global scripts always access
