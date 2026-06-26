@@ -110,7 +110,7 @@ class GlobalScriptManager
 			{
 				if (!file.endsWith('.hx')) continue;
 
-				var fullPath = '$globalDir$file';
+				var fullPath = '$dirPath$file';
 				var scriptName = 'global_' + file.substr(0, file.length - 3);
 
 				if (scriptGroup.exists(scriptName)) continue;
