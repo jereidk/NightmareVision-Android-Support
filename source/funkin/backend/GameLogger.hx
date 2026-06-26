@@ -8,6 +8,8 @@ import sys.io.File;
 /**
  * Persistent rolling log file. Android-only: writes every Logger and trace()
  * call to game.log in external storage (same folder as crash.log).
+ * 
+ * Only active when ClientPrefs.inDevMode is true (developer mode enabled).
  *
  * Rotation: when game.log exceeds MAX_BYTES, it is renamed to game.log.old
  * (overwriting the previous .old) and a fresh game.log is started.
@@ -25,10 +27,14 @@ class GameLogger
 	/**
 	 * Must be called once, as early as possible in Init.create().
 	 * Opens (or rotates) game.log and installs the haxe.Log.trace interceptor.
+	 * Only activates if ClientPrefs.inDevMode is true.
 	 */
 	public static function init():Void
 	{
 		#if android
+		// Only enable logging in developer mode
+		if (ClientPrefs == null || !ClientPrefs.inDevMode) return;
+		
 		final dir:String = mobile.backend.StorageSystem.getDirectory();
 		logPath = dir + 'game.log';
 		oldPath = dir + 'game.log.old';
@@ -83,6 +89,7 @@ class GameLogger
 	static function _write(line:String):Void
 	{
 		#if android
+		if (logPath.length == 0) return; // Not initialized or dev mode disabled
 		try
 		{
 			final out = File.append(logPath, false);

@@ -27,6 +27,7 @@ import external.Native;
  * - FPS tracking
  * - Asset loading snapshots
  * 
+ * Only active when ClientPrefs.inDevMode is true.
  * Useful for debugging memory leaks and performance issues on Android.
  */
 class SystemMonitor
@@ -49,10 +50,17 @@ class SystemMonitor
 
 	/**
 	 * Initialize system monitoring
+	 * Only activates if ClientPrefs.inDevMode is true.
 	 */
 	public static function init():Void
 	{
 		#if (android && sys)
+		// Only enable monitoring in developer mode
+		if (ClientPrefs == null || !ClientPrefs.inDevMode) {
+			enabled = false;
+			return;
+		}
+		
 		try {
 			var dir:String = mobile.backend.StorageSystem.getDirectory();
 			logPath = dir + 'sysmon.log';
