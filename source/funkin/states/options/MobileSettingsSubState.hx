@@ -496,8 +496,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			remove(z.spr, true);
 			z.spr.destroy();
-			remove(z.label, true);
-			z.label.destroy();
+			if (z.label != null)
+			{
+				remove(z.label, true);
+				z.label.destroy();
+			}
 		}
 		_zones.resize(0);
 	}
