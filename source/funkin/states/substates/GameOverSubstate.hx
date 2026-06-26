@@ -9,8 +9,6 @@ import flixel.util.FlxTimer;
 
 import funkin.backend.MusicBeatSubstate;
 import funkin.states.PlayState;
-import funkin.states.StoryMenuState;
-import funkin.states.FreeplayState;
 import funkin.objects.Character;
 import funkin.objects.menu.AmongControls;
 import mobile.utils.MobileNavUtil;
@@ -166,9 +164,8 @@ class GameOverSubstate extends MusicBeatSubstate
 			if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC) endBullshit();
 		}
 		
-		if (controls.BACK || _backTouchTriggered)
+		if (controls.BACK)
 		{
-			_backTouchTriggered = false;
 			if (PlayState.instance?.scripts.call('onGameOverCancel', []) != ScriptConstants.STOP_FUNC)
 			{
 				FlxG.sound.music.stop();
@@ -183,7 +180,7 @@ class GameOverSubstate extends MusicBeatSubstate
 		}
 		
 		#if mobile
-		// Touch zone support for Touch navigation mode
+		// Tap boyfriend during deathLoop to restart (Touch mode)
 		if (MobileNavUtil.allowPointerNav())
 		{
 			for (touch in FlxG.touches.list)
@@ -223,6 +220,21 @@ class GameOverSubstate extends MusicBeatSubstate
 		PlayState.instance?.scripts.call('onUpdatePost', [elapsed]);
 	}
 	
+	#if mobile
+	function _handleTouch(touch:FlxTouch):Void
+	{
+		// Only accept during deathLoop animation
+		if (boyfriend != null && boyfriend.getAnimName() == "deathLoop")
+		{
+			if (touch.overlaps(boyfriend) && !isEnding)
+			{
+				if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC)
+					endBullshit();
+			}
+		}
+	}
+	#end
+
 	/**
 	 *	Triggers the game over music after the intro.
 	 * @param volume 
@@ -253,35 +265,9 @@ class GameOverSubstate extends MusicBeatSubstate
 		// PlayState.instance?.scripts.call('onGameOverConfirm', [true]); Commented bc i don't get the point of this call also makes things fucky
 	}
 	
-	#if mobile
-	var _backTouchTriggered:Bool = false;
-	
-	function _handleTouch(touch:FlxTouch):Void
-	{
-		// Left zone (< 33% width) -> BACK (return to menu)
-		// Right zone (> 33% width) -> ACCEPT (restart song)
-		if (touch.x < FlxG.width * 0.33)
-		{
-			_backTouchTriggered = true;
-		}
-		else
-		{
-			_backTouchTriggered = false;
-			if (!isEnding)
-			{
-				if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC)
-					endBullshit();
-			}
-		}
-	}
-	#end
-	
 	override function destroy()
 	{
 		instance = null;
-		#if mobile
-		_backTouchTriggered = false;
-		#end
 		super.destroy();
 	}
 }
