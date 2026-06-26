@@ -55,7 +55,9 @@ class Init extends FlxState
 				info += '\nLast graphics:';
 				for (g in lastGraphics) {
 					// Solo nombre del archivo, no ruta completa
-					var shortName = g.split('/').pop().split('\\').pop();
+					var shortName = g.split('/').pop();
+					if (shortName != null) shortName = shortName.split('\\').pop();
+					if (shortName == null) shortName = g;
 					if (shortName.length > 25) shortName = shortName.substr(0, 22) + '...';
 					info += '\n  - $shortName';
 				}
