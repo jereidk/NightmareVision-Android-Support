@@ -198,7 +198,7 @@ class DLCManager {
                     }
                 }
 
-                Logger.log('DLCManager: Enriched "${entry.id}" from release ${entry.releaseTag}', INFO);
+                Logger.log('DLCManager: Enriched "${entry.id}" from release ${entry.releaseTag}', NOTICE);
             } catch (e:Dynamic) {
                 Logger.log('DLCManager: Failed to fetch release ${entry.releaseTag}: $e', WARN);
             }
