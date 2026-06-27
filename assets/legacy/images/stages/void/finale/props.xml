@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<TextureAtlas imagePath="props.png" width="4096" height="3619">
-	<SubTexture name="bg" x="1" y="1800" width="2779" height="1819" frameX="-66" frameY="-44" frameWidth="2911" frameHeight="1862"/>
-	<SubTexture name="dark" x="1" y="1" width="2784" height="1796" frameX="-8" frameY="-7" frameWidth="2805" frameHeight="1812"/>
-	<SubTexture name="dead" x="2783" y="3294" width="595" height="273" rotated="true" frameX="-1" frameY="0" frameWidth="274" frameHeight="596"/>
-	<SubTexture name="fore" x="2787" y="1" width="1308" height="2397" rotated="true" frameX="0" frameY="0" frameWidth="2397" frameHeight="1308"/>
-	<SubTexture name="lamp" x="2783" y="2400" width="274" height="891" frameX="0" frameY="0" frameWidth="274" frameHeight="891"/>
-	<SubTexture name="splat" x="3059" y="2400" width="808" height="326" frameX="0" frameY="0" frameWidth="808" frameHeight="326"/>
-</TextureAtlas>

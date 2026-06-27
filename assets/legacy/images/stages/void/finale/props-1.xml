@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="props-1.png" width="4096" height="3561">
+	<SubTexture name="bg" x="1" y="1" width="3267" height="2090" frameX="-74" frameY="-49" frameWidth="3267" frameHeight="2090"/>
+	<SubTexture name="fore" x="1" y="2092" width="2690" height="1468" rotated="false" frameX="0" frameY="0" frameWidth="2690" frameHeight="1468"/>
+</TextureAtlas>

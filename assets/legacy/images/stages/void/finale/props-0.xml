@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="props-0.png" width="4096" height="2403">
+	<SubTexture name="dark" x="1" y="1" width="3148" height="2034" frameX="-9" frameY="-8" frameWidth="3148" frameHeight="2034"/>
+	<SubTexture name="lamp" x="3150" y="1" width="307" height="1000"/>
+	<SubTexture name="dead" x="3458" y="1" width="307" height="669" rotated="false" frameX="0" frameY="0" frameWidth="307" frameHeight="669"/>
+	<SubTexture name="splat" x="1" y="2036" width="907" height="366"/>
+</TextureAtlas>
