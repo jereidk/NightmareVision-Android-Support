@@ -137,7 +137,7 @@ class AstcLoader
 		}
 
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
-		if (OflAssets.exists(astcPath))
+		if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
 		{
 
 			var bytes = OflAssets.getBytes(astcPath);
