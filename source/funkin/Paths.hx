@@ -45,7 +45,7 @@ class Paths
 	
 	// , , ,
 	@:allow(funkin.backend.FunkinCache)
-	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
+	public static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
 	
 	/**
 	 * Primary function used for pathing. In order it will check (Primary Mod Directory, Mods directory, Assets directory)
