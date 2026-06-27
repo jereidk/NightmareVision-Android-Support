@@ -19,7 +19,7 @@ import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
 
 /**
- * Metadata for a downloadable DLC entry (from registry JSON).
+ * Metadata for a downloadable DLC entry (from registry JSON, enriched by GitHub release API).
  */
 typedef DLCEntry = {
     var id:String;
@@ -31,6 +31,8 @@ typedef DLCEntry = {
     var downloadUrl:String;
     var sha256:String;
     var ?tags:Array<String>;
+    /** Optional GitHub release tag (e.g. "dlc-v1") to enrich name/description/author from the API. */
+    var ?releaseTag:String;
 }
 
 /**
@@ -60,6 +62,10 @@ class DLCManager {
     /** URL of the community DLC registry JSON. */
     public static final REGISTRY_URL =
         "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-registry.json";
+
+    /** GitHub API base for release tag lookups. */
+    static final RELEASES_API_BASE =
+        "https://api.github.com/repos/jereidk/NightmareVision-Android-Support/releases/tags/";
 
     #if sys
     static var _mutex:Mutex = new Mutex();
@@ -128,6 +134,72 @@ class DLCManager {
         return false;
     }
 
+    // ── Release-API enrichment ─────────────────────────────────────────────
+
+    /**
+     * For each DLC entry that has a `releaseTag`, fetch the GitHub release API
+     * and overwrite name/description/author/version/sizeMb/downloadUrl/sha256
+     * with the live release data. Registry fields serve as fallback when the
+     * API call fails (rate limit, no network, etc.).
+     *
+     * Runs inside the background thread created by fetchRegistryAsync() —
+     * no mutex needed for `reg.dlcs` because only this thread touches it.
+     */
+    static function _enrichFromGitHubReleases(reg:DLCRegistry):Void {
+        for (entry in reg.dlcs) {
+            if (entry.releaseTag == null || entry.releaseTag == "") continue;
+            try {
+                var url = RELEASES_API_BASE + StringTools.urlEncode(entry.releaseTag);
+                var http = new Http(url);
+                var data  = "";
+                var error = "";
+                http.onData  = (d) -> data  = d;
+                http.onError = (e) -> error = e;
+                http.addHeader("Accept", "application/vnd.github+json");
+                http.addHeader("User-Agent", "ImpostorLegacy-DLCManager");
+                http.request(false);
+
+                if (error != "" || data == "") continue;
+
+                var release:Dynamic = Json.parse(data);
+
+                // Use GitHub release name as the DLC title
+                if (release.name != null && Std.string(release.name) != "")
+                    entry.name = Std.string(release.name);
+
+                // Use release body as description
+                if (release.body != null && Std.string(release.body) != "")
+                    entry.description = Std.string(release.body);
+
+                // Author from the release publisher
+                if (release.author != null && release.author.login != null)
+                    entry.author = Std.string(release.author.login);
+
+                // Version from tag_name — strip a leading "v" if present
+                if (release.tag_name != null) {
+                    var tag = Std.string(release.tag_name);
+                    entry.version = tag.startsWith("v") ? tag.substring(1) : tag;
+                }
+
+                // Pick the first downloadable asset
+                if (release.assets != null) {
+                    var assets:Array<Dynamic> = cast release.assets;
+                    if (assets.length > 0) {
+                        var asset = assets[0];
+                        if (asset.size != null)
+                            entry.sizeMb = Std.parseFloat(Std.string(asset.size)) / (1024.0 * 1024.0);
+                        if (asset.browser_download_url != null)
+                            entry.downloadUrl = Std.string(asset.browser_download_url);
+                    }
+                }
+
+                Logger.log('DLCManager: Enriched "${entry.id}" from release ${entry.releaseTag}', INFO);
+            } catch (e:Dynamic) {
+                Logger.log('DLCManager: Failed to fetch release ${entry.releaseTag}: $e', WARN);
+            }
+        }
+    }
+
     // ── Async operations ───────────────────────────────────────────────────
 
     /** Fetches the community registry JSON asynchronously. */
@@ -152,6 +224,9 @@ class DLCManager {
                 var reg:DLCRegistry = Json.parse(data);
                 if (reg.schemaVersion != 1)
                     throw "Unsupported registry version: " + reg.schemaVersion;
+
+                // Enrich entries with live release metadata from GitHub API
+                _enrichFromGitHubReleases(reg);
 
                 _mutex.acquire();
                 registryData   = reg;
@@ -325,7 +400,34 @@ class DLCManager {
 
     // ── Private helpers ────────────────────────────────────────────────────
 
+    /**
+     * Write/update meta.json for an installed DLC folder.
+     * This is THE authoritative metadata — the game reads it to list installed DLCs.
+     */
     #if sys
+    static function _writeMetaJson(destPath:String, entry:DLCEntry):Void {
+        var metaPath = destPath + "meta.json";
+        var meta:Dynamic = {};
+        if (FileSystem.exists(metaPath)) {
+            try {
+                meta = Json.parse(File.getContent(metaPath));
+            } catch (e:Dynamic) {}
+        }
+
+        // Always overwrite the id, name, and global flag from the entry
+        // (the registry / release API is the source of truth).
+        meta.dlcId  = entry.id;
+        meta.name   = entry.name;
+        meta.global = true;
+
+        // Fill in optional fields only if the entry has non‑empty values
+        if (entry.description != "") meta.description = entry.description;
+        if (entry.author != "")      meta.author      = entry.author;
+        if (entry.version != "")     meta.version     = entry.version;
+
+        File.saveContent(metaPath, Json.stringify(meta, null, "  "));
+    }
+
     static function _extractZip(zipPath:String, destPath:String, entry:DLCEntry):Void {
         var input   = File.read(zipPath, true);
         var entries = Reader.readZip(input);
@@ -378,25 +480,8 @@ class DLCManager {
             _setProgress(70 + (total > 0 ? Std.int(25 * i / total) : 25), "Installing (" + i + "/" + total + ")...");
         }
 
-        // Ensure meta.json carries our dlcId marker and global:true
-        var metaPath = destPath + "meta.json";
-        if (FileSystem.exists(metaPath)) {
-            try {
-                var meta:Dynamic = Json.parse(File.getContent(metaPath));
-                var changed = false;
-                if (meta.dlcId  == null)  { meta.dlcId  = entry.id; changed = true; }
-                if (meta.global != true)  { meta.global = true;      changed = true; }
-                if (changed) File.saveContent(metaPath, Json.stringify(meta));
-            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to update meta.json: $e', WARN); }
-        } else {
-            var meta = {
-                name:        entry.name,
-                global:      true,   // load alongside the active mod, not only when selected
-                description: entry.description,
-                dlcId:       entry.id
-            };
-            File.saveContent(metaPath, Json.stringify(meta));
-        }
+        // Ensure meta.json carries our dlcId marker, name, and global:true
+        _writeMetaJson(destPath, entry);
     }
 
     static function _setStatus(state:DLCTaskState, progress:Int, msg:String):Void {
