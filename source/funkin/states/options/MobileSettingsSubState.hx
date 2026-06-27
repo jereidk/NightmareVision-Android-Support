@@ -218,8 +218,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_enterComplete = true;
 
 			for (member in members)
-				if (member != null)
-					member.alpha = _enterAlpha;
+			{
+				if (member != null && Std.isOfType(member, FlxObject))
+				{
+					cast(member, FlxObject).alpha = _enterAlpha;
+				}
+			}
 		}
 
 		// Smooth selection animation
