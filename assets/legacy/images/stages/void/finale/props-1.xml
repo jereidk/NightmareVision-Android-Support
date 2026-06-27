@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<TextureAtlas imagePath="props-1.png" width="4096" height="3561">
-	<SubTexture name="bg" x="1" y="1" width="3267" height="2090" frameX="-74" frameY="-49" frameWidth="3267" frameHeight="2090"/>
-	<SubTexture name="fore" x="1" y="2092" width="2690" height="1468" rotated="false" frameX="0" frameY="0" frameWidth="2690" frameHeight="1468"/>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="props-1.png" width="2690" height="1834">
+	<SubTexture name="dead" x="1907" y="1468" width="668" height="306" rotated="true" frameX="-1" frameY="-0" frameWidth="307" frameHeight="669"/>
+	<SubTexture name="fore" x="0" y="0" width="2690" height="1468" frameX="-0" frameY="-0" frameWidth="2690" frameHeight="1468"/>
+	<SubTexture name="lamp" x="907" y="1468" width="1000" height="307" rotated="true" frameX="-0" frameY="-0" frameWidth="307" frameHeight="1000"/>
+	<SubTexture name="splat" x="0" y="1468" width="907" height="366" frameX="-0" frameY="-0" frameWidth="907" frameHeight="366"/>
 </TextureAtlas>
