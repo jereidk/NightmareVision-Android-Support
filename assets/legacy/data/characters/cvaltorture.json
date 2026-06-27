@@ -149,7 +149,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/misc/cvp/cvaltorture",
+	"image": "characters/misc/cvp/cvaltorture-0,characters/misc/cvp/cvaltorture-1,characters/misc/cvp/cvaltorture-2",
 	"position": [
 		-60,
 		-70

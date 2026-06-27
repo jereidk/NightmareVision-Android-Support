@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="drippico-0.png" width="3449" height="3220">
+	<SubTexture name="mongo 0000" x="773" y="0" width="442" height="704" rotated="true" frameX="-0" frameY="-27" frameWidth="705" frameHeight="470"/>
+	<SubTexture name="mongo 0001" x="773" y="0" width="442" height="704" rotated="true" frameX="-0" frameY="-27" frameWidth="705" frameHeight="470"/>
+	<SubTexture name="mongo 0003" x="773" y="704" width="468" height="699" rotated="true" frameX="-3" frameY="-1" frameWidth="705" frameHeight="470"/>
+	<SubTexture name="picomongo0000" x="1273" y="662" width="995" height="994" frameX="-0" frameY="-0" frameWidth="1577" frameHeight="995"/>
+	<SubTexture name="picomongo0001" x="1273" y="662" width="995" height="994" frameX="-0" frameY="-0" frameWidth="1577" frameHeight="995"/>
+	<SubTexture name="picomongo0005" x="0" y="0" width="773" height="1279" rotated="true" frameX="-294" frameY="-221" frameWidth="1577" frameHeight="995"/>
+	<SubTexture name="picomongo0006" x="0" y="1279" width="773" height="1279" rotated="true" frameX="-294" frameY="-221" frameWidth="1577" frameHeight="995"/>
+	<SubTexture name="shootleft0000" x="1425" y="1656" width="812" height="660" frameX="-303" frameY="-66" frameWidth="1116" frameHeight="727"/>
+	<SubTexture name="shootleft0001" x="2142" y="2316" width="660" height="811" rotated="true" frameX="-303" frameY="-66" frameWidth="1116" frameHeight="727"/>
+	<SubTexture name="shootleft0002" x="2268" y="1113" width="951" height="651" frameX="-162" frameY="-75" frameWidth="1116" frameHeight="727"/>
+	<SubTexture name="shootleft0003" x="2425" y="0" width="726" height="1113" rotated="true" frameX="-0" frameY="-0" frameWidth="1116" frameHeight="727"/>
+	<SubTexture name="shootright0000" x="773" y="1656" width="652" height="871" rotated="true" frameX="-0" frameY="-51" frameWidth="1275" frameHeight="704"/>
+	<SubTexture name="shootright0001" x="1273" y="2527" width="869" height="652" frameX="-2" frameY="-51" frameWidth="1275" frameHeight="704"/>
+	<SubTexture name="shootright0002" x="1273" y="0" width="1152" height="662" frameX="-2" frameY="-41" frameWidth="1275" frameHeight="704"/>
+	<SubTexture name="shootright0003" x="0" y="2558" width="1273" height="662" frameX="-2" frameY="-41" frameWidth="1275" frameHeight="704"/>
+	<SubTexture name="singDOWN0000" x="2802" y="1764" width="647" height="783" rotated="true" frameX="-0" frameY="-4" frameWidth="789" frameHeight="652"/>
+</TextureAtlas>
