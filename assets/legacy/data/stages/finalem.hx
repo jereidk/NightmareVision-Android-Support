@@ -56,7 +56,7 @@ function onLoad()
 	// Load multi-atlas props (2 atlases <4096 each replacing the single >4096 original)
 	propsFrames = Paths.getMultiAtlas([ext + 'props-0', ext + 'props-1']);
 	
-	var bgScale = 2.6;
+	var bgScale = 1.3;
 	
 	var bg1:FlxSprite = new FlxSprite(800, -270);
 	bg1.frames = propsFrames;
