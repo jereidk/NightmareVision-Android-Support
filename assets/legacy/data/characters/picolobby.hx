@@ -26,6 +26,7 @@ function onGameOverStart()
 	retry.animation.addByPrefix('idle', "retry loop0", 24, true);
 	retry.animation.addByPrefix('confirm', "retry confirm0", 24, false);
 	retry.visible = false;
+	retry.scale.set(1.4, 1.4);
 }
 
 function onGameOverPost()
