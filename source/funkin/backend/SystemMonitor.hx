@@ -301,7 +301,7 @@ class SystemMonitor
 		#if (android && cpp)
 		try {
 			var bytes = Native.getTaskMemory();
-			if (bytes > 0:cpp.UInt64) {
+			if (bytes > cpp.UInt64.ofInt(0)) {
 				return Std.int(bytes / 1024 / 1024) + ' MB';
 			}
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get task memory: $e', WARN); }
