@@ -12,6 +12,7 @@ import flixel.util.FlxStringUtil;
 import funkin.objects.HealthIcon;
 
 import flixel.group.FlxSpriteGroup;
+import mobile.utils.MobileNavUtil;
 
 class StoryMenuState extends AmongUIState
 {

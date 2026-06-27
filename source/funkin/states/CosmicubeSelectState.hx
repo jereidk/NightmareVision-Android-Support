@@ -10,6 +10,7 @@ import funkin.input.TurboControl;
 import flixel.group.FlxSpriteGroup;
 
 using StringTools;
+import mobile.utils.MobileNavUtil;
 
 class CosmicubeSelectState extends AmongUIState
 {

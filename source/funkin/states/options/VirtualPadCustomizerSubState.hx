@@ -212,7 +212,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	function _saveAndExit():Void
 	{
-		ClientPrefs.saveSettings();
+		ClientPrefs.flushSave();
 		close();
 	}
 
