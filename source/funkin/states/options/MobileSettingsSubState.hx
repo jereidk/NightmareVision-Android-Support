@@ -90,6 +90,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// ── State ────────────────────────────────────────────────────────────────
 	var _opts:Array<MobileOpt> = [];
 	var _sel:Int = 0;
+	var _selVisual:Float = 0.0; // Smoothly follows _sel
 
 	var _demoTimer:Float = 0.0;
 	var _demoIdx:Int = 0;
@@ -220,6 +221,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				if (member != null)
 					member.alpha = _enterAlpha;
 		}
+
+		// Smooth selection animation
+		_selVisual = FlxMath.lerp(_selVisual, _sel, elapsed * 8);
 
 		_updatePreview(elapsed);
 
@@ -530,6 +534,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _updateRows():Void
 	{
+		// Position highlight smoothly
+		final highlightY = OPT_Y0 + _selVisual * OPT_H - 2;
+		for (i in 0...MAX_OPT)
+		{
+			if (i == _sel && _rowHi[i].visible)
+				_rowHi[i].y = highlightY;
+		}
+
 		for (i in 0...MAX_OPT)
 		{
 			final opt = (i < _opts.length) ? _opts[i] : null;
