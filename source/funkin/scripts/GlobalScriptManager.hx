@@ -36,7 +36,7 @@ using StringTools;
 class GlobalScriptManager
 {
 	/** Singleton instance, created in Main.hx. */
-	public static var instance(default, null):GlobalScriptManager = null;
+	public static var instance(default, null):Null<GlobalScriptManager> = null;
 
 	/** The persistent script group shared across all states. */
 	public var scriptGroup(default, null):ScriptGroup;
