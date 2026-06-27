@@ -165,16 +165,12 @@ function onCreatePost()
 	
 	gf.scrollFactor.set(0.7, 0.7);
 	
-	var speedlinesPath = Paths.getPath('images/' + ext + 'speedlines.png', null, true);
-	if (FunkinAssets.exists(speedlinesPath))
-	{
-		speedlines = new FlxBackdrop().loadGraphic(Paths.image(ext + 'speedlines'));
-		speedlines.scale.set(3, 3);
-		speedlines.updateHitbox();
-		speedlines.scrollFactor.set(.3, .3);
-		speedlines.alpha = 0.5;
-		add(speedlines);
-	}
+	speedlines = new FlxBackdrop().loadGraphic(Paths.image(ext + 'speedLines'));
+	speedlines.scale.set(3, 3);
+	speedlines.updateHitbox();
+	speedlines.scrollFactor.set(.3, .3);
+	speedlines.alpha = 0.5;
+	add(speedlines);
 	
 	pet.origin.set(pet.width / 2, pet.height / 2);
 	
