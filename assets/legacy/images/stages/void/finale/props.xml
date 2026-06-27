@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
--->
-<TextureAtlas imagePath="props.png" width="1562" height="2916">
-	<SubTexture name="bg" x="0" y="1008" width="1560" height="1020" frameX="-37" frameY="-24" frameWidth="1634" frameHeight="1045"/>
-	<SubTexture name="dark" x="0" y="0" width="1562" height="1008" frameX="-4" frameY="-4" frameWidth="1574" frameHeight="1017"/>
-	<SubTexture name="dead" x="500" y="2762" width="334" height="153" rotated="true" frameX="0" frameY="0" frameWidth="154" frameHeight="334"/>
-	<SubTexture name="fore" x="0" y="2028" width="1345" height="734" frameX="0" frameY="0" frameWidth="1345" frameHeight="734"/>
-	<SubTexture name="lamp" x="0" y="2762" width="500" height="154" rotated="true" frameX="0" frameY="0" frameWidth="154" frameHeight="500"/>
-	<SubTexture name="splat" x="1345" y="2028" width="183" height="454" rotated="true" frameX="0" frameY="0" frameWidth="454" frameHeight="183"/>
+<TextureAtlas imagePath="props.png" width="4096" height="3619">
+	<SubTexture name="bg" x="1" y="1800" width="2779" height="1819" frameX="-66" frameY="-44" frameWidth="2911" frameHeight="1862"/>
+	<SubTexture name="dark" x="1" y="1" width="2784" height="1796" frameX="-8" frameY="-7" frameWidth="2805" frameHeight="1812"/>
+	<SubTexture name="dead" x="2783" y="3294" width="595" height="273" rotated="true" frameX="-1" frameY="0" frameWidth="274" frameHeight="596"/>
+	<SubTexture name="fore" x="2787" y="1" width="1308" height="2397" rotated="true" frameX="0" frameY="0" frameWidth="2397" frameHeight="1308"/>
+	<SubTexture name="lamp" x="2783" y="2400" width="274" height="891" frameX="0" frameY="0" frameWidth="274" frameHeight="891"/>
+	<SubTexture name="splat" x="3059" y="2400" width="808" height="326" frameX="0" frameY="0" frameWidth="808" frameHeight="326"/>
 </TextureAtlas>
