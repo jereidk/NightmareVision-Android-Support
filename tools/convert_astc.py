@@ -373,6 +373,9 @@ def main() -> None:
     parser.add_argument("--blocksize", "-b",
                         help="Override block size for ALL files (disables adaptive "
                              "selection). E.g. --blocksize 8x8")
+    parser.add_argument("--quality", "-q",
+                        help="astcenc quality preset: fastest, fast, medium, thorough, "
+                             "verythorough, exhaustive. Overrides config value.")
     args = parser.parse_args()
 
     # -----------------------------------------------------------------------
@@ -404,6 +407,8 @@ def main() -> None:
     if args.blocksize:
         config["blocksize"] = args.blocksize
         config["overrides"] = {}   # discard per-asset overrides when globally forced
+    if args.quality:
+        config["quality"] = args.quality
 
     delete_png = args.delete_png or config.get("delete_png", False)
 
