@@ -217,11 +217,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (_enterAlpha > 0.95)
 				_enterComplete = true;
 
-			for (member in members)
+			for (i in 0...members.length)
 			{
-				if (member != null && Std.isOfType(member, FlxObject))
+				var member = members[i];
+				if (member != null)
 				{
-					cast(member, FlxObject).alpha = _enterAlpha;
+					var obj:FlxObject = cast member;
+					obj.alpha = _enterAlpha;
 				}
 			}
 		}

@@ -9,6 +9,7 @@ import openfl.display3D.Context3DTextureFormat;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.Assets as OflAssets;
+import openfl.Assets;
 import openfl.events.Event;
 import lime.utils.UInt8Array;
 #end
@@ -137,17 +138,12 @@ class AstcLoader
 		}
 
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
-		try {
-			if (OflAssets.exists(astcPath))
-			{
-				var bytes = OflAssets.getBytes(astcPath);
-				if (bytes != null) {
-					return _loadAndTrack(pngPath, astcPath, bytes);
-				}
+		if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
+		{
+			var bytes = OflAssets.getBytes(astcPath);
+			if (bytes != null) {
+				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
-		}
-		catch (e:Dynamic) {
-			// Fallback: asset doesn't exist or getBytes failed
 		}
 
 		return null;
