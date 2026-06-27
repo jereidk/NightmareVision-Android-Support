@@ -58,6 +58,7 @@ class Paths
 	public static var DEFAULT_FONT:String = 'vcr.ttf';
 	
 	@:allow(funkin.backend.FunkinCache)
+	@:allow(funkin.objects.FunkinSprite)
 	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
 	
 	/**
