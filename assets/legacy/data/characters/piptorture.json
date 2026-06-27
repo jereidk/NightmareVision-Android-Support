@@ -68,7 +68,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/misc/cvp/piptorture",
+	"image": "characters/misc/cvp/piptorture-0,characters/misc/cvp/piptorture-1",
 	"position": [
 		-200,
 		95
