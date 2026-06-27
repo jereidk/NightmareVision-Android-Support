@@ -1224,6 +1224,15 @@ class PlayState extends MusicBeatState
 			scripts.call('onStartCountdown', []);
 			return;
 		}
+
+		// Log loaded scripts and enable per-call timing to track lag culprits
+		ScriptGroup.timingEnabled = true;
+		final scriptNames = scripts.members.map(s -> s.name);
+		final ntNames    = noteTypeScripts.members.map(s -> s.name);
+		final evNames    = eventScripts.members.map(s -> s.name);
+		trace('[ScriptPerf] LOADED scripts(${scriptNames.length}): ${scriptNames.join(", ")}');
+		trace('[ScriptPerf] LOADED noteTypeScripts(${ntNames.length}): ${ntNames.join(", ")}');
+		trace('[ScriptPerf] LOADED eventScripts(${evNames.length}): ${evNames.join(", ")}');
 		
 		inCutscene = false;
 
@@ -3473,9 +3482,18 @@ class PlayState extends MusicBeatState
 	public function callScript(script:FunkinScript, event:String, args:Array<Dynamic>):Dynamic
 	{
 		if (!script.exists(event)) return ScriptConstants.CONTINUE_FUNC;
-		
+
+		final _t = ScriptGroup.timingEnabled ? haxe.Timer.stamp() : 0.0;
+
 		var ret:Dynamic = script.call(event, args)?.returnValue;
-		
+
+		if (ScriptGroup.timingEnabled)
+		{
+			final _ms = (haxe.Timer.stamp() - _t) * 1000.0;
+			if (_ms >= ScriptGroup.slowThresholdMs)
+				trace('[ScriptPerf] ${script.name}::$event ${Math.round(_ms * 10) / 10}ms');
+		}
+
 		return ret ?? ScriptConstants.CONTINUE_FUNC;
 	}
 	

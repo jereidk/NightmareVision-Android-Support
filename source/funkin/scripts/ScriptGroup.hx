@@ -8,12 +8,17 @@ import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
 /**
  * Container of `FunkinScript` instances
- * 
+ *
  * idea from friens static fyr thanks
  */
 @:nullSafety(Strict)
 class ScriptGroup implements IFlxDestroyable
 {
+	/** Set true to log script calls slower than slowThresholdMs to trace/logcat */
+	public static var timingEnabled:Bool = false;
+	/** Minimum milliseconds before a script call is logged (when timingEnabled) */
+	public static var slowThresholdMs:Float = 1.0;
+
 	public var scriptShareables:Sharables = new Sharables();
 	
 	/**
@@ -89,13 +94,22 @@ class ScriptGroup implements IFlxDestroyable
 		for (i in members)
 		{
 			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
-			
+
+			final _t = timingEnabled ? haxe.Timer.stamp() : 0.0;
+
 			var ret:Dynamic = i.call(event, args)?.returnValue;
-			
+
+			if (timingEnabled)
+			{
+				final _ms = (haxe.Timer.stamp() - _t) * 1000.0;
+				if (_ms >= slowThresholdMs)
+					trace('[ScriptPerf] ${i.name}::$event ${Math.round(_ms * 10) / 10}ms');
+			}
+
 			if (ret != null)
 			{
 				if (ScriptConstants.halting(ret) && !ignoreStops) return ret;
-				
+
 				if (ret != ScriptConstants.CONTINUE_FUNC) returnVal = ret;
 			}
 		}
