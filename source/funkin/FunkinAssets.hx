@@ -31,19 +31,27 @@ class FunkinAssets
 
 	private static function getCachedAssetList(?type:AssetType):Array<String>
 	{
-		if (type == null)
+		try
 		{
-			if (_assetListAllCache == null) _assetListAllCache = Assets.list();
-			return _assetListAllCache;
+			if (type == null)
+			{
+				if (_assetListAllCache == null) _assetListAllCache = Assets.list();
+				return _assetListAllCache;
+			}
+			final key = Std.string(type);
+			var cached = _assetListTypeCache.get(key);
+			if (cached == null)
+			{
+				cached = Assets.list(type);
+				_assetListTypeCache.set(key, cached);
+			}
+			return cached;
 		}
-		final key = Std.string(type);
-		var cached = _assetListTypeCache.get(key);
-		if (cached == null)
+		catch (e:Dynamic)
 		{
-			cached = Assets.list(type);
-			_assetListTypeCache.set(key, cached);
+			Logger.log('getCachedAssetList: Failed to get asset list: $e', WARN);
+			return [];
 		}
-		return cached;
 	}
 
 	/**
@@ -283,21 +291,36 @@ class FunkinAssets
 		// Normalize to trailing slash so the prefix strip is clean.
 		try
 		{
-			final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
+			final hasTrailingSlash = StringTools.endsWith(directory, '/');
+			final prefix = hasTrailingSlash ? directory : (directory + '/');
+
 			// Extract the first path component after the prefix (file or folder name).
 			// Deduplicate so a folder with many files appears only once.
 			final seen = new haxe.ds.StringMap<Bool>();
 			final result:Array<String> = [];
+
 			for (a in getCachedAssetList())
 			{
-				if (!StringTools.startsWith(a, prefix)) continue;
-				var rel = a.substring(prefix.length);
-				final slash = rel.indexOf('/');
-				final entry = slash >= 0 ? rel.substring(0, slash) : rel;
-				if (entry.length > 0 && !seen.exists(entry))
+				try
 				{
-					seen.set(entry, true);
-					result.push(entry);
+					if (!StringTools.startsWith(a, prefix)) continue;
+
+					var rel = a.substring(prefix.length);
+					if (rel.length == 0) continue;
+
+					final slash = rel.indexOf('/');
+					final entry = slash >= 0 ? rel.substring(0, slash) : rel;
+
+					if (entry.length > 0 && !seen.exists(entry))
+					{
+						seen.set(entry, true);
+						result.push(entry);
+					}
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('readDirectory: Error processing entry "$a": $e', WARN);
+					continue;
 				}
 			}
 			return result;
@@ -327,8 +350,22 @@ class FunkinAssets
 
 		try
 		{
-			final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
-			return Lambda.exists(getCachedAssetList(), a -> StringTools.startsWith(a, prefix));
+			final hasTrailingSlash = StringTools.endsWith(directory, '/');
+			final prefix = hasTrailingSlash ? directory : (directory + '/');
+
+			for (a in getCachedAssetList())
+			{
+				try
+				{
+					if (StringTools.startsWith(a, prefix)) return true;
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('isDirectory: Error checking entry "$a": $e', WARN);
+					continue;
+				}
+			}
+			return false;
 		}
 		catch (e:Dynamic)
 		{
