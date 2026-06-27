@@ -20,11 +20,9 @@ class Init extends FlxState
 {
 	override public function create():Void
 	{
-		// Start the rolling log file before anything else so every subsequent
-		// log line (crash detection, prefs load, mod init, etc.) is captured.
+		// DebugDisplay starts early (no prefs needed). Log files need ClientPrefs,
+		// so GameLogger/SystemMonitor init below after ClientPrefs.load().
 		#if android
-		funkin.backend.GameLogger.init();
-		funkin.backend.SystemMonitor.init();
 		funkin.backend.DebugDisplay.init();
 
 		// Register cache info plugin for DebugDisplay
@@ -136,6 +134,8 @@ class Init extends FlxState
 		
 		ClientPrefs.load();
 		
+		funkin.backend.GameLogger.init();
+		funkin.backend.SystemMonitor.init();
 		funkin.data.Highscore.load();
 		
 		if (FlxG.save.data.weekCompleted != null) funkin.states.StoryMenuState.weekCompleted = FlxG.save.data.weekCompleted;
