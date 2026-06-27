@@ -87,8 +87,12 @@ class FunkinCache
 		{
 			if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 			{
-				Paths.tempAtlasFramesCache.remove(key);
-				removeFromCache(key);
+				// tempAtlasFramesCache stores keys WITHOUT the .png extension,
+			// while currentTrackedGraphics stores keys WITH extension.
+			// Strip extension to clear stale frame cache entries.
+			final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
+			Paths.tempAtlasFramesCache.remove(cacheKey);
+			removeFromCache(key);
 			}
 		}
 		
