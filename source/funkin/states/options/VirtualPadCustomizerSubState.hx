@@ -16,8 +16,6 @@ import flixel.input.touch.FlxTouch;
 import mobile.controls.MobileVirtualPad;
 import mobile.backend.flixel.FlxButton;
 import mobile.backend.flixel.input.FlxMobileInputID;
-import mobile.controls.MobileDPadMode;
-import mobile.controls.MobileActionMode;
 import mobile.utils.MobileNavUtil;
 import funkin.data.ClientPrefs;
 import funkin.Paths;
