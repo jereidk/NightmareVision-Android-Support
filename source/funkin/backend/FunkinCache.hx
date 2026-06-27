@@ -46,7 +46,7 @@ class FunkinCache
 {
 	/**
 	 * Clears all graphics and sounds that are considered inactive. Flags everything to be inactive as well.
-	 * 
+	 *
 	 * use `clearUnusedMemory` afterwards to purge everything
 	 */
 	public function clearStoredMemory() // maybe rename
@@ -64,7 +64,7 @@ class FunkinCache
 		// 		disposeGraphic(FlxG.bitmap.get(key));
 		// 	}
 		// }
-		
+
 		// clear all sounds that are cached
 		for (key in currentTrackedSounds.keys())
 		{
@@ -73,6 +73,26 @@ class FunkinCache
 				removeFromCache(key);
 			}
 		}
+
+		// Clear stale atlas frame cache entries. This prevents cache coherency issues
+		// where frame data points to disposed bitmaps when transitioning between songs.
+		// tempAtlasFramesCache keys are stored WITHOUT .png extension.
+		try
+		{
+			for (key in currentTrackedGraphics.keys())
+			{
+				if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
+				{
+					final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
+					Paths.tempAtlasFramesCache.remove(cacheKey);
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('clearStoredMemory: Failed to clear tempAtlasFramesCache: $e', WARN);
+		}
+
 		// flags everything to be cleared out next unused memory clear
 		localTrackedAssets.resize(0);
 		openfl.Assets.cache.clear("songs");
