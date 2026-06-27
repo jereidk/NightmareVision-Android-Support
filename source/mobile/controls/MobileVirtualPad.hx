@@ -201,6 +201,8 @@ class MobileVirtualPad extends TouchInputManager
 	
 	/**
 	 * Load custom button positions from ClientPrefs.
+	 * Uses the new JSON map (customPadPositionsJson) first for all buttons,
+	 * then falls back to legacy customPadPositions for backward compatibility.
 	 */
 	function _loadCustomPositions():Void
 	{
@@ -212,14 +214,29 @@ class MobileVirtualPad extends TouchInputManager
 			[UP, noteUP],
 			[RIGHT, noteRIGHT]
 		];
+		var keys = ['buttonLeft', 'buttonDown', 'buttonUp', 'buttonRight'];
+
+		// Try to load from the JSON map first (set by VirtualPadCustomizerSubState)
+		var jsonMap:Map<String, Array<Float>> = _parseCustomPositionsJson();
 		
 		for (i in 0...4)
 		{
-			var pos = ClientPrefs.customPadPositions[i];
-			if (pos[0] < 0 || pos[1] < 0)
+			var pos:Array<Float>;
+
+			// Check JSON map first
+			if (jsonMap.exists(keys[i]))
+			{
+				pos = jsonMap.get(keys[i]);
+			}
+			// Then legacy array
+			else if (ClientPrefs.customPadPositions[i][0] >= 0)
+			{
+				pos = ClientPrefs.customPadPositions[i];
+			}
+			// Finally default
+			else
 			{
 				pos = _defaultPosition(i);
-				ClientPrefs.customPadPositions[i] = pos;
 			}
 
 			var btn = createButton(pos[0], pos[1], dirs[i], colors[i], ids[i]);
@@ -231,6 +248,32 @@ class MobileVirtualPad extends TouchInputManager
 				case 3: buttonRight = add(btn);
 			}
 		}
+	}
+
+	/**
+	 * Parse the customPadPositionsJson string into a usable Map.
+	 * Returns empty map if not set or invalid JSON.
+	 */
+	static function _parseCustomPositionsJson():Map<String, Array<Float>>
+	{
+		var map = new Map<String, Array<Float>>();
+		var raw = ClientPrefs.customPadPositionsJson;
+		if (raw == null || raw == "") return map;
+		try
+		{
+			var parsed:Dynamic = haxe.Json.parse(raw);
+			if (parsed != null && Reflect.isObject(parsed))
+			{
+				for (field in Reflect.fields(parsed))
+				{
+					var arr:Array<Dynamic> = Reflect.field(parsed, field);
+					if (arr != null && arr.length >= 2)
+						map.set(field, [Std.int(arr[0]), Std.int(arr[1])]);
+				}
+			}
+		}
+		catch (e:Dynamic) {}
+		return map;
 	}
 	
 	function _defaultPosition(i:Int):Array<Float>

@@ -173,6 +173,8 @@ class ClientPrefs
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	@saveVar public static var virtualPadLayout:String = 'LeftFull';
 	@saveVar public static var customPadPositions:Array<Array<Float>> = [[-1,-1],[-1,-1],[-1,-1],[-1,-1]];
+	/** JSON map of all custom button positions (name -> [x, y]) for VirtualPadCustomizer. */
+	@saveVar public static var customPadPositionsJson:String = "";
 
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
