@@ -200,8 +200,12 @@ def blocksize_from_energy(energy: float) -> str:
 
 def pick_blocksize(png_path: Path, config: dict) -> str:
     """
-    Priority: per-asset JSON override → adaptive edge_energy → config default.
+    Priority: force_blocksize (--blocksize CLI) → per-asset JSON override → adaptive edge_energy → config default.
     """
+    # 0. Forced global override from --blocksize CLI flag
+    if "force_blocksize" in config:
+        return config["force_blocksize"]
+
     path_str = str(png_path).replace("\\", "/")
 
     # 1. Per-asset overrides (substring match against full path)
@@ -405,7 +409,7 @@ def main() -> None:
 
     # CLI overrides
     if args.blocksize:
-        config["blocksize"] = args.blocksize
+        config["force_blocksize"] = args.blocksize
         config["overrides"] = {}   # discard per-asset overrides when globally forced
     if args.quality:
         config["quality"] = args.quality
