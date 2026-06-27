@@ -118,15 +118,19 @@ class Init extends FlxState
 		animate.FlxAnimateAssets.getBitmapData = (path) -> cast funkin.FunkinAssets.getBitmapData(path);
 		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
 		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (e:Dynamic) { Logger.log('Failed to get text content for: $path - $e', WARN); return cast null; }; };
-		// Hide .astc files from FlxAnimate's folder scanner so spritemap image
-		// selection always resolves to the .png counterpart. The getBitmapData
-		// override above then transparently loads the .astc GPU texture for that
-		// path, making ASTC compression safe to use even when .astc and .png
-		// coexist in the same texture-atlas directory.
+		// Replace .astc with .png in FlxAnimate's folder scanner so spritemap
+		// image selection always resolves to a .png counterpart that FlxAnimate
+		// expects. The getBitmapData override above then transparently loads the
+		// .astc GPU texture for that path via AstcLoader, making ASTC compression
+		// safe even when only .astc exists (no .png counterpart).
+		// NOTE: Filtering out .astc (old approach) breaks spritemaps that ONLY
+		// have .astc — FlxAnimate cannot find the image file and the path becomes
+		// "$path/null", causing a hard crash when entering songs.
 		final _animListOrig = animate.FlxAnimateAssets.list;
 		animate.FlxAnimateAssets.list = function(path, ?type, ?lib, subs = false) {
 			var r = _animListOrig(path, type, lib, subs);
-			return r == null ? [] : r.filter(f -> !f.endsWith('.astc'));
+			if (r == null) return [];
+			return r.map(f -> f.endsWith('.astc') ? f.substr(0, f.length - 5) + '.png' : f);
 		};
 
 		// load settings/save
