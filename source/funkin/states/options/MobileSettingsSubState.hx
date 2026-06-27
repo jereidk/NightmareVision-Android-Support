@@ -3,6 +3,7 @@ package funkin.states.options;
 #if mobile
 
 import flixel.FlxG;
+import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
