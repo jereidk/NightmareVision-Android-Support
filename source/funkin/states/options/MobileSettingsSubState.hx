@@ -51,21 +51,28 @@ typedef PreviewZone =
 class MobileSettingsSubState extends MusicBeatSubstate
 {
 	// ── Preview canvas (a mini game screen, ~16:9) ───────────────────────────
-	static final CANVAS_X:Float = 60;
-	static final CANVAS_Y:Float = 84;
-	static final CANVAS_W:Int   = 512;
-	static final CANVAS_H:Int   = 288;
+	static final CANVAS_X:Float = 50;
+	static final CANVAS_Y:Float = 100;
+	static final CANVAS_W:Int   = 500;
+	static final CANVAS_H:Int   = 280;
 
 	// ── Options column ───────────────────────────────────────────────────────
-	static final OPT_X:Float  = 648;
-	static final OPT_Y0:Float = 104;
-	static final OPT_H:Float  = 60;
-	static final OPT_W:Int    = 560;
+	static final OPT_X:Float  = 600;
+	static final OPT_Y0:Float = 100;
+	static final OPT_H:Float  = 54;
+	static final OPT_W:Int    = 580;
 	static final MAX_OPT:Int  = 6;
 
-	// L D U R — matches MobileHitbox / MobileVirtualPad colours.
-	static final ZONE_COLORS = [0xFFFF00FF, 0xFF00FFFF, 0xFF00FF00, 0xFFFF0000];
+	// L D U R — matches MobileHitbox / MobileVirtualPad colours (improved).
+	static final ZONE_COLORS = [0xFFFF6B9D, 0xFF00D9FF, 0xFF00FF88, 0xFFFFB84D];
 	static final ZONE_LABELS = ["LEFT", "DOWN", "UP", "RIGHT"];
+
+	// Color palette for modern FNF style
+	static final COLOR_HIGHLIGHT:Int = 0xFFFFD700;
+	static final COLOR_SELECTED:Int  = 0xFFFFA500;
+	static final COLOR_TEXT:Int      = 0xFFFFFFFF;
+	static final COLOR_DESC:Int      = 0xFFB0B0B0;
+	static final COLOR_BG:Int        = 0xFF0A0A14;
 
 	// ── UI: preview ──────────────────────────────────────────────────────────
 	var _canvasBg:FlxSprite;
@@ -101,70 +108,83 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
 		add(bg);
 
-		var titleTxt = new FlxText(0, 18, FlxG.width, Lang.str('opt_category_mobile', 'MOBILE CONTROLS').toUpperCase());
-		titleTxt.setFormat(Paths.font('vcr.ttf'), 38, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		titleTxt.borderSize = 2;
+		var titleTxt = new FlxText(0, 14, FlxG.width, Lang.str('opt_category_mobile', 'MOBILE CONTROLS').toUpperCase());
+		titleTxt.setFormat(Paths.font('vcr.ttf'), 42, COLOR_HIGHLIGHT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleTxt.borderSize = 2.5;
 		add(titleTxt);
 
-		// Caption above the canvas (kept clear of the canvas so zones never cover it).
-		_modeText = new FlxText(CANVAS_X, 58, CANVAS_W, '');
-		_modeText.setFormat(Paths.font('vcr.ttf'), 18, 0xFFFFE066, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		_modeText.borderSize = 1.5;
+		// Caption above the canvas
+		_modeText = new FlxText(CANVAS_X, 54, CANVAS_W, '');
+		_modeText.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFB84D, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_modeText.borderSize = 1.8;
 		add(_modeText);
 
-		// Canvas background — zones are drawn on top of this.
-		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y).makeGraphic(CANVAS_W, CANVAS_H, 0xFF0A0A12);
-		_canvasBg.alpha = 0.9;
+		// Canvas background with border styling
+		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y).makeGraphic(CANVAS_W, CANVAS_H, 0xFF1A1A2E);
+		_canvasBg.alpha = 0.95;
 		add(_canvasBg);
 
-		// Options row pool.
+		// Canvas border effect
+		var canvasBorder = new FlxSprite(CANVAS_X - 3, CANVAS_Y - 3).makeGraphic(CANVAS_W + 6, CANVAS_H + 6, FlxColor.TRANSPARENT);
+		canvasBorder.makeGraphic(CANVAS_W + 6, CANVAS_H + 6, 0xFF2A4A5E);
+		canvasBorder.alpha = 0.6;
+		add(canvasBorder);
+
+		// Options row pool with improved styling
 		for (i in 0...MAX_OPT)
 		{
 			final rowY = OPT_Y0 + i * OPT_H;
 
-			var hi = new FlxSprite(OPT_X, rowY).makeGraphic(OPT_W, Std.int(OPT_H - 6), FlxColor.fromRGB(255, 230, 60, 38));
+			// Highlight background for selected row
+			var hi = new FlxSprite(OPT_X - 6, rowY - 2).makeGraphic(OPT_W + 12, Std.int(OPT_H - 4), 0xFF2D5A6B);
 			hi.visible = false;
 			_rowHi.push(hi);
 			add(hi);
 
-			var lbl = new FlxText(OPT_X + 14, rowY + 8, OPT_W - 200, '');
-			lbl.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			// Option label
+			var lbl = new FlxText(OPT_X + 16, rowY + 6, OPT_W - 220, '');
+			lbl.setFormat(Paths.font('vcr.ttf'), 24, COLOR_TEXT, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.visible = false;
 			_rowLabel.push(lbl);
 			add(lbl);
 
-			var lA = new FlxText(OPT_X + OPT_W - 168, rowY + 8, 40, '◄');
-			lA.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.fromRGB(120, 200, 255), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			lA.borderSize = 1;
+			// Left arrow
+			var lA = new FlxText(OPT_X + OPT_W - 170, rowY + 4, 40, '◄');
+			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lA.borderSize = 1.5;
 			lA.visible = false;
 			_rowLeft.push(lA);
 			add(lA);
 
-			var v = new FlxText(OPT_X + OPT_W - 158, rowY + 8, 140, '');
-			v.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			// Value display
+			var v = new FlxText(OPT_X + OPT_W - 156, rowY + 6, 140, '');
+			v.setFormat(Paths.font('vcr.ttf'), 22, 0xFFFFD700, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			v.borderSize = 1.5;
 			v.visible = false;
 			_rowValue.push(v);
 			add(v);
 
-			var rA = new FlxText(OPT_X + OPT_W - 36, rowY + 8, 40, '►');
-			rA.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.fromRGB(120, 200, 255), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			rA.borderSize = 1;
+			// Right arrow
+			var rA = new FlxText(OPT_X + OPT_W - 36, rowY + 4, 40, '►');
+			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			rA.borderSize = 1.5;
 			rA.visible = false;
 			_rowRight.push(rA);
 			add(rA);
 		}
 
-		_descText = new FlxText(OPT_X, OPT_Y0 + MAX_OPT * OPT_H + 6, OPT_W, '');
-		_descText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(190, 190, 190), LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		_descText.borderSize = 1;
+		// Description text with better styling
+		_descText = new FlxText(OPT_X, OPT_Y0 + MAX_OPT * OPT_H + 8, OPT_W, '');
+		_descText.setFormat(Paths.font('vcr.ttf'), 17, COLOR_DESC, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_descText.borderSize = 1.2;
 		add(_descText);
 
-		var help = new FlxText(340, FlxG.height - 60, 600,
-			Lang.str('mobile_controls_help', '◄ ►  change   ·   tap a zone to test   ·   B  back'));
-		help.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(140, 140, 140), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		help.borderSize = 1;
+		// Help text at bottom
+		var help = new FlxText(0, FlxG.height - 48, FlxG.width,
+			Lang.str('mobile_controls_help', '◄ ►  cambiar   ·   toca una zona para probar   ·   B  atrás'));
+		help.setFormat(Paths.font('vcr.ttf'), 17, 0xFF909090, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		help.borderSize = 1.3;
 		add(help);
 
 		super.create();
@@ -472,9 +492,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		return switch (opt.kind)
 		{
 			case 'bool':
-				_getBool(opt.id) ? Lang.str('on', 'ON') : Lang.str('off', 'OFF');
+				_getBool(opt.id) ? '[✓ ON]' : '[  OFF  ]';
 			case 'percent':
-				Std.int(Math.round(_getFloat(opt.id) * 100)) + '%';
+				var pct = Std.int(Math.round(_getFloat(opt.id) * 100));
+				var filled = Std.int(pct / 10);
+				var bar = '[';
+				for (i in 0...filled) bar += '█';
+				for (i in filled...10) bar += '░';
+				bar += '] ' + pct + '%';
+				bar;
 			case 'string':
 				if (opt.stored != null && opt.choices != null)
 				{
@@ -492,8 +518,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			final opt = (i < _opts.length) ? _opts[i] : null;
 			final show = (opt != null);
+			final selected = show && (i == _sel);
 
-			_rowHi[i].visible    = show && (i == _sel);
+			_rowHi[i].visible    = selected;
 			_rowLabel[i].visible = show;
 			_rowValue[i].visible = show;
 			_rowLeft[i].visible  = show;
@@ -502,9 +529,21 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (!show) continue;
 
 			_rowLabel[i].text = opt.label;
-			_rowLabel[i].color = (i == _sel) ? FlxColor.YELLOW : FlxColor.WHITE;
+			_rowLabel[i].color = selected ? COLOR_HIGHLIGHT : COLOR_TEXT;
 			_rowValue[i].text = _displayValue(opt);
-			_rowValue[i].color = (i == _sel) ? FlxColor.YELLOW : FlxColor.fromRGB(210, 210, 210);
+			_rowValue[i].color = selected ? COLOR_HIGHLIGHT : 0xFFCCCCCC;
+
+			// Selection visual feedback
+			if (selected)
+			{
+				_rowLeft[i].color = 0xFF00FFFF;
+				_rowRight[i].color = 0xFF00FFFF;
+			}
+			else
+			{
+				_rowLeft[i].color = 0xFF6699CC;
+				_rowRight[i].color = 0xFF6699CC;
+			}
 		}
 
 		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
@@ -616,15 +655,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	}
 
 	/**
-	 * Adds a circular zone preview element.
-	 * Uses FlxSprite with circular bitmap since _preview.graphics is not available.
+	 * Adds a circular zone preview element with improved visual feedback.
 	 */
 	function _addZoneCircle(X:Float, Y:Float, radius:Float, colorIndex:Int):Void
 	{
-		var color = [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000][colorIndex];
+		var color = ZONE_COLORS[colorIndex];
 		var diameter = Std.int(radius * 2);
 
-		// Create a circular bitmap
+		// Create a circular bitmap with gradient
 		var bitmap = new BitmapData(diameter, diameter, true, 0x00000000);
 		var cx = Std.int(radius);
 		var cy = Std.int(radius);
@@ -638,7 +676,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				var dist = Math.sqrt(dx * dx + dy * dy);
 				if (dist <= radius)
 				{
-					bitmap.setPixel32(px, py, (color & 0x00FFFFFF) | 0x88000000);
+					var alpha = Std.int((1.0 - (dist / radius)) * 200);
+					bitmap.setPixel32(px, py, (color & 0x00FFFFFF) | (alpha << 24));
 				}
 			}
 		}
@@ -722,9 +761,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		spr.alpha = _idleAlpha();
 		add(spr);
 
-		var lbl = new FlxText(x, y + h / 2 - 11, w, ZONE_LABELS[colorIdx]);
-		lbl.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		lbl.borderSize = 1.5;
+		// Zone label with better styling
+		var lbl = new FlxText(x + 2, y + h / 2 - 13, w - 4, ZONE_LABELS[colorIdx]);
+		lbl.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		lbl.borderSize = 2;
 		add(lbl);
 
 		_zones.push({spr: spr, label: lbl, colorIdx: colorIdx, pressed: false, curA: _idleAlpha()});
@@ -751,11 +791,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 		#end
 
-		// Idle "demo" shimmer so the preview feels alive when untouched.
+		// Idle "demo" animation — zones pulse in sequence when untouched
 		if (!_touchingZone)
 		{
 			_demoTimer += elapsed;
-			if (_demoTimer >= 0.65)
+			if (_demoTimer >= 0.5)
 			{
 				_demoTimer = 0.0;
 				_demoIdx = (_demoIdx + 1) % _zones.length;
@@ -764,12 +804,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_zones[i].pressed = (i == _demoIdx);
 		}
 
+		// Smooth alpha transitions with easing
 		final pressA = _pressAlpha();
 		final idleA  = _idleAlpha();
 		for (z in _zones)
 		{
 			final target = z.pressed ? pressA : idleA;
-			z.curA = FlxMath.lerp(z.curA, target, FlxMath.bound(elapsed * 10, 0, 1));
+			z.curA = FlxMath.lerp(z.curA, target, FlxMath.bound(elapsed * 12, 0, 1));
 			z.spr.alpha = z.curA;
 		}
 	}
