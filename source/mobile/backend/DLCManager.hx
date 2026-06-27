@@ -167,9 +167,14 @@ class DLCManager {
                 if (release.name != null && Std.string(release.name) != "")
                     entry.name = Std.string(release.name);
 
-                // Use release body as description
-                if (release.body != null && Std.string(release.body) != "")
-                    entry.description = Std.string(release.body);
+                // Use release body as description, stripping HTML comments
+                // (GitHub releases sometimes include <!-- sha256:... --> or similar).
+                if (release.body != null && Std.string(release.body) != "") {
+                    var rawDescription = Std.string(release.body);
+                    // Strip <!-- ... --> HTML comments
+                    rawDescription = ~/<!--[\s\S]*?-->/g.replace(rawDescription, "");
+                    entry.description = StringTools.trim(rawDescription);
+                }
 
                 // Author from the release publisher
                 if (release.author != null && release.author.login != null)
