@@ -448,15 +448,7 @@ class FunkinAssets
 			if (key == null || key.length == 0)
 			{
 				Logger.log('getGraphic: Invalid key (null or empty)', WARN);
-				try
-				{
-					return FlxG.bitmap.add('flixel/images/logo/default.png');
-				}
-				catch (e:Dynamic)
-				{
-					Logger.log('getGraphic: Failed to load fallback logo: $e', WARN);
-					return null;
-				}
+				return FlxG.bitmap.add('flixel/images/logo/default.png');
 			}
 
 			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
@@ -494,15 +486,7 @@ class FunkinAssets
 			Logger.log("[FunkinAssets] GRAPHIC FALLBACK TRIGGERED for: $key", WARN);
 			#end
 
-			try
-			{
-				return FlxG.bitmap.add('flixel/images/logo/default.png');
-			}
-			catch (e:Dynamic)
-			{
-				Logger.log('getGraphic: Failed to load fallback logo: $e', WARN);
-				return null;
-			}
+			return FlxG.bitmap.add('flixel/images/logo/default.png');
 	}
 	
 	/**
