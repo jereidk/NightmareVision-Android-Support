@@ -108,52 +108,45 @@ class AstcLoader
 	{
 		#if (android && cpp)
 		if (!AstcSupport.isSupported) {
-			Logger.log('[AstcLoader] ASTC not supported on this device', NOTICE);
+			// Logger.log('[AstcLoader] ASTC not supported on this device', NOTICE);
 			return null;
 		}
 
 		var astcPath = deriveAstcPath(pngPath);
 		if (astcPath == null) {
-			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath, NOTICE);
+			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath, WARN);
 			return null;
 		}
-
-		Logger.log('[AstcLoader] Trying to load ASTC for: ' + pngPath, NOTICE);
-		Logger.log('[AstcLoader] ASTC path: ' + astcPath, NOTICE);
 
 		// External storage (extracted APK assets, DLC overrides) takes priority.
 		if (sys.FileSystem.exists(astcPath))
 		{
-			Logger.log('[AstcLoader] Found in FileSystem: ' + astcPath, NOTICE);
+
 			try
 			{
 				var bytes = sys.io.File.getBytes(astcPath);
-				Logger.log('[AstcLoader] Read ' + bytes.length + ' bytes from FileSystem', NOTICE);
+
 				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
 			catch (e:Dynamic)
 			{
-				Logger.log('[AstcLoader] ERROR reading FileSystem ASTC: ' + e, NOTICE);
+
 				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
 				return null;
 			}
 		}
 
-		Logger.log('[AstcLoader] Not in FileSystem, checking APK assets...', NOTICE);
-
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
 		if (OflAssets.exists(astcPath))
 		{
-			Logger.log('[AstcLoader] Found in APK assets: ' + astcPath, NOTICE);
+
 			var bytes = OflAssets.getBytes(astcPath);
 			if (bytes != null) {
-				Logger.log('[AstcLoader] Read ' + bytes.length + ' bytes from APK assets', NOTICE);
+
 				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
 		}
 
-		Logger.log('[AstcLoader] No ASTC found for: ' + pngPath, NOTICE);
-		Logger.log('[AstcLoader] Will use PNG fallback', NOTICE);
 		return null;
 		#else
 		return null;

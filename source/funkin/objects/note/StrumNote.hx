@@ -96,6 +96,10 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		if (animation.curAnim != null) lastAnim = animation.curAnim.name;
 		var br:String = texture;
 		
+		// Defensively clear stale frame cache to prevent Haxe logo on song restart.
+		// The frame cache key is derived from the texture path without .png extension.
+		Paths.tempAtlasFramesCache.remove(Paths.getPath('images/$br.png', null, true).withoutExtension());
+		
 		frames = Paths.getAtlasFrames(br);
 		
 		setGraphicSize(Std.int(width * skin.receptorScale));

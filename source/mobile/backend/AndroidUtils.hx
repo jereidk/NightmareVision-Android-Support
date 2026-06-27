@@ -11,8 +11,18 @@ class AndroidUtils
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
+	/** Minimum interval between JNI vibration calls (ms) to avoid lag from frequent JNI overhead. */
+	static var _lastVibrateTime:Float = -1000;
+
+	/**
+	 * Vibrate with throttling to avoid JNI overhead on rapid note presses.
+	 * Skips vibration if called within MIN_VIBRATE_INTERVAL of the last call.
+	 */
 	public static function vibrate(ms:Int = 12):Void
 	{
+		var now = haxe.Timer.stamp() * 1000;
+		if (now - _lastVibrateTime < 50) return; // max 20 vibrations/sec
+		_lastVibrateTime = now;
 		try { _vibrate([ms]); }
 		catch (e:Dynamic) { trace("Vibrate error: " + e); }
 	}
