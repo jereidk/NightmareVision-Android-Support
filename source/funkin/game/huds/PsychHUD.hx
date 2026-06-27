@@ -13,15 +13,25 @@ class PsychHUD extends BaseHUD
 {
 	var ratingGraphic:FlxSprite;
 	var ratingNumGroup:FlxTypedGroup<FlxSprite>;
-	
+
 	var healthBar:Bar;
 	var healthLerp:Float = 1;
 	var iconP1:HealthIcon;
 	var iconP2:HealthIcon;
 	var scoreTxt:FlxText;
-	
+
 	var timeTxt:FlxText;
 	var timeBar:Bar;
+
+	// Stored tween references — avoids FlxTween.cancelTweensOf() scanning all active tweens.
+	var _ratingAlphaTween:FlxTween = null;
+	var _ratingScaleTween:FlxTween = null;
+	var _scoreBopTween:FlxTween = null;
+	var _numAlphaTweens:Array<FlxTween> = [];
+	var _numScaleTweens:Array<FlxTween> = [];
+
+	// Dirty-check for timeTxt — only redraw when the displayed second actually changes.
+	var _lastSecond:Int = -1;
 	
 	var ratingPrefix:String = "";
 	var ratingSuffix:String = '';
@@ -180,10 +190,12 @@ class PsychHUD extends BaseHUD
 	public function doScoreBop():Void
 	{
 		if (!ClientPrefs.scoreZoom) return;
-		
-		FlxTween.cancelTweensOf(scoreTxt.scale);
+
+		if (_scoreBopTween != null) { _scoreBopTween.cancel(); _scoreBopTween = null; }
 		scoreTxt.scale.set(1.075, 1.075);
-		FlxTween.tween(scoreTxt.scale, {x: 1, y: 1}, 0.2);
+		_scoreBopTween = FlxTween.tween(scoreTxt.scale, {x: 1, y: 1}, 0.2, {
+			onComplete: function(_) { _scoreBopTween = null; }
+		});
 	}
 	
 	public function updateIconsPosition()
@@ -264,7 +276,11 @@ class PsychHUD extends BaseHUD
 			var secondsTotal:Int = Math.floor(songCalc / 1000);
 			if (secondsTotal < 0) secondsTotal = 0;
 			
-			if (ClientPrefs.timeBarType != 'Song Name') timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
+			if (ClientPrefs.timeBarType != 'Song Name' && secondsTotal != _lastSecond)
+				{
+					_lastSecond = secondsTotal;
+					timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
+				}
 		}
 		
 		healthLerp = FlxMath.lerp(healthLerp, parent.health, 0.15);
@@ -308,22 +324,37 @@ class PsychHUD extends BaseHUD
 			ratingGraphic.screenCenter();
 			ratingGraphic.x = posX - 40;
 			ratingGraphic.y -= 60;
-			
+
 			if (PlayState.isPixelStage) ratingGraphic.antialiasing = false;
-			
+
 			ratingGraphic.scale.set(ratingScale * ratingPop, ratingScale * ratingPop);
 			ratingGraphic.updateHitbox();
-			
-			FlxTween.cancelTweensOf(ratingGraphic, ['alpha']);
-			FlxTween.cancelTweensOf(ratingGraphic.scale);
-			FlxTween.tween(ratingGraphic.scale, {x: ratingScale, y: ratingScale}, 0.5, {ease: FlxEase.expoOut});
-			FlxTween.tween(ratingGraphic, {alpha: 0}, 0.5, {startDelay: Conductor.stepCrotchet * 0.01, ease: FlxEase.expoOut});
+
+			if (_ratingScaleTween != null) { _ratingScaleTween.cancel(); _ratingScaleTween = null; }
+			if (_ratingAlphaTween != null) { _ratingAlphaTween.cancel(); _ratingAlphaTween = null; }
+			_ratingScaleTween = FlxTween.tween(ratingGraphic.scale, {x: ratingScale, y: ratingScale}, 0.5, {
+				ease: FlxEase.expoOut,
+				onComplete: function(_) { _ratingScaleTween = null; }
+			});
+			_ratingAlphaTween = FlxTween.tween(ratingGraphic, {alpha: 0}, 0.5, {
+				startDelay: Conductor.stepCrotchet * 0.01,
+				ease: FlxEase.expoOut,
+				onComplete: function(_) { _ratingAlphaTween = null; }
+			});
 		}
 		
 		if (showRatingNum)
 		{
+			// Cancel all digit tweens from the previous popup before recycling.
+			// O(digit_count) direct cancels instead of O(all_active_tweens) scans.
+			for (j in 0..._numAlphaTweens.length)
+			{
+				if (_numAlphaTweens[j] != null) { _numAlphaTweens[j].cancel(); _numAlphaTweens[j] = null; }
+				if (_numScaleTweens[j] != null) { _numScaleTweens[j].cancel(); _numScaleTweens[j] = null; }
+			}
+
 			ratingNumGroup.killMembers();
-			
+
 			var separatedScore:Array<Int> = [], n:Int = combo;
 			while (n > 0)
 			{
@@ -332,7 +363,10 @@ class PsychHUD extends BaseHUD
 			}
 			while (separatedScore.length < minCombos)
 				separatedScore.unshift(0);
-				
+
+			_numAlphaTweens.resize(separatedScore.length);
+			_numScaleTweens.resize(separatedScore.length);
+
 			for (i => d in separatedScore)
 			{
 				var numScore:FlxSprite = ratingNumGroup.recycle(FlxSprite);
@@ -342,17 +376,23 @@ class PsychHUD extends BaseHUD
 				numScore.x = posX + (43 * i) - 90;
 				numScore.y += 80;
 				numScore.revive();
-				
+
 				if (PlayState.isPixelStage) numScore.antialiasing = false;
-				
+
 				numScore.scale.set(combosScale * combosPop, combosScale * combosPop);
 				numScore.updateHitbox();
-				
-				FlxTween.cancelTweensOf(numScore, ['alpha']);
-				FlxTween.cancelTweensOf(numScore.scale);
-				FlxTween.tween(numScore.scale, {x: combosScale, y: combosScale}, 0.5, {ease: FlxEase.expoOut});
-				FlxTween.tween(numScore, {alpha: 0}, 0.5, {startDelay: Conductor.stepCrotchet * 0.01, ease: FlxEase.expoOut});
-				
+
+				final idx = i;
+				_numScaleTweens[i] = FlxTween.tween(numScore.scale, {x: combosScale, y: combosScale}, 0.5, {
+					ease: FlxEase.expoOut,
+					onComplete: function(_) { _numScaleTweens[idx] = null; }
+				});
+				_numAlphaTweens[i] = FlxTween.tween(numScore, {alpha: 0}, 0.5, {
+					startDelay: Conductor.stepCrotchet * 0.01,
+					ease: FlxEase.expoOut,
+					onComplete: function(_) { _numAlphaTweens[idx] = null; }
+				});
+
 				ratingNumGroup.add(numScore);
 			}
 		}
