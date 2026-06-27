@@ -146,11 +146,7 @@ class FunkinAssets
 		// files that might be bundled in the APK or cached by OpenFL.
 		#if android
 		if (Assets.exists(path, IMAGE)) {
-			Logger.log('[getBitmapData] Trying Assets.getBitmapData for: $path', NOTICE);
 			bitmap = Assets.getBitmapData(path, useCache);
-			Logger.log('[getBitmapData] Assets.getBitmapData result=${bitmap != null}', NOTICE);
-		} else {
-			Logger.log('[getBitmapData] NOT in Assets: $path', NOTICE);
 		}
 		#end
 
@@ -158,19 +154,14 @@ class FunkinAssets
 		// for external files (DLC, mods, etc.)
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
 		if (bitmap == null && FileSystem.exists(path)) {
-			Logger.log('[getBitmapData] Trying BitmapData.fromFile for: $path', NOTICE);
 			// On Android, BitmapData.fromFile needs the full path with storage directory
 			var loadPath = path;
 			#if (android && sys)
 			// Build full path: storageDir + path
 			// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
 			loadPath = StorageSystem.getDirectory() + path;
-			Logger.log('[getBitmapData] Using full path: $loadPath', NOTICE);
 			#end
 			bitmap = BitmapData.fromFile(loadPath);
-			Logger.log('[getBitmapData] BitmapData.fromFile result=${bitmap != null}', NOTICE);
-		} else if (bitmap == null) {
-			Logger.log('[getBitmapData] FileSystem.exists=false for: $path', NOTICE);
 		}
 		#end
 
@@ -277,16 +268,6 @@ class FunkinAssets
 	 */
 	public static function getGraphic(key:String, useCache:Bool = true, allowGPU:Bool = true):FlxGraphic
 		{
-			#if android
-			var cwd = Sys.getCwd();
-			var fullPath = cwd + key;
-			Logger.log("[getGraphic] called for: $key", NOTICE);
-			Logger.log("  Working dir: $cwd", NOTICE);
-			Logger.log("  Full path: $fullPath", NOTICE);
-			Logger.log("  FileSystem.exists(): ${sys.FileSystem.exists(fullPath)}", NOTICE);
-			Logger.log("  Assets.exists(): ${Assets.exists(key, IMAGE)}", NOTICE);
-			#end
-
 			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
 
 			if (graphic != null)
