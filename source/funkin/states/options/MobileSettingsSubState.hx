@@ -432,13 +432,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		_opts.push({
 			id: 'haptic', kind: 'bool',
-			label: '📳 ' + Lang.str('opt_haptic', 'Haptic Feedback'),
+			label: '▶ ' + Lang.str('opt_haptic', 'Haptic Feedback'),
 			desc:  Lang.str('opt_haptic_desc', 'Vibrates briefly on each note hit.\nOnly fires when you are in control (not bot play).')
 		});
 
 		_opts.push({
 			id: 'nav', kind: 'string',
-			label: '☰ ' + Lang.str('opt_navinput', 'Navigation Input'),
+			label: '≡ ' + Lang.str('opt_navinput', 'Navigation Input'),
 			desc:  Lang.str('opt_navinput_desc', 'How you interact with menus and UI.\nTouch uses native screen taps. Virtual Pad shows on-screen buttons.'),
 			choices: [Lang.str('choice_navinput_touch', 'Touch'), Lang.str('choice_navinput_pad', 'Virtual Pad')],
 			stored:  ['Touch', 'Virtual Pad']
@@ -446,7 +446,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		_opts.push({
 			id: 'game', kind: 'string',
-			label: '🎮 ' + Lang.str('opt_gameinput', 'Gameplay Input'),
+			label: '◆ ' + Lang.str('opt_gameinput', 'Gameplay Input'),
 			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. Tap Notes: touch notes directly.'),
 			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_tapnotes', 'Tap Notes')],
 			stored:  ['Hitbox', 'Virtual Pad', 'Tap Notes']
@@ -456,14 +456,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_opts.push({
 				id: 'layout', kind: 'string',
-				label: '📐 ' + Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
+				label: '◇ ' + Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
 				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.'),
 				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad'), Lang.str('choice_hitboxlayout_arrows', 'Arrows'), Lang.str('choice_hitboxlayout_triangle', 'Triangle')],
 				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle']
 			});
 			_opts.push({
 				id: 'hitboxAlpha', kind: 'percent',
-				label: '👁 ' + Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),
+				label: '◉ ' + Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),
 				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.')
 			});
 		}
@@ -471,13 +471,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_opts.push({
 				id: 'padAlpha', kind: 'percent',
-				label: '👁 ' + Lang.str('opt_padopacity', 'Pad Opacity'),
+				label: '◉ ' + Lang.str('opt_padopacity', 'Pad Opacity'),
 				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.')
 			});
 
 		_opts.push({
 			id: 'vpadLayout', kind: 'string',
-			label: '🎯 ' + Lang.str('opt_vpadlayout', 'Pad Layout'),
+			label: '✦ ' + Lang.str('opt_vpadlayout', 'Pad Layout'),
 			desc:  Lang.str('opt_vpadlayout_desc', 'Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.'),
 			choices: [Lang.str('choice_vpad_leftfull', 'Left Side'), Lang.str('choice_vpad_rightfull', 'Right Side'), Lang.str('choice_vpad_custom', 'Custom')],
 			stored:  ['LeftFull', 'RightFull', 'Custom']
@@ -487,7 +487,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_opts.push({
 				id: 'vpadCustomize', kind: 'customize',
-				label: '🛠 ' + Lang.str('opt_vpadcustomize', 'Customize Pad'),
+				label: '⚙ ' + Lang.str('opt_vpadcustomize', 'Customize Pad'),
 				desc:  Lang.str('opt_vpadcustomize_desc', 'Open the pad customizer to drag buttons to new positions.')
 			});
 		}
@@ -496,7 +496,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if mobile
 		_opts.push({
 			id: 'aspectRatio', kind: 'string',
-			label: '📺 ' + Lang.str('opt_aspectratio', 'Screen Fit'),
+			label: '▭ ' + Lang.str('opt_aspectratio', 'Screen Fit'),
 			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort).'),
                         choices: [Lang.str('choice_aspect_fit', 'Fit (16:9)'), Lang.str('choice_aspect_stretch', 'Stretch'), Lang.str('choice_aspect_expand', 'Expand')],
                         stored:  ['fit', 'stretch', 'expand']
