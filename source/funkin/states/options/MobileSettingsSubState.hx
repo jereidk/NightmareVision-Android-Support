@@ -3,7 +3,6 @@ package funkin.states.options;
 #if mobile
 
 import flixel.FlxG;
-import flixel.FlxObject;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
@@ -220,12 +219,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 			for (i in 0...members.length)
 			{
-				var member = members[i];
-				if (member != null)
-				{
-					var obj:FlxObject = cast member;
-					obj.alpha = _enterAlpha;
-				}
+				var spr = Std.downcast(members[i], FlxSprite);
+				if (spr != null)
+					spr.alpha = _enterAlpha;
 			}
 		}
 
