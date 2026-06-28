@@ -40,9 +40,18 @@
 		0,
 		350
 	],
+	"dance_every": 2,
+	"pausePortrait": "",
+	"gameover_intial_sound": null,
+	"flags": {},
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
 	"healthicon": "bf",
+	"afterimages": true,
+	"gameover_character": null,
+	"vslice_sustains": false,
 	"flip_x": true,
-	"healthbar_colors": [
+	"healthbar_colours": [
 		49,
 		176,
 		209
@@ -51,6 +60,7 @@
 		0,
 		0
 	],
-	"sing_duration": 4,
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
 	"scale": 1
 }
