@@ -125,12 +125,12 @@ function onLoad()
 	add(crewmates[0]);
 	
 	victory = new FlxText(280, 67, -1, 'VICTORY'); //-88
-	victory.setFormat(Paths.font('vcr'), 70, 0xFF4DFFFF);
+	victory.setFormat(Paths.font('vcr.ttf'), 70, 0xFF4DFFFF);
 	victory.scale.set(2.774, 2.774);
 	victory.updateHitbox();
 	victory.scrollFactor.x = 0.5;
 	victory.text = Lang.str('victory');
-	add(victory);
+	insert(0, victory);
 }
 
 function onUpdateScorePost(_):Void overrideScoreText();

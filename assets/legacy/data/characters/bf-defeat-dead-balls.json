@@ -1,4 +1,5 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"offsets": [
@@ -35,6 +36,8 @@
 		}
 	],
 	"no_antialiasing": false,
+	"flags": {},
+	"afterimages": true,
 	"image": "characters/gameover/bf_defeat_death_balls-0,characters/gameover/bf_defeat_death_balls-1",
 	"position": [
 		30,

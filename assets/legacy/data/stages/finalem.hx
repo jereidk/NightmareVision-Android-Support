@@ -117,7 +117,7 @@ function onLoad()
 	finaleFGStuff.add(bg3);
 	finaleFGStuff.add(bg4);
 	finaleFGStuff.add(bg5);
-	finaleFGStuff.add(dark);
+	if (!ClientPrefs.lowQuality) finaleFGStuff.add(dark);
 	finaleFGStuff.add(finaleLight);
 	
 	finaleBGStuff.alpha = 0.001;
@@ -141,7 +141,7 @@ function onCreatePost()
 	camSpecialThing([750, 800], [750, 800], 0.8);
 	
 	add(finaleFGStuff);
-	add(finaleFlashbackStuff);
+	if (!ClientPrefs.lowQuality) add(finaleFlashbackStuff);
 	
 	lightoverlay = new FlxSprite(-550, 250).loadGraphic(Paths.image('stages/void/iluminao omaga'));
 	lightoverlay.scale.set(4, 4);
@@ -211,7 +211,7 @@ function onCreatePost()
 
 function onBeatHit()
 {
-	if (curBeat % 4 == 0) finaleLight.animation.play('bop');
+	if (!ClientPrefs.lowQuality && curBeat % 4 == 0) finaleLight.animation.play('bop');
 }
 
 function onUpdate(elapsed)

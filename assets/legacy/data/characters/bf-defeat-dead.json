@@ -1,4 +1,5 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"loop": false,
@@ -35,6 +36,8 @@
 		}
 	],
 	"no_antialiasing": false,
+	"flags": {},
+	"afterimages": true,
 	"image": "characters/gameover/bf_defeat_death",
 	"position": [
 		-80,

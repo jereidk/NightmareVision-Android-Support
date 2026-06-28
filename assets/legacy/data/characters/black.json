@@ -143,6 +143,7 @@
 		}
 	],
 	"no_antialiasing": false,
+	"pausePortrait": "",
 	"image": "characters/story/black/black",
 	"position": [
 		180,
