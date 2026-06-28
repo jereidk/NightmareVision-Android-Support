@@ -1,115 +1,117 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
-			"offsets": [
-				57,
-				-278
-			],
 			"loop": false,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "idle",
-			"indices": [],
-			"name": "impostor idle"
+			"fps": 24,
+			"name": "impostor idle",
+			"indices": []
 		},
 		{
-			"offsets": [
-				59,
-				-294
-			],
 			"loop": false,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singRIGHT",
-			"indices": [],
-			"name": "impostor right"
+			"fps": 24,
+			"name": "impostor right",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "impostor down",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "impostor up2",
+			"indices": []
 		},
 		{
 			"offsets": [
-				106,
-				-303
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
-			"anim": "singDOWN",
+			"anim": "danceLeft",
 			"indices": [],
-			"name": "impostor down"
+			"name": "impostor dance left"
 		},
 		{
 			"offsets": [
-				249,
-				-288
+				0,
+				0
 			],
+			"loop": false,
+			"fps": 24,
+			"anim": "danceRight",
+			"indices": [],
+			"name": "impostor dance right"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "liveReaction",
+			"indices": [],
+			"name": "bwomp"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
 			"loop": false,
 			"fps": 24,
 			"anim": "singLEFT",
+			"flipX": false,
 			"indices": [],
-			"name": "imposter left"
-		},
-		{
-			"offsets": [
-				161,
-				-161
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "singUP",
-			"indices": [],
-			"name": "impostor up2"
-		},
-		{
-			"loop": false,
-			"offsets": [
-				61,
-				-278
-			],
-			"anim": "danceLeft",
-			"fps": 24,
-			"name": "impostor dance left",
-			"indices": []
-		},
-		{
-			"loop": false,
-			"offsets": [
-				57,
-				-278
-			],
-			"anim": "danceRight",
-			"fps": 24,
-			"name": "impostor dance right",
-			"indices": []
-		},
-		{
-			"loop": false,
-			"offsets": [
-				352,
-				-174
-			],
-			"anim": "liveReaction",
-			"fps": 24,
-			"name": "bwomp",
-			"indices": []
+			"name": "impostor left"
 		}
 	],
 	"no_antialiasing": false,
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true,
-	"image": "characters/story/green/green-0,characters/story/green/green-1,characters/story/green/green-2",
+	"image": "characters/story/green/green",
 	"position": [
-		3,
-		92
+		-367,
+		232
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "green",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": true,
 	"flip_x": false,
 	"healthbar_colour": -14718165,
 	"camera_position": [
-		30,
-		230
+		100,
+		-19
 	],
 	"gameover_loop_sound": null,
 	"sing_duration": 6,
