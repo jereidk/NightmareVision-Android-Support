@@ -2,8 +2,8 @@
 	"animations": [
 		{
 			"offsets": [
-				166,
-				-137
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
@@ -13,8 +13,8 @@
 		},
 		{
 			"offsets": [
-				251,
-				-157
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
@@ -24,8 +24,8 @@
 		},
 		{
 			"offsets": [
-				258,
-				-231
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
@@ -35,8 +35,8 @@
 		},
 		{
 			"offsets": [
-				378,
-				-135
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
@@ -46,8 +46,8 @@
 		},
 		{
 			"offsets": [
-				249,
-				-190
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
@@ -73,8 +73,8 @@
 		{
 			"loop": false,
 			"offsets": [
-				235,
-				-149
+				0,
+				0
 			],
 			"anim": "hey",
 			"fps": 24,
@@ -85,8 +85,8 @@
 			"loop": true,
 			"flipY": false,
 			"offsets": [
-				249,
-				-190
+				0,
+				0
 			],
 			"anim": "idle",
 			"fps": 24,
@@ -102,8 +102,8 @@
 		},
 		{
 			"offsets": [
-				249,
-				-190
+				0,
+				0
 			],
 			"indices": [
 				14,
@@ -126,8 +126,8 @@
 	"flags": {},
 	"afterimages": true,
 	"position": [
-		0,
-		0
+		-350,
+		200
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
@@ -139,11 +139,11 @@
 	"flip_x": false,
 	"healthbar_colour": -11394257,
 	"camera_position": [
-		0,
-		0
+		178,
+		2
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 0.9,
 	"_editor_isPlayer": false
 }
