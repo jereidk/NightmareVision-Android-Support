@@ -10,6 +10,7 @@ import funkin.scripts.*;
 #if mobile
 import flixel.group.FlxGroup;
 import mobile.controls.MobileHitbox;
+import mobile.controls.MobileHitbox.HitboxLayout;
 import mobile.controls.MobileVirtualPad;
 #end
 
@@ -88,8 +89,18 @@ class MusicBeatSubstate extends FlxSubState
 				return;
 			}
 
-			// Tap Notes: no hitbox needed, NoteTapInput handles it separately
-			if (funkin.data.ClientPrefs.gameInputMode == 'Tap Notes') return;
+			// VSlice controls: static arrow receptors (ARROWS hitbox, ignores layout pref).
+			if (funkin.data.ClientPrefs.gameInputMode == 'VSlice controls')
+			{
+				hitbox = new MobileHitbox(ARROWS);
+				hitboxCam = new FlxCamera();
+				hitboxCam.bgColor.alpha = 0;
+				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
+				hitbox.cameras = [hitboxCam];
+				hitbox.visible = false;
+				add(hitbox);
+				return;
+			}
 
 			// Hitbox mode (and any future modes)
 			hitbox = new MobileHitbox();

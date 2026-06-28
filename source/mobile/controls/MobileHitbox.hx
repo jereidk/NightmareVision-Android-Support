@@ -55,14 +55,14 @@ class MobileHitbox extends TouchInputManager
 
 	private var _cachedGraphics:Map<Int, flixel.graphics.FlxGraphic> = new Map();
 
-	public function new():Void
+	public function new(?forcedLayout:HitboxLayout):Void
 	{
 		super();
 		alphaTarget = funkin.data.ClientPrefs.hitboxAlpha;
 
 		var safe = mobile.backend.ScreenUtil.safeArea();
 
-		switch (layoutFromPrefs())
+		switch (forcedLayout ?? layoutFromPrefs())
 		{
 			case TWO_THUMB:  buildTwoThumb(safe);
 			case FOUR_LANES: buildFourLanes(safe);

@@ -450,9 +450,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'game', kind: 'string',
 			label: '◆ ' + Lang.str('opt_gameinput', 'Gameplay Input'),
-			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. Tap Notes: touch notes directly.'),
-			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_tapnotes', 'Tap Notes')],
-			stored:  ['Hitbox', 'Virtual Pad', 'Tap Notes']
+			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. VSlice controls: static arrow receptors.'),
+			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_vslice', 'VSlice controls')],
+			stored:  ['Hitbox', 'Virtual Pad', 'VSlice controls']
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')
@@ -613,10 +613,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_buildPadPreview();
 			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
 		}
-		else if (ClientPrefs.gameInputMode == 'Tap Notes')
+		else if (ClientPrefs.gameInputMode == 'VSlice controls')
 		{
-			// No visual zones for tap notes - just touch the notes directly
-			_modeText.text = Lang.str('preview_mode_tapnotes', 'Tap Notes');
+			_buildArrowsPreview();
+			_modeText.text = Lang.str('preview_mode_vslice', 'VSlice controls');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
 		{
