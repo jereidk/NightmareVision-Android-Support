@@ -115,6 +115,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
 		add(bg);
 
+		// Header bar behind the title.
+		var topBar = new FlxSprite(0, 0);
+		topBar.loadGraphic(Paths.image('menu/common/topBar'));
+		topBar.setGraphicSize(FlxG.width, 90);
+		topBar.updateHitbox();
+		add(topBar);
+
 		var titleTxt = new FlxText(0, 14, FlxG.width, Lang.str('opt_category_mobile', 'MOBILE CONTROLS').toUpperCase());
 		titleTxt.setFormat(Paths.font('vcr.ttf'), 42, COLOR_HIGHLIGHT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleTxt.borderSize = 2.5;
@@ -126,16 +133,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_modeText.borderSize = 1.8;
 		add(_modeText);
 
-		// Canvas background with border styling
-		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y).makeGraphic(CANVAS_W, CANVAS_H, 0xFF1A1A2E);
+		// Canvas background — star field scaled to preview area.
+		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y);
+		_canvasBg.loadGraphic(Paths.image('menu/common/starFG'));
+		_canvasBg.setGraphicSize(CANVAS_W, CANVAS_H);
+		_canvasBg.updateHitbox();
 		_canvasBg.alpha = 0.95;
 		add(_canvasBg);
-
-		// Canvas border effect
-		var canvasBorder = new FlxSprite(CANVAS_X - 3, CANVAS_Y - 3).makeGraphic(CANVAS_W + 6, CANVAS_H + 6, FlxColor.TRANSPARENT);
-		canvasBorder.makeGraphic(CANVAS_W + 6, CANVAS_H + 6, 0xFF2A4A5E);
-		canvasBorder.alpha = 0.6;
-		add(canvasBorder);
 
 		// Options row pool with improved styling
 		for (i in 0...MAX_OPT)
@@ -143,7 +147,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			final rowY = OPT_Y0 + i * OPT_H;
 
 			// Highlight background for selected row
-			var hi = new FlxSprite(OPT_X - 6, rowY - 2).makeGraphic(OPT_W + 12, Std.int(OPT_H - 4), 0xFF2D5A6B);
+			var hi = new FlxSprite(OPT_X - 6, rowY - 2);
+			hi.loadGraphic(Paths.image('menu/freeplay/card'));
+			hi.setGraphicSize(OPT_W + 12, Std.int(OPT_H - 4));
+			hi.updateHitbox();
 			hi.visible = false;
 			_rowHi.push(hi);
 			add(hi);

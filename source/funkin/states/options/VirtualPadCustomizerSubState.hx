@@ -57,8 +57,18 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	override function create()
 	{
 		// ── Background ──
-		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 0, 210));
+		bg = new FlxSprite(0, 0);
+		bg.loadGraphic(Paths.image('menu/common/starBG'));
+		bg.setGraphicSize(FlxG.width, FlxG.height);
+		bg.updateHitbox();
 		add(bg);
+
+		// ── Header bar ──
+		var topBar = new FlxSprite(0, 0);
+		topBar.loadGraphic(Paths.image('menu/common/topBar'));
+		topBar.setGraphicSize(FlxG.width, 90);
+		topBar.updateHitbox();
+		add(topBar);
 
 		// ── Title ──
 		var title = new FlxText(0, 20, FlxG.width, 'CUSTOMIZE VIRTUAL PAD');
@@ -395,7 +405,11 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	function _makeButton(x:Float, y:Float, text:String, color:Int):FlxSprite
 	{
-		var spr = new FlxSprite(x, y).makeGraphic(150, 36, color);
+		var spr = new FlxSprite(x, y);
+		spr.loadGraphic(Paths.image('menu/freeplay/card'));
+		spr.setGraphicSize(150, 36);
+		spr.updateHitbox();
+		spr.color = color;
 		add(spr); // sprite first (background)
 		var txt = new FlxText(x, y + 6, 150, text);
 		txt.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
