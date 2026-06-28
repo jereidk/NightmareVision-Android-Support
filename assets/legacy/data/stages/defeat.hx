@@ -17,7 +17,8 @@ var glowTween2:FlxTween;
 var defeatBopTween:FlxTween;
 var defeatScaleTween:Dynamic = null;
 var ext:String = 'stages/void/';
-var defeatRetro:String = '';
+var defeatRetro:Null<String> = null;
+var bf:String;
 public var redscreen:FlxSprite;
 
 var bfRim:DropShadowShader;
@@ -115,11 +116,9 @@ function onCreatePost()
 	iconP2.visible = false;
 	// wait. I'm white!
 	
-	if (boyfriend.hasFlag('defeatRetro'))
-	{
-		defeatRetro = boyfriend.getFlag('defeatRetro');
+	defeatRetro = boyfriend.getFlag('variants')?.retro ?? boyfriend.getFlag('defeatRetro');
+	if (defeatRetro != null)
 		addCharacterToList(defeatRetro, 0);
-	}
 	addCharacterToList('blackold', 1);
 	
 	snapCamToPos(750, 500);
@@ -141,6 +140,7 @@ function onCreatePost()
 	lightoverlay.blend = BlendMode.ADD;
 	lightoverlay.antialiasing = ClientPrefs.globalAntialiasing;
 	lightoverlay.zIndex = 3;
+	lightoverlay.alpha = 0.6;
 	add(lightoverlay);
 	
 	redscreen.zIndex = 3;
@@ -372,8 +372,9 @@ function onEvent(eventName, value1, value2)
 				case 0:
 					prevAfterimages = boyfriend.ghostsEnabled;
 					prevScoreColor = scoreTxt.color;
+					bf = boyfriend.curCharacter;
 					
-					if (defeatRetro != '') changeCharacter(defeatRetro, 0);
+					if (defeatRetro != null) changeCharacter(defeatRetro, 0);
 					
 					boyfriend.ghostsEnabled = false;
 					
@@ -390,8 +391,9 @@ function onEvent(eventName, value1, value2)
 					if (hasPet) pet.visible = false;
 					isRetro = true;
 				case 1:
-					changeCharacter(hasBfSkin ? ClientPrefs.bfSkin : 'bf-defeat-scared', 0);
+					changeCharacter(bf, 0);
 					changeCharacter('black', 1);
+					checkStageFlag(boyfriend);
 					
 					boyfriend.ghostsEnabled = prevAfterimages;
 					
@@ -422,6 +424,7 @@ function onEvent(eventName, value1, value2)
 					FlxTween.tween(edgeglow1, {alpha: 0.5}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(edgeglow2, {alpha: 0.5}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(subtract, {alpha: 1}, 0.7, {ease: FlxEase.quadInOut});
+					FlxTween.tween(lightoverlay, {alpha: 0.7}, 0.7, {ease: FlxEase.quadInOut});
 				case 1:
 					FlxTween.tween(bodies, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(bodies2, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
@@ -429,6 +432,7 @@ function onEvent(eventName, value1, value2)
 					FlxTween.tween(edgeglow1, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(edgeglow2, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(subtract, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
+					FlxTween.tween(lightoverlay, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 			}
 	}
 }

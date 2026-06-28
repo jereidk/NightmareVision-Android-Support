@@ -135,6 +135,9 @@
 	],
 	"no_antialiasing": false,
 	"image": "characters/triple/pink/pretender",
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true,
 	"position": [
 		-500,
 		100

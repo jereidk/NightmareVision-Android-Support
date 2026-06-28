@@ -84,6 +84,9 @@
 	],
 	"no_antialiasing": false,
 	"image": "characters/story/white/white",
+	"flags": {},
+	"afterimages": true,
+	"pausePortrait": "",
 	"position": [
 		-230,
 		80
@@ -102,7 +105,7 @@
 		312.5
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": false
 }

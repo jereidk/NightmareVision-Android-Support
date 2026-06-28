@@ -65,13 +65,15 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
+	"afterimages": true,
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "maroon-parasite",
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
-	"healthbar_colour": -9695438,
+	"healthbar_colour": -38616,
 	"camera_position": [
 		-210,
 		260

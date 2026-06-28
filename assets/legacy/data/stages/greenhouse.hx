@@ -160,8 +160,7 @@ function onLoad()
 	rhmmira.animation.play('bop');
 	rhmmira.antialiasing = true;
 	rhmmira.scrollFactor.set(1.2, 1);
-	add(rhmmira);
-	
+
 	bluemira = new FlxSprite(-1350, 0);
 	bluemira.frames = Paths.getSparrowAtlas(ext + 'crew');
 	bluemira.animation.addByPrefix('bop', 'blue', 24, false);
@@ -210,6 +209,7 @@ function onLoad()
 function onCreatePost()
 {
 	camSpecialThing([100, 200], [380, 200], 0.5);
+	add(rhmmira);
 	add(bluemira);
 	add(pot);
 	add(vines);

@@ -122,6 +122,9 @@
 	],
 	"no_antialiasing": false,
 	"image": "characters/triple/maroon/maroon",
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true,
 	"position": [
 		0,
 		0

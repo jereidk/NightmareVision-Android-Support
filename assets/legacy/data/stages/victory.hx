@@ -129,6 +129,7 @@ function onLoad()
 	victory.scale.set(2.774, 2.774);
 	victory.updateHitbox();
 	victory.scrollFactor.x = 0.5;
+	victory.text = Lang.str('victory');
 	add(victory);
 }
 

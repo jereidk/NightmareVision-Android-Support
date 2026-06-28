@@ -119,6 +119,9 @@
 	],
 	"no_antialiasing": false,
 	"image": "characters/triple/grey",
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true,
 	"position": [
 		0,
 		220
@@ -131,7 +134,7 @@
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
-	"healthbar_colour": -9082999,
+	"healthbar_colour": -10332301,
 	"camera_position": [
 		500,
 		0
