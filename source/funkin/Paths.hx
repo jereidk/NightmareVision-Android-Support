@@ -296,19 +296,21 @@ class Paths
 	{
 		if (keys.length == 0) return null;
 		
-		final firstKey:Null<String> = keys.shift()?.trim();
+		// Make a copy to avoid mutating the caller's array
+		final keysCopy = keys.copy();
+		final firstKey:Null<String> = keysCopy.shift()?.trim();
 		
 		var frames = getAtlasFrames(firstKey, parentFolder, allowGPU, checkMods);
 		
 		// If first atlas failed, nothing to combine - return null early
 		if (frames == null) return null;
 		
-		if (keys.length != 0)
+		if (keysCopy.length != 0)
 		{
 			final originalCollection = frames;
 			frames = new FlxAtlasFrames(originalCollection.parent);
 			frames.addAtlas(originalCollection, true);
-			for (i in keys)
+			for (i in keysCopy)
 			{
 				final newFrames = getAtlasFrames(i.trim(), parentFolder, allowGPU, checkMods);
 				if (newFrames != null)
