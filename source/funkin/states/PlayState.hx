@@ -739,6 +739,7 @@ class PlayState extends MusicBeatState
 			gfGroup.addChar(gf);
 			gfGroup.parent = gf;
 			startCharacterScript(gf.curCharacter, gf);
+			trace('[DEBUG] GF Created: visible=${gf.visible}, alpha=${gf.alpha}, x=${gf.x}, y=${gf.y}');
 		}
 		
 		dad = new Character(SONG.player2);
@@ -1238,6 +1239,9 @@ class PlayState extends MusicBeatState
 			scripts.call('onStartCountdown', []);
 			return;
 		}
+
+		// Debug: log GF state at countdown start
+		trace('[DEBUG] startCountdown: gf=${gf != null}, visible=${gf?.visible}, alpha=${gf?.alpha}, gfGroup.visible=${gfGroup.visible}, stage.zIndex=${stage.zIndex}, gfGroup.zIndex=${gfGroup.zIndex}');
 
 		// Log loaded scripts and enable per-call timing to track lag culprits
 		ScriptGroup.timingEnabled = true;

@@ -92,5 +92,10 @@ class CharacterGroup extends FlxSpriteGroup
 		
 		char.x += char.positionArray[0];
 		char.y += char.positionArray[1];
+		
+		// Debug: log character state after positioning
+		#if debug
+		trace('[DEBUG] startPos: type=${type}, char=${char.curCharacter}, visible=${char.visible}, alpha=${char.alpha}');
+		#end
 	}
 }
