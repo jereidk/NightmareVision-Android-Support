@@ -147,31 +147,32 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			add(hi);
 
 			// Option label
-			var lbl = new FlxText(OPT_X + 16, rowY + 6, OPT_W - 220, '');
+			var lbl = new FlxText(OPT_X + 16, rowY + 6, OPT_W - 275, '');
 			lbl.setFormat(Paths.font('vcr.ttf'), 24, COLOR_TEXT, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.visible = false;
 			_rowLabel.push(lbl);
 			add(lbl);
 
-			// Left arrow
-			var lA = new FlxText(OPT_X + OPT_W - 170, rowY + 4, 40, '◄');
-			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			lA.borderSize = 1.5;
-			lA.visible = false;
-			_rowLeft.push(lA);
-			add(lA);
-
-			// Value display
-			var v = new FlxText(OPT_X + OPT_W - 156, rowY + 6, 140, '');
+			// Left arrow  (must be added AFTER value so it draws on top)
+			// Value display (centre of the right block)
+			var v = new FlxText(OPT_X + OPT_W - 192, rowY + 6, 134, '');
 			v.setFormat(Paths.font('vcr.ttf'), 22, 0xFFFFD700, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			v.borderSize = 1.5;
 			v.visible = false;
 			_rowValue.push(v);
 			add(v);
 
+			// Left arrow — drawn after value so it renders on top if widths ever shift
+			var lA = new FlxText(OPT_X + OPT_W - 248, rowY + 4, 52, '◄');
+			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lA.borderSize = 1.5;
+			lA.visible = false;
+			_rowLeft.push(lA);
+			add(lA);
+
 			// Right arrow
-			var rA = new FlxText(OPT_X + OPT_W - 36, rowY + 4, 40, '►');
+			var rA = new FlxText(OPT_X + OPT_W - 56, rowY + 4, 52, '►');
 			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			rA.borderSize = 1.5;
 			rA.visible = false;
@@ -297,39 +298,33 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Option rows — Virtual Pad navigates via controls.*, not raw touch.
 		if (ClientPrefs.navInputMode == 'Virtual Pad') return;
 
-		// Option rows.
+		// Use the full row as a touch target.
+		// Left half of the row → ◄ (change left); right half → ► (change right).
+		// Bool options toggle on any tap. The ◄ ► sprites are visual only.
 		for (i in 0..._opts.length)
 		{
 			if (i >= MAX_OPT) break;
 
-			if (_rowLeft[i].visible && FlxG.mouse.overlaps(_rowLeft[i]))
+			final rowY = OPT_Y0 + i * OPT_H;
+			if (!(mx >= OPT_X && mx <= OPT_X + OPT_W && my >= rowY && my < rowY + OPT_H))
+				continue;
+
+			if (_sel != i)
 			{
-				if (_sel != i) { _sel = i; _updateRows(); }
-				_changeSelected(-1);
-				return;
-			}
-			if (_rowRight[i].visible && FlxG.mouse.overlaps(_rowRight[i]))
-			{
-				if (_sel != i) { _sel = i; _updateRows(); }
-				_changeSelected(1);
-				return;
+				_sel = i;
+				FunkinSound.play(Paths.sound('hover'), 0.5);
+				_updateRows();
 			}
 
-			final rowY = OPT_Y0 + i * OPT_H;
-			if (mx >= OPT_X && mx <= OPT_X + OPT_W && my >= rowY && my < rowY + OPT_H)
-			{
-				if (_sel != i)
-				{
-					_sel = i;
-					FunkinSound.play(Paths.sound('hover'), 0.5);
-					_updateRows();
-				}
-				else if (_opts[i].kind == 'bool')
-				{
-					_changeSelected(1);
-				}
-				return;
-			}
+			final opt = _opts[i];
+			if (opt.kind == 'bool')
+				_changeSelected(1);
+			else if (mx < OPT_X + OPT_W * 0.5)
+				_changeSelected(-1);
+			else
+				_changeSelected(1);
+
+			return;
 		}
 	}
 	#end
