@@ -355,13 +355,17 @@ class DLCManager {
                     }
                 });
 
+                var counterClosed = false;
                 try {
                     http.customRequest(false, counter);
+                    // customRequest closes the output stream on success; mark it so the
+                    // catch block below does not attempt a second close on rethrow.
+                    counterClosed = true;
                 } catch (e:Dynamic) {
-                    try counter.close() catch (ce:Dynamic) { Logger.log('DLCManager: Failed to close counter: $ce', WARN); }
+                    if (!counterClosed)
+                        try { counter.close(); counterClosed = true; } catch (_:Dynamic) {}
                     throw "Download failed: " + Std.string(e);
                 }
-                try counter.close() catch (ce:Dynamic) { Logger.log('DLCManager: Failed to close counter: $ce', WARN); }
 
                 if (error != "") throw "Download failed: " + error;
                 if (!FileSystem.exists(zipPath) || FileSystem.stat(zipPath).size == 0)
