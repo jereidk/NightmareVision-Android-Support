@@ -59,6 +59,7 @@ var dialogueEnded:Bool = false;
 var curIcon:String = 'bf';
 var curSide:Int = 0;
 var charMap:Map<String, Dynamic> = new haxe.ds.StringMap();
+var soundCache:Map<String, FlxSound> = new haxe.ds.StringMap();
 var blackYnot:FlxSprite;
 var vidPlaying:Bool = false;
 var dialogueAfter:Bool = false;
@@ -305,7 +306,9 @@ function refreshDialogue(?oldToo = false)
 function v4SpeakerShit()
 {
 	var speaker:FlxSprite = speakerAnims(curCharacter);
-	swagDialogue.sounds = [FlxG.sound.load(Paths.sound('dialogue/' + curSound), 0.6)];
+	if (!soundCache.exists(curSound))
+		soundCache[curSound] = FlxG.sound.load(Paths.sound('dialogue/' + curSound), 0.6);
+	swagDialogue.sounds = [soundCache[curSound]];
 	dropText.text = boxChar;
 	icon.changeIcon(curIcon);
 	
@@ -569,6 +572,7 @@ function goodBialogue()
 			onComplete: function() {
 				boxGroup.kill();
 				charMap.clear();
+				soundCache.clear();
 				bgFade.kill();
 			}
 		});
@@ -597,7 +601,7 @@ function onUpdate(elapsed)
 
 function onUpdatePost()
 {
-	if (swagDialogue != null)
+	if (swagDialogue != null && hasDialogue)
 	{
 		if (rtlMode && rtlFullText.length > 0)
 		{
