@@ -12,6 +12,11 @@ import flixel.util.FlxTimer;
 
 import funkin.states.*;
 
+#if mobile
+import mobile.utils.MobileNavUtil;
+import mobile.backend.MusicBeatSubstate;
+#end
+
 // rewrite this later
 class DialogueBox extends FlxSpriteGroup
 {
@@ -149,6 +154,21 @@ class DialogueBox extends FlxSpriteGroup
 		dialogue = new Alphabet(0, 80, "", false, true); // excuse me?????
 		// dialogue.x = 90;
 		// add(dialogue);
+		
+		// Add VirtualPad for mobile when navInputMode is 'Virtual Pad'
+		#if mobile
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			// Try to get parent state to add VirtualPad
+			var parentState = FlxG.state;
+			if (parentState != null && Std.is(parentState, MusicBeatSubstate))
+			{
+				var musicBeatState = cast(parentState, MusicBeatSubstate);
+				musicBeatState.addVirtualPad(LEFT_FULL, A_B);
+				musicBeatState.addVirtualPadCamera();
+			}
+		}
+		#end
 	}
 	
 	var dialogueOpened:Bool = false;

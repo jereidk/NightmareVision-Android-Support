@@ -2,7 +2,10 @@ package mobile.backend.java;
 
 import android.app.Activity;
 import android.content.Context;
+import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -10,6 +13,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowInsetsController;
 import org.haxe.extension.Extension;
+import java.io.File;
 
 public class AndroidUtils extends Extension {
 
@@ -128,5 +132,51 @@ public class AndroidUtils extends Extension {
         } else {
             vibrator.vibrate(ms);
         }
+    }
+
+    /**
+     * Scans a folder using Android's MediaScanner to make it visible in file managers.
+     * Uses MediaScannerConnection to add the folder to the media store.
+     * Similar to FunkinCrew/Funkin's "Data Folder" approach.
+     */
+    public static void scanFolder(final String folderPath) {
+        if (folderPath == null || folderPath.isEmpty()) return;
+        
+        final Activity activity = mainActivity;
+        if (activity == null) return;
+        
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File folder = new File(folderPath);
+                    if (!folder.exists()) return;
+                    
+                    // Create a .nomedia file to prevent media scanning of game content
+                    // but still make the folder itself visible
+                    File nomediaFile = new File(folderPath, ".nomedia");
+                    if (!nomediaFile.exists()) {
+                        nomediaFile.createNewFile();
+                    }
+                    
+                    // Use MediaScannerConnection to scan the folder
+                    // This makes it visible in file managers like the native "Files" app
+                    String[] paths = { folderPath };
+                    MediaScannerConnection.scanFile(
+                        activity.getApplicationContext(),
+                        paths,
+                        null,
+                        new MediaScannerConnection.OnScanCompletedListener() {
+                            @Override
+                            public void onScanCompleted(String path, Uri uri) {
+                                android.util.Log.i("AndroidUtils", "Scanned folder: " + path);
+                            }
+                        }
+                    );
+                } catch (Exception e) {
+                    android.util.Log.e("AndroidUtils", "Error scanning folder: " + e.toString());
+                }
+            }
+        });
     }
 }

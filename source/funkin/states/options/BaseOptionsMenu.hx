@@ -12,6 +12,7 @@ import flixel.math.FlxRect;
 import funkin.objects.*;
 import funkin.objects.menu.ScrollBar;
 import funkin.backend.MusicBeatSubstate;
+import mobile.utils.MobileNavUtil;
 
 class BaseOptionsMenu extends MusicBeatSubstate
 {
@@ -388,7 +389,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		var mouseDirectionPressed:Int = 0;
 		var mouseDirectionReleased:Int = 0;
 		
-		if (FlxG.mouse.justPressed)
+		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		var allowMouseInput:Bool = true;
+		#if mobile
+		allowMouseInput = MobileNavUtil.allowPointerNav();
+		#end
+		
+		// Force mouseControlActive to false when mouse input is not allowed
+		if (!allowMouseInput) mouseControlActive = false;
+		
+		if (allowMouseInput && FlxG.mouse.justPressed)
 		{
 			var hoveredBox = getHoveredAddbox();
 			if (hoveredBox != null)
@@ -398,12 +408,12 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				selectOption(hoveredBox.ID);
 			}
 		}
-		if (!FlxG.mouse.pressed && mouseHeldDirection != 0)
+		if (allowMouseInput && !FlxG.mouse.pressed && mouseHeldDirection != 0)
 		{
 			mouseDirectionReleased = mouseHeldDirection;
 			mouseHeldDirection = 0;
 		}
-		if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+		if (allowMouseInput && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
 		{
 			mouseControlActive = true;
 		}

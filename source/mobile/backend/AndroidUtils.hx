@@ -8,6 +8,7 @@ class AndroidUtils
 	static var _setFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setFullscreen", "(I)V");
 	static var _getFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getFullscreen", "()I");
 	static var _toggleFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "toggleFullscreen", "()V");
+	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
@@ -54,6 +55,18 @@ class AndroidUtils
 	{
 		try { _toggleFullscreen([]); }
 		catch (e:Dynamic) { trace("toggleFullscreen error: " + e); }
+	}
+
+	/**
+	 * Scans a folder using Android's MediaScanner to make it visible in file managers.
+	 * This uses MediaScannerConnection.scanFile to add the folder to the media store.
+	 * Similar to FunkinCrew/Funkin's "Data Folder" and ShadowEngine's approach.
+	 */
+	public static function scanModFolder():Void
+	{
+		var folderPath = StorageSystem.getDirectory();
+		try { _scanFolder([folderPath]); }
+		catch (e:Dynamic) { trace("scanModFolder error: " + e); }
 	}
 }
 #end

@@ -16,6 +16,7 @@ import funkin.objects.*;
 import funkin.input.Controls;
 import funkin.input.InputFormatter;
 import funkin.objects.menu.ScrollBar;
+import mobile.utils.MobileNavUtil;
 
 class ControlsSubState extends MusicBeatSubstate
 {
@@ -295,7 +296,14 @@ class ControlsSubState extends MusicBeatSubstate
 				}
 		}
 		
+		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		#if mobile
+		var allowMouseInput = MobileNavUtil.allowPointerNav();
+		if (!allowMouseInput) mouseControlActive = false;
+		if (allowMouseInput && (FlxG.mouse.justMoved || FlxG.mouse.justPressed || FlxG.mouse.wheel != 0)) mouseControlActive = true;
+		#else
 		if (FlxG.mouse.justMoved || FlxG.mouse.justPressed || FlxG.mouse.wheel != 0) mouseControlActive = true;
+		#end
 		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK) mouseControlActive = false;
 		
 		if (mouseControlActive && state == SELECT && FlxG.mouse.justMoved)

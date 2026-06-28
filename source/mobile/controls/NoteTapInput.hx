@@ -52,11 +52,17 @@ class NoteTapInput extends FlxBasic
 			laneJustReleased[i] = false;
 		}
 
+		// Get camGame for coordinate conversion (notes are in camGame logical space)
+		var camGame = FlxG.camera;
+
 		for (touch in FlxG.touches.list)
 		{
 			if (touch.justPressed)
 			{
-				final lane = _findNoteLane(touch.x, touch.y);
+				// Convert screen coordinates to camGame logical space
+				// This handles camera zoom, scroll, and offset correctly
+				var touchPos = touch.getScreenPosition(camGame);
+				final lane = _findNoteLane(touchPos.x, touchPos.y);
 				if (lane >= 0)
 				{
 					_heldTouches.set(touch.touchPointID, lane);

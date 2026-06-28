@@ -11,6 +11,7 @@ import flixel.addons.display.FlxBackdrop;
 import funkin.data.WeekData;
 import funkin.data.ClientPrefs;
 import funkin.objects.Alphabet;
+import mobile.utils.MobileNavUtil;
 
 @:nullSafety
 class TitleState extends MusicBeatState
@@ -172,7 +173,12 @@ class TitleState extends MusicBeatState
 			return;
 		}
 		
-		final pressedEnter:Bool = FlxG.gamepads.lastActive?.justPressed.START || FlxG.keys.justPressed.ENTER || controls.ACCEPT || FlxG.mouse.justPressed;
+		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		var allowMousePress:Bool = true;
+		#if mobile
+		allowMousePress = MobileNavUtil.allowPointerNav();
+		#end
+		final pressedEnter:Bool = FlxG.gamepads.lastActive?.justPressed.START || FlxG.keys.justPressed.ENTER || controls.ACCEPT || (allowMousePress && FlxG.mouse.justPressed);
 		
 		if (!transitioning && skippedIntro)
 		{

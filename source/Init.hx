@@ -154,6 +154,11 @@ class Init extends FlxState
 		funkin.FunkinAssets.invalidateAssetListCache(); // Refresh asset list after loading mods
 		#end
 		
+		// Make mod folder visible in Android file managers (like FunkinCrew/Funkin's "Data Folder")
+		#if android
+		mobile.backend.AndroidUtils.scanModFolder();
+		#end
+		
 		// set some flixel settings
 		FlxG.fixedTimestep = false;
 		FlxG.game.focusLostFramerate = 60;
