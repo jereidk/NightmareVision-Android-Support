@@ -9,6 +9,7 @@ var finaleUIActive:Bool = false;
 var ext:String = 'ui/finale/';
 var newBar:Bar;
 var blackPIcon:FlxSprite;
+var _parasiteLosing:Bool = false;
 
 public var skinColors:Map<String, Array<FlxColor>> = [
 	// public so hypothetically you can push your own
@@ -90,7 +91,11 @@ function onUpdate(elapsed)
 
 function updateParasiteIcon(curHealth:Float)
 {
-	if (curHealth < 0.2)
+	var losing:Bool = curHealth < 0.2;
+	if (losing == _parasiteLosing) return;
+	_parasiteLosing = losing;
+
+	if (losing)
 	{
 		blackPIcon.animation.play('losing');
 		blackPIcon.offset.set(0, 39);
