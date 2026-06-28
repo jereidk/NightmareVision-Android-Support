@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "blackp",
+	"pausePortrait": "blackp",
 	"animations": [
 		{
 			"loop": false,
@@ -79,5 +79,7 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 6,
 	"scale": 1.0,
-	"_editor_isPlayer": false
+	"_editor_isPlayer": false,
+	"flags": {},
+	"afterimages": true
 }

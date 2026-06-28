@@ -314,5 +314,8 @@
 	"gameover_loop_sound": "updogGameoverLoop",
 	"sing_duration": 4,
 	"scale": 0.94,
-	"_editor_isPlayer": true
+	"_editor_isPlayer": true,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

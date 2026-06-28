@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "green",
+	"pausePortrait": "green",
 	"animations": [
 		{
 			"loop": false,
@@ -76,6 +76,8 @@
 		290
 	],
 	"sing_duration": 4,
-    "vslice_sustains": true,
-	"scale": 1
+	"vslice_sustains": true,
+	"scale": 1,
+	"flags": {},
+	"afterimages": true
 }

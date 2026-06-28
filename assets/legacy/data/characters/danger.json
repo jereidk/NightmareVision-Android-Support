@@ -193,5 +193,6 @@
 	"_editor_isPlayer": false,
 	"flags": {
 		"runner": true
-	}
+	},
+	"pausePortrait": ""
 }

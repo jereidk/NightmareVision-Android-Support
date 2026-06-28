@@ -129,5 +129,7 @@
 	"_editor_isPlayer": true,
 	"flags": {
 		"defeatRetro": "bf"
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

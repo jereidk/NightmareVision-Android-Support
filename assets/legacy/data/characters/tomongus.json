@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "mech",
+	"pausePortrait": "mech",
 	"animations": [
 		{
 			"offsets": [
@@ -89,5 +89,6 @@
 	"scale": 6,
 	"flags": {
 		"isPixel": true
-	}
+	},
+	"afterimages": true
 }

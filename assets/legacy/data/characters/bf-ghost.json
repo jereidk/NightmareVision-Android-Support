@@ -272,5 +272,7 @@
 		"seeThrough": true,
 		"customMonotone": "bf-monotone",
 		"defeatRetro": "bf-ghost-retro"
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

@@ -69,7 +69,7 @@
 	],
 	"no_antialiasing": true,
 	"image": "characters/gf/gfPixel",
-    "dance_every": 1,
+	"dance_every": 1,
 	"position": [
 		270,
 		252
@@ -89,5 +89,7 @@
 	"scale": 6,
 	"flags": {
 		"isPixel": true
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

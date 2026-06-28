@@ -65,7 +65,7 @@
 			"indices": [],
 			"flipX": false
 		},
-        {
+		{
 			"offsets": [
 				-19,
 				-16
@@ -140,5 +140,8 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 4,
 	"scale": 1,
-	"_editor_isPlayer": true
+	"_editor_isPlayer": true,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

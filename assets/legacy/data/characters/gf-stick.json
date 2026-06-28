@@ -213,5 +213,7 @@
 	"_editor_isPlayer": false,
 	"flags": {
 		"lightsDownSpeaker": true
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

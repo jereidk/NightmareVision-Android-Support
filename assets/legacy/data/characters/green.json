@@ -90,6 +90,9 @@
 		}
 	],
 	"no_antialiasing": false,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true,
 	"image": "characters/story/green/green-0,characters/story/green/green-1,characters/story/green/green-2",
 	"position": [
 		3,
@@ -109,7 +112,7 @@
 		230
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": false
 }

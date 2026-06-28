@@ -135,6 +135,11 @@
 	"scale": 1,
 	"_editor_isPlayer": true,
 	"flags": {
-		"turbulenceOffset": [0, -70]
-	}
+		"turbulenceOffset": [
+			0,
+			-70
+		]
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

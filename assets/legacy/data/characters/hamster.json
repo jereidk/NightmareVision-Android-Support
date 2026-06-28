@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "tomo",
+	"pausePortrait": "tomo",
 	"animations": [
 		{
 			"offsets": [
@@ -82,5 +82,6 @@
 	"_editor_isPlayer": false,
 	"flags": {
 		"isPixel": true
-	}
+	},
+	"afterimages": true
 }

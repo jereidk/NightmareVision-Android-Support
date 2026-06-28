@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "ow",
+	"pausePortrait": "ow",
 	"animations": [
 		{
 			"loop": false,
@@ -75,5 +75,7 @@
 		390
 	],
 	"sing_duration": 10,
-	"scale": 0.8
+	"scale": 0.8,
+	"flags": {},
+	"afterimages": true
 }

@@ -1,7 +1,10 @@
 {
 	"animations": [
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "idle",
@@ -9,7 +12,10 @@
 			"name": "idle"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "hey",
@@ -17,7 +23,10 @@
 			"name": "hey"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": true,
 			"fps": 24,
 			"anim": "hey-loop",
@@ -25,7 +34,10 @@
 			"name": "hey loop"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "singLEFT",
@@ -33,7 +45,10 @@
 			"name": "left"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "singDOWN",
@@ -41,7 +56,10 @@
 			"name": "down"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "singUP",
@@ -49,7 +67,10 @@
 			"name": "up"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "singRIGHT",
@@ -57,7 +78,10 @@
 			"name": "right"
 		},
 		{
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"loop": false,
 			"fps": 24,
 			"anim": "shoot",
@@ -67,7 +91,10 @@
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "pull",
 			"fps": 24,
 			"name": "charge",
@@ -77,7 +104,10 @@
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singDOWNmiss",
 			"fps": 24,
 			"name": "miss down",
@@ -87,7 +117,10 @@
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singLEFTmiss",
 			"fps": 24,
 			"name": "miss left",
@@ -97,7 +130,10 @@
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singRIGHTmiss",
 			"fps": 24,
 			"name": "miss right",
@@ -107,7 +143,10 @@
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [0, 0],
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singUPmiss",
 			"fps": 24,
 			"name": "miss up",
@@ -142,5 +181,7 @@
 		"variants": {
 			"pixel": "bfsus-pixel"
 		}
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

@@ -136,5 +136,7 @@
 	"_editor_isPlayer": true,
 	"flags": {
 		"isPixel": true
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

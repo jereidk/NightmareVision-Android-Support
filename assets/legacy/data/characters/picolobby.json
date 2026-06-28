@@ -135,5 +135,8 @@
 	"gameover_loop_sound": "Jorsawsee_Loop",
 	"sing_duration": 4,
 	"scale": 1,
-	"_editor_isPlayer": true
+	"_editor_isPlayer": true,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

@@ -13,7 +13,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [12, -6],
+			"offsets": [
+				12,
+				-6
+			],
 			"anim": "singLEFT",
 			"fps": 24,
 			"name": "BF NOTE LEFT0",
@@ -21,7 +24,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-10, -50],
+			"offsets": [
+				-10,
+				-50
+			],
 			"anim": "singDOWN",
 			"fps": 24,
 			"name": "BF NOTE DOWN0",
@@ -29,7 +35,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-29, 27],
+			"offsets": [
+				-29,
+				27
+			],
 			"anim": "singUP",
 			"fps": 24,
 			"name": "BF NOTE UP0",
@@ -37,7 +46,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-38,-7],
+			"offsets": [
+				-38,
+				-7
+			],
 			"anim": "singRIGHT",
 			"fps": 24,
 			"name": "BF NOTE RIGHT0",
@@ -45,7 +57,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [12, 24],
+			"offsets": [
+				12,
+				24
+			],
 			"anim": "singLEFTmiss",
 			"fps": 24,
 			"name": "BF NOTE LEFT MISS",
@@ -53,7 +68,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-11, -19],
+			"offsets": [
+				-11,
+				-19
+			],
 			"anim": "singDOWNmiss",
 			"fps": 24,
 			"name": "BF NOTE DOWN MISS",
@@ -61,7 +79,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-29, 27],
+			"offsets": [
+				-29,
+				27
+			],
 			"anim": "singUPmiss",
 			"fps": 24,
 			"name": "BF NOTE UP MISS",
@@ -69,7 +90,10 @@
 		},
 		{
 			"loop": false,
-			"offsets": [-30, 21],
+			"offsets": [
+				-30,
+				21
+			],
 			"anim": "singRIGHTmiss",
 			"fps": 24,
 			"name": "BF NOTE RIGHT MISS",
@@ -98,5 +122,8 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 4,
 	"scale": 1,
-	"_editor_isPlayer": true
+	"_editor_isPlayer": true,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

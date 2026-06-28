@@ -183,6 +183,12 @@
 	"scale": 1,
 	"_editor_isPlayer": true,
 	"flags": {
-		"finaleHealthBarColor": ["0xFF1E4824", "0xFF4C683C", "0xFF00221F"]
-	}
+		"finaleHealthBarColor": [
+			"0xFF1E4824",
+			"0xFF4C683C",
+			"0xFF00221F"
+		]
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

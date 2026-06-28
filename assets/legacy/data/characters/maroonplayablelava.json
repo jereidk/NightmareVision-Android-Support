@@ -79,7 +79,12 @@
 			"loop": true,
 			"fps": 24,
 			"anim": "singLEFT-loop",
-			"indices": [7,8,9,10],
+			"indices": [
+				7,
+				8,
+				9,
+				10
+			],
 			"name": "left"
 		},
 		{
@@ -90,7 +95,24 @@
 			"loop": true,
 			"fps": 24,
 			"anim": "singDOWN-loop",
-			"indices": [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22],
+			"indices": [
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22
+			],
 			"name": "down"
 		},
 		{
@@ -101,7 +123,12 @@
 			"loop": true,
 			"fps": 24,
 			"anim": "singUP-loop",
-			"indices": [7,8,9,10],
+			"indices": [
+				7,
+				8,
+				9,
+				10
+			],
 			"name": "up"
 		},
 		{
@@ -112,7 +139,12 @@
 			"loop": true,
 			"fps": 24,
 			"anim": "singRIGHT-loop",
-			"indices": [7,8,9,10],
+			"indices": [
+				7,
+				8,
+				9,
+				10
+			],
 			"name": "right"
 		},
 		{
@@ -252,6 +284,12 @@
 	"scale": 0.9,
 	"_editor_isPlayer": true,
 	"flags": {
-		"finaleHealthBarColor": ["0xFF6B2B3C", "0xFFCC5849", "0xFF440D37"]
-	}
+		"finaleHealthBarColor": [
+			"0xFF6B2B3C",
+			"0xFFCC5849",
+			"0xFF440D37"
+		]
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

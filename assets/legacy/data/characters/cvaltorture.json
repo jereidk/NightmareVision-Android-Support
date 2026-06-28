@@ -1,5 +1,5 @@
 {
-    "pausePortrait": "torture",
+	"pausePortrait": "torture",
 	"animations": [
 		{
 			"offsets": [
@@ -166,5 +166,7 @@
 		90
 	],
 	"sing_duration": 4,
-	"scale": 1
+	"scale": 1,
+	"flags": {},
+	"afterimages": true
 }

@@ -65,12 +65,17 @@
 	"healthicon": "nuzzus",
 	"flip_x": false,
 	"healthbar_colors": [
-		240,92,134
+		240,
+		92,
+		134
 	],
 	"camera_position": [
 		-60,
 		110
 	],
 	"sing_duration": 4,
-	"scale": 5
+	"scale": 5,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

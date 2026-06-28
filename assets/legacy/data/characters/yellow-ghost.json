@@ -93,7 +93,13 @@
 		"ghost": true,
 		"floating": true,
 		"seeThrough": true,
-		"finaleHealthBarColor": ["0xFFFFD452", "0xFFFFEC8E", "0xFFE0893B"],
+		"finaleHealthBarColor": [
+			"0xFFFFD452",
+			"0xFFFFEC8E",
+			"0xFFE0893B"
+		],
 		"customMonotone": "yellow"
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }
