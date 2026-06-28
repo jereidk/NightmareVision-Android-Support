@@ -8,6 +8,8 @@ import crowplexus.iris.ErrorSeverity;
 
 import extensions.hscript.InterpEx;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
 import funkin.backend.plugins.DebugTextPlugin;
 import funkin.objects.*;
 import funkin.objects.note.*;
