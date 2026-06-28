@@ -1116,15 +1116,17 @@ class PlayState extends MusicBeatState
 		
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
-		#if mobile
 		Note.swagWidth = 160 * 0.7;
 		final _isVSlice = (ClientPrefs.gameInputMode == 'VSlice controls');
 		if (_isVSlice)
 		{
 			Note.swagWidth = 237;
-			modManager.vsliceBaseY = FlxG.height - mobile.backend.ScreenUtil.safeArea().top - 255;
+			var safeTop:Float = 0;
+			#if mobile
+			safeTop = mobile.backend.ScreenUtil.safeArea().top;
+			#end
+			modManager.vsliceBaseY = FlxG.height - safeTop - 255;
 		}
-		#end
 
 		for (lane in 0...SONG.lanes)
 		{
@@ -1135,20 +1137,16 @@ class PlayState extends MusicBeatState
 			
 			var strums = new PlayField(0, 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
-			#if mobile
 			if (_isVSlice && lane == 0) strums._skin.receptorScale = 1.0;
-			#end
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
 			strums.ID = lane;
 
-			#if mobile
 			if (_isVSlice && lane != 0)
 			{
 				strums.visible = false;
 				strums.underlay.visible = false;
 			}
-			#end
 
 			playFields.add(strums);
 			underlays.add(strums.underlay);

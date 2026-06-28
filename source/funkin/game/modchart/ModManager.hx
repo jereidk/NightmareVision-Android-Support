@@ -83,10 +83,7 @@ class ModManager implements IFlxDestroyable
 	
 	public var activeMods:Array<Array<String>> = [[], []]; // by player
 
-	#if mobile
-	/** Pre-computed receptor center Y for VSlice controls mode. Set from PlayState. */
 	public var vsliceBaseY:Float = 0;
-	#end
 	
 	inline public function quickRegister(mod:Modifier) registerMod(mod.getName(), mod);
 	
@@ -220,9 +217,7 @@ class ModManager implements IFlxDestroyable
 	public function getBaseX(direction:Int, player:Int):Float
 	{
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
-		#if mobile
 		if (funkin.data.ClientPrefs.gameInputMode == 'VSlice controls') return x;
-		#end
 		switch (player)
 		{
 			case 0:
