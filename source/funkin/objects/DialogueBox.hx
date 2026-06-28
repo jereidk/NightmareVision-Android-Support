@@ -14,7 +14,7 @@ import funkin.states.*;
 
 #if mobile
 import mobile.utils.MobileNavUtil;
-import mobile.backend.MusicBeatSubstate;
+import funkin.backend.MusicBeatSubstate;
 #end
 
 // rewrite this later
