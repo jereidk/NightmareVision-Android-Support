@@ -4,12 +4,12 @@ import funkin.backend.MusicBeatSubstate;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
+import flixel.graphics.frames.FlxTileFrames;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.input.touch.FlxTouch;
@@ -40,7 +40,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	var bg:FlxSprite;
 	var dragButtons:Array<DragButton> = [];
-	var collisionBounds:Array<FlxSprite> = [];
 
 	var saveBtn:FlxSprite;
 	var resetBtn:FlxSprite;
@@ -74,7 +73,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		add(layoutLabel);
 
 		// ── Status / hint ──
-		statusText = new FlxText(0, FlxG.height - 105, FlxG.width, 'Drag the buttons · B / SAVE to exit · RESET restores defaults');
+		statusText = new FlxText(0, 130, FlxG.width, 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults');
 		statusText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 180, 180), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(statusText);
 
@@ -103,18 +102,15 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 			if (pos[0] < 0 || pos[1] < 0) pos = _defaultPos(i);
 
-			var btn = new DragButton(pos[0], pos[1], DIR_NAMES[i], DIR_COLORS[i]);
+			var btn = new DragButton(pos[0], pos[1], DIR_NAMES[i].toLowerCase(), DIR_COLORS[i]);
 			add(btn);
 			dragButtons.push(btn);
-			collisionBounds.push(new FlxSprite(pos[0] - MIN_GAP, pos[1] - MIN_GAP));
 			_boundsList.push(FlxRect.get(pos[0] - MIN_GAP, pos[1] - MIN_GAP, btn.width + MIN_GAP * 2, btn.height + MIN_GAP * 2));
 		}
 
-		// ── Save & Reset buttons ──
-		saveBtn = _makeButton(FlxG.width / 2 - 180, FlxG.height - 50, 'SAVE & EXIT', 0xFF4488FF);
-		resetBtn = _makeButton(FlxG.width / 2 + 20, FlxG.height - 50, 'RESET', 0xFFCC4444);
-		add(saveBtn);
-		add(resetBtn);
+		// ── Save & Reset buttons (top area, below title/label/status) ──
+		saveBtn  = _makeButton(FlxG.width / 2 - 180, 82, 'SAVE & EXIT', 0xFF4488FF);
+		resetBtn = _makeButton(FlxG.width / 2 + 20,  82, 'RESET',       0xFFCC4444);
 
 		super.create();
 
@@ -163,6 +159,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 					dragIdx = i;
 					offsetX = px - btn.x;
 					offsetY = py - btn.y;
+					btn.animation.play('pressed');
 					break;
 				}
 			}
@@ -187,6 +184,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		// ── Release ──
 		if (dragIdx >= 0 && pointerJustReleased)
 		{
+			dragButtons[dragIdx].animation.play('idle');
 			dragIdx = -1;
 		}
 
@@ -243,7 +241,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 					if (overlapLeft < overlapRight)
 						bestX = other.x - bw - MIN_GAP;
 					else
-						bestX = other.x + other.width + MIN_GAP - MIN_GAP * 2;
+						bestX = other.x + other.width + MIN_GAP;
 				}
 				else
 				{
@@ -251,7 +249,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 					if (overlapTop < overlapBottom)
 						bestY = other.y - bh - MIN_GAP;
 					else
-						bestY = other.y + other.height + MIN_GAP - MIN_GAP * 2;
+						bestY = other.y + other.height + MIN_GAP;
 				}
 			}
 		}
@@ -381,15 +379,16 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	function _defaultPos(i:Int):Array<Float>
 	{
+		// Match MobileVirtualPad LEFT_FULL positions so defaults equal the actual game layout.
 		var safe = mobile.backend.ScreenUtil.safeArea();
 		var safeLeft = Std.int(safe.left);
 		var baseY = FlxG.height - Std.int(safe.bottom);
 		return switch (i)
 		{
-			case 0: [safeLeft + 20, baseY - 220]; // LEFT
-			case 1: [safeLeft + 140, baseY - 140]; // DOWN
-			case 2: [safeLeft + 140, baseY - 300]; // UP
-			case 3: [safeLeft + 260, baseY - 220]; // RIGHT
+			case 0: [safeLeft,        baseY - 243]; // LEFT
+			case 1: [safeLeft + 105,  baseY - 135]; // DOWN
+			case 2: [safeLeft + 105,  baseY - 345]; // UP
+			case 3: [safeLeft + 207,  baseY - 243]; // RIGHT
 			default: [0, 0];
 		};
 	}
@@ -397,32 +396,28 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	function _makeButton(x:Float, y:Float, text:String, color:Int):FlxSprite
 	{
 		var spr = new FlxSprite(x, y).makeGraphic(150, 36, color);
+		add(spr); // sprite first (background)
 		var txt = new FlxText(x, y + 6, 150, text);
 		txt.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
-		add(txt);
+		add(txt); // text after (foreground)
 		return spr;
 	}
 }
 
 /**
- * Simple draggable button sprite for the customizer.
- * Shows a colored square with a direction label.
+ * Draggable button using the real virtual pad PNG texture.
+ * The graphic is a 3-frame horizontal sheet (idle | hover | pressed).
  */
-class DragButton extends FlxSpriteGroup
+class DragButton extends FlxSprite
 {
-	public var label:FlxText;
-	public var bg:FlxSprite;
-
-	public function new(x:Float, y:Float, text:String, color:Int)
+	public function new(x:Float, y:Float, graphicName:String, color:Int)
 	{
 		super(x, y);
-
-		bg = new FlxSprite().makeGraphic(80, 80, color);
-		bg.alpha = 0.7;
-		add(bg);
-
-		label = new FlxText(0, 24, 80, text);
-		label.setFormat(Paths.font('vcr.ttf'), 14, FlxColor.WHITE, CENTER);
-		add(label);
+		var graphic = FlxG.bitmap.add('assets/mobile/virtualpad/$graphicName.png');
+		frames = FlxTileFrames.fromGraphic(graphic, FlxPoint.weak(Std.int(graphic.width / 3), graphic.height));
+		animation.add('idle',    [0], 1, false);
+		animation.add('pressed', [2], 1, false);
+		animation.play('idle');
+		this.color = color;
 	}
 }

@@ -7,6 +7,8 @@ import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
+import flixel.math.FlxPoint;
+import flixel.graphics.frames.FlxTileFrames;
 import openfl.display.BitmapData;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
@@ -795,13 +797,35 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		final bw = 134 * sx;
 		final bh = 134 * sy;
 
+		// colorIdx → asset name: 0=left, 1=down, 2=up, 3=right
+		final btnNames = ['left', 'down', 'up', 'right'];
+
 		inline function place(gx:Float, gy:Float, ci:Int)
-			_addZone(CANVAS_X + gx * sx, CANVAS_Y + gy * sy, bw, bh, ci);
+			_addPadButtonZone(CANVAS_X + gx * sx, CANVAS_Y + gy * sy, bw, bh, btnNames[ci], ci);
 
 		place(105, FlxG.height - 345, 2); // UP
 		place(0,   FlxG.height - 243, 0); // LEFT
 		place(207, FlxG.height - 243, 3); // RIGHT
 		place(105, FlxG.height - 135, 1); // DOWN
+	}
+
+	function _addPadButtonZone(x:Float, y:Float, w:Float, h:Float, graphicName:String, colorIdx:Int):Void
+	{
+		var graphic = FlxG.bitmap.add('assets/mobile/virtualpad/$graphicName.png');
+		var frames  = FlxTileFrames.fromGraphic(graphic, FlxPoint.weak(Std.int(graphic.width / 3), graphic.height));
+
+		var spr = new FlxSprite(x, y);
+		spr.frames = frames;
+		spr.animation.add('idle',    [0], 1, false);
+		spr.animation.add('pressed', [2], 1, false);
+		spr.animation.play('idle');
+		spr.setGraphicSize(Std.int(w), Std.int(h));
+		spr.updateHitbox();
+		spr.color = ZONE_COLORS[colorIdx];
+		spr.alpha = _idleAlpha();
+		add(spr);
+
+		_zones.push({spr: spr, label: null, colorIdx: colorIdx, pressed: false, curA: _idleAlpha()});
 	}
 
 	function _addZone(x:Float, y:Float, w:Float, h:Float, colorIdx:Int):Void
@@ -862,6 +886,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			final target = z.pressed ? pressA : idleA;
 			z.curA = FlxMath.lerp(z.curA, target, FlxMath.bound(elapsed * 12, 0, 1));
 			z.spr.alpha = z.curA;
+			// Real pad button sprites (3-frame sheets): switch idle/pressed frame.
+			if (z.spr.frames != null && z.spr.frames.numFrames > 1)
+				z.spr.animation.play(z.pressed ? 'pressed' : 'idle');
 		}
 	}
 
