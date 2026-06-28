@@ -90,7 +90,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/story/green/green",
+	"image": "characters/story/green/green-0,characters/story/green/green-1,characters/story/green/green-2",
 	"position": [
 		3,
 		92

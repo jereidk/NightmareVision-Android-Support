@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="green-2.png" width="1428" height="471">
+	<SubTexture name="bwomp0078" x="0" y="0" width="781" height="468" frameX="-2" frameY="-63" frameWidth="911" frameHeight="546"/>
+	<SubTexture name="impostor up20008" x="781" y="0" width="647" height="471" frameX="-52" frameY="-27" frameWidth="700" frameHeight="515"/>
+</TextureAtlas>
