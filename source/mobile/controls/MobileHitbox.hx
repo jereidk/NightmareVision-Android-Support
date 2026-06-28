@@ -549,11 +549,20 @@ class MobileHitbox extends TouchInputManager
 	/**
 	 * Converts arrow HSV values from ClientPrefs to a FlxColor.
 	 * Index: 0=LEFT, 1=DOWN, 2=UP, 3=RIGHT
+	 *
+	 * arrowHSV[i][0] is a HUE SHIFT (same as the note shader in NotesSubState),
+	 * so we apply it on top of each arrow's traditional base hue rather than
+	 * treating it as an absolute hue. This keeps hitbox colours consistent with
+	 * the visible note colours when the player customises them.
 	 */
+	// Traditional FNF note hues: purple(LEFT) cyan(DOWN) green(UP) red(RIGHT)
+	static final ARROW_BASE_HUES:Array<Float> = [300.0, 200.0, 120.0, 0.0];
+
 	static function getArrowColor(direction:Int):FlxColor
 	{
 		var hsv = ClientPrefs.arrowHSV[direction];
-		return FlxColor.fromHSB(hsv[0], (100 + hsv[1]) / 100, (100 + hsv[2]) / 100);
+		var hue = (ARROW_BASE_HUES[direction] + hsv[0]) % 360;
+		return FlxColor.fromHSB(hue, (100 + hsv[1]) / 100, (100 + hsv[2]) / 100);
 	}
 
 	static function layoutFromPrefs():HitboxLayout
