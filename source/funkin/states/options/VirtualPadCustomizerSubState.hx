@@ -131,10 +131,13 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 		super.create();
 
-		// Navigation pad for BACK / ACCEPT — use NONE dpad + A_B so only accept/back are visible
+		// Navigation pad — only when virtual pad is the nav input; Touch mode uses SAVE & EXIT.
 		#if mobile
-		addVirtualPad(NONE, A_B);
-		addVirtualPadCamera();
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(NONE, A_B);
+			addVirtualPadCamera();
+		}
 		#end
 	}
 

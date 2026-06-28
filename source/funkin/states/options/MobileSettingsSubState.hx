@@ -88,6 +88,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _rowLeft:Array<FlxText>    = [];
 	var _rowRight:Array<FlxText>   = [];
 	var _descText:FlxText;
+	var _helpText:FlxText;
+	var _backBtn:FlxSprite;
+	var _backBtnLabel:FlxText;
 
 	// ── State ────────────────────────────────────────────────────────────────
 	var _opts:Array<MobileOpt> = [];
@@ -200,23 +203,41 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_descText.borderSize = 1.2;
 		add(_descText);
 
-		// Help text at bottom
-		var help = new FlxText(0, FlxG.height - 48, FlxG.width,
-			Lang.str('mobile_controls_help', '◄ ►  cambiar   ·   toca una zona para probar   ·   B  atrás'));
-		help.setFormat(Paths.font('vcr.ttf'), 17, 0xFF909090, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		help.borderSize = 1.3;
-		add(help);
+		// Help text at bottom (updated dynamically by _updateNavModeUI)
+		_helpText = new FlxText(0, FlxG.height - 48, FlxG.width, '');
+		_helpText.setFormat(Paths.font('vcr.ttf'), 17, 0xFF909090, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_helpText.borderSize = 1.3;
+		add(_helpText);
+
+		// Touch-mode back button — only visible when navInputMode is Touch.
+		final backBtnY:Float = OPT_Y0 + MAX_OPT * OPT_H + 50;
+		_backBtn = new FlxSprite(OPT_X, backBtnY);
+		_backBtn.loadGraphic(Paths.image('menu/freeplay/card'));
+		_backBtn.setGraphicSize(160, 42);
+		_backBtn.updateHitbox();
+		_backBtn.antialiasing = ClientPrefs.globalAntialiasing;
+		_backBtn.color = 0xFF334455;
+		add(_backBtn);
+		_backBtnLabel = new FlxText(OPT_X, backBtnY + 9, 160, '◄  BACK');
+		_backBtnLabel.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_backBtnLabel.borderSize = 1.5;
+		_backBtnLabel.antialiasing = ClientPrefs.globalAntialiasing;
+		add(_backBtnLabel);
 
 		super.create();
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		addVirtualPadCamera();
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, A_B);
+			addVirtualPadCamera();
+		}
 		#end
 
 		_rebuildOptions();
 		_rebuildPreview();
 		_updateRows();
+		_updateNavModeUI();
 	}
 
 	// ── Update ───────────────────────────────────────────────────────────────
@@ -296,6 +317,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		final mx = FlxG.mouse.x;
 		final my = FlxG.mouse.y;
+
+		// Touch-mode back button
+		if (_backBtn.visible && FlxG.mouse.overlaps(_backBtn))
+		{
+			FunkinSound.play(Paths.sound('cancelMenu'));
+			close();
+			return;
+		}
 
 		// Preview zones — always tappable regardless of nav mode.
 		for (i in 0..._zones.length)
@@ -383,6 +412,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				addVirtualPad(LEFT_FULL, A_B);
 				addVirtualPadCamera();
 			}
+			_updateNavModeUI();
 			#end
 		}
 		else if (opt.id == 'game')
@@ -404,6 +434,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 
 		_updateRows();
+	}
+
+	/** Show/hide touch-mode back button and update help text to match current nav input mode. */
+	function _updateNavModeUI():Void
+	{
+		final touchMode = (ClientPrefs.navInputMode == 'Touch');
+		_backBtn.visible      = touchMode;
+		_backBtnLabel.visible = touchMode;
+		_helpText.text = touchMode
+			? Lang.str('mobile_controls_help_touch', 'toca una zona para probar   ·   BACK para salir')
+			: Lang.str('mobile_controls_help', '◄ ►  cambiar   ·   toca una zona para probar   ·   B  atrás');
 	}
 
 	// ── ClientPrefs accessors ──────────────────────────────────────────────────
