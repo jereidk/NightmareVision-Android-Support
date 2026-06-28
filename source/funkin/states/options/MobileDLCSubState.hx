@@ -314,6 +314,7 @@ class MobileDLCSubState extends MusicBeatSubstate
      */
     function _handleTouch():Void
     {
+        if (funkin.data.ClientPrefs.navInputMode == 'Virtual Pad') return;
         if (!FlxG.mouse.justPressed) return;
 
         var mx = FlxG.mouse.x;

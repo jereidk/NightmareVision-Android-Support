@@ -1130,7 +1130,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			if (controlLEFT.PRESSED || controlRIGHT.PRESSED || controlUP.PRESSED || controlDOWN.PRESSED) mouseMode = false;
 			#end
 			
-			if (FlxG.mouse.justReleased)
+			if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				if (FlxG.mouse.overlaps(menuBackButton, overlayCamera))
 				{
@@ -1206,7 +1206,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					}
 				}
 				
-				if (FlxG.mouse.justPressed)
+				if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...gridNodes.length)
 					{
@@ -1269,7 +1269,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					}
 				}
 				
-				if (FlxG.mouse.justPressed)
+				if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...categoryTexts.length)
 					{

@@ -123,7 +123,7 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 			if (controls.UI_RIGHT_P) changeSelection(1);
 			if (controls.UI_LEFT_P) changeSelection(-1);
 			
-			if (FlxG.mouse.justPressed)
+			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				for (i => icon in iconArray)
 				{

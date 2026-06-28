@@ -190,7 +190,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		
 		if (!lockMovement)
 		{
-			if (FlxG.mouse.justPressed)
+			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				mouseMode = true;
 				var mousePos = FlxG.mouse.getWorldPosition();

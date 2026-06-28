@@ -159,7 +159,7 @@ class PauseSubState extends MusicBeatSubstate
 		var looksieScale:Float = FlxMath.lerp(looksie.scale.x, looksieHover ? 1.25 : 1, FlxMath.bound(elapsed * 15.6, 0, 1));
 		looksie.scale.set(looksieScale, looksieScale);
 		
-		if (looksieHover && FlxG.mouse.justPressed)
+		if (looksieHover && FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			changeView(!viewingMode);
 		}
@@ -169,7 +169,7 @@ class PauseSubState extends MusicBeatSubstate
 		
 		for (item in optionText)
 		{
-			if (item.overlapsPoint(mousePos, true, cam) && FlxG.mouse.justPressed && !viewingMode)
+			if (item.overlapsPoint(mousePos, true, cam) && FlxG.mouse.justPressed && !viewingMode && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				if (curSelect == item.ID)
 				{

@@ -143,10 +143,10 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
-		if (FlxG.mouse.justPressed)
+		if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			var mousePos = FlxG.mouse.getWorldPosition();
-			
+
 			if (menuBackButton.overlapsPoint(mousePos))
 			{
 				closeWeek();

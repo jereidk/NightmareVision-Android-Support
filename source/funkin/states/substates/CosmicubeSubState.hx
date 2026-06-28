@@ -300,7 +300,7 @@ class CosmicubeSubState extends MusicBeatSubstate
 				}
 			}
 			
-			if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton, overlayCamera))
+			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad' && FlxG.mouse.overlaps(menuBackButton, overlayCamera))
 			{
 				closeTween();
 			}

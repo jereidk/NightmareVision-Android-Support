@@ -132,7 +132,7 @@ class MissCounterSubstate extends MusicBeatSubstate
 			if (controls.UI_RIGHT_P) changeSelection(1);
 			if (controls.UI_LEFT_P) changeSelection(-1);
 			
-			if (FlxG.mouse.justPressed)
+			if (FlxG.mouse.justPressed && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				for (d in dummySprites)
 				{
