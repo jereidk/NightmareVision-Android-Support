@@ -16,7 +16,8 @@ function onCreatePost()
 		camGame.flash(0xFFFFFFFF, 0.35);
 		intro.kill();
 	});
-	intro.load(Paths.video('week2/ejected'), [FunkinVideoSprite.muted]);
+	var cutscene = (hasBfSkin || hasGfSkin) ? 'week2/ejected-empty' : 'week2/ejected';
+	intro.load(Paths.video(cutscene), [FunkinVideoSprite.muted]);
 	intro.antialiasing = ClientPrefs.globalAntialiasing;
 	
 	// Desync prevention (at least as much as I can do)
