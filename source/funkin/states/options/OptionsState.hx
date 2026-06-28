@@ -449,7 +449,7 @@ class OptionsState extends MusicBeatState
 			}
 			#end
 			
-			if (mouseControlActive && !blockAllInput)
+			if (mouseControlActive && !blockAllInput && !blockInput)
 			{
 				// left bar mouse
 				var themouseshit2 = FlxG.mouse;
