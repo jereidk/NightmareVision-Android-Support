@@ -188,7 +188,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/gf/gf_danger",
+	"image": "characters/gf/gf_danger-0,characters/gf/gf_danger-1",
 	"position": [
 		0,
 		0

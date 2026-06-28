@@ -79,7 +79,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/henry/rhm",
+	"image": "characters/henry/rhm-0,characters/henry/rhm-1",
 	"position": [
 		-190,
 		130
