@@ -14,6 +14,8 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.input.touch.FlxTouch;
 
+import flixel.addons.display.FlxBackdrop;
+
 import mobile.controls.MobileVirtualPad;
 import mobile.backend.flixel.FlxButton;
 import mobile.backend.flixel.input.FlxMobileInputID;
@@ -38,7 +40,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	/** Minimum separation between button edges (prevents overlap). */
 	static final MIN_GAP:Float = 6;
 
-	var bg:FlxSprite;
 	var dragButtons:Array<DragButton> = [];
 
 	var saveBtn:FlxSprite;
@@ -56,35 +57,41 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	override function create()
 	{
-		// ── Background ──
-		bg = new FlxSprite(0, 0);
-		bg.loadGraphic(Paths.image('menu/common/starBG'));
-		bg.setGraphicSize(FlxG.width, FlxG.height);
-		bg.updateHitbox();
-		add(bg);
+		// ── Background (scrolling stars, matches OptionsState) ──
+		var starsBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
+		starsBG.velocity.x = -4.5;
+		add(starsBG);
+
+		var starsFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
+		starsFG.velocity.x = -9;
+		add(starsFG);
 
 		// ── Header bar ──
 		var topBar = new FlxSprite(0, 0);
 		topBar.loadGraphic(Paths.image('menu/common/topBar'));
 		topBar.setGraphicSize(FlxG.width, 90);
 		topBar.updateHitbox();
+		topBar.antialiasing = ClientPrefs.globalAntialiasing;
 		add(topBar);
 
 		// ── Title ──
-		var title = new FlxText(0, 20, FlxG.width, 'CUSTOMIZE VIRTUAL PAD');
-		title.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		var title = new FlxText(0, 14, FlxG.width, 'CUSTOMIZE VIRTUAL PAD');
+		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		title.borderSize = 2;
+		title.antialiasing = ClientPrefs.globalAntialiasing;
 		add(title);
 
 		// ── Layout label ──
 		var layoutName = ClientPrefs.virtualPadLayout;
 		var layoutLabel = new FlxText(0, 62, FlxG.width, 'Current layout: ' + layoutName);
 		layoutLabel.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 200, 255), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		layoutLabel.antialiasing = ClientPrefs.globalAntialiasing;
 		add(layoutLabel);
 
-		// ── Status / hint ──
-		statusText = new FlxText(0, 130, FlxG.width, 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults');
+		// ── Status / hint (below header bar) ──
+		statusText = new FlxText(0, 148, FlxG.width, 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults');
 		statusText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 180, 180), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		statusText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(statusText);
 
 		// ── Load saved positions ──
@@ -118,9 +125,9 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			_boundsList.push(FlxRect.get(pos[0] - MIN_GAP, pos[1] - MIN_GAP, btn.width + MIN_GAP * 2, btn.height + MIN_GAP * 2));
 		}
 
-		// ── Save & Reset buttons (top area, below title/label/status) ──
-		saveBtn  = _makeButton(FlxG.width / 2 - 180, 82, 'SAVE & EXIT', 0xFF4488FF);
-		resetBtn = _makeButton(FlxG.width / 2 + 20,  82, 'RESET',       0xFFCC4444);
+		// ── Save & Reset buttons (just below the header bar) ──
+		saveBtn  = _makeButton(FlxG.width / 2 - 180, 95, 'SAVE & EXIT', 0xFF4488FF);
+		resetBtn = _makeButton(FlxG.width / 2 + 20,  95, 'RESET',       0xFFCC4444);
 
 		super.create();
 
@@ -410,9 +417,11 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		spr.setGraphicSize(150, 36);
 		spr.updateHitbox();
 		spr.color = color;
+		spr.antialiasing = ClientPrefs.globalAntialiasing;
 		add(spr); // sprite first (background)
 		var txt = new FlxText(x, y + 6, 150, text);
 		txt.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
+		txt.antialiasing = ClientPrefs.globalAntialiasing;
 		add(txt); // text after (foreground)
 		return spr;
 	}

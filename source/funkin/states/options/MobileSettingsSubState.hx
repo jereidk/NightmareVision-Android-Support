@@ -54,13 +54,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 {
 	// ── Preview canvas (a mini game screen, ~16:9) ───────────────────────────
 	static final CANVAS_X:Float = 50;
-	static final CANVAS_Y:Float = 100;
+	static final CANVAS_Y:Float = 120;
 	static final CANVAS_W:Int   = 500;
 	static final CANVAS_H:Int   = 280;
 
 	// ── Options column ───────────────────────────────────────────────────────
 	static final OPT_X:Float  = 600;
-	static final OPT_Y0:Float = 100;
+	static final OPT_Y0:Float = 120;
 	static final OPT_H:Float  = 54;
 	static final OPT_W:Int    = 580;
 	static final MAX_OPT:Int  = 6;
@@ -120,17 +120,20 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		topBar.loadGraphic(Paths.image('menu/common/topBar'));
 		topBar.setGraphicSize(FlxG.width, 90);
 		topBar.updateHitbox();
+		topBar.antialiasing = ClientPrefs.globalAntialiasing;
 		add(topBar);
 
-		var titleTxt = new FlxText(0, 14, FlxG.width, Lang.str('opt_category_mobile', 'MOBILE CONTROLS').toUpperCase());
-		titleTxt.setFormat(Paths.font('vcr.ttf'), 42, COLOR_HIGHLIGHT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		titleTxt.borderSize = 2.5;
+		var titleTxt = new FlxText(0, 10, FlxG.width, Lang.str('opt_category_mobile', 'MOBILE CONTROLS').toUpperCase());
+		titleTxt.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, COLOR_HIGHLIGHT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleTxt.borderSize = 2;
+		titleTxt.antialiasing = ClientPrefs.globalAntialiasing;
 		add(titleTxt);
 
-		// Caption above the canvas
-		_modeText = new FlxText(CANVAS_X, 54, CANVAS_W, '');
-		_modeText.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFB84D, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		_modeText.borderSize = 1.8;
+		// Caption above the canvas (placed between header bar and canvas)
+		_modeText = new FlxText(CANVAS_X, 92, CANVAS_W, '');
+		_modeText.setFormat(Paths.font('vcr.ttf'), 18, 0xFFFFB84D, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_modeText.borderSize = 1.5;
+		_modeText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_modeText);
 
 		// Canvas background — star field scaled to preview area.
@@ -139,6 +142,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_canvasBg.setGraphicSize(CANVAS_W, CANVAS_H);
 		_canvasBg.updateHitbox();
 		_canvasBg.alpha = 0.95;
+		_canvasBg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_canvasBg);
 
 		// Options row pool with improved styling
@@ -151,6 +155,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			hi.loadGraphic(Paths.image('menu/freeplay/card'));
 			hi.setGraphicSize(OPT_W + 12, Std.int(OPT_H - 4));
 			hi.updateHitbox();
+			hi.antialiasing = ClientPrefs.globalAntialiasing;
 			hi.visible = false;
 			_rowHi.push(hi);
 			add(hi);
