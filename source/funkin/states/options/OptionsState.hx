@@ -403,7 +403,7 @@ class OptionsState extends MusicBeatState
 		{
 			hoveredOption = -1;
 			
-			if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+			if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				mouseControlActive = true;
 			}
