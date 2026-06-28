@@ -162,6 +162,7 @@ class ClientPrefs
 	#if mobile
 	@saveVar public static var navInputMode:String = 'Touch';
 	@saveVar public static var gameInputMode:String = 'Hitbox';
+	@saveVar public static var noteLayout:String = 'Normal';
 
 	@saveVar public static var hitboxAlpha:Float = 0.2;
 

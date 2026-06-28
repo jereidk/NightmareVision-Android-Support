@@ -217,7 +217,7 @@ class ModManager implements IFlxDestroyable
 	public function getBaseX(direction:Int, player:Int):Float
 	{
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
-		if (funkin.data.ClientPrefs.gameInputMode == 'VSlice controls') return x;
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice') return x;
 		switch (player)
 		{
 			case 0:

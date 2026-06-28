@@ -392,6 +392,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'game':   ClientPrefs.gameInputMode;
 			case 'layout': ClientPrefs.hitboxLayout;
 			case 'vpadLayout': ClientPrefs.virtualPadLayout;
+			case 'noteLayout': ClientPrefs.noteLayout;
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
 			default: '';
 		};
@@ -403,6 +404,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'game':   ClientPrefs.gameInputMode = v;
 			case 'layout': ClientPrefs.hitboxLayout = v;
 			case 'vpadLayout': ClientPrefs.virtualPadLayout = v;
+			case 'noteLayout': ClientPrefs.noteLayout = v;
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
@@ -453,6 +455,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. VSlice controls: static arrow receptors.'),
 			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_vslice', 'VSlice controls')],
 			stored:  ['Hitbox', 'Virtual Pad', 'VSlice controls']
+		});
+
+		_opts.push({
+			id: 'noteLayout', kind: 'string',
+			label: '◈ ' + Lang.str('opt_notelayout', 'Note Layout'),
+			desc:  Lang.str('opt_notelayout_desc', 'Visual arrangement of notes.\nNormal: standard FNF layout.\nVSlice: centered, wider spacing, bigger arrows.'),
+			choices: [Lang.str('choice_notelayout_normal', 'Normal'), Lang.str('choice_notelayout_vslice', 'VSlice')],
+			stored:  ['Normal', 'VSlice']
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')

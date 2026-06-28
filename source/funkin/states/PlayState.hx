@@ -1117,7 +1117,7 @@ class PlayState extends MusicBeatState
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 		Note.swagWidth = 160 * 0.7;
-		final _isVSlice = (ClientPrefs.gameInputMode == 'VSlice controls');
+		final _isVSlice = (ClientPrefs.noteLayout == 'VSlice');
 		if (_isVSlice)
 		{
 			Note.swagWidth = 237;
