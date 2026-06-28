@@ -3,6 +3,7 @@ import funkin.objects.FunkinCaption;
 
 import flixel.text.FlxText;
 import flixel.addons.text.FlxTypeText;
+import flixel.math.FlxPoint;
 
 import funkin.backend.DebugDisplay;
 import funkin.backend.math.Vector3;
@@ -61,6 +62,12 @@ var camTwistIntensity:Float = 0;
 var camTwistIntensity2:Float = 3;
 var camTwist:Bool = false;
 
+// Camera cache to avoid unnecessary work every frame
+var cachedCamState:String = '';
+var cachedDadOff:Dynamic = -1;
+var cachedBfOff:Dynamic = -1;
+var cachedDisplacement:FlxPoint = FlxPoint.weak();
+
 public var tauntCharacter:Character;
 
 function onLoad()
@@ -100,6 +107,8 @@ public function camSpecialThing(?dad = null, ?bf = null, ?zoom:Float = -1, ?snap
 	if (zoom > 0) defaultCamZoom = zoom;
 	if (bf != null && bf != -1) bfOff = bf;
 	if (dad != null && dad != -1) dadOff = dad;
+	// Invalidate cache when camera settings change
+	cachedCamState = '';
 	if (snaptoo != -1 && snaptoo != null)
 	{
 		var huh = (snaptoo == 0 ? dad : bf);
@@ -115,6 +124,8 @@ public function resetCam()
 	// Reset hardbaked positions for camera
 	dadOff = -1;
 	bfOff = -1;
+	// Invalidate cache
+	cachedCamState = '';
 }
 
 function onMoveCamera(whosTurn:Bool)
@@ -123,6 +134,17 @@ function onMoveCamera(whosTurn:Bool)
 	if (dadOff == -1 && bfOff == -1) return;
 	
 	if (game.camCurTarget == boyfriend) whosTurn = 'boyfriend'; // sure watever i dont care. hmph
+	
+	// Build cache key from current state
+	var camStateKey = whosTurn;
+	if (game.camCurTarget != null) camStateKey += '_forced';
+	
+	// Skip all work if camera state hasn't changed
+	if (camStateKey == cachedCamState && dadOff == cachedDadOff && bfOff == cachedBfOff) return;
+	
+	cachedCamState = camStateKey;
+	cachedDadOff = dadOff;
+	cachedBfOff = bfOff;
 	
 	if (whosTurn == 'dad')
 	{
@@ -145,9 +167,12 @@ function onMoveCamera(whosTurn:Bool)
 		
 		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
 		
-		final displacement = character.getSingDisplacement();
-		camFollow.x += displacement.x;
-		camFollow.y += displacement.y;
+		// Use cached displacement instead of creating new FlxPoint every frame
+		var displacement = character.getSingDisplacement();
+		cachedDisplacement.x = displacement.x;
+		cachedDisplacement.y = displacement.y;
+		camFollow.x += cachedDisplacement.x;
+		camFollow.y += cachedDisplacement.y;
 	}
 }
 
