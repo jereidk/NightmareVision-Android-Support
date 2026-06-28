@@ -3,7 +3,6 @@ import funkin.objects.FunkinCaption;
 
 import flixel.text.FlxText;
 import flixel.addons.text.FlxTypeText;
-import flixel.math.FlxPoint;
 
 import funkin.backend.DebugDisplay;
 import funkin.backend.math.Vector3;
