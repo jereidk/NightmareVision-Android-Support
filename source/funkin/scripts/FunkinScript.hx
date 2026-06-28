@@ -86,10 +86,10 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		function log(x:String, ?pos:haxe.PosInfos, level:ErrorSeverity)
 		{
 			final prefix:String = ErrorSeverityTools.getPrefix(level);
-			
-			DebugTextPlugin.addText(formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:'), Logger.getHexColourFromSeverity(Severity.fromIris(level)));
-			
-			Iris.logLevel(level, x, pos);
+			final formatted:String = formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:');
+
+			DebugTextPlugin.addText(formatted, Logger.getHexColourFromSeverity(Severity.fromIris(level)));
+			Logger.log(formatted, Severity.fromIris(level));
 		}
 		
 		Iris.warn = log.bind(_, _, WARN);
@@ -162,7 +162,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		catch (e)
 		{
 			__garbage = true;
-			Logger.log('[${name}]: PARSING ERROR: $e', ERROR, true);
+			Iris.error('[${name}]: PARSING ERROR: $e');
 		}
 		return ret;
 	}
@@ -194,9 +194,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 				}
 				catch (e:haxe.Exception)
 				{
-					#if sys
-					Sys.println(e.message);
-					#end
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
 				}
 				
 				for (key in defaultShit.keys())
