@@ -282,7 +282,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		final mx = FlxG.mouse.x;
 		final my = FlxG.mouse.y;
 
-		// Preview zones — "test" tap.
+		// Preview zones — always tappable regardless of nav mode.
 		for (i in 0..._zones.length)
 		{
 			if (FlxG.mouse.overlaps(_zones[i].spr))
@@ -293,6 +293,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				return;
 			}
 		}
+
+		// Option rows — Virtual Pad navigates via controls.*, not raw touch.
+		if (ClientPrefs.navInputMode == 'Virtual Pad') return;
 
 		// Option rows.
 		for (i in 0..._opts.length)
@@ -362,7 +365,18 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		FunkinSound.play(Paths.sound('scrollMenu'));
 
 		// Layout / input changes alter both the visible options and the preview.
-		if (opt.id == 'game')
+		if (opt.id == 'nav')
+		{
+			#if mobile
+			removeVirtualPad();
+			if (ClientPrefs.navInputMode == 'Virtual Pad')
+			{
+				addVirtualPad(LEFT_FULL, A_B);
+				addVirtualPadCamera();
+			}
+			#end
+		}
+		else if (opt.id == 'game')
 		{
 			_rebuildOptions();
 			_rebuildPreview();
