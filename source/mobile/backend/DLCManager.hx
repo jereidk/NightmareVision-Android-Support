@@ -355,17 +355,16 @@ class DLCManager {
                     }
                 });
 
-                var counterClosed = false;
                 try {
                     http.customRequest(false, counter);
-                    // customRequest closes the output stream on success; mark it so the
-                    // catch block below does not attempt a second close on rethrow.
-                    counterClosed = true;
                 } catch (e:Dynamic) {
-                    if (!counterClosed)
-                        try { counter.close(); counterClosed = true; } catch (_:Dynamic) {}
+                    try { counter.close(); } catch (_:Dynamic) {}
                     throw "Download failed: " + Std.string(e);
                 }
+                // Always close counter after a successful request. If customRequest already
+                // closed it internally (platform-dependent), the double-close is harmless
+                // and silenced — "Bad file handle" here is not a real error.
+                try { counter.close(); } catch (_:Dynamic) {}
 
                 if (error != "") throw "Download failed: " + error;
                 if (!FileSystem.exists(zipPath) || FileSystem.stat(zipPath).size == 0)
