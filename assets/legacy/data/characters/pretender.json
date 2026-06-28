@@ -152,11 +152,11 @@
 	"flip_x": true,
 	"healthbar_colour": -1153844,
 	"camera_position": [
-		237,
-		-102
+		12,
+		127
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 0.9,
 	"_editor_isPlayer": true
 }

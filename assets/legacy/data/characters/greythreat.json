@@ -77,8 +77,8 @@
 	"flip_x": false,
 	"healthbar_colour": -10332301,
 	"camera_position": [
-		500,
-		0
+		38,
+		-62
 	],
 	"gameover_loop_sound": null,
 	"sing_duration": 6,
