@@ -3,6 +3,9 @@ package funkin.input;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.group.FlxGroup;
 import flixel.FlxBasic;
+#if mobile
+import mobile.backend.flixel.input.FlxMobileInputID;
+#end
 
 class TurboControlGroup extends FlxTypedGroup<TurboControl>
 {
@@ -23,6 +26,9 @@ class TurboControl extends FlxBasic // very basic turbo control thingy
 	public var turbos:Array<TurboControl> = [];
 	public var buttons:Null<Array<Int>> = null; // for controllers
 	public var keys:Array<Int>;
+	#if mobile
+	public var mobileButtons:Null<Array<FlxMobileInputID>> = null; // for mobile virtual pad
+	#end
 	
 	public var holding:Bool = false;
 	
@@ -57,6 +63,20 @@ class TurboControl extends FlxBasic // very basic turbo control thingy
 		
 		justPressed = (justPressed || FlxG.keys.anyJustPressed(keys));
 		pressed = (pressed || FlxG.keys.anyPressed(keys));
+		
+		#if mobile
+		// Check mobile virtual pad buttons
+		if (mobileButtons != null)
+		{
+			for (button in mobileButtons)
+			{
+				justPressed = (justPressed || mobilePadJustPressed(button));
+				pressed = (pressed || mobilePadPressed(button));
+				
+				if (pressed) break;
+			}
+		}
+		#end
 		
 		if (!holding)
 		{
@@ -105,6 +125,24 @@ class TurboControl extends FlxBasic // very basic turbo control thingy
 		return _pressed;
 	}
 	
+	#if mobile
+	/** Check if a mobile virtual pad button is currently pressed */
+	function mobilePadPressed(button:FlxMobileInputID):Bool
+	{
+		final controls = Controls.instance;
+		if (controls == null) return false;
+		return controls.mobilePadPressed([button]);
+	}
+	
+	/** Check if a mobile virtual pad button was just pressed this frame */
+	function mobilePadJustPressed(button:FlxMobileInputID):Bool
+	{
+		final controls = Controls.instance;
+		if (controls == null) return false;
+		return controls.mobilePadJustPressed([button]);
+	}
+	#end
+	
 	public static function fromControl(action:String, rate:Float = 0.1)
 	{
 		var keys = ClientPrefs.keyBinds.get(action);
@@ -126,6 +164,18 @@ class TurboControl extends FlxBasic // very basic turbo control thingy
 				
 				default: null;
 			}
+
+				#if mobile
+				// Also add mobile virtual pad button support
+				instance.mobileButtons = switch (action.split('_')[1])
+				{
+					case 'left': [FlxMobileInputID.LEFT];
+					case 'right': [FlxMobileInputID.RIGHT];
+					case 'down': [FlxMobileInputID.DOWN];
+					case 'up': [FlxMobileInputID.UP];
+					default: null;
+				}
+				#end
 		}
 		else
 		{
