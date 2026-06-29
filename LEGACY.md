@@ -44,6 +44,8 @@ Current version: **1.1.1b**
 ### Bugfixes
 - Roomcode Pico sprite has a correct gameover sprite.
 - RHM's Z-value is fixed in the greenhouse stage.
+- Fixed BPM and Section Beats UI behaving incorrectly in the Chart Editor.
+- Fixed some variables not working correctly in Hscript.
 
 ## 1.1.1b (june 21 2026)
   
@@ -52,9 +54,8 @@ Current version: **1.1.1b**
 - Lights Down correctly changes the current character if skins are equipped.
 - Clipping in Voting Time background fixed.
 
-### For developers
-These will only affect those who work on mods for Legacy
-- All events have descriptions to hopefully note what they do.
+### For modders
+- All events now have descriptions about how they work.
 
 ## 1.1.1 (june 21 2026)
 
