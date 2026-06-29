@@ -1,4 +1,5 @@
 import flixel.addons.text.FlxTypeText;
+
 import funkin.FunkinAssets;
 
 using StringTools;
@@ -35,9 +36,9 @@ public var repeatedCutscenes:Bool = false;
  * other thingies
 **/
 public var videoCheckStory:Bool = true;
+
 public var skippableVideo:Bool = true;
 public var video:FunkinVideoSprite;
-
 public var skipText:FlxText; // skip video text
 var bgFade:FlxSprite;
 var box:RGBSprite;
@@ -59,7 +60,6 @@ var dialogueEnded:Bool = false;
 var curIcon:String = 'bf';
 var curSide:Int = 0;
 var charMap:Map<String, Dynamic> = new haxe.ds.StringMap();
-var soundCache:Map<String, FlxSound> = new haxe.ds.StringMap();
 var blackYnot:FlxSprite;
 var vidPlaying:Bool = false;
 var dialogueAfter:Bool = false;
@@ -72,7 +72,7 @@ var portrait:Array<FlxSprite> = [];
 function onCreatePost()
 {
 	final PADDING = 15;
-	skipText = new FlxText(PADDING, 0, FlxG.width - PADDING * 2, IS_ANDROID ? Lang.str('video_skip_android', '◄ to skip') : Lang.str('video_skip'));
+	skipText = new FlxText(PADDING, 0, FlxG.width - PADDING * 2, Lang.str('video_skip'));
 	skipText.setFormat(Paths.font("liberbold.ttf"), 25, FlxColor.WHITE, Lang.hasSpecial('rightToLeft') ? 'right' : 'left', FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 	skipText.borderSize = 2;
 	skipText.y = FlxG.height - skipText.height - (PADDING * (3 / 4));
@@ -83,7 +83,7 @@ function onVidEnd()
 {
 	hideCaption();
 	
-	video.kill();
+	video.destroy();
 	vidPlaying = false;
 	camGame.visible = true;
 	skipText.visible = false;
@@ -108,21 +108,20 @@ function onVidEnd()
 public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canSkip:Bool, ?onEnd:Void->Void, ?onFormat:Void->Void)
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
-
+	
 	songStartCallback = () -> return Function_Stop;
-
+	
 	skippableVideo = (canSkip ?? true); // fuck you hscript
 	dialogueAfter = (dAfter ?? true);
-
+	
 	if (!dialogueAfter) PlayState.seenCutscene = true;
-
+	
 	blackYnot = new FlxSprite().makeScaledGraphic(FlxG.width + 3, FlxG.height, FlxColor.BLACK);
 	blackYnot.camera = camOther;
 	add(blackYnot);
-
+	
 	video = new FunkinVideoSprite();
-
-	video.onEnd(onVidEnd);
+	
 	video.onFormat(() -> {
 		vidPlaying = true;
 		video.camera = camOther;
@@ -134,27 +133,21 @@ public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canS
 		// ^ for windowed fullscreen
 		textFade();
 	});
-
+	
 	add(video);
-
+	
 	if (onEnd != null) video.onEnd(onEnd);
 	if (onFormat != null) video.onFormat(onFormat);
-
+	video.onEnd(onVidEnd);
+	
 	if (video.load(Paths.video(Paths.sanitize(vid))))
 	{
 		video.delayAndStart();
 	}
 	else
 	{
-		// Video file missing or inaccessible — skip the cutscene entirely and let PlayState's
-		// own songStartCallback() call (which fires after all scripts load) trigger startCountdown.
-		// Do NOT call startCountdown() here: song scripts run videoCutscene() at top-level code
-		// time (before PlayState line 905), so calling startCountdown() twice would crash the
-		// countdown state machine.
-		if (blackYnot != null) { blackYnot.kill(); blackYnot = null; }
-		video.kill();
-		PlayState.seenCutscene = true;
-		songStartCallback = startCountdown;
+		if (onEnd != null) onEnd();
+		onVidEnd();
 	}
 }
 
@@ -188,7 +181,7 @@ function speakerAnims(char:String = 'bf')
 	}
 	else
 	{
-		var path:String = Paths.getPath('data/dialogue/' + char + '.json', null, true);
+		var path:String = Paths.getPath('data/dialogue/' + char + '.json', null, PathsTestMode.NORMAL);
 		dialogueChar = FunkinAssets.parseJson5(FunkinAssets.getContent(path));
 		charMap[char] = dialogueChar;
 		loadUp = true;
@@ -306,9 +299,7 @@ function refreshDialogue(?oldToo = false)
 function v4SpeakerShit()
 {
 	var speaker:FlxSprite = speakerAnims(curCharacter);
-	if (!soundCache.exists(curSound))
-		soundCache[curSound] = FlxG.sound.load(Paths.sound('dialogue/' + curSound), 0.6);
-	swagDialogue.sounds = [soundCache[curSound]];
+	swagDialogue.sounds = [FlxG.sound.load(Paths.sound('dialogue/' + curSound), 0.6)];
 	dropText.text = boxChar;
 	icon.changeIcon(curIcon);
 	
@@ -333,7 +324,7 @@ function v4SpeakerShit()
 public function readDialogue()
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
-	var txt = Paths.getPath('songs/' + Paths.sanitize(songName) + '/dialogue.txt', null, true);
+	var txt = Paths.getPath('songs/' + Paths.sanitize(songName) + '/dialogue.txt', null, PathsTestMode.NORMAL);
 	dialogueList = CoolUtil.coolTextFile(txt);
 	if (dialogueList.length == 0) return;
 	
@@ -538,21 +529,14 @@ function dialogueUpdate(elapsed:Float)
 		if (dialogueEnded)
 		{
 			if (dialogueList.length > 0) refreshDialogue(true);
-			else goodBialogue();
-		}
-		else swagDialogue.skip();
-	}
-	for (touch in FlxG.touches.list)
-	{
-		if (touch.justReleased)
-		{
-			if (dialogueEnded)
+			else
 			{
-				if (dialogueList.length > 0) refreshDialogue(true);
-				else goodBialogue();
+				goodBialogue();
 			}
-			else swagDialogue.skip();
-			break;
+		}
+		else
+		{
+			swagDialogue.skip();
 		}
 	}
 }
@@ -572,7 +556,6 @@ function goodBialogue()
 			onComplete: function() {
 				boxGroup.kill();
 				charMap.clear();
-				soundCache.clear();
 				bgFade.kill();
 			}
 		});
@@ -601,7 +584,7 @@ function onUpdate(elapsed)
 
 function onUpdatePost()
 {
-	if (swagDialogue != null && hasDialogue)
+	if (swagDialogue != null)
 	{
 		if (rtlMode && rtlFullText.length > 0)
 		{
