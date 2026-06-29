@@ -8,4 +8,8 @@
 	"girlfriend": [1170, 420],
 	"opponent": [-150, 160],
 	"secondopp": [-60, 210],
+	"flags": {
+		"airship": true,
+		"windy": true
+	}
 }

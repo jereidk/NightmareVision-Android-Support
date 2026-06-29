@@ -124,12 +124,14 @@ function onLoad()
 	add(crewmates[2]);
 	add(crewmates[0]);
 	
-	victory = new FlxText(280, 67, -1, 'VICTORY'); //-88
-	victory.setFormat(Paths.font('vcr.ttf'), 70, 0xFF4DFFFF);
-	victory.scale.set(2.774, 2.774);
-	victory.updateHitbox();
+	victory = new flixel.text.FlxText(280, 30, -1, '');
+	victory.setFormat(Paths.font('vcr.ttf'), 195, 0xFF4DFFFF);
+
+	victory.antialiasing = false;
 	victory.scrollFactor.x = 0.5;
 	victory.text = Lang.str('victory');
+	victory.updateHitbox();
+	victory.x = 700 - (victory.frameWidth / 2);
 	insert(0, victory);
 }
 

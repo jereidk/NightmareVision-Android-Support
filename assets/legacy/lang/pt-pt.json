@@ -346,6 +346,8 @@
 		
 		"cutscene_delusion0": "PRESENTE",
 		"cutscene_delusion1": "O AIRSHIP",
+
+        "victory": "VITÓRIA",
 		
 		"cutscene_finale0": "TU ÉS MUITO TEIMOSO, NÃO ÉS.",
 		"cutscene_finalegibberish": "&%!$@%$&/@|$!\"&%_-%$-&_&%@!-<o>-!?",
@@ -492,8 +494,7 @@
         "doubletrouble0": "Agora podes jogar Double Trouble.",
         "doubletrouble1": "(No menu de Jogo livre! Em baixo de bonus songs!)",
         "victory0":"O que interessa? Tu já ganhaste!",
-		"victory": "VITÓRIA",
-
+		
 		// i'm so sorry.... options!
 
         "opt_category_adjustdelay": "Adjustar Delay",
@@ -608,6 +609,7 @@
 		// some new misc menu stuff
         "rand": "Aleatório",
         "reset":"Padrão",
+        "reset_score":"Apagar recorde",
         "select":"Selecionar",
         "back":"Voltar",
         "conf":"Confirmar",
@@ -622,7 +624,6 @@
         "weirdroute4": "Está na hora de fazer o que faço melhor.",
         "weirdroute5": "O Vermelho. Sempre soube que havia algo suspeito sobre ele, mas não o consegui parar a tempo... Agora está a apodrecer naquela lava toda.",
         "weirdroute6": "O capitão...",
-        "weirdroute7": "INSIRA O CÓDIGO",
-		"reset_score": "Apagar recorde"
+        "weirdroute7": "INSIRA O CÓDIGO"
 	}
 }

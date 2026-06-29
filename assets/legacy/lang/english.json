@@ -493,8 +493,6 @@
 		"doubletrouble0": "You can now play Double Trouble.",
 		"doubletrouble1": "(In the Freeplay menu! Under bonus songs!)",
 		"victory0":"Who cares? You already won!",
-		"victory": "VICTORY",
-		"credits_thanks": "Thank you for playing!",
 		"who1": "I didn't do it",
 		"who2": "Nope",
 		"who3": "And neither did you",
@@ -680,6 +678,10 @@
 		"weirdroute4": "Time to do what I do best.",
 		"weirdroute5": "Red. I always knew somethin' was fishy about that guy, but I didn't stop him in time... He's rottin' in that lava pit now.",
 		"weirdroute6": "The Captain...",
-		"weirdroute7": "ENTER CODE"
+		"weirdroute7": "ENTER CODE",
+
+		// credits
+		"victory":"VICTORY",
+		"credits_thanks":"Thank you for playing!"
 	}
 }

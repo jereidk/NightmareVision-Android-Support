@@ -59,8 +59,8 @@
 			"loop": false,
 			"flipY": false,
 			"offsets": [
-				725,
-				398
+				632,
+				341
 			],
 			"anim": "kill",
 			"fps": 24,
@@ -72,8 +72,8 @@
 			"loop": false,
 			"flipY": false,
 			"offsets": [
-				723,
-				400
+				631,
+				341
 			],
 			"anim": "kill2",
 			"fps": 24,
@@ -165,7 +165,7 @@
 		-100
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 3.7,
 	"scale": 1,
 	"_editor_isPlayer": false
 }
