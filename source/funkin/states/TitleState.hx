@@ -173,10 +173,11 @@ class TitleState extends MusicBeatState
 			return;
 		}
 		
-		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		// Always allow touch/click on TitleState for easy access
 		var allowMousePress:Bool = true;
 		#if mobile
-		allowMousePress = MobileNavUtil.allowPointerNav();
+		// TitleState should always accept touch, regardless of navInputMode setting
+		allowMousePress = true;
 		#end
 		final pressedEnter:Bool = FlxG.gamepads.lastActive?.justPressed.START || FlxG.keys.justPressed.ENTER || controls.ACCEPT || (allowMousePress && FlxG.mouse.justPressed);
 		

@@ -361,9 +361,6 @@ class DLCManager {
                     try { counter.close(); } catch (_:Dynamic) {}
                     throw "Download failed: " + Std.string(e);
                 }
-                // Always close counter after a successful request. If customRequest already
-                // closed it internally (platform-dependent), the double-close is harmless
-                // and silenced — "Bad file handle" here is not a real error.
                 try { counter.close(); } catch (_:Dynamic) {}
 
                 if (error != "") throw "Download failed: " + error;
@@ -551,6 +548,7 @@ private class DownloadProgressOutput extends haxe.io.Output {
     final dest:haxe.io.Output;
     final onWritten:Int->Void;
     var total:Int = 0;
+    var isClosed:Bool = false;
 
     public function new(dest:haxe.io.Output, onWritten:Int->Void) {
         this.dest      = dest;
@@ -558,19 +556,29 @@ private class DownloadProgressOutput extends haxe.io.Output {
     }
 
     override public function writeByte(c:Int):Void {
+        if (isClosed) return;
         dest.writeByte(c);
         total++;
         onWritten(total);
     }
 
     override public function writeBytes(s:haxe.io.Bytes, pos:Int, len:Int):Int {
+        if (isClosed) return 0;
         var n = dest.writeBytes(s, pos, len);
         total += n;
         onWritten(total);
         return n;
     }
 
-    override public function flush():Void dest.flush();
-    override public function close():Void dest.close();
+    override public function flush():Void {
+        if (!isClosed) dest.flush();
+    }
+
+    override public function close():Void {
+        if (!isClosed) {
+            isClosed = true;
+            try { dest.close(); } catch (_:Dynamic) {}
+        }
+    }
 }
 #end

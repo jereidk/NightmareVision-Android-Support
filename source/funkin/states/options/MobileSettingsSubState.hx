@@ -88,6 +88,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _rowLeft:Array<FlxText>    = [];
 	var _rowRight:Array<FlxText>   = [];
 	var _descText:FlxText;
+	var _descBg:FlxSprite;
 	var _helpText:FlxText;
 	var _backBtn:FlxSprite;
 	var _backBtnLabel:FlxText;
@@ -197,10 +198,16 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			add(rA);
 		}
 
-		// Description text with better styling
-		_descText = new FlxText(OPT_X, OPT_Y0 + MAX_OPT * OPT_H + 8, OPT_W, '');
+		// Description text with better styling and background
+		_descBg = new FlxSprite(OPT_X - 6, OPT_Y0 + MAX_OPT * OPT_H + 4);
+		_descBg.makeGraphic(OPT_W + 12, 70, 0x88000000);
+		_descBg.antialiasing = ClientPrefs.globalAntialiasing;
+		add(_descBg);
+
+		_descText = new FlxText(OPT_X + 8, OPT_Y0 + MAX_OPT * OPT_H + 8, OPT_W - 16, '');
 		_descText.setFormat(Paths.font('vcr.ttf'), 17, COLOR_DESC, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		_descText.borderSize = 1.2;
+		_descText.wordWrap = true;
 		add(_descText);
 
 		// Help text at bottom (updated dynamically by _updateNavModeUI)
@@ -210,7 +217,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		add(_helpText);
 
 		// Touch-mode back button — only visible when navInputMode is Touch.
-		final backBtnY:Float = OPT_Y0 + MAX_OPT * OPT_H + 50;
+		final backBtnY:Float = OPT_Y0 + MAX_OPT * OPT_H + 80;
 		_backBtn = new FlxSprite(OPT_X, backBtnY);
 		_backBtn.loadGraphic(Paths.image('menu/freeplay/card'));
 		_backBtn.setGraphicSize(160, 42);
