@@ -182,6 +182,8 @@ class FlxMacro
 	{
 		var fields:Array<Field> = Context.getBuildFields();
 		
+		var toRemove:Array<Field> = [];
+
 		for (field in fields) {
 			switch (field.kind) {
 				default:
@@ -190,17 +192,20 @@ class FlxMacro
 						fun.expr = macro {
 							if (textField == null || textField.text == Text)
 								return text = Text;
-							
+
 							_regen = true;
 							return textField.text = text = Text;
 						}
 					}
 			}
-			
-			if (field.name == 'set_antialiasing') // fucj ou
-				fields.remove(field);
+
+			if (field.name == 'set_antialiasing')
+				toRemove.push(field);
 		}
-		
+
+		for (field in toRemove)
+			fields.remove(field);
+
 		return fields;
 	}
 	
