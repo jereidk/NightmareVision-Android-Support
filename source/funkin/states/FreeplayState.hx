@@ -1,6 +1,5 @@
 package funkin.states;
 
-import funkin.input.TurboControl;
 import mobile.utils.MobileNavUtil;
 
 import flixel.group.FlxGroup;
@@ -137,23 +136,11 @@ class FreeplayState extends AmongUIState
 	
 	var menuWeekSelect:FlxSprite;
 	
-	var turboGroup:TurboControlGroup;
-	var controlDOWN:TurboControl = TurboControl.fromControl('ui_down');
-	var controlUP:TurboControl = TurboControl.fromControl('ui_up');
-	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
-	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
-	
 	override function create()
 	{
 		super.create();
 		
 		Mods.currentModDirectory = null;
-		
-		add(turboGroup = new TurboControlGroup());
-		turboGroup.add(controlDOWN);
-		turboGroup.add(controlUP);
-		turboGroup.add(controlLEFT);
-		turboGroup.add(controlRIGHT);
 		
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
@@ -612,11 +599,11 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controlLEFT.PRESSED) changeSection(-1);
-			else if (controlRIGHT.PRESSED) changeSection(1);
+			if (controls.UI_LEFT) changeSection(-1);
+			else if (controls.UI_RIGHT) changeSection(1);
 			
-			if (controlUP.PRESSED || FlxG.mouse.wheel > 0) changeSong(-1, false);
-			else if (controlDOWN.PRESSED || FlxG.mouse.wheel < 0) changeSong(1, false);
+			if (controls.UI_UP || FlxG.mouse.wheel > 0) changeSong(-1, false);
+			else if (controls.UI_DOWN || FlxG.mouse.wheel < 0) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
 
