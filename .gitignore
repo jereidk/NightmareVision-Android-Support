@@ -31,3 +31,5 @@ export/*
 *the-sus*
 source/zlib/*
 source/thesus/*
+
+.claude/
