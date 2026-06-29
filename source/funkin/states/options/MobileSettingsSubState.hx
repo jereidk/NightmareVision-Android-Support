@@ -89,6 +89,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _rowRight:Array<FlxText>   = [];
 	var _descText:FlxText;
 	var _descBg:FlxSprite;
+	var _scrollBar:FlxSprite;
+	var _scrollThumb:FlxSprite;
 	var _helpText:FlxText;
 	var _backBtn:FlxSprite;
 	var _backBtnLabel:FlxText;
@@ -97,6 +99,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _opts:Array<MobileOpt> = [];
 	var _sel:Int = 0;
 	var _selVisual:Float = 0.0; // Smoothly follows _sel
+	var _scrollOffset:Float = 0.0; // Target scroll offset
+	var _scrollOffsetVisual:Float = 0.0; // Smoothly follows _scrollOffset
 
 	var _demoTimer:Float = 0.0;
 	var _demoIdx:Int = 0;
@@ -210,6 +214,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_descText.wordWrap = true;
 		add(_descText);
 
+		// Scrollbar (only visible when there are more options than fit on screen)
+		final scrollBarX = OPT_X + OPT_W + 8;
+		final scrollBarH = MAX_OPT * OPT_H;
+		_scrollBar = new FlxSprite(scrollBarX, OPT_Y0);
+		_scrollBar.makeGraphic(8, Std.int(scrollBarH), 0x33FFFFFF);
+		add(_scrollBar);
+
+		_scrollThumb = new FlxSprite(scrollBarX, OPT_Y0);
+		_scrollThumb.makeGraphic(8, 40, 0xAAFFFFFF);
+		add(_scrollThumb);
+
 		// Help text at bottom (updated dynamically by _updateNavModeUI)
 		_helpText = new FlxText(0, FlxG.height - 48, FlxG.width, '');
 		_helpText.setFormat(Paths.font('vcr.ttf'), 17, 0xFF909090, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -270,6 +285,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		// Smooth selection animation
 		_selVisual = FlxMath.lerp(_selVisual, _sel, elapsed * 8);
+		_scrollOffsetVisual = FlxMath.lerp(_scrollOffsetVisual, _scrollOffset, elapsed * 10);
 
 		_updatePreview(elapsed);
 
@@ -296,12 +312,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			_sel = (_sel <= 0) ? _opts.length - 1 : _sel - 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
+			_updateScrollOffset();
 			_updateRows();
 		}
 		if (controls.UI_DOWN_P)
 		{
 			_sel = (_sel >= _opts.length - 1) ? 0 : _sel + 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
+			_updateScrollOffset();
 			_updateRows();
 		}
 
@@ -314,6 +332,31 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (opt != null && opt.kind == 'bool') _changeSelected(1);
 			else if (opt != null && opt.kind == 'customize' && opt.id == 'vpadCustomize')
 				openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
+		}
+	}
+
+	/** Update scroll offset so selected option stays visible */
+	function _updateScrollOffset():Void
+	{
+		if (_opts.length <= MAX_OPT)
+		{
+			_scrollOffset = 0;
+			return;
+		}
+
+		// Calculate how many rows are visible above the current selection
+		var visibleAbove = Std.int(_scrollOffset / OPT_H);
+		var visibleBelow = MAX_OPT - 1 - visibleAbove;
+
+		// If selection is above visible area, scroll up
+		if (_sel < visibleAbove)
+		{
+			_scrollOffset = _sel * OPT_H;
+		}
+		// If selection is below visible area, scroll down
+		else if (_sel > visibleAbove + MAX_OPT - 1)
+		{
+			_scrollOffset = (_sel - MAX_OPT + 1) * OPT_H;
 		}
 	}
 
@@ -351,22 +394,25 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Use the full row as a touch target.
 		// Left half of the row → ◄ (change left); right half → ► (change right).
 		// Bool options toggle on any tap. The ◄ ► sprites are visual only.
-		for (i in 0..._opts.length)
+		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
+		for (i in 0...MAX_OPT)
 		{
-			if (i >= MAX_OPT) break;
+			final optIndex = topIndex + i;
+			if (optIndex >= _opts.length) break;
 
 			final rowY = OPT_Y0 + i * OPT_H;
 			if (!(mx >= OPT_X && mx <= OPT_X + OPT_W && my >= rowY && my < rowY + OPT_H))
 				continue;
 
-			if (_sel != i)
+			if (_sel != optIndex)
 			{
-				_sel = i;
+				_sel = optIndex;
 				FunkinSound.play(Paths.sound('hover'), 0.5);
+				_updateScrollOffset();
 				_updateRows();
 			}
 
-			final opt = _opts[i];
+			final opt = _opts[optIndex];
 			if (opt.kind == 'bool')
 				_changeSelected(1);
 			else if (mx < OPT_X + OPT_W * 0.5)
@@ -589,6 +635,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		if (_sel >= _opts.length) _sel = _opts.length - 1;
 		if (_sel < 0) _sel = 0;
+		_scrollOffset = 0;
+		_scrollOffsetVisual = 0;
 	}
 
 	function _displayValue(opt:MobileOpt):String
@@ -618,19 +666,26 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _updateRows():Void
 	{
-		// Position highlight smoothly
-		final highlightY = OPT_Y0 + _selVisual * OPT_H - 2;
+		// Calculate which option index is at the top of the visible area (use visual for smooth scroll)
+		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
+
+		// Position highlight smoothly (accounting for scroll)
+		final highlightY = OPT_Y0 + (_selVisual - topIndex) * OPT_H - 2;
 		for (i in 0...MAX_OPT)
 		{
-			if (i == _sel && _rowHi[i].visible)
+			// Check if this visual row corresponds to the selected option
+			final visualIndex = topIndex + i;
+			if (visualIndex == _sel && _rowHi[i].visible)
 				_rowHi[i].y = highlightY;
 		}
 
 		for (i in 0...MAX_OPT)
 		{
-			final opt = (i < _opts.length) ? _opts[i] : null;
+			// Map visual row index to option array index
+			final optIndex = topIndex + i;
+			final opt = (optIndex < _opts.length) ? _opts[optIndex] : null;
 			final show = (opt != null);
-			final selected = show && (i == _sel);
+			final selected = show && (optIndex == _sel);
 
 			_rowHi[i].visible    = selected;
 			_rowLabel[i].visible = show;
@@ -660,6 +715,30 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
 		_descText.text = (sel != null) ? sel.desc : '';
+
+		// Update scrollbar visibility and thumb position
+		final needsScroll = _opts.length > MAX_OPT;
+		_scrollBar.visible = needsScroll;
+		_scrollThumb.visible = needsScroll;
+
+		if (needsScroll)
+		{
+			// Position thumb based on scroll offset
+			final maxScroll = (_opts.length - MAX_OPT) * OPT_H;
+			final thumbRange = MAX_OPT * OPT_H - 40;
+			final thumbY = OPT_Y0 + (_scrollOffsetVisual / maxScroll) * thumbRange;
+			_scrollThumb.y = thumbY;
+		}
+
+		// Show/hide description based on scroll position
+		if (_descBg != null && _descText != null)
+		{
+			final descAreaTop = OPT_Y0 + MAX_OPT * OPT_H;
+			final scrollDelta = _scrollOffsetVisual;
+			final descVisible = scrollDelta < OPT_H; // Show desc if not scrolled too far
+			_descBg.visible = descVisible;
+			_descText.visible = descVisible;
+		}
 	}
 
 	// ── Preview canvas ───────────────────────────────────────────────────────
