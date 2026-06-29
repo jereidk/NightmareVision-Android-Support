@@ -262,7 +262,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 
 	public static function getSongInfo(songID:String):Array<String>
 	{
-		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', null, true);
+		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', NORMAL);
 		var info:Array<String> = CoolUtil.coolTextFile(txt);
 		if (info != null && info.length > 0) return info;
 		return ['UNKNOWN', 'NO SONG INFO FOUND'];

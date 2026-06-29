@@ -227,7 +227,7 @@ function onLoad():Void
 {
 	// This will probably be reworked to have custom modded credits in the future.
 	// Nigga typing like serious Samuel im crying. But yea
-	if (Paths.fileExists('securitydlc/meta.json', null, true))
+	if (Paths.fileExists('securitydlc/meta.json', NORMAL))
 	{
 		hasDLC = true;
 		
