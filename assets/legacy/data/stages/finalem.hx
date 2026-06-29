@@ -10,7 +10,6 @@ var finaleDarkFG:FlxSprite;
 var finaleLight:FlxSprite;
 var lightoverlay:FlxSprite;
 var finaleMode:Bool = false;
-var propsFrames:FlxAtlasFrames = null;
 var bars:FlxSpriteGroup;
 public var rimlightExcludedSkins:Array<String> = ['blackp']; // ig we need this now
 
@@ -52,52 +51,31 @@ function onLoad()
 	defeatFinaleStuff.add(mainoverlayDK);
 	
 	var bg0:FlxSprite = new FlxSprite(-600, -400).makeScaledGraphic(3000, 2000, 0xFF0D0A1B);
-
-	// Load multi-atlas props (2 atlases <4096 each replacing the single >4096 original)
-	propsFrames = Paths.getMultiAtlas([ext + 'props-0', ext + 'props-1']);
 	
 	var bgScale = 1.3;
 	
-	var bg1:FlxSprite = new FlxSprite(800, -270);
-	bg1.frames = propsFrames;
-	bg1.animation.addByPrefix('dead', 'dead', 24, true);
-	bg1.animation.play('dead');
+	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props', 'dead');
 	bg1.scrollFactor.set(0.8, 0.8);
 	bg1.scale.set(bgScale, bgScale);
 	
-	var bg2:FlxSprite = new FlxSprite(-790, -530);
-	bg2.frames = propsFrames;
-	bg2.animation.addByPrefix('bg', 'bg', 24, true);
-	bg2.animation.play('bg');
+	var bg2:FlxSprite = new FlxSprite(-790, -530).loadFromSheet(ext + 'props', 'bg');
 	bg2.updateHitbox();
 	bg2.scrollFactor.set(0.9, 0.9);
 	bg2.scale.set(bgScale, bgScale);
 	
-	var bg3:FlxSprite = new FlxSprite(370, 1200);
-	bg3.frames = propsFrames;
-	bg3.animation.addByPrefix('splat', 'splat', 24, true);
-	bg3.animation.play('splat');
+	var bg3:FlxSprite = new FlxSprite(370, 1200).loadFromSheet(ext + 'props', 'splat');
 	bg3.updateHitbox();
 	bg3.scale.set(bgScale, bgScale);
 	
-	var bg4:FlxSprite = new FlxSprite(990, -380);
-	bg4.frames = propsFrames;
-	bg4.animation.addByPrefix('lamp', 'lamp', 24, true);
-	bg4.animation.play('lamp');
+	var bg4:FlxSprite = new FlxSprite(990, -380).loadFromSheet(ext + 'props', 'lamp');
 	bg4.updateHitbox();
 	bg4.scale.set(bgScale, bgScale);
 	
-	var bg5:FlxSprite = new FlxSprite(-750, 160);
-	bg5.frames = propsFrames;
-	bg5.animation.addByPrefix('fore', 'fore', 24, true);
-	bg5.animation.play('fore');
+	var bg5:FlxSprite = new FlxSprite(-750, 160).loadFromSheet(ext + 'props', 'fore');
 	bg5.updateHitbox();
 	bg5.scale.set(bgScale, bgScale);
 	
-	var dark:FlxSprite = new FlxSprite(-950, -160);
-	dark.frames = propsFrames;
-	dark.animation.addByPrefix('dark', 'dark', 24, true);
-	dark.animation.play('dark');
+	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props', 'dark');
 	dark.scale.set(1.3, 1.3);
 	dark.blend = BlendMode.MULTIPLY;
 	
@@ -117,7 +95,7 @@ function onLoad()
 	finaleFGStuff.add(bg3);
 	finaleFGStuff.add(bg4);
 	finaleFGStuff.add(bg5);
-	if (!ClientPrefs.lowQuality) finaleFGStuff.add(dark);
+	if (!ClientPrefs.lowQuality)finaleFGStuff.add(dark);
 	finaleFGStuff.add(finaleLight);
 	
 	finaleBGStuff.alpha = 0.001;
@@ -160,7 +138,7 @@ function onCreatePost()
 	lightoverlay.zIndex = 4;
 	finaleDarkFG.zIndex = 5;
 	
-	game.opponentStrums.visible = false;
+	opponentStrums.visible = false;
 	modManager.setValue("alpha", 1, 1);
 	refreshZ();
 	

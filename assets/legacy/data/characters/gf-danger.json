@@ -1,4 +1,5 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"loop": false,
@@ -188,7 +189,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/gf/gf_danger-0,characters/gf/gf_danger-1",
+	"image": "characters/gf/gf_danger",
 	"position": [
 		0,
 		0
@@ -209,8 +210,7 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 6,
 	"scale": 1,
-	"_editor_isPlayer": false,
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true
+	"_editor_isPlayer": false
+"flags": {},
+"afterimages": true,
 }

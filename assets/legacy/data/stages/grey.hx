@@ -102,7 +102,8 @@ function onCreatePost()
 	lightsubtract.blend = BlendMode.SUBTRACT;
 	lightsubtract.alpha = 1;
 	add(lightsubtract);
-	
+
+	if (hasGfSkin && gf.curCharacter == 'gfmira') changeCharacter('gf-pretender', 2);
 	if (ClientPrefs.shaders)
 	{
 		var rimlightBase:ExtraDropShadowShader = new funkin.game.shaders.ExtraDropShadowShader();
