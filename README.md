@@ -6,46 +6,45 @@ Made with [NightmareVision Engine](https://github.com/NMVTeam/NightmareVision)! 
 
 To compile with the Security DLC, include the command `-D DLC` when building!!
 
-## Special thanks to...
+# Compiling
 
-* ShadowMario and Co. for [Psych engine](https://github.com/ShadowMario/FNF-PsychEngine)
+If compilation errors arise, Ensure your Haxe version is correct and your haxelibs match what is listed in the .hxpkg file
 
-* Nebula_Zorua for the [specific Psych fork](https://github.com/nebulazorua/exe-psych-fork) NMV is built off and for the Modchart backend
+### Prerequisites...
 
-* Rozebud for the chart editor little buddies ([Check out their engine too](https://github.com/ThatRozebudDude/FPS-Plus-Public))
+(You can skip this if you already have compiled any fnf or flixel project)
 
-* Cne crew for camera rotation support ([Check out codename engine](https://github.com/CodenameCrew/CodenameEngine))
-
-* MaybeMaru for [MoonChart](https://github.com/MaybeMaru/moonchart) and [Flixel-Animate](https://github.com/MaybeMaru/flixel-animate)
-
-
-## How to compile NMV Engine
-
-### Quick Note
-- Haxe 4.3.6 or newer is expected
-- This engine ENFORCES the use of local libraries with hxpkg/hmm to prevent issues in relation to `hxvlc`
-- The expected library versions are listed within the .hxpkg file. 
-
-if compilation errors arise, Ensure your Haxe version is correct and your haxelibs match what is listed in the .hxpkg file
-
-### Download the prerequisites... (skip this if you already have compiled any fnf project, or any flixel project basically lol)
-
-[Haxe](https://haxe.org/download/)
-
-[Git](https://git-scm.com/downloads)
-
-[VS Community](https://visualstudio.microsoft.com/vs/community/)
-
-within the VS Community Installer, download `Desktop development with c++`
+- [Git](https://git-scm.com/downloads)
+- [Haxe](https://haxe.org/download/)
+	- 4.3.6 or newer is expected!
+- [VS Community](https://visualstudio.microsoft.com/vs/community/)
+	- Within the VS Community Installer, download **Desktop Development with C++**
 
 ### Download the projects required libraries...
 
-In a cmd within the project directory, in order run...
+> [!TIP]  
+> Actually, you can run [this file](projFiles/SETUP.bat) to automate the library setup process!
 
-> haxelib install hxpkg
+> [!NOTE]
+> This engine **enforces** the use of local libraries with hxpkg/hmm to prevent issues in relation to Hxvlc.<br>
+> The expected library versions are listed within the .hxpkg file.
 
-> haxelib run hxpkg setup
+Open a Command Prompt within the project directory and run the following commands...
 
-> haxelib run hxpkg install
+```cmd
+haxelib install hxpkg
+haxelib run hxpkg setup
+haxelib run hxpkg install
+```
 
-After that is complete, run `lime test windows` and you should be compiling
+You should be able to run `lime test cpp` to start compiling the game now!
+
+You can include `-D ASSET_REDIRECT` in the command for files to update as they're changed in the assets folder.<br>
+(Do **not** include this command if you're making a release build)
+
+# Special Thanks
+
+- ShadowMario and Co. for [Psych Engine](https://github.com/ShadowMario/FNF-PsychEngine)
+- Nebula_Zorua for the [specific Psych fork](https://github.com/nebulazorua/exe-psych-fork) NMV is built off and for the Modchart backend
+- Rozebud for the chart editor little buddies ([Check out FPS Plus too](https://github.com/ThatRozebudDude/FPS-Plus-Public))
+- MaybeMaru for [MoonChart](https://github.com/MaybeMaru/moonchart) and [Flixel-animate](https://github.com/MaybeMaru/flixel-animate)
