@@ -13,6 +13,7 @@ function onStepHit()
 function onCreatePost()
 {
 	camSpecialThing([600, 450], [800, 450]);
+	pet.scale.set(1.5,1.5);
 }
 
 function onUpdate(elapsed)
@@ -39,8 +40,6 @@ function onUpdate(elapsed)
 
 function onLoad()
 {
-
-	pet.scale.set(1.5,1.5);
 	var sky:FlxSprite = new FlxSprite(-1100, -800).loadGraphic(Paths.image(ext + 'back'));
 	sky.scrollFactor.set(0, 0);
 	add(sky);

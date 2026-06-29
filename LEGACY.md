@@ -60,6 +60,7 @@ Current version: **1.1.1b**
 - Black's Defeat sprite was re-exported to fix effects.
 - White's halo effect was fixed.
 - Fixed some variables not working correctly in Hscript.
+- Pets are correctly scaled in Pip Towers stage.
 
 ### Changes
 - HUD no longer cuts off in Ejected and Turbulence.
