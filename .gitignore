@@ -1,10 +1,12 @@
-# Content
-content/ignore_*/*
-content/avas_evil_secrets/*
-
-# Haxelib & HXPKG
 .haxelib/*
-hmm.json
+dump/*
+*.lnk
+
+# enoiugh git ignores guys
+# yeah ok sure
+**/content/*
+!content/securitydlc
+!content/mods-go-here.txt
 
 ### Mac
 .DS_Store
@@ -15,20 +17,17 @@ vscode-project.hxml
 export/*
 .vscode/*
 *.code-workspace
-dump/*
-
 # Local history which shouldn't be shared.
 .history
 .ionide
-
 # ! means a file should be added regardless of it it gets ignored prior.
 # Including to allow others to use already set-up configuration tweaked for the project.
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-/content
-!content/NMV-Base-Game
+.vs/*
 
-# Claude Code worktrees
-.claude/worktrees/
+*the-sus*
+source/zlib/*
+source/thesus/*
