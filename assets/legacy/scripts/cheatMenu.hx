@@ -7,8 +7,6 @@ function onCreatePost()
 	if (!ClientPrefs.inDevMode) return;
 	game.paused = false;
 	dbGroup.camera = game.camOther;
-	dbGroup.visible = false;
-	add(dbGroup);
 
 	// ── terminal panel background ──────────────────────────────────────────
 	var panelBg = new FlxSprite(0, 630).makeGraphic(FlxG.width, 90, 0xEE000D00);
@@ -69,9 +67,11 @@ function onCreatePost()
 		shButton.text = getBool('SHADERS', ClientPrefs.shaders);
 	});
 	msButton    = makeBtn(START + GAP * 4, getBool('MID SCROLL', ClientPrefs.middleScroll), () -> {
-		ClientPrefs.middleScroll = !ClientPrefs.middleScroll;
-		ClientPrefs.flush();
-		msButton.text = getBool('MID SCROLL', ClientPrefs.middleScroll);
+		msButton.text = getBool('MID SCROLL', ClientPrefs.middleScroll = !ClientPrefs.middleScroll);
+		recalculateMiddlescroll();
+	});
+	dsButton    = makeBtn(START + GAP * 5, getBool('D SCROLL', ClientPrefs.downScroll), () -> {
+		dsButton.text = getBool('D SCROLL', ClientPrefs.downScroll = !ClientPrefs.downScroll);
 	});
 
 	dbGroup.add(closeButton);
@@ -79,6 +79,7 @@ function onCreatePost()
 	dbGroup.add(flButton);
 	dbGroup.add(shButton);
 	dbGroup.add(msButton);
+	dbGroup.add(dsButton);
 
 	// ── bottom hint ───────────────────────────────────────────────────────
 	var hint = new FlxText(0, 692, FlxG.width, '[ TAB / pause menu to toggle ]', 9);
@@ -86,11 +87,37 @@ function onCreatePost()
 	dbGroup.add(hint);
 }
 
+var warping:Bool = false;
 function onUpdate()
 {
 	if (ClientPrefs.inDevMode || PlayState.chartingMode)
 	{
-		if (FlxG.keys.pressed.THREE) playbackRate = 2;
-		if (FlxG.keys.released.THREE) playbackRate = 1;
+		if (FlxG.keys.pressed.THREE)
+		{
+			playbackRate = (FlxG.keys.pressed.SHIFT ? .5 : 2);
+			warping = true;
+		}
+		else if (warping)
+		{
+			playbackRate = 1;
+			warping = false;
+		}
+	}
+}
+
+function recalculateMiddlescroll():Void
+{
+	for (playField in playFields)
+	{
+		if (playField.isPlayer)
+		{
+			modManager.setValue('opponentSwap', ClientPrefs.middleScroll ? .5 : 0, playField.ID);
+
+			continue;
+		}
+
+		playField.visible = !ClientPrefs.middleScroll;
+
+		modManager.setValue('alpha', ClientPrefs.middleScroll ? 1 : 0, playField.ID);
 	}
 }
