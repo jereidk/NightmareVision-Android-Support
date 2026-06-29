@@ -93,7 +93,7 @@ class OurLittleFriend extends FlxSprite
 	function buildOffsets(?path:String)
 	{
 		path ??= _offsetPath;
-		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in FunkinAssets.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
+		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in File.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
 		{
 			var value = i.trim().split(',');
 			offsets.set(k, [Std.parseFloat(value[0]), Std.parseFloat(value[1])]);
@@ -184,7 +184,7 @@ class ChartEditorState extends MusicBeatState
 			"Value 1: Character to change (Dad, BF, GF)\nValue 2: New character's name"
 		],
 		// my auto formatter is forcing it to be liek this. i will fix it later
-		['Change Noteskin', 'Value 1: name of the noteskin json to change to.\nValue 2: ID of strum to change. (0 -> player, 1 -> opponent, etc)'],
+		['Change Noteskin', 'Changes the Noteskin of a specific strumline.\n\nValue 1: Name of the Noteskin to change to\nValue 2: ID of the Strumline (0 = Player, 1 = Opponent, etc.)'],
 		['Change Scroll Speed', "Value 1: Scroll Speed Multiplier (1 is default)\nValue 2: Time it takes to change fully in seconds."],
 		['Set Property', "Value 1: Variable name\nValue 2: New value"],
 		['HUD Fade', "Fades the HUD camera\n\nValue 1: Alpha\nValue 2: Duration"],
@@ -238,41 +238,7 @@ class ChartEditorState extends MusicBeatState
 	var curRedoIndex = 0;
 	
 	public static var _song:Song;
-	public static var song(get, set):Song;
-	static inline function get_song():Song return _song;
-	static inline function set_song(v:Song):Song return _song = v;
-
-	public static function getDefaultSong():Song
-	{
-		return {
-			song: 'test', notes: [], events: [], bpm: 150, needsVoices: true,
-			speed: 1.0, keys: 4, lanes: 1, player1: 'bf', player2: 'dad',
-			gfVersion: 'gf', stage: 'stage', arrowSkins: [],
-			allowBFskin: false, allowGFskin: false, allowPet: false
-		};
-	}
-
-	public var bfHitsound:Bool = false;
-	public var dadHitsound:Bool = false;
-	public var shiftStrumlineTransform:Dynamic = null;
-	public var swapStrumlineTransform:Dynamic = null;
-
-	#if mobile
-	var chartMobileBtns:Array<FlxSprite> = [];
-	var chartMobilePlayLbl:flixel.text.FlxText = null;
-	#end
-
-	public function updateVolume():Void {}
-	public function copySection():Void {}
-	public function pasteSection():Void {}
-	public function clearSection():Void {}
-	public function cloneSection(n:Dynamic):Void {}
-	public function mirrorNotes(notes:Dynamic, axis:Dynamic):Void {}
-	public function transformNoteStrumlines(notes:Dynamic, transform:Dynamic):Void {}
-	public function getSelectedNotes():Array<Array<Dynamic>> return curSelectedNotes;
-	public function getSelectedEvents():Array<Array<Dynamic>>
-		return [for (n in curSelectedNotes) if (n[2] == null) n];
-
+	
 	/*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
 	**/
@@ -407,7 +373,7 @@ class ChartEditorState extends MusicBeatState
 		if (curSec >= _song.notes.length) curSec = _song.notes.length - 1;
 		
 		FlxG.mouse.visible = true;
-
+		
 		addSection();
 		
 		currentSongName = Paths.sanitize(_song.song);
@@ -536,35 +502,10 @@ class ChartEditorState extends MusicBeatState
 		lastSong = currentSongName;
 		
 		updateGrid();
-
-		#if mobile
-		final btnW = 55;
-		final btnH = 55;
-		final btnGap = 4;
-		final totalW = 5 * btnW + 4 * btnGap;
-		final startX = FlxG.width - totalW - 6;
-		final startY = 6;
-		final btnLabels = ['<<', 'PLY', '>>', 'UND', 'OPT'];
-		for (i in 0...5)
-		{
-			final bx = startX + i * (btnW + btnGap);
-			final btn = new FlxSprite(bx, startY).makeGraphic(btnW, btnH, 0xCC000033);
-			btn.scrollFactor.set();
-			btn.camera = camHUD;
-			add(btn);
-			chartMobileBtns.push(btn);
-			final lbl = new flixel.text.FlxText(bx, startY + Std.int((btnH - 16) / 2), btnW, btnLabels[i]);
-			lbl.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
-			lbl.scrollFactor.set();
-			lbl.camera = camHUD;
-			add(lbl);
-			if (i == 1) chartMobilePlayLbl = lbl;
-		}
-		#end
-
+		
 		super.create();
 	}
-
+	
 	function createFriends()
 	{
 		// temp
@@ -1495,7 +1436,7 @@ class ChartEditorState extends MusicBeatState
 		
 		#if MODS_ALLOWED
 		var eventPushedMap:Map<String, Bool> = new Map<String, Bool>();
-		var directories:Array<String> = [];
+		var directories:Array<String> = [Paths.getCorePath('data/events/'), Paths.getCorePath('events/')];
 		
 		#if MODS_ALLOWED
 		directories.push(Paths.mods('data/events/'));
@@ -1894,7 +1835,7 @@ class ChartEditorState extends MusicBeatState
 		
 		try
 		{
-			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp', true);
+			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp');
 			if (oppVocals != null)
 			{
 				opponentVocals.loadEmbedded(oppVocals);
@@ -1973,9 +1914,9 @@ class ChartEditorState extends MusicBeatState
 			if (wname == 'section_beats')
 			{
 				_song.notes[curSec].sectionBeats = Std.int(nums.value);
-
+				
 				Conductor.mapBPMChanges(_song);
-
+				
 				reloadGridLayer();
 			}
 			else if (wname == 'song_speed')
@@ -1985,9 +1926,9 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'song_bpm')
 			{
 				_song.bpm = nums.value;
-
+				
 				Conductor.mapBPMChanges(_song);
-
+				
 				updateGrid();
 			}
 			else if (wname == 'song_strums')
@@ -2028,11 +1969,11 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'section_bpm')
 			{
 				_song.notes[curSec].bpm = nums.value;
-
+				
 				if (_song.notes[curSec].changeBPM)
 				{
 					Conductor.mapBPMChanges(_song);
-
+					
 					updateGrid();
 				}
 			}
@@ -2139,45 +2080,6 @@ class ChartEditorState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
-		#if mobile
-		if (chartMobilePlayLbl != null)
-			chartMobilePlayLbl.text = FlxG.sound.music.playing ? 'PSE' : 'PLY';
-
-		for (touch in FlxG.touches.list)
-		{
-			if (touch.justPressed)
-			{
-				for (i in 0...chartMobileBtns.length)
-				{
-					final btn = chartMobileBtns[i];
-					if (touch.viewX >= btn.x && touch.viewX < btn.x + btn.width
-						&& touch.viewY >= btn.y && touch.viewY < btn.y + btn.height)
-					{
-						switch (i)
-						{
-							case 0: changeSection(curSec - 1);
-							case 1: if (FlxG.sound.music.time < (FlxG.sound.music.length - endOffset)) togglePause();
-							case 2: changeSection(curSec + 1);
-							case 3: undo();
-							case 4:
-								autosaveSong();
-								toggleMusic(false);
-								openSubState(new ChartingOptionsSubmenuOLD());
-						}
-						break;
-					}
-				}
-			}
-		}
-
-		if (FlxG.android.justReleased.BACK)
-		{
-			autosaveSong();
-			toggleMusic(false);
-			openSubState(new ChartingOptionsSubmenuOLD());
-		}
-		#end
-
 		if (camPos != null) camPos.setPosition(strumLine.x + CAM_OFFSET, strumLine.y);
 		
 		bg.scale.x = bg.scale.y = (1 / FlxG.camera.zoom);
@@ -2857,7 +2759,7 @@ class ChartEditorState extends MusicBeatState
 	var waveformPrinted:Bool = true;
 	var wavData:Array<Array<Array<Float>>> = [[[0], [0]], [[0], [0]]];
 	
-	function updateWaveform(?forceRegenerate:Bool)
+	function updateWaveform()
 	{
 		#if desktop
 		if (waveformPrinted)
@@ -3950,20 +3852,15 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 		});
 		changeSelection();
 		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
-
-		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		addVirtualPadCamera();
-		#end
 	}
-
+	
 	override public function update(elapsed:Float)
 	{
-		if ((FlxG.keys.justPressed.ESCAPE || controls.BACK) && canexit)
+		if (FlxG.keys.justPressed.ESCAPE && canexit)
 		{
 			close();
 		}
-
+		
 		var upP = controls.UI_UP_P;
 		var downP = controls.UI_DOWN_P;
 		var accepted = controls.ACCEPT;
