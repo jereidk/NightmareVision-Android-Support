@@ -42,6 +42,7 @@ Current version: **1.1.1b**
 ## 1.1.2 (? 2026)
 
 ### Additions
+- You can now skip time in the Pause menu, while Charting Mode is active.
 - Updated some libraries.
 	- Bumped Lime, OpenFL and Flixel versions.
 		- Seamless camera rotation with `scrollAngle` is now supported.

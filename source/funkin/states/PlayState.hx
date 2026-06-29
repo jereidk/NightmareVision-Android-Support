@@ -442,7 +442,7 @@ class PlayState extends MusicBeatState
 	 * 
 	 * Can be manually changed.
 	 */
-	var songLength:Float = 0;
+	public var songLength:Float = 0;
 	
 	public var boyfriendCameraOffset:Array<Float> = [0, 0];
 	public var opponentCameraOffset:Array<Float> = [0, 0];
@@ -2326,11 +2326,8 @@ class PlayState extends MusicBeatState
 		#else
 		FlxG.switchState(FlxG.keys.pressed.SHIFT ? ChartEditorState.new : OLDChartEditorState.new);
 		#end
-		chartingMode = true;
-		
-		DiscordClient.changePresence('Chart Editor');
 	}
-	
+
 	function openCharacterEditor():Void
 	{
 		FlxG.camera.followLerp = 0;
@@ -3143,7 +3140,7 @@ class PlayState extends MusicBeatState
 		scripts.call('onPopUpScorePost', [note, rating]);
 	}
 	
-	inline function getSongTime():Float
+	public inline function getSongTime():Float
 	{
 		if (audio.inst?.playing)
 		{
