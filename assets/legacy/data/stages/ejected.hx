@@ -193,8 +193,8 @@ function onUpdate(elapsed)
 	if (speedlines != null) speedlines.y = -(funTime * 2 * (ClientPrefs.flashing ? 1.75 : .75));
 
 	if (isDead) return;
-	camHUD.y = Math.sin((Conductor.songPosition / 1000) * (Conductor.bpm / 60) * 1.0) * 15;
-	camHUD.angle = Math.sin((Conductor.songPosition / 1200) * (Conductor.bpm / 60) * -1.0) * 1.2;
+	camHUD.scroll.y = Math.sin((Conductor.songPosition / 1000) * (Conductor.bpm / 60) * -1.0) * 15;
+	camHUD.scrollAngle = Math.sin((Conductor.songPosition / 1200) * (Conductor.bpm / 60) * -1.0) * 1.2;
 	
 	if (cloudScroll.length >= 3)
 	{
