@@ -37,12 +37,18 @@ WEBSITE: https://vsimpostor.com/
 - Lithuanian
 
 # CHANGELOG
-Current version: **1.1.1b**
+Current version: **1.1.1**
+
+## 1.1.2 (? 2026)
+
+### Bugfixes
+- Roomcode Pico sprite has a correct gameover sprite.
+- RHM's Z-value is fixed in the greenhouse stage.
 
 ## 1.1.1b (june 21 2026)
   
 ### Bugfixes
-- Fixed dialogue and its cohorts from only the assets folder, resulting in modded dialogue crashing.
+- Fixed dialogue and song credits not working in mods.
 - Lights Down correctly changes the current character if skins are equipped.
 - Clipping in Voting Time background fixed.
 

@@ -160,7 +160,7 @@ function onLoad()
 	rhmmira.animation.play('bop');
 	rhmmira.antialiasing = true;
 	rhmmira.scrollFactor.set(1.2, 1);
-
+	
 	bluemira = new FlxSprite(-1350, 0);
 	bluemira.frames = Paths.getSparrowAtlas(ext + 'crew');
 	bluemira.animation.addByPrefix('bop', 'blue', 24, false);
@@ -179,8 +179,6 @@ function onLoad()
 	vines.animation.play('bop');
 	vines.antialiasing = true;
 	vines.scrollFactor.set(1.4, 1);
-        vines.scale.set(2, 2); // vines resized 50%, compensate with 2x scale
-        vines.updateHitbox();
 	
 	heartEmitter = new FlxEmitter(-1200, 1000);
 	
@@ -209,8 +207,8 @@ function onLoad()
 function onCreatePost()
 {
 	camSpecialThing([100, 200], [380, 200], 0.5);
-	add(rhmmira);
 	add(bluemira);
+	add(rhmmira);
 	add(pot);
 	add(vines);
 	add(heartEmitter);
