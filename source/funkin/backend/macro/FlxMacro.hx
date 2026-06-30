@@ -121,6 +121,24 @@ class FlxMacro
 		return fields;
 	}
 	
+	/**
+	 * Adds zIndex to `FlxBasic`'
+	 */
+	public static macro function buildFlxBasic():Array<Field>
+	{
+		var fields:Array<Field> = Context.getBuildFields();
+		
+		fields.push(
+			{
+				name: "zIndex",
+				access: [APublic],
+				kind: FVar(macro :Int, macro $v{0}),
+				pos: Context.currentPos(),
+			});
+			
+		return fields;
+	}
+	
 	public static macro function buildFlxCamera():Array<Field>
 	{
 		var fields:Array<Field> = Context.getBuildFields();
@@ -276,44 +294,6 @@ class FlxMacro
 		return fields;
 	}
 	
-	/**
-	 * Removes mobile-only volume/mute hardlocks from `SoundFrontEnd`.
-	 * Upstream flixel locks volume=1 and muted=false on mobile, breaking in-game audio control.
-	 */
-	public static macro function buildFlxSoundFrontEnd():Array<Field>
-	{
-		var fields:Array<Field> = Context.getBuildFields();
-
-		for (field in fields)
-		{
-			switch (field.kind)
-			{
-				default:
-				case FFun(fun):
-					if (field.name == 'set_volume')
-					{
-						fun.expr = macro
-						{
-							volume = flixel.math.FlxMath.bound(Volume, 0, 1);
-							if (volumeHandler != null)
-								volumeHandler(muted ? 0 : volume);
-							onVolumeChange.dispatch(muted ? 0 : volume);
-							return volume;
-						}
-					}
-					else if (field.name == 'set_muted')
-					{
-						fun.expr = macro
-						{
-							return muted = v;
-						}
-					}
-			}
-		}
-
-		return fields;
-	}
-
 	/**
 	 * A general function for both `FlxDrawQuadsItem` and `FlxDrawTrianglesItem`
 	 * It adjusts the `render` function to update rgb shader fields if it can
