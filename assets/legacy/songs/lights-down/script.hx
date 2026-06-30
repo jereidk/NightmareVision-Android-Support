@@ -6,15 +6,12 @@ public var hudDarkShader:ExtraDropShadowShader;
 public var darkShader:ExtraDropShadowShader;
 public var vignette:Bool = false;
 var isDark:Bool = false;
-var noshader:Bool = false;
 
 function onLoad()
 {
 	readDialogue();
-	
-	var dark:Null<String> = boyfriend.getFlag('variants')?.dark;
-	if (dark != null) addCharacterToList(dark, 0);
-	
+	// Just preloading this in onLoad() instead of onPush()
+	addCharacterToList('bf-dark', 0);
 	addCharacterToList('green-dark', 1);
 	
 	darkShader = new funkin.game.shaders.ExtraDropShadowShader();
@@ -54,13 +51,13 @@ function onLoad()
 		0, 0, 0, 0, 255,
 		0, 0, 0, 0, 255,
 		0, 0, 0, 1, 0
-	], 140, 10, 0);
+	], 140, 15, 0);
 	darkShader.addLayer([
 		0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0,
 		0, 0, 0, 1, 0
-	], -32, 12, 0);
+	], -32, 15, 0);
 	
 	darkShader.attachedSprite = boyfriend;
 	boyfriend.useRenderTexture = true;
@@ -119,8 +116,8 @@ function onEvent(eventName, value1, value2)
 					camGame.alpha = 0;
 			}
 		case 'Lights out':
-			if (value1 == '2' /* ????? */ || (value1 == '1' && !ClientPrefs.flashing)) return;
-			
+			if (value1 == '2') return;
+			if (value1 == '1' && !ClientPrefs.flashing) return;
 			isDark = true;
 			
 			// My favorite VS IMPOSTOR moment is when we loaded the dad shader despite this never being used outside of this song/character.
@@ -136,14 +133,12 @@ function onEvent(eventName, value1, value2)
 			
 			playHUD.healthBar.bg.setColorTransform(0, 0, 0, 1, 224, 224, 224);
 			
-			var dark:Null<String> = boyfriend.getFlag('variants')?.dark;
-			if (dark != null)
+			if (boyfriend.curCharacter == 'bf' || boyfriend.curCharacter == 'bf-dark')
 			{
-				changeCharacter(dark, 0);
+				triggerEventNote('Change Character', '0', 'bf-dark');
 				boyfriend.shader = null;
-				noshader = true;
 			}
-			else if (boyfriend.getFlag('dark') != true)
+			else
 			{
 				boyfriend.shader = darkShader;
 			}
@@ -151,7 +146,6 @@ function onEvent(eventName, value1, value2)
 			playHUD.healthBar.setColors(FlxColor.BLACK, 0xffe0e0e0);
 		case 'Lights on':
 			if (value1 == '1' && !ClientPrefs.flashing) return;
-			
 			isDark = false;
 			
 			gf.alpha = 1;
@@ -163,7 +157,7 @@ function onEvent(eventName, value1, value2)
 			
 			playHUD.healthBar.bg.setColorTransform();
 			
-			if (noshader) changeCharacter(hasBfSkin ? ClientPrefs.bfSkin : PlayState.SONG.player1, 0);
+			if (boyfriend.curCharacter == 'bf-dark') triggerEventNote('Change Character', '0', PlayState.SONG.player1);
 			
 			setVignette(vignette);
 			triggerEventNote('Change Character', '1', PlayState.SONG.player2);
