@@ -3449,7 +3449,7 @@ class PlayState extends MusicBeatState
 			if (SONG.notes[curSection].changeBPM)
 			{
 				Conductor.bpm = SONG.notes[curSection].bpm;
-				scripts.set('bpm', Conductor.bpm);
+				scripts.set('curBpm', Conductor.bpm);
 			}
 			scripts.set('mustHitSection', SONG.notes[curSection].mustHitSection);
 			scripts.set('altAnim', SONG.notes[curSection].altAnim);

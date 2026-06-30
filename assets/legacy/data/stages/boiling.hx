@@ -85,13 +85,17 @@ function onCreatePost()
 	add(lavaOverlay);
 	if (!ClientPrefs.lowQuality) add(emberEmitter);
 	
-	if (ClientPrefs.bfSkin == 'bfpolus')
+	if (hasBfSkin && game.boyfriend.curCharacter == 'bfpolus')
 	{
 		triggerEventNote('Change Character', 'dad', 'maroonplayableoplava');
 		game.dad.x = 1050;
 		game.dad.y = 330;
 		triggerEventNote('Change Character', 'boyfriend', 'bf-lava');
 		camSpecialThing([1760, 400], [1900, 400]);
+	}
+	if (game.boyfriend.curCharacter == 'maroonplayable')
+	{
+		triggerEventNote('Change Character', 'boyfriend', 'maroonplayablelava');
 	}
 	
 	pet.zIndex = 0;

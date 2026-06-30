@@ -3,45 +3,45 @@
 	"animations": [
 		{
 			"offsets": [
-				0,
-				0
+				853,
+				7
 			],
 			"loop": false,
 			"fps": 24,
 			"anim": "firstDeath",
 			"indices": [],
-			"name": "balls BF dies"
+			"name": "BF dies"
 		},
 		{
 			"offsets": [
-				0,
-				0
+				67,
+				-19
 			],
 			"loop": true,
 			"fps": 24,
 			"anim": "deathLoop",
 			"indices": [],
-			"name": "balls BF Dead Loop"
+			"name": "BF Dead Loop"
 		},
 		{
 			"offsets": [
-				0,
-				0
+				67,
+				45
 			],
 			"loop": false,
 			"fps": 24,
 			"anim": "deathConfirm",
 			"indices": [],
-			"name": "balls BF Dead confirm"
+			"name": "BF Dead confirm"
 		}
 	],
 	"no_antialiasing": false,
 	"flags": {},
 	"afterimages": true,
-	"image": "characters/gameover/bfdefeatgameovers",
+	"image": "characters/gameover/bf_defeat_death_balls-0,characters/gameover/bf_defeat_death_balls-1",
 	"position": [
-		-945,
-		266
+		30,
+		326
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": "stage/defeat_kill_ballz_sfx",
@@ -53,11 +53,11 @@
 	"flip_x": true,
 	"healthbar_colour": -13520687,
 	"camera_position": [
-		43,
-		-136
+		-29,
+		82
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 6,
+	"sing_duration": 4,
 	"scale": 1,
 	"_editor_isPlayer": true
 }

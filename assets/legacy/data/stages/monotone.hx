@@ -1,6 +1,7 @@
 import funkin.data.ClientPrefs;
-import flixel.FlxSprite;
 import Reflect;
+
+import flixel.FlxSprite;
 
 var ext = 'stages/skeld/monotone/';
 var bbg:FlxSprite;
@@ -20,6 +21,8 @@ var platform:FlxSprite;
 var speedlines:FlxBackdrop;
 var funTime:Float;
 var blackImage:FlxSprite;
+var oldPet:Null<String> = null;
+var oldBf:Null<String> = null;
 var lightoverlay:FlxSprite;
 var lightoverlay2:FlxSprite;
 var hsv1:HSLColorSwap = (ClientPrefs.shaders ? new funkin.game.shaders.HSLColorSwap() : null);
@@ -153,8 +156,8 @@ function onCreatePost()
 	blackImage = new flixel.system.FlxBGSprite();
 	blackImage.color = FlxColor.BLACK;
 	blackImage.alpha = 0;
-	stage.insert(stage.members.indexOf(dadGroup) + 1, blackImage);
-	
+	add(blackImage);
+
 	copyPet.loadPet(pet.curPet);
 	copyPet.flipX = !copyPet.flipX;
 	copyPet.x -= (copyPet._petOffset.x * 2);
@@ -178,7 +181,7 @@ function onCreatePost()
 	preloadVariant('falling');
 	preloadVariant('defeat');
 	preloadVariant('windy');
-
+	
 	addCharacterToList('greenEjected', 1);
 	addCharacterToList('monotone', 1);
 	addCharacterToList('red', 1);
@@ -187,7 +190,6 @@ function onCreatePost()
 	if (hasBfSkin)
 	{
 		final shift:Null<String> = (boyfriend.getFlag('variants')?.monotone ?? boyfriend.getFlag('customMonotone'));
-		
 		changeCharacter(shift ?? boyfriend.curCharacter, 1);
 		
 		if (dad.isPlayerInEditor) // i mean it works !
@@ -198,6 +200,7 @@ function onCreatePost()
 				'singLEFT' => 'singRIGHT',
 				'danceLeft' => 'danceRight'
 			];
+			
 			var ogAnims = dad.animation.getNameList().copy();
 			for (animName in ogAnims)
 			{
@@ -211,7 +214,7 @@ function onCreatePost()
 			}
 		}
 		
-		if (shift == null) dad.x = (-boyfriend.x - dad.baseFrameWidth + (dad.getFlag('monotoneXOffset') ?? 0) + 1920);
+		if (shift == null) dad.x = (-boyfriend.x - dad.frameWidth + (dad.getFlag('monotoneXOffset') ?? 0) + 1920);
 	}
 	
 	camHUD.alpha = .0001; // doy
@@ -241,7 +244,7 @@ function onCreatePost()
 	// Loggo. No other comment
 	yapsesh = new FlxSprite(0, 0);
 	yapsesh.frames = Paths.getSparrowAtlas(ext + 'dialogue');
-	yapsesh.animation.addByPrefix('bop', 'dialogue', 22, false);
+	yapsesh.animation.addByPrefix('bop', 'dialogue', 24, false);
 	yapsesh.camera = camOther;
 	yapsesh.zIndex = 12;
 	yapsesh.screenCenter();
@@ -327,13 +330,13 @@ function onEvent(n, v1, v2)
 					bbg.alpha = 1;
 				case 'green':
 					setVariant('falling');
-					spinPet = true;
 					triggerEventNote('Change Character', 'dad', 'greenEjected');
 					bggreen.alpha = 1;
 					lightoverlay2.alpha = 0.001;
 					greentower.alpha = 1;
 					speedlines.alpha = 0.5;
 					if (hasBfSkin && boyfriend.getFlag('floating') != true) platform.alpha = 1;
+					spinPet = true;
 					greentower.y = 0.001;
 					FlxTween.tween(greentower, {y: -300}, 20);
 					bbg.alpha = 0.001;
@@ -368,45 +371,6 @@ function onEvent(n, v1, v2)
 	}
 	
 	if (dad.curCharacter == 'monotone') copyPet.kill();
-}
-
-var oldPet:Null<String> = null;
-var oldBf:Null<String> = null;
-
-function setVariant(?variant:String):Void
-{
-	var custom:Null<String> = (variant == null || boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
-	if (custom != null)
-	{
-		oldBf ??= boyfriend.curCharacter;
-		changeCharacter(custom, 0);
-	}
-	else if (oldBf != null)
-	{
-		changeCharacter(oldBf, 0);
-		oldBf = null;
-	}
-	
-	custom = (variant == null || pet.getFlag('variants') == null ? null : Reflect.field(pet.getFlag('variants'), variant));
-	if (custom != null)
-	{
-		oldPet ??= pet.curPet;
-		pet.loadPet(custom);
-	}
-	else if (oldPet != null)
-	{
-		pet.loadPet(oldPet);
-		oldPet = null;
-	}
-}
-
-function preloadVariant(variant:String):Void
-{
-	var custom:Null<String> = (boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
-	if (custom != null) addCharacterToList(custom, 0);
-	
-	custom = (pet.getFlag('variants') == null ? null : Reflect.field(pet.getFlag('variants'), variant));
-	if (custom != null) new funkin.objects.Pet().loadPet(custom).destroy();
 }
 
 function onUpdate(elapsed:Float):Void
@@ -519,23 +483,23 @@ function defeatness(ya:Bool)
 		bfRimlight.threshold = .05;
 		bfRimlight.strength = .85;
 		bfRimlight.setColorMatrix([
-			.4, .5, -.2, 0, -50,
+			 .4,  .5, -.2, 0, -50,
 			-.25, .7, -.15, 0, -20,
-			.42, -.35, .85, 0, -72,
-			0, 0, 0, 1, 0
+			 .42, -.35, .85, 0, -72,
+			  0,   0,   0, 1,   0
 		]);
 		bfRimlight.addLayer([
-			.7, .5, 1, 0, 192,
-			.3, .4, -.5, 0, 64,
+			.7, .5,   1, 0, 192,
+			.3, .4, -.5, 0,  64,
 			-.1, .2, .35, 0, 74,
-			0, 0, 0, 1, 0
+			 0, 0,   0, 1,   0
 		], 10, 14, .01);
 		bfRimlight.addLayer(
 			bfRimlight.addLayer([
-				.9, .6, .4, 0, 4,
+				 .9, .6, .4, 0,   4,
 				-.2, .5, .1, 0, -18,
 				-.2, .2, .4, 0, -28,
-				0, 0, 0, 1, 0
+				  0,  0,  0, 1,   0
 			], 12, 40, .01, .4)
 		.colorMatrix, 96, 24, .01, .4);
 		
@@ -560,4 +524,36 @@ function defeatness(ya:Bool)
 	{
 		boyfriend.shader = pet.shader = null;
 	}
+}
+function setVariant(?variant:String):Void
+{
+	var custom:Null<String> = (variant == null || boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
+	if (custom != null)
+	{
+		oldBf ??= boyfriend.curCharacter;
+		changeCharacter(custom, 0);
+	}
+	else if (oldBf != null)
+	{
+		changeCharacter(oldBf, 0);
+		oldBf = null;
+	}
+	
+	custom = (variant == null || pet.getFlag('variants') == null ? null : Reflect.field(pet.getFlag('variants'), variant));
+	if (custom != null)
+	{
+		oldPet ??= pet.curPet;
+		pet.loadPet(custom);
+	}
+	else if (oldPet != null)
+	{
+		pet.loadPet(oldPet);
+		oldPet = null;
+	}
+}
+
+function preloadVariant(variant:String):Void
+{
+	var custom:Null<String> = (boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
+	if (custom != null) addCharacterToList(custom, 0);
 }
