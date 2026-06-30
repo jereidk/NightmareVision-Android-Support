@@ -1,6 +1,9 @@
 package funkin.states;
 
 import mobile.utils.MobileNavUtil;
+import mobile.backend.flixel.input.FlxMobileInputID;
+
+import funkin.input.TurboControl;
 
 import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
@@ -135,7 +138,13 @@ class FreeplayState extends AmongUIState
 	var cutscenePhase:UnlockAnimPhase = NONE;
 	
 	var menuWeekSelect:FlxSprite;
-	
+
+	var turboGroup:TurboControlGroup;
+	var controlDOWN:TurboControl = TurboControl.fromControl('ui_down');
+	var controlUP:TurboControl = TurboControl.fromControl('ui_up');
+	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
+	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
+
 	override function create()
 	{
 		super.create();
@@ -218,6 +227,12 @@ class FreeplayState extends AmongUIState
 		
 		scriptGroup.call('onCreatePost', []);
 		changeSection(0, false);
+
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlDOWN);
+		turboGroup.add(controlUP);
+		turboGroup.add(controlLEFT);
+		turboGroup.add(controlRIGHT);
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
@@ -599,11 +614,11 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controls.UI_LEFT) changeSection(-1);
-			else if (controls.UI_RIGHT) changeSection(1);
-			
-			if (controls.UI_UP || FlxG.mouse.wheel > 0) changeSong(-1, false);
-			else if (controls.UI_DOWN || FlxG.mouse.wheel < 0) changeSong(1, false);
+			if (controlLEFT.PRESSED #if mobile || controls.mobilePadPressed([LEFT]) #end) changeSection(-1);
+			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadPressed([RIGHT]) #end) changeSection(1);
+
+			if (controlUP.PRESSED #if mobile || controls.mobilePadPressed([UP]) #end || FlxG.mouse.wheel > 0) changeSong(-1, false);
+			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadPressed([DOWN]) #end || FlxG.mouse.wheel < 0) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
 
