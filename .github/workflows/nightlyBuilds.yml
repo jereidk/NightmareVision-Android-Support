@@ -62,6 +62,10 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
+      - name: Reset .haxelib for fresh dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
@@ -303,6 +307,10 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
+      - name: Reset .haxelib for fresh dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
@@ -539,6 +547,10 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
+      - name: Reset .haxelib for fresh dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
@@ -761,6 +773,11 @@ jobs:
         shell: pwsh
         run: haxelib setup C:/haxelib
 
+      - name: Reset .haxelib for fresh dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: Get-ChildItem .haxelib -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'lime' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         shell: pwsh
@@ -858,6 +875,10 @@ jobs:
 
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
+
+      - name: Reset .haxelib for fresh dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
