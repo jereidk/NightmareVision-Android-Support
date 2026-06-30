@@ -62,9 +62,14 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
-      - name: Reset .haxelib for fresh dependency install
+      - name: Preserve lime cache for fresh dependency install
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
-        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+        run: |
+          if [ -d .haxelib/lime ]; then
+            rm -rf /tmp/lime-cache-preserve
+            mv .haxelib/lime /tmp/lime-cache-preserve
+          fi
+          rm -rf .haxelib
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
@@ -72,6 +77,14 @@ jobs:
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Restore lime cache after dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d /tmp/lime-cache-preserve ]; then
+            rm -rf .haxelib/lime
+            mv /tmp/lime-cache-preserve .haxelib/lime
+          fi
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -307,9 +320,14 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
-      - name: Reset .haxelib for fresh dependency install
+      - name: Preserve lime cache for fresh dependency install
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
-        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+        run: |
+          if [ -d .haxelib/lime ]; then
+            rm -rf /tmp/lime-cache-preserve
+            mv .haxelib/lime /tmp/lime-cache-preserve
+          fi
+          rm -rf .haxelib
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
@@ -317,6 +335,14 @@ jobs:
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Restore lime cache after dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d /tmp/lime-cache-preserve ]; then
+            rm -rf .haxelib/lime
+            mv /tmp/lime-cache-preserve .haxelib/lime
+          fi
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -547,9 +573,14 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
-      - name: Reset .haxelib for fresh dependency install
+      - name: Preserve lime cache for fresh dependency install
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
-        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+        run: |
+          if [ -d .haxelib/lime ]; then
+            rm -rf /tmp/lime-cache-preserve
+            mv .haxelib/lime /tmp/lime-cache-preserve
+          fi
+          rm -rf .haxelib
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
@@ -557,6 +588,14 @@ jobs:
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Restore lime cache after dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d /tmp/lime-cache-preserve ]; then
+            rm -rf .haxelib/lime
+            mv /tmp/lime-cache-preserve .haxelib/lime
+          fi
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -773,10 +812,15 @@ jobs:
         shell: pwsh
         run: haxelib setup C:/haxelib
 
-      - name: Reset .haxelib for fresh dependency install
+      - name: Preserve lime cache for fresh dependency install
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         shell: pwsh
-        run: Get-ChildItem .haxelib -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'lime' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        run: |
+          if (Test-Path .haxelib/lime) {
+            Remove-Item /tmp/lime-cache-preserve -Recurse -Force -ErrorAction SilentlyContinue
+            Move-Item .haxelib/lime /tmp/lime-cache-preserve
+          }
+          Remove-Item .haxelib -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
@@ -785,6 +829,15 @@ jobs:
           haxelib install hxcpp --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Restore lime cache after dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          if (Test-Path /tmp/lime-cache-preserve) {
+            Remove-Item .haxelib/lime -Recurse -Force -ErrorAction SilentlyContinue
+            Move-Item /tmp/lime-cache-preserve .haxelib/lime
+          }
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -876,9 +929,14 @@ jobs:
       - name: Setup haxelib root
         run: haxelib setup ~/haxelib
 
-      - name: Reset .haxelib for fresh dependency install
+      - name: Preserve lime cache for fresh dependency install
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
-        run: find .haxelib -mindepth 1 -maxdepth 1 ! -name lime -exec rm -rf {} + 2>/dev/null || true
+        run: |
+          if [ -d .haxelib/lime ]; then
+            rm -rf /tmp/lime-cache-preserve
+            mv .haxelib/lime /tmp/lime-cache-preserve
+          fi
+          rm -rf .haxelib
 
       - name: Install Haxe libraries
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
@@ -886,6 +944,14 @@ jobs:
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
           haxelib run hxpkg install
+
+      - name: Restore lime cache after dependency install
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d /tmp/lime-cache-preserve ]; then
+            rm -rf .haxelib/lime
+            mv /tmp/lime-cache-preserve .haxelib/lime
+          fi
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
