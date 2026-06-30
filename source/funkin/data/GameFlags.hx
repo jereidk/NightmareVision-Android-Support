@@ -56,7 +56,7 @@ class GameFlags
 		
 		cachedAwards = [];
 		
-		final path = Paths.getPath('data/awards.json', NORMAL);
+		final path = Paths.getPath('data/awards.json', null, true);
 		if (!FunkinAssets.exists(path, TEXT)) return cachedAwards;
 		
 		final jsonData:Dynamic = FunkinAssets.parseJson(FunkinAssets.getContent(path));
