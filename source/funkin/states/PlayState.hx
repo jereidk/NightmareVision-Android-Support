@@ -106,9 +106,9 @@ class PlayState extends MusicBeatState
 	function set_playbackRate(value:Float):Float
 	{
 		#if FLX_PITCH
-		if (generatedMusic) audio.pitch = value;
-
-		if (!paused) FlxG.timeScale = value;
+		if (generatedMusic) audio.pitch = playbackRate;
+		
+		FlxG.animationTimeScale = value;
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000 * value;
 		
 		playbackRate = value;
@@ -545,19 +545,13 @@ class PlayState extends MusicBeatState
 	public static var attackCharacter:Int = 0; // who ur playing as in monotone attack
 	public static var totalMisses:Int = 0;
 	public static var missLimit:Bool = false;
-	public var focusPlayer:Null<Character> = null;
-
+	
 	public var allowBFSkin:Bool;
 	public var allowGFSkin:Bool;
 	public var allowPet:Bool;
 	
 	public var input:InputSystem;
-
-	var tauntCharacter(get, set):Null<Character>;
-
-	inline function get_tauntCharacter():Null<Character> return focusPlayer;
-	inline function set_tauntCharacter(v:Null<Character>):Null<Character> return focusPlayer = v;
-
+	
 	inline function get_pauseOverwrite():String return pauseOverride;
 	
 	inline function set_pauseOverwrite(v:String):String return pauseOverride = v;
@@ -1158,8 +1152,6 @@ class PlayState extends MusicBeatState
 			underlays.add(strums.underlay);
 			
 			strums.onNoteHit.add((note, field) -> {
-				setFocusPlayerFromNote(note);
-
 				if (field.ID == 1) camZooming = true;
 
 				if (field.playerControls || (!audio.splitVocals && !audio.trackSwap)) audio.hit();
@@ -1177,9 +1169,7 @@ class PlayState extends MusicBeatState
 			});
 			strums.onNoteMiss.add((note, field) -> {
 				if (note.canMiss || !field.playerControls) return;
-
-				setFocusPlayerFromNote(note);
-
+				
 				audio.miss();
 				if (instakillOnMiss) doDeathCheck(true);
 				if (!practiceMode) songScore -= 10;
@@ -1233,20 +1223,7 @@ class PlayState extends MusicBeatState
 		
 		scripts.call('postModifierRegister');
 	}
-
-	public function setFocusPlayerFromNote(note:Note)
-	{
-		final playField = note.playField;
-
-		if (playField?.isPlayer) // jsut made some bullshit
-		{
-			focusPlayer = (note.owner ?? (note.gfNote ? gf : null));
-			focusPlayer ??= (note.singers == null ? playField.owner : note.singers[0]);
-
-			if (focusPlayer == boyfriend) focusPlayer = null; // ok
-		}
-	}
-
+	
 	var startTimer:FlxTimer = null;
 	var finishTimer:FlxTimer = null;
 	
@@ -1314,7 +1291,7 @@ class PlayState extends MusicBeatState
 					return;
 				}
 				
-				startTimer = new FlxTimer().start(Conductor.crotchet / 1000, function(tmr:FlxTimer) {
+				startTimer = new FlxTimer().start((Conductor.crotchet / 1000) / playbackRate, function(tmr:FlxTimer) {
 					if (swagCounter < 4) handleBoppers(tmr.loopsLeft);
 					
 					var introAssets:Map<String, Array<String>> = new Map<String, Array<String>>();
@@ -1373,7 +1350,7 @@ class PlayState extends MusicBeatState
 		
 		spr.cameras = [camHUD];
 		
-		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000,
+		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000 / playbackRate,
 			{
 				ease: FlxEase.cubeInOut,
 				onComplete: function(twn:FlxTween) {
@@ -1807,27 +1784,7 @@ class PlayState extends MusicBeatState
 						startTime: event.strumTime,
 						speed: speed
 					});
-
-			case 'Change Noteskin':
-				var fieldID:Int = 0;
-				switch (event.value2.toLowerCase())
-				{
-					case 'dad' | 'opponent' | '1':
-						fieldID = 1;
-					default:
-						fieldID = Std.parseInt(event.value1);
-						if (Math.isNaN(fieldID)) fieldID = 0;
-				}
-
-				var skin = new NoteSkin(event.value1, SONG.keys, fieldID);
-
-				// load the skin so game no lag when change le skin
-				Paths.getAtlasFrames(skin.noteTexture);
-				Paths.getAtlasFrames(skin.splashTexture);
-				Paths.getAtlasFrames(skin.sustainSplashTexture);
-
-				skin = FlxDestroyUtil.destroy(skin);
-
+					
 			case 'Change Character':
 				var charType:Int = 0;
 				switch (event.value1.toLowerCase())
@@ -1883,25 +1840,27 @@ class PlayState extends MusicBeatState
 	{
 		if (paused)
 		{
-			audio?.pause();
-
+			if (audio != null) audio.pause();
+			
 			FlxTimer.globalManager.forEach((i:FlxTimer) -> if (!i.finished) i.active = false);
 			FlxTween.globalManager.forEach((i:FlxTween) -> if (!i.finished) i.active = false);
-
+			
 			#if VIDEOS_ALLOWED
 			FunkinVideoSprite.forEachAlive((video) -> if (video.tiedToGame) video.pause());
 			#end
-
-			FlxG.timeScale = 1;
-
+			
 			for (field in playFields?.members)
 			{
-				if (!field.inControl || !field.playerControls) continue;
-
-				for (strum in field.members)
+				if (field.inControl && field.playerControls)
 				{
-					strum.playAnim('static');
-					strum.resetAnim = 0;
+					for (strum in field.members)
+					{
+						if (strum.animation.curAnim?.name != 'static')
+						{
+							strum.playAnim('static');
+							strum.resetAnim = 0;
+						}
+					}
 				}
 			}
 		}
@@ -1927,7 +1886,6 @@ class PlayState extends MusicBeatState
 			#end
 			
 			paused = false;
-			playbackRate = playbackRate;
 			scripts.call('onResume', []);
 			
 			resetDiscordRPC(startTimer != null && startTimer.finished);
@@ -1987,7 +1945,7 @@ class PlayState extends MusicBeatState
 		
 		if (cameraLerping && !inCutscene)
 		{
-			final lerpRate = 0.04 * cameraSpeed;
+			final lerpRate = 0.04 * cameraSpeed * playbackRate;
 			FlxG.camera.followLerp = lerpRate;
 		}
 		
@@ -2043,14 +2001,14 @@ class PlayState extends MusicBeatState
 		{
 			if (startedCountdown)
 			{
-				Conductor.songPosition += (elapsed * 1000);
+				Conductor.songPosition += (elapsed * 1000 * playbackRate);
 				
 				if (Conductor.songPosition >= 0) startSong();
 			}
 		}
 		else
 		{
-			Conductor.songPosition += (elapsed * 1000);
+			Conductor.songPosition += (elapsed * 1000 * playbackRate);
 			
 			if (Math.abs(getSongTime() - Conductor.songPosition) > 1000 / 60 / playbackRate) Conductor.songPosition = getSongTime();
 			
@@ -2070,7 +2028,7 @@ class PlayState extends MusicBeatState
 			modManager.update(elapsed);
 		}
 		
-		final spawnOffset:Float = (spawnTime / songSpeed);
+		final spawnOffset:Float = (spawnTime * playbackRate / songSpeed);
 		
 		while (queueNotes.length > 0 && (queueNotes[0].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes.shift());
@@ -2217,18 +2175,7 @@ class PlayState extends MusicBeatState
 		
 		super.update(elapsed);
 		input.update();
-
-		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
-		{
-			var focusPlayer:Character = (focusPlayer ?? boyfriend);
-
-			if (focusPlayer.canTaunt && focusPlayer.hasAnim('hey'))
-			{
-				focusPlayer.playAnim('hey');
-				focusPlayer.specialAnim = focusPlayer.holding = true;
-			}
-		}
-
+		
 		if (camZooming)
 		{
 			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
@@ -2653,23 +2600,7 @@ class PlayState extends MusicBeatState
 					
 					if (duration > 0 && intensity != 0) targetsArray[i].shake(intensity, duration);
 				}
-
-			case 'Change Noteskin':
-				var fieldID:Int = 0;
-				switch (value2.toLowerCase())
-				{
-					case 'dad' | 'opponent' | '1':
-						fieldID = 1;
-					default:
-						fieldID = Std.parseInt(value2);
-						if (Math.isNaN(fieldID)) fieldID = 0;
-				}
-
-				var skin = new NoteSkin(value1, SONG.keys, fieldID);
-				skin.ID = fieldID;
-
-				getFieldFromID(fieldID).changeSkin(skin);
-
+				
 			case 'Change Character':
 				var charType:Int = 0;
 				switch (value1.toLowerCase())
@@ -2738,7 +2669,7 @@ class PlayState extends MusicBeatState
 				if (val2 <= 0) songSpeed = newValue;
 				else
 				{
-					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2,
+					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2 / playbackRate,
 						{
 							ease: FlxEase.linear,
 							onComplete: function(twn:FlxTween) {
@@ -3199,9 +3130,8 @@ class PlayState extends MusicBeatState
 				songHits++;
 				totalPlayed++;
 				totalNotesHit += (note.ratingMod = rating.ratingMod);
-				rating.increase();
-
 				RecalculateRating(false);
+				rating.increase();
 			}
 		}
 		
@@ -3214,7 +3144,7 @@ class PlayState extends MusicBeatState
 	{
 		if (audio.inst?.playing)
 		{
-			return Math.max(@:privateAccess audio.inst._channel.position, audio.inst.time);
+			return @:privateAccess audio.inst._channel.position;
 		}
 		else
 		{
@@ -3334,61 +3264,62 @@ class PlayState extends MusicBeatState
 	
 	function keyShit():Void
 	{
-		if (!startedCountdown || !generatedMusic || boyfriend.stunned) return;
-
 		// HOLDING
-		final up:Bool = controls.NOTE_UP;
-		final right:Bool = controls.NOTE_RIGHT;
-		final down:Bool = controls.NOTE_DOWN;
-		final left:Bool = controls.NOTE_LEFT;
-		final taunting:Bool = (controls.NOTE_TAUNT && (focusPlayer ?? boyfriend)?.canTaunt);
-
-		var i:Int = notes.length;
-		while (--i >= 0)
+		var up = controls.NOTE_UP;
+		var right = controls.NOTE_RIGHT;
+		var down = controls.NOTE_DOWN;
+		var left = controls.NOTE_LEFT;
+		var taunt = controls.NOTE_TAUNT;
+		
+		if (startedCountdown && !boyfriend.stunned && generatedMusic)
 		{
-			var daNote = notes.members[i];
-
-			if (!daNote.alive) continue;
-
-			if (daNote.isSustainNote && !daNote.blockHit && !daNote.tooLate && !daNote.playField.autoPlayed
-				&& daNote.playField.inControl && daNote.playField.playerControls)
+			var i:Int = notes.length;
+			while (--i >= 0)
 			{
-				final holding:Bool = input.inputPressed(daNote.noteData);
-
-				if (daNote.wasGoodHit)
+				var daNote = notes.members[i];
+				
+				if (!daNote.alive) continue;
+				
+				if (daNote.isSustainNote && !daNote.blockHit && !daNote.tooLate && !daNote.playField.autoPlayed
+					&& daNote.playField.inControl && daNote.playField.playerControls)
 				{
-					final splash = daNote.tailState.splash;
-
-					if (holding && splash != null && !splash.alive)
+					final holding:Bool = input.inputPressed(daNote.noteData);
+					
+					if (daNote.wasGoodHit)
 					{
-						splash.playAnim('start${splash.noteData}');
-						splash.revive();
+						final splash = daNote.tailState.splash;
+						
+						if (holding && splash != null && !splash.alive)
+						{
+							splash.playAnim('start${splash.noteData}');
+							splash.revive();
+						}
+					}
+					else if (holding && Conductor.songPosition >= daNote.strumTime)
+					{
+						daNote.playField.onNoteHit.dispatch(daNote, daNote.playField);
+					}
+					else if (!holding && !daNote.ignoreNote && !endingSong && daNote.strum.coyoteTime <= 0 && !daNote.tailState.missed)
+					{
+						daNote.playField.onNoteMiss.dispatch(daNote, daNote.playField);
 					}
 				}
-				else if (holding && Conductor.songPosition >= daNote.strumTime)
-				{
-					daNote.playField.onNoteHit.dispatch(daNote, daNote.playField);
-				}
-				else if (!holding && !daNote.ignoreNote && !endingSong && daNote.strum.coyoteTime <= 0 && !daNote.tailState.missed)
-				{
-					daNote.playField.onNoteMiss.dispatch(daNote, daNote.playField);
-				}
 			}
-		}
-
-		if (!left && !down && !up && !right && !taunting)
-		{
-			for (field in playFields)
+			
+			if (!left && !down && !up && !right && !taunt)
 			{
-				if (field.playerControls && field.owner?.holding) field.owner.holding = false;
-			}
-
-			if (holders.length > 0)
-			{
-				for (holder in holders)
-					holder.holding = false;
-
-				holders.resize(0);
+				for (field in playFields)
+				{
+					if (field.playerControls && field.owner?.holding) field.owner.holding = false;
+				}
+				
+				if (holders.length > 0)
+				{
+					for (holder in holders)
+						holder.holding = false;
+						
+					holders.resize(0);
+				}
 			}
 		}
 	}
@@ -3419,8 +3350,6 @@ class PlayState extends MusicBeatState
 	override function destroy()
 	{
 		instance = null;
-
-		playbackRate = 1;
 
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
