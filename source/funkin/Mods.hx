@@ -323,10 +323,9 @@ class Mods
 	public static function loadTopModConfig():Null<ModMeta>
 	{
 		var pack = getPack();
-
-		WindowUtil.setTitle(pack?.windowTitle ?? 'VS IMPOSTOR LEGACY ' + Main.LEGACY_VERSION);
-
 		if (pack == null) return null;
+		
+		WindowUtil.setTitle(pack.windowTitle ?? 'VS IMPOSTOR LEGACY v' + Main.LEGACY_VERSION);
 		
 		inline function resetIcon()
 		{

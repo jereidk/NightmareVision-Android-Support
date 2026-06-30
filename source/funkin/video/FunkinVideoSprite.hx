@@ -3,7 +3,7 @@ package funkin.video;
 // sigh rework coming again soon
 #if VIDEOS_ALLOWED
 import hxvlc.flixel.FlxVideoSprite;
-import #if (hxvlc > "2.2.6") hxvlc.openfl.Location #else hxvlc.util.Location #end;
+import hxvlc.util.Location;
 
 import funkin.objects.FunkinCaption;
 
@@ -197,7 +197,7 @@ class FunkinVideoSprite extends FlxVideoSprite
 	
 	inline function int64ToFloat(int:haxe.Int64):Float return (int.high * 4294967296. + (int.low >>> 0)); // thanks stack overflow
 	
-	public override function load(location:#if (hxvlc > "2.2.6") hxvlc.openfl.Location #else hxvlc.util.Location #end, ?options:Array<String>):Bool
+	public override function load(location:hxvlc.util.Location, ?options:Array<String>):Bool
 	{
 		captions.empty();
 		
