@@ -323,8 +323,6 @@ class ChartEditorState extends MusicBeatState
 			});
 		}
 		
-		PlayState.chartingMode = true;
-
 		Conductor.bpm = _song.bpm;
 		Conductor.mapBPMChanges(_song);
 		initialKeyCount = _song.keys;
@@ -333,7 +331,9 @@ class ChartEditorState extends MusicBeatState
 		
 		ClientPrefs.load();
 		
-		DiscordClient.changePresence("Chart Editor" /* sorry that was boring */);
+		// Updating Discord Rich Presence
+		// DiscordClient.changePresence("Chart Editor", StringTools.replace(_song.song, '-', ' '));
+		DiscordClient.changePresence("Chart Editor", "Uhm idk mane burp");
 		
 		camHUD = new FlxCamera();
 		camHUD.bgColor = 0x0;
