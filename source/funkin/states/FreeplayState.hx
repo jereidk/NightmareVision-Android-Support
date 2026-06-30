@@ -28,7 +28,6 @@ typedef FreeplayWeek =
 	var section:String;
 	var ?mod:String;
 	var title:String;
-	var ?graphic:String;
 }
 
 abstract SongInformation(Array<Dynamic>) to Array<Dynamic>
@@ -83,7 +82,6 @@ class FreeplayState extends AmongUIState
 	public static var curMonth:Int = 0;
 	public static var curSelect:Int = 0;
 	
-	var smoothMonth:Float = 0;
 	var smoothSelect:Float = 0;
 	
 	var reload_timer:Float = 0;
@@ -123,8 +121,7 @@ class FreeplayState extends AmongUIState
 	
 	var CARD_X:Float = 70;
 	var CARD_Y:Float = (FlxG.height * .45);
-	var TAB_DISTANCE:Float = 320;
-	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
+	var CIRCLE_PADDING:Float = 12;
 	
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
@@ -144,9 +141,7 @@ class FreeplayState extends AmongUIState
 		super.create();
 		
 		Mods.currentModDirectory = null;
-
-		smoothMonth = curMonth;
-
+		
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
 		circles.zIndex = 22;
@@ -238,6 +233,8 @@ class FreeplayState extends AmongUIState
 			add(cards);
 			
 			cachedCards = new FlxTypedGroup();
+			add(cachedCards);
+			cachedCards.kill();
 		}
 		
 		scriptGroup.call('onSectionChange', [curMonth]);
@@ -363,20 +360,12 @@ class FreeplayState extends AmongUIState
 	function changeSection(by:Int = 0, ?backToTop = true)
 	{
 		curMonth += by;
-
-		if (curMonth >= weeks.length)
-		{
-			smoothMonth -= weeks.length;
-			curMonth = 0;
-		}
-		else if (curMonth < 0)
-		{
-			smoothMonth += weeks.length;
-			curMonth = weeks.length - 1;
-		}
-
-		FlxTween.cancelTweensOf(this, ['smoothMonth']);
-		FlxTween.tween(this, {smoothMonth: curMonth}, .3, {ease: FlxEase.quartOut});
+		
+		if (curMonth > weeks.length - 1) curMonth = 0;
+		if (curMonth < 0) curMonth = weeks.length - 1;
+		
+		for (c in circles)
+			c.alpha = c.ID == curMonth ? 1 : 0.3;
 			
 		sectionText.text = weeks[curMonth].title;
 		if (backToTop) smoothSelect = curSelect = 0;
@@ -613,20 +602,8 @@ class FreeplayState extends AmongUIState
 			if (controls.UI_LEFT) changeSection(-1);
 			else if (controls.UI_RIGHT) changeSection(1);
 			
-			if (FlxG.mouse.wheel != 0)
-			{
-				if (FlxG.mouse.y >= circles.findMinY() && FlxG.mouse.y <= circles.findMaxY())
-				{
-					changeSection(FlxG.mouse.wheel > 0 ? 1 : -1);
-				}
-				else if (FlxG.mouse.y >= (upperBar.y + upperBar.height))
-				{
-					changeSong(FlxG.mouse.wheel < 0 ? 1 : -1, false);
-				}
-			}
-
-			if (controls.UI_UP) changeSong(-1, false);
-			else if (controls.UI_DOWN) changeSong(1, false);
+			if (controls.UI_UP || FlxG.mouse.wheel > 0) changeSong(-1, false);
+			else if (controls.UI_DOWN || FlxG.mouse.wheel < 0) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
 
@@ -639,53 +616,21 @@ class FreeplayState extends AmongUIState
 			#end
 
 			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
-		}
-
-		if (cutscenePhase != NONE && controls.ACCEPT) skipUnlockCutscene();
-
-		var clickedTab:Null<FlxSprite> = null, clickedWeek:Null<Int> = null, scrollFrom:Null<Float> = null;
-
-		for (tab in circles)
-		{
-			final diff:Float = (tab.ID - 4);
-			final scrollDiff:Float = (diff - FlxMath.mod(smoothMonth, 1));
-			final cos:Float = FlxMath.fastCos((1 - scrollDiff / TAB_RADIUS) * Math.PI / 2);
-
-			final weekIndex:Int = Std.int(FlxMath.mod(diff + Math.floor(smoothMonth), weeks.length));
-			final week:FreeplayWeek = weeks[weekIndex];
-
-			if (tab.graphic?.key != week.graphic)
+			
+			for (c in circles)
 			{
-				tab.loadGraphic(week.graphic);
-
-				tab.setGraphicSize(-1, 71);
-				tab.updateHitbox();
-			}
-
-			// tab.color = FlxColor.interpolate(FlxColor.BLUE, FlxColor.RED, tab.ID / 9);
-
-			tab.x = ((FlxG.width - tab.width) * .5 + cos * TAB_DISTANCE);
-
-			tab.alpha = Math.max(0, 1 - FlxEase.quintIn(Math.abs(scrollDiff / 5)) * .6 - FlxEase.quintOut(Math.abs(scrollDiff / 5)) * .4);
-
-			if (!lockMovement && clickedTab == null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(tab))
-			{
-				/*if (
-					clickedTab == null ||
-					Math.abs(FlxG.mouse.x - (tab.x + tab.width * .5)) < Math.abs(FlxG.mouse.x - (clickedTab.x + clickedTab.width * .5))
-				)*/
-
-				clickedTab = tab;
-				clickedWeek = weekIndex;
-				scrollFrom = (smoothMonth + weekIndex - curMonth - diff);
+				if (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
+				{
+					goToSection(c.ID);
+					
+					break;
+				}
 			}
 		}
-
-		if (clickedWeek != null)
+		
+		if (cutscenePhase != NONE)
 		{
-			smoothMonth = scrollFrom;
-
-			goToSection(clickedWeek);
+			if (controls.ACCEPT) skipUnlockCutscene();
 		}
 		
 		for (c in cards)
@@ -739,18 +684,9 @@ class FreeplayState extends AmongUIState
 	
 	// Convert to public static for my menu support. I'm a fat gay boy.
 	// hello
-	public function goToSection(sect:Int, wrap:Bool = false)
+	public function goToSection(sect:Int)
 	{
-		if (sect == curMonth) return;
-
-		if (wrap)
-		{
-			final diff:Int = (sect - curMonth);
-			if (diff < -weeks.length * .5) smoothMonth -= weeks.length;
-			if (diff > weeks.length * .5) smoothMonth += weeks.length;
-		}
-
-		changeSection(sect - curMonth);
+		if (sect != curMonth) changeSection(sect - curMonth);
 	}
 	
 	function checkLock(song:SongInformation)
@@ -893,27 +829,32 @@ class FreeplayState extends AmongUIState
 				for (song in fetchWeekSongs(WeekData.weeksLoaded.get(week)))
 					freeplayWeek.songs.push(song);
 			}
-
-			Mods.currentModDirectory = freeplayWeek.mod;
-
-			freeplayWeek.graphic = Paths.image('${ext}sections/${freeplayWeek.section}')?.key; // yeaa go to HELL !!!
-
+			
 			weeks.push(freeplayWeek);
 		}
-
-		Mods.currentModDirectory = null;
-
-		for (circ in circles) circ.destroy();
+		
+		for (circ in circles)
+			circ.destroy();
 		circles.clear();
-
-		for (i in 0 ... 10)
+		
+		final tempweeks:Int = (weeks.length > 9 ? 9 : weeks.length);
+		
+		for (i in 0...tempweeks)
 		{
-			final circ:FlxSprite = circles.add(new FlxSprite());
-
+			var w:String = weeks[i].section;
+			Mods.currentModDirectory = weeks[i].mod;
+			
+			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
+			circ.setGraphicSize(-1, 71);
+			circ.updateHitbox();
+			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
-			circ.zIndex = Std.int(Math.abs(i - 5));
+			
+			circles.add(circ);
 		}
-
-		circles.sort(SortUtil.sortByZ, flixel.util.FlxSort.ASCENDING);
+		
+		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
+		
+		Mods.currentModDirectory = null;
 	}
 }
