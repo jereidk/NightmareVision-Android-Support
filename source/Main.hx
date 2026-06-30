@@ -88,7 +88,26 @@ class Main extends Sprite
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}
 		#end
+
+		#if sys
+		FlxG.stage.window.onClose.add(onWindowClose);
+		#end
 	}
+
+	#if sys
+	static function onWindowClose():Void
+	{
+		@:privateAccess MusicBeatState.addPlayTimeDelta();
+		ClientPrefs.flush();
+		funkin.Mods.writeModList();
+
+		#if hxvlc
+		hxvlc.util.Handle.dispose();
+		#end
+
+		Sys.exit(0);
+	}
+	#end
 	
 	@:access(flixel.FlxCamera)
 	static function onResize(w:Int, h:Int)
