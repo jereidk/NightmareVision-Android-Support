@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}-fat
+          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -280,11 +280,11 @@ jobs:
 
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM64 (aarch64) — covers all modern Android devices (2019+).
-  # -D ANDROID_ARM64_ONLY is passed to both "lime rebuild android" and
-  # "lime build android" so liblime.so/libApplicationMain.so are only ever
-  # compiled for arm64 — armv7 is never built in this job. libvlc.so is a
-  # vendored prebuilt shipped for both ABIs; the Gradle ABI split (applied
-  # below) strips the unused armeabi-v7a copy out of the packaged APK.
+  # NOTE: The -D ANDROID_ARM64_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
     name: Build Android (ARM64)
@@ -314,7 +314,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}-arm64
+          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -428,9 +428,8 @@ jobs:
             /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
-          # ld.lld wrapper stays installed even though this job no longer links
-          # armv7 (lime rebuild/build are scoped to ANDROID_ARM64_ONLY below) —
-          # it's a no-op for non-ARM32 links, kept for parity with the other jobs.
+          # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
+          # also links liblime-v7.so (ARM32) which hits the same NDK 29 sysroot issue.
           mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
           echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgZm9yIGFwaSBpbiAxNiAxOSAyMSAyMyAyNDsgZG8KICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICBBUk0zMj0iJEFSTTMyX0JBU0UvJGFwaSIKICAgICAgYnJlYWsKICAgIGZpCiAgZG9uZQogIGVjaG8gImxkLmxsZC13cmFwcGVyOiBBUk0zMiBsaW5rIGRldGVjdGVkLCBzeXNyb290PSRBUk0zMiIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
             | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
@@ -512,7 +511,7 @@ jobs:
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
-          haxelib run lime rebuild android -release -D ANDROID_ARM64_ONLY
+          haxelib run lime rebuild android -release
           if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
             echo "ERROR: Missing Liblime 64 so"
             exit 1
@@ -556,11 +555,11 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM32 (armeabi-v7a) — for older / low-end 32-bit devices.
   # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
-  # -D ANDROID_ARM32_ONLY is passed to both "lime rebuild android" and
-  # "lime build android" so liblime.so/libApplicationMain.so are only ever
-  # compiled for armv7 — arm64 is never built in this job. libvlc.so is a
-  # vendored prebuilt shipped for both ABIs; the Gradle ABI split (applied
-  # below) strips the unused arm64-v8a copy out of the packaged APK.
+  # NOTE: The -D ANDROID_ARM32_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
     name: Build Android (ARM32)
@@ -590,7 +589,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}-armv7
+          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -789,9 +788,9 @@ jobs:
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
-          haxelib run lime rebuild android -release -D ANDROID_ARM32_ONLY
-          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
-            echo "ERROR: Missing Liblime v7 so"
+          haxelib run lime rebuild android -release
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
+            echo "ERROR: Missing Liblime 64 so"
             exit 1
           fi
 
