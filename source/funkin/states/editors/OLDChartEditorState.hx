@@ -185,7 +185,7 @@ class OLDChartEditorState extends MusicBeatState
 	
 	static function get__song()
 	{
-		return (ChartEditorState.song);
+		return (ChartEditorState._song);
 	}
 	
 	/*
@@ -250,7 +250,28 @@ class OLDChartEditorState extends MusicBeatState
 	{
 		instance = this;
 		
-		ChartEditorState.song ??= ChartEditorState.getDefaultSong();
+		if (ChartEditorState._song == null)
+		{
+			PlayState.SONG = ChartEditorState._song = (PlayState.SONG ?? {
+				song: 'test',
+				trackSwap: false,
+				notes: [],
+				events: [],
+				bpm: 100.0,
+				needsVoices: true,
+				arrowSkins: ['default', 'default'],
+				player1: 'bf',
+				player2: 'bf',
+				gfVersion: 'gf',
+				speed: 1,
+				stage: 'stage',
+				keys: 4,
+				lanes: 2,
+				allowBFskin: true,
+				allowGFskin: true,
+				allowPet: true
+			});
+		}
 		
 		initialKeyCount = _song.keys;
 		ClientPrefs.load();
@@ -3713,7 +3734,7 @@ class OLDChartEditorState extends MusicBeatState
 		{
 			final songName = Paths.sanitize(song);
 			
-			ChartEditorState.song = Chart.fromPath(Paths.json('$songName/charts/${Difficulty.getDifficultyFilePath()}'));
+			ChartEditorState._song = Chart.fromPath(Paths.json('$songName/charts/${Difficulty.getDifficultyFilePath()}'));
 		}
 		catch (e)
 		{
