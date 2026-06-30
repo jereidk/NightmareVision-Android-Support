@@ -551,7 +551,13 @@ class PlayState extends MusicBeatState
 	public var allowPet:Bool;
 	
 	public var input:InputSystem;
-	
+
+	public var focusPlayer:Null<Character> = null;
+
+	var tauntCharacter(get, set):Null<Character>;
+	inline function get_tauntCharacter():Null<Character> return focusPlayer;
+	inline function set_tauntCharacter(v:Null<Character>):Null<Character> return focusPlayer = v;
+
 	inline function get_pauseOverwrite():String return pauseOverride;
 	
 	inline function set_pauseOverwrite(v:String):String return pauseOverride = v;
@@ -1153,6 +1159,8 @@ class PlayState extends MusicBeatState
 			underlays.add(strums.underlay);
 			
 			strums.onNoteHit.add((note, field) -> {
+				setFocusPlayerFromNote(note);
+
 				if (field.ID == 1) camZooming = true;
 
 				if (field.playerControls || (!audio.splitVocals && !audio.trackSwap)) audio.hit();
@@ -1169,6 +1177,8 @@ class PlayState extends MusicBeatState
 				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
+				setFocusPlayerFromNote(note);
+
 				if (note.canMiss || !field.playerControls) return;
 				
 				audio.miss();
@@ -2176,7 +2186,17 @@ class PlayState extends MusicBeatState
 		
 		super.update(elapsed);
 		input.update();
-		
+
+		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
+		{
+			var tauntTarget:Character = (focusPlayer ?? boyfriend);
+			if (tauntTarget.canTaunt && tauntTarget.hasAnim('hey'))
+			{
+				tauntTarget.playAnim('hey');
+				tauntTarget.specialAnim = tauntTarget.holding = true;
+			}
+		}
+
 		if (camZooming)
 		{
 			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
@@ -3263,9 +3283,22 @@ class PlayState extends MusicBeatState
 		scripts.call('onInputRelease', [key]);
 	}
 	
+	public function setFocusPlayerFromNote(note:Note)
+	{
+		final playField = note.playField;
+
+		if (playField?.isPlayer)
+		{
+			focusPlayer = (note.owner ?? (note.gfNote ? gf : null));
+			focusPlayer ??= (note.singers == null ? playField.owner : note.singers[0]);
+
+			if (focusPlayer == boyfriend) focusPlayer = null;
+		}
+	}
+
 	// Hold notes
 	var holders:Array<Character> = [];
-	
+
 	function keyShit():Void
 	{
 		// HOLDING
@@ -3273,7 +3306,7 @@ class PlayState extends MusicBeatState
 		var right = controls.NOTE_RIGHT;
 		var down = controls.NOTE_DOWN;
 		var left = controls.NOTE_LEFT;
-		var taunt = controls.NOTE_TAUNT;
+		final taunting:Bool = (controls.NOTE_TAUNT && (focusPlayer ?? boyfriend)?.canTaunt);
 		
 		if (startedCountdown && !boyfriend.stunned && generatedMusic)
 		{
@@ -3310,7 +3343,7 @@ class PlayState extends MusicBeatState
 				}
 			}
 			
-			if (!left && !down && !up && !right && !taunt)
+			if (!left && !down && !up && !right && !taunting)
 			{
 				for (field in playFields)
 				{
