@@ -1,14 +1,6 @@
 package extensions.flixel;
 
-import openfl.geom.ColorTransform;
-import openfl.display.BlendMode;
 import openfl.display.Graphics;
-import openfl.display.BitmapData;
-
-import flixel.math.FlxMatrix;
-import flixel.math.FlxAngle;
-import flixel.graphics.frames.FlxFrame;
-import flixel.system.FlxAssets.FlxShader;
 
 using flixel.util.FlxColorTransformUtil;
 
