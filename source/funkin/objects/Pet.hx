@@ -1,6 +1,5 @@
 package funkin.objects;
 
-import flixel.util.FlxSignal;
 import funkin.data.CharacterData;
 
 class Pet extends Bopper implements IFlags {
@@ -8,9 +7,7 @@ class Pet extends Bopper implements IFlags {
 	
 	public var data:Null<CharacterInfo>;
 	public var flags:haxe.DynamicAccess<Dynamic> = {};
-
-	public var onChange:FlxTypedSignal<Pet -> Void> = new FlxTypedSignal();
-
+	
 	var _petOffset:FlxPoint = FlxPoint.get();
 	var _baseWidth:Float = 0;
 	var _baseHeight:Float = 0;
@@ -21,22 +18,17 @@ class Pet extends Bopper implements IFlags {
 		loadPet(pet);
 	}
 	
-	public function loadPet(name:String = '', force:Bool = false):Pet {
-		if (curPet == name && !force) return this;
-
+	public function loadPet(name:String = ''):Pet {
 		curPet = name;
-
+		
 		if (name == null || name == '') {
 			kill();
-
 			return this;
 		}
-
-		revive();
+		
 		_loadPetFile(name);
-
-		onChange.dispatch(this);
-
+		
+		revive();
 		return this;
 	}
 	
@@ -49,9 +41,7 @@ class Pet extends Bopper implements IFlags {
 		y += _baseHeight;
 		
 		data = CharacterParser.fetchInfoUnsafe(name, 'pets');
-
-		flags = (data?.flags ?? {});
-
+		
 		if (data == null)
 		{
 			scale.set(1, 1);
@@ -72,7 +62,8 @@ class Pet extends Bopper implements IFlags {
 			scalableOffsets = data.scalableOffsets;
 			scale.set(data.scale, data.scale);
 			flipX = baseFlipX = data.flip_x;
-
+			flags = data.flags;
+			
 			danceEveryNumBeats = (data.dance_every ?? 2);
 			
 			var animations = data.animations;
@@ -82,21 +73,14 @@ class Pet extends Bopper implements IFlags {
 				{
 					if (anim.indices != null && anim.indices.length > 0)
 					{
-						addAnimByIndices(anim.anim, anim.name, anim.indices, anim.fps, !!anim.loop, anim.flipX, anim.flipY);
+						addAnimByIndices(anim.anim, anim.name, anim.indices, anim.fps, anim.loop, anim.flipX, anim.flipY);
 					}
 					else
 					{
-						addAnimByPrefix(anim.anim, anim.name, anim.fps, !!anim.loop, anim.flipX, anim.flipY);
+						addAnimByPrefix(anim.anim, anim.name, anim.fps, anim.loop, anim.flipX, anim.flipY);
 					}
 					
-					if (anim.offsets != null && anim.offsets.length > 1)
-					{
-						addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
-					}
-					else
-					{
-						addOffset(anim.anim, 0, 0);
-					}
+					if (anim.offsets != null && anim.offsets.length > 1) addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				}
 			}
 			else
@@ -108,7 +92,7 @@ class Pet extends Bopper implements IFlags {
 		recalculateDanceIdle();
 		
 		playAnim(alternatingDance ? 'danceLeft' : 'idle', true);
-		if (!animation.curAnim?.looped) finishAnim();
+		finishAnim();
 		
 		updateHitbox();
 		

@@ -24,18 +24,15 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	public var parent:FreeplayState;
 	
 	var bg:FlxSprite;
-	var bgThing:FlxSprite;
 	var cubeCamera:FlxCamera;
 	var menuBackButton:FlxSprite;
 	var otherTitleText:FlxText;
-
+	
 	var bubl:FlxSpriteGroup;
 	var CIRCLE_PADDING:Float = 12;
 	var CIRC_WRAP = 7;
 	var curSelection:Int = 0;
 	var WEEKS_WRAP = 0;
-	var lockMovement:Bool = true;
-	final uiTweenOffsetY:Float = 120;
 	
 	public function new(parent:FreeplayState, month:Int = 0)
 	{
@@ -48,21 +45,20 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		
 		bg = new flixel.system.FlxBGSprite();
 		bg.color = FlxColor.BLACK;
-		bg.alpha = 0;
+		bg.alpha = 0.72;
 		add(bg);
-		// sorry bullshit
-		bgThing = new FlxSprite().loadGraphic(Paths.image('menu/freeplay/resetPrompt'));
-		bgThing.screenCenter();
-		add(bgThing);
-		(cubeCamera = new FlxCamera(bgThing.x + 6, bgThing.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
+		var bullshit:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menu/freeplay/resetPrompt'));
+		bullshit.screenCenter();
+		add(bullshit);
+		(cubeCamera = new FlxCamera(bullshit.x + 6, bullshit.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
 		FlxG.cameras.add(cubeCamera, false);
-
+		
 		otherTitleText = new FlxText(340, 205, 0, Lang.str('freeplay'), 50);
 		otherTitleText.setFormat(Paths.font('AmaticSC-Bold.ttf', false), 50, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);
-
-		menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
+		
+		menuBackButton = new FlxSprite(bullshit.x + bullshit.width - 5, bullshit.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.x -= menuBackButton.width;
 		add(menuBackButton);
 	}
@@ -110,34 +106,6 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		super.create();
 		changeSelection();
 
-		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
-
-		for (obj in [bgThing, otherTitleText, menuBackButton])
-		{
-			var alpha:Float = obj.alpha;
-			obj.alpha = 0;
-			obj.y += uiTweenOffsetY;
-			var tween = FlxTween.tween(obj, {y: obj.y - uiTweenOffsetY, alpha: alpha}, .35, {ease: FlxEase.circOut});
-
-			if (obj == bgThing)
-			{
-				tween.onUpdate = function(_) {
-					cubeCamera.y = bgThing.y + 67;
-				};
-			}
-		}
-
-		for (obj in bubl.members)
-		{
-			if (obj == null) continue;
-
-			var alpha:Float = obj.alpha;
-			obj.alpha = 0;
-			FlxTween.tween(obj, {alpha: alpha}, .35, {ease: FlxEase.circOut});
-		}
-
-		new FlxTimer().start(.35, function(_) lockMovement = false);
-
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B);
@@ -162,7 +130,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	
 	function acceptWeek(sect:Int)
 	{
-		parent.goToSection(sect, true);
+		parent.goToSection(sect);
 		FlxG.sound.play(Paths.sound('panelAppear'), .5);
 		close();
 	}
@@ -175,12 +143,6 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
-		if (lockMovement)
-		{
-			super.update(elapsed);
-			return;
-		}
-
 		if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			var mousePos = FlxG.mouse.getWorldPosition();

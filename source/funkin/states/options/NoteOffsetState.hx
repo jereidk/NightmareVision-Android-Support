@@ -117,7 +117,6 @@ class NoteOffsetState extends MusicBeatState
 		add(timeTxt);
 		
 		Conductor.bpm = 100.0;
-		Conductor.bpmChangeMap.resize(0);
 		FunkinSound.playMusic(Paths.music('offsetSong'), 1, true);
 		
 		super.create();
