@@ -510,7 +510,7 @@ function victory():Void
 	add(victory);
 
 	var thanks:FlxText = new FlxText(0, 600, 900, 'Thank you for playing!');
-	thanks.setFormat(Paths.font('vcr.ttf'), 56, 0xff80ffff, 'center');
+	thanks.setFormat(Paths.font('vcr.ttf'), 66, 0xff80ffff, 'center');
 	insert(0, thanks);
 	thanks.text = Lang.str('credits_thanks');
 	thanks.screenCenter(FlxAxes.X);
