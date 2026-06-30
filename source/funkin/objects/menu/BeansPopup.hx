@@ -21,26 +21,24 @@ class BeansPopup extends FlxSpriteGroup
 	{
 		super();
 		
-		amount = FlxMath.maxInt(0, amount); // no more negative money. im sorry.
-
 		y -= 100;
 		lerpScore = amount;
-
+		
 		if (currency.length == 0) // no cosmicube acitve
 		{
 			new FlxTimer().start(0, function(_) if (onFinish != null) onFinish());
 			kill();
-
+			
 			return;
 		}
-
-		CosmicubeData.setMoney(currency, CosmicubeData.getMoney(currency) + amount);
+		
+		CosmicubeData.setMoney(currency, CosmicubeData.getMoney(currency) + FlxMath.maxInt(0, amount)); // no more negative money. im sorry.
 		ClientPrefs.flush();
-
+		
 		anchorX = FlxG.width - 150;
 		anchorY = 50;
-
-		bean = new FlxSprite(0, 0).loadGraphic(Paths.image('currency/$currency', LOOSE));
+		
+		bean = new FlxSprite(0, 0).loadGraphic(Paths.image('currency/$currency'));
 		bean.antialiasing = ClientPrefs.globalAntialiasing;
 		bean.updateHitbox();
 		bean.scrollFactor.set();

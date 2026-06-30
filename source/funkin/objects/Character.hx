@@ -40,9 +40,7 @@ class Character extends Bopper implements IFlags
 	public var specialAnim:Bool = false;
 	public var holding(default, set):Bool = false;
 	public var stunned:Bool = false;
-
-	public var canTaunt:Bool = true;
-
+	
 	/**
 	 * Multiplier of how long a character holds the sing pose
 	 */
@@ -168,26 +166,25 @@ class Character extends Bopper implements IFlags
 		while (doubleGhosts.length < count)
 		{
 			final ghost = new FunkinSprite();
+			ghost.visible = false;
 			ghost.useRenderTexture = true;
 			ghost.antialiasing = true;
-			ghost.visible = false;
-
+			ghost.alpha = ghostAlpha;
+			
 			doubleGhosts.push(ghost);
 		}
 	}
 	
-	public function loadCharacter(name:String, force:Bool = false):Character
+	public function loadCharacter(name:String, force:Bool = false):Void
 	{
-		if (curCharacter == name && !force) return this;
-
+		if (curCharacter == name && !force) return;
+		
 		for (ghost in doubleGhosts) ghost?.destroy();
 		doubleGhosts.resize(0);
-
+		
 		loadFile(CharacterParser.fetchInfo(curCharacter = name));
-
+		
 		genGhosts(PlayState.SONG?.keys ?? 0);
-
-		return this;
 	}
 	
 	// clean this up
@@ -277,10 +274,6 @@ class Character extends Bopper implements IFlags
 				{
 					addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				}
-				else
-				{
-					addOffset(anim.anim, 0, 0);
-				}
 			}
 		}
 		else
@@ -289,8 +282,8 @@ class Character extends Bopper implements IFlags
 		}
 		
 		dance(true);
-		if (!animation.curAnim?.looped) finishAnim();
 		setBaseFrameSize();
+		dance(true);
 	}
 	
 	override function update(elapsed:Float)
@@ -405,14 +398,12 @@ class Character extends Bopper implements IFlags
 		}
 	}
 	
-	public function playGhostAnim(ghostID:Int = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
+	public function playGhostAnim(ghostID = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
 		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
 		
 		var ghost = doubleGhosts[ghostID];
-
-		if (ghost == null) return trace('what $ghostID');
-
+		
 		if (ghost.frames == null)
 		{
 			ghost.frames = frames;
