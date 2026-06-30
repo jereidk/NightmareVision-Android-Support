@@ -42,13 +42,9 @@ Current version: **1.1.1b**
 ## 1.1.2 (? 2026)
 
 ### Bugfixes
-- Fixed BPM and Section Beats UI behaving incorrectly in the Chart Editor.
 - Roomcode Pico sprite has a correct gameover sprite.
 - RHM's Z-value is fixed in the greenhouse stage.
-- Polus Boyfriend's windy variant now has correct looped poses.
-- Pink's Pretender death animation was re-exported to fix effects.
-- Black's Defeat sprite was re-exported to fix effects.
-- White's halo effect was fixed.
+- Fixed BPM and Section Beats UI behaving incorrectly in the Chart Editor.
 - Fixed some variables not working correctly in Hscript.
 
 ## 1.1.1b (june 21 2026)
