@@ -120,7 +120,7 @@
 		110
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 6,
+	"sing_duration": 4,
 	"scale": 1,
 	"_editor_isPlayer": false,
 	"pausePortrait": "",

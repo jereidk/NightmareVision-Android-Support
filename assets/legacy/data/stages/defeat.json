@@ -10,8 +10,5 @@
 	"opponent": [210, 100],
 	"secondopp": [-60, 210],
 	"pet": [1420, 900],
-	
-	"flags": {
-		"defeat": true
-	}
+	"flags": {"defeat": true}
 }

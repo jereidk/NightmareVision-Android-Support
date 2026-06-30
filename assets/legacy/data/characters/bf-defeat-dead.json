@@ -36,6 +36,8 @@
 		}
 	],
 	"no_antialiasing": false,
+	"flags": {},
+	"afterimages": true,
 	"image": "characters/gameover/bfdefeatgameovers",
 	"position": [
 		-945,
@@ -43,11 +45,9 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
-	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "bf",
-	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": true,

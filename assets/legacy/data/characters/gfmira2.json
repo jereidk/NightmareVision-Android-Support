@@ -1,5 +1,4 @@
 {
-	"pausePortrait": "",
 	"animations": [
 		{
 			"offsets": [
@@ -98,9 +97,9 @@
 	],
 	"sing_duration": 6,
 	"scale": 1,
-"_editor_isPlayer": true,
 	"flags": {
-"afterimages": true,
 		"lightsDownSpeaker": true
-	}
+	},
+	"pausePortrait": "",
+	"afterimages": true
 }

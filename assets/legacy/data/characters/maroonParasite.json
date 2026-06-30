@@ -1,60 +1,60 @@
 {
-	"pausePortrait": "maroonp",
+    "pausePortrait": "maroonp",
 	"animations": [
 		{
+			"loop": true,
 			"offsets": [
 				249,
 				40
 			],
-			"loop": true,
-			"fps": 24,
 			"anim": "idle",
-			"indices": [],
-			"name": "idle"
+			"fps": 24,
+			"name": "idle",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				243,
 				72
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singRIGHT",
-			"indices": [],
-			"name": "right"
+			"fps": 24,
+			"name": "right",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				294,
 				248
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singDOWN",
-			"indices": [],
-			"name": "down"
+			"fps": 24,
+			"name": "down",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				313,
 				73
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singLEFT",
-			"indices": [],
-			"name": "left"
+			"fps": 24,
+			"name": "left",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				513,
 				350
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singUP",
-			"indices": [],
-			"name": "up"
+			"fps": 24,
+			"name": "up",
+			"indices": []
 		}
 	],
 	"no_antialiasing": false,
@@ -66,10 +66,10 @@
 	"dance_every": 2,
 	"gameover_intial_sound": null,
 	"flags": {},
+	"afterimages": true,
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "maroon-parasite",
-	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,

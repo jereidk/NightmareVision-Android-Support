@@ -1,5 +1,4 @@
 {
-	"pausePortrait": "",
 	"animations": [
 		{
 			"loop": false,
@@ -89,5 +88,6 @@
 	"flags": {
 		"lightsDownSpeaker": true
 	},
+	"pausePortrait": "",
 	"afterimages": true
 }

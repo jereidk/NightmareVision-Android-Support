@@ -16,32 +16,35 @@ function onLoad()
 		bars.add(bar);
 	}
 	
-	var voting1:FlxSprite = new FlxSprite(610, 168).loadGraphic(Paths.image(ext + 'back'));
-	voting1.scrollFactor.set(.93, .93);
+	var voting1:FlxSprite = new FlxSprite(700, 125).loadGraphic(Paths.image(ext + 'back'));
+	voting1.scale.set(1.5, 1.5);
+	voting1.updateHitbox();
 	add(voting1);
-
-	var voting2:FlxSprite = new FlxSprite(-472, -295).loadGraphic(Paths.image(ext + 'front'));
-	voting2.scrollFactor.set(.95, .97);
+	
+	// voting2
+	var voting2:FlxSprite = new FlxSprite(-430, -275).loadGraphic(Paths.image(ext + 'walls something'));
+	voting2.scale.set(1.5, 1.5);
+	voting2.updateHitbox();
 	add(voting2);
-
-	var jorsawsee:FlxSprite = new FlxSprite(1690, 480).loadGraphic(Paths.image(ext + 'jorsawsee'));
-	jorsawsee.scrollFactor.set(.975, .99);
-	jorsawsee.scale.set(.7, .7);
-	jorsawsee.updateHitbox();
-	add(jorsawsee);
-
+	
 	var votinguh:FlxSprite = new FlxSprite(500, 590).loadGraphic(Paths.image(ext + 'chair3'));
-	votinguh.scrollFactor.set(.95, .95);
+	votinguh.scale.set(1.2, 1.2);
+	votinguh.updateHitbox();
 	add(votinguh);
-
-	var voting3:FlxSprite = new FlxSprite(160, 625).loadGraphic(Paths.image(ext + 'chair2'));
-	voting3.scrollFactor.set(.98, .98);
+	
+	// voting3
+	var voting3:FlxSprite = new FlxSprite(150, 625).loadGraphic(Paths.image(ext + 'chair2'));
+	voting3.scale.set(1.4, 1.4);
+	voting3.updateHitbox();
 	add(voting3);
-
-	var voting4:FlxSprite = new FlxSprite(-190, 700).loadGraphic(Paths.image(ext + 'chair1'));
+	
+	// voting4
+	var voting4:FlxSprite = new FlxSprite(-180, 700).loadGraphic(Paths.image(ext + 'chair1'));
+	voting4.scale.set(1.5, 1.5);
+	voting4.updateHitbox();
 	add(voting4);
-
-	redmungus = new Character(1760, 225, 'madgus');
+	
+	redmungus = new Character(1775, 200, 'madgus');
 	game.startCharacterPos(redmungus);
 	add(redmungus);
 	redmungus.scale.set(1.2, 1.2);

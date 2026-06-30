@@ -131,7 +131,7 @@
 	"dance_every": 2,
 	"gameover_intial_sound": null,
 	"flags": {
-		"variants":{
+		"variants": {
 			"windy": "bfpolusblow",
 			"falling": "bfpolusblow",
 			"boiling": "bf-lava"

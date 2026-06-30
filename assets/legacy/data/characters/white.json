@@ -1,101 +1,101 @@
 {
-	"pausePortrait": "",
 	"animations": [
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "idle",
-			"fps": 24,
-			"name": "idle",
-			"indices": []
+			"indices": [],
+			"name": "idle"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "singRIGHT",
-			"fps": 24,
-			"name": "right",
-			"indices": []
+			"indices": [],
+			"name": "right"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "singLEFT",
-			"fps": 24,
-			"name": "left",
-			"indices": []
+			"indices": [],
+			"name": "left"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "singUP",
-			"fps": 24,
-			"name": "up",
-			"indices": []
+			"indices": [],
+			"name": "up"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "singDOWN",
-			"fps": 24,
-			"name": "down",
-			"indices": []
+			"indices": [],
+			"name": "down"
 		},
 		{
+			"loop": false,
+			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
-			"flipY": false,
-			"loop": false,
-			"fps": 24,
 			"anim": "singUP-alt",
-			"flipX": false,
+			"fps": 24,
+			"name": "alUp",
 			"indices": [],
-			"name": "alUp"
+			"flipX": false
 		},
 		{
+			"loop": false,
+			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
-			"flipY": false,
-			"loop": false,
-			"fps": 24,
 			"anim": "singDOWN-alt",
-			"flipX": false,
+			"fps": 24,
+			"name": "alDown",
 			"indices": [],
-			"name": "alDown"
+			"flipX": false
 		}
 	],
 	"no_antialiasing": false,
 	"image": "characters/story/white/white",
+	"flags": {},
+	"afterimages": true,
+	"pausePortrait": "",
 	"position": [
 		-265,
 		174
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
-	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "white",
-	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": true,
 	"flip_x": false,
