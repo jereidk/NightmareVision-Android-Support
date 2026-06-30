@@ -118,18 +118,6 @@ jobs:
             exit 1
           fi
 
-      - name: Pin Android NDK (NDK 29 armeabi-v7a sysroot lacks stdin/stdout/stderr/__register_atfork)
-        run: |
-          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/*/ 2>/dev/null | grep -v '/29\.' | sort -V | tail -1)
-          if [ -z "$NDK_DIR" ]; then
-            echo "ERROR: no NDK version other than 29.x found under $ANDROID_HOME/ndk" >&2
-            ls "$ANDROID_HOME/ndk" >&2
-            exit 1
-          fi
-          NDK_DIR="${NDK_DIR%/}"
-          echo "Pinning NDK to $NDK_DIR (NDK 29's armeabi-v7a sysroot is missing libc symbols needed to link ARM32)"
-          echo "ANDROID_NDK_LATEST_HOME=$NDK_DIR" >> $GITHUB_ENV
-
       - name: Prepare NDK clang++ for Android
         run: |
           mkdir -p /tmp/ndk-wrap
@@ -393,18 +381,6 @@ jobs:
             exit 1
           fi
 
-      - name: Pin Android NDK (NDK 29 armeabi-v7a sysroot lacks stdin/stdout/stderr/__register_atfork)
-        run: |
-          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/*/ 2>/dev/null | grep -v '/29\.' | sort -V | tail -1)
-          if [ -z "$NDK_DIR" ]; then
-            echo "ERROR: no NDK version other than 29.x found under $ANDROID_HOME/ndk" >&2
-            ls "$ANDROID_HOME/ndk" >&2
-            exit 1
-          fi
-          NDK_DIR="${NDK_DIR%/}"
-          echo "Pinning NDK to $NDK_DIR (NDK 29's armeabi-v7a sysroot is missing libc symbols needed to link ARM32)"
-          echo "ANDROID_NDK_LATEST_HOME=$NDK_DIR" >> $GITHUB_ENV
-
       - name: Prepare NDK clang++ for Android
         run: |
           mkdir -p /tmp/ndk-wrap
@@ -667,18 +643,6 @@ jobs:
             echo "ERROR: Missing Lime ndll"
             exit 1
           fi
-
-      - name: Pin Android NDK (NDK 29 armeabi-v7a sysroot lacks stdin/stdout/stderr/__register_atfork)
-        run: |
-          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/*/ 2>/dev/null | grep -v '/29\.' | sort -V | tail -1)
-          if [ -z "$NDK_DIR" ]; then
-            echo "ERROR: no NDK version other than 29.x found under $ANDROID_HOME/ndk" >&2
-            ls "$ANDROID_HOME/ndk" >&2
-            exit 1
-          fi
-          NDK_DIR="${NDK_DIR%/}"
-          echo "Pinning NDK to $NDK_DIR (NDK 29's armeabi-v7a sysroot is missing libc symbols needed to link ARM32)"
-          echo "ANDROID_NDK_LATEST_HOME=$NDK_DIR" >> $GITHUB_ENV
 
       - name: Prepare NDK clang++ for Android
         run: |
