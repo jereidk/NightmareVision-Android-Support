@@ -3,7 +3,7 @@ import flixel.addons.display.FlxRuntimeShader;
 import String;
 
 // hi this is kim, this script was made by ASHLEY and edited by LOGGO and ORBYY, thank you!
-public var petRGB:FlxRuntimeShader = null;
+var petRGB:FlxRuntimeShader = null;
 
 /**
 	* Since the RGB pets default to Boyfriend's health icon color, some colors (like yellowplayable and amongbf) would be ugly/inaccurate to how they are in Among Us. 
@@ -39,8 +39,7 @@ public var overwriteColors:Map<String, Array<FlxColor>> = [
 	'blake' => [0xFF342F43, 0xFF15141A],
 	'bobby' => [0xFF1F0F89, 0xFF19123E],
 	'bfblack' => [0xFF2B2C3C, 0xFF1A182E],
-	'shit' => [0xFF7D4831, 0xFF5F1B37],
-	'amongbfweird' => [0xFFC93E3E, 0xFF80254D]
+	'shit' => [0xFF7D4831, 0xFF5F1B37]
 ];
 
 /**
@@ -48,7 +47,7 @@ public var overwriteColors:Map<String, Array<FlxColor>> = [
 **/
 var hasRGBpet:Bool = false;
 
-function applyPetRGB(pet:Pet)
+function onCreatePost()
 {
 	if (!pet.getFlag('rgb')) return; // WHAT DO YOU MEAN WE DONT EVEN HAVE AN RGB PET ON
 	if (!pet.isAnimate)
@@ -56,31 +55,29 @@ function applyPetRGB(pet:Pet)
 		trace('RGB pet ${pet.curPet} must be a texture atlas');
 		return;
 	}
-
-	if (petRGB == null)
+	
+	try
 	{
 		var frag:String = Paths.getTextFromFile('shaders/amongRgb.frag');
 		petRGB = new FlxRuntimeShader(frag);
 		petRGB.setFloatArray('green', [96 / 255, 208 / 255, 1]);
 		petRGB.setFloat('visor', 1);
-	}
 
-	for (layer in pet.timeline.layers)
+		for (layer in pet.timeline.layers)
+		{
+			layer.forEachFrame(function(frame) {
+				for (element in frame.elements)
+					element.shader = petRGB;
+			});
+		}
+		pet.useRenderTexture = true;
+
+		updateRGB(boyfriend);
+	}
+	catch (e:Dynamic)
 	{
-		layer.forEachFrame(function(frame) {
-			for (element in frame.elements)
-				element.shader = petRGB;
-		});
+		trace('RGB pet shader unavailable on this device: ' + e);
 	}
-	pet.useRenderTexture = true;
-}
-
-function onCreatePost()
-{
-	applyPetRGB(pet);
-	pet.onChange.add(applyPetRGB);
-
-	reloadPetRGB(boyfriend);
 }
 /**
 	* converts `FlxColor` into an array of `R, G, B` divided by 255 for the shader support
@@ -96,13 +93,11 @@ function convertColor(col:FlxColor = 0xFFFFFF):Array<Float> {
 /**
 	* Reloads the color shader depending on `based.healthColour`
 	```haxe
-	reloadPetRGB(boyfriend);
+	updateRGB(boyfriend);
 	```
 **/
-public function reloadPetRGB(?based:Character = boyfriend) {
-	if (petRGB == null) return;
-
-	if (overwriteColors.exists(based.curCharacter))
+function updateRGB(?based:Character = boyfriend) {
+	if(overwriteColors.exists(based.curCharacter))
 	{
 		// if it has handmade colors assigned to it, get them from the map.
 		var color:Array<Float> = overwriteColors.get(boyfriend.curCharacter);

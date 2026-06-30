@@ -35,8 +35,8 @@ function onLoad()
 		'Press 5 to delete Cosmicube unlocks\n' +
 		'Press 4 to toggle Force Unlock for freeplay and story mode\n' +
 		'Press 3 to delete bought songs\n' +
-		'Press 2 to be rich\n' +
-		'Press 1 to be poor\n' +
+		'Press 2 to give a lot of moneys\n' +
+		'Press 1 to set money to 0\n' +
 		'[ Mobile: hold 2 fingers 1 s to open dev panel ]',
 		12.5);
 	debugText.alignment = 'right';
@@ -243,7 +243,7 @@ function onUpdate()
 	}
 	if (FlxG.keys.justPressed.TWO)
 	{
-		CosmicubeData.currentMoney += 1000000;
+		CosmicubeData.currentMoney = 2_147_483_647;
 		ClientPrefs.flush();
 		trace('FREE MONEY');
 	}

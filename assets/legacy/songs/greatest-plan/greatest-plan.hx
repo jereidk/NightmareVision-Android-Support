@@ -1,4 +1,4 @@
-import funkin.utils.MathUtil;
+var charlesEnter:Bool = false;
 
 function onLoad()
 {
@@ -49,7 +49,15 @@ function onEvent(name, v1, v2)
 			if (hasColor) playHUD.scoreTxt.color = dad.healthColour;
 		// healthBar.createColoredEmptyBar(0xFFff3333);
 		case 'enter':
-			FlxTween.tween(dad, {x: -380}, 4, {ease: FlxEase.expoOut});
+			charlesEnter = true;
 			pauseOverwrite = 'charles';
+	}
+}
+
+function onUpdate(elapsed)
+{
+	if (charlesEnter)
+	{
+		dad.x = FlxMath.lerp(dad.x, -600, FlxMath.bound(elapsed * 2.1, 0, 1));
 	}
 }
