@@ -24,7 +24,7 @@ class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
 	{
 		super.create();
 		
-		FlxG.cameras.add(camera = camCredits = new FlxCameraEx(), false);
+		FlxG.cameras.add(camera = camCredits = new FlxCamera(), false);
 		camCredits.bgColor = 0;
 		
 		initStateScript();

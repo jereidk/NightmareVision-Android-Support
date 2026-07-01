@@ -110,7 +110,7 @@ class GameOverSubstate extends MusicBeatSubstate
 			FlxG.camera.follow(camFollow, LOCKON, 0);
 		}
 		
-		camCTRL = new FlxCameraEx();
+		camCTRL = new FlxCamera();
 		camCTRL.bgColor = 0x0;
 		FlxG.cameras.add(camCTRL, false);
 		

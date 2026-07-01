@@ -106,9 +106,9 @@ class PlayState extends MusicBeatState
 	function set_playbackRate(value:Float):Float
 	{
 		#if FLX_PITCH
-		if (generatedMusic) audio.pitch = playbackRate;
+		if (generatedMusic) audio.pitch = value;
 		
-		FlxG.animationTimeScale = value;
+		if (!paused) FlxG.timeScale = value;
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000 * value;
 		
 		playbackRate = value;
@@ -442,7 +442,7 @@ class PlayState extends MusicBeatState
 	 * 
 	 * Can be manually changed.
 	 */
-	var songLength:Float = 0;
+	public var songLength:Float = 0;
 	
 	public var boyfriendCameraOffset:Array<Float> = [0, 0];
 	public var opponentCameraOffset:Array<Float> = [0, 0];
@@ -1302,7 +1302,7 @@ class PlayState extends MusicBeatState
 					return;
 				}
 				
-				startTimer = new FlxTimer().start((Conductor.crotchet / 1000) / playbackRate, function(tmr:FlxTimer) {
+				startTimer = new FlxTimer().start(Conductor.crotchet / 1000, function(tmr:FlxTimer) {
 					if (swagCounter < 4) handleBoppers(tmr.loopsLeft);
 					
 					var introAssets:Map<String, Array<String>> = new Map<String, Array<String>>();
@@ -1361,7 +1361,7 @@ class PlayState extends MusicBeatState
 		
 		spr.cameras = [camHUD];
 		
-		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000 / playbackRate,
+		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000,
 			{
 				ease: FlxEase.cubeInOut,
 				onComplete: function(twn:FlxTween) {
@@ -1858,6 +1858,7 @@ class PlayState extends MusicBeatState
 			
 			#if VIDEOS_ALLOWED
 			FunkinVideoSprite.forEachAlive((video) -> if (video.tiedToGame) video.pause());
+			FlxG.timeScale = 1;
 			#end
 			
 			for (field in playFields?.members)
@@ -1897,6 +1898,7 @@ class PlayState extends MusicBeatState
 			#end
 			
 			paused = false;
+					playbackRate = 1;
 			scripts.call('onResume', []);
 			
 			resetDiscordRPC(startTimer != null && startTimer.finished);
@@ -1956,7 +1958,7 @@ class PlayState extends MusicBeatState
 		
 		if (cameraLerping && !inCutscene)
 		{
-			final lerpRate = 0.04 * cameraSpeed * playbackRate;
+			final lerpRate = 0.04 * cameraSpeed;
 			FlxG.camera.followLerp = lerpRate;
 		}
 		
@@ -2012,14 +2014,14 @@ class PlayState extends MusicBeatState
 		{
 			if (startedCountdown)
 			{
-				Conductor.songPosition += (elapsed * 1000 * playbackRate);
+				Conductor.songPosition += (elapsed * 1000);
 				
 				if (Conductor.songPosition >= 0) startSong();
 			}
 		}
 		else
 		{
-			Conductor.songPosition += (elapsed * 1000 * playbackRate);
+			Conductor.songPosition += (elapsed * 1000);
 			
 			if (Math.abs(getSongTime() - Conductor.songPosition) > 1000 / 60 / playbackRate) Conductor.songPosition = getSongTime();
 			
@@ -2039,7 +2041,7 @@ class PlayState extends MusicBeatState
 			modManager.update(elapsed);
 		}
 		
-		final spawnOffset:Float = (spawnTime * playbackRate / songSpeed);
+		final spawnOffset:Float = (spawnTime / songSpeed);
 		
 		while (queueNotes.length > 0 && (queueNotes[0].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes.shift());
@@ -2693,7 +2695,7 @@ class PlayState extends MusicBeatState
 				if (val2 <= 0) songSpeed = newValue;
 				else
 				{
-					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2 / playbackRate,
+					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2,
 						{
 							ease: FlxEase.linear,
 							onComplete: function(twn:FlxTween) {
@@ -3293,6 +3295,7 @@ class PlayState extends MusicBeatState
 			focusPlayer ??= (note.singers == null ? playField.owner : note.singers[0]);
 
 			if (focusPlayer == boyfriend) focusPlayer = null;
+					playbackRate = playbackRate;
 		}
 	}
 
@@ -3482,7 +3485,7 @@ class PlayState extends MusicBeatState
 			if (SONG.notes[curSection].changeBPM)
 			{
 				Conductor.bpm = SONG.notes[curSection].bpm;
-				scripts.set('curBpm', Conductor.bpm);
+				scripts.set('bpm', Conductor.bpm);
 			}
 			scripts.set('mustHitSection', SONG.notes[curSection].mustHitSection);
 			scripts.set('altAnim', SONG.notes[curSection].altAnim);

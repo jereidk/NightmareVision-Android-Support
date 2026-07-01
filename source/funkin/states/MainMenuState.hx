@@ -153,7 +153,7 @@ class MainMenuState extends MusicBeatState
 		add(portCredit);
 		#end
 
-		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.height - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
+		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.width - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
 		#if debug
 		versionShit.text += ' (${GitMacro.getGitCommitHash()})';
 		#end
