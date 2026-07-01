@@ -1897,7 +1897,7 @@ class ChartEditorState extends MusicBeatState
 		
 		try
 		{
-			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp', true);
+			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp');
 			if (oppVocals != null)
 			{
 				opponentVocals.loadEmbedded(oppVocals);
@@ -1976,6 +1976,7 @@ class ChartEditorState extends MusicBeatState
 			if (wname == 'section_beats')
 			{
 				_song.notes[curSec].sectionBeats = Std.int(nums.value);
+                                Conductor.mapBPMChanges(_song);
 				reloadGridLayer();
 			}
 			else if (wname == 'song_speed')
@@ -1984,9 +1985,8 @@ class ChartEditorState extends MusicBeatState
 			}
 			else if (wname == 'song_bpm')
 			{
-				tempBpm = nums.value;
+				_song.bpm = nums.value;
 				Conductor.mapBPMChanges(_song);
-				Conductor.bpm = nums.value;
 			}
 			else if (wname == 'song_strums')
 			{
@@ -2543,7 +2543,6 @@ class ChartEditorState extends MusicBeatState
 		// 	clickForInfo.color = 0xFF8c8c8c;
 		// }
 		
-		_song.bpm = tempBpm;
 		
 		strumLineNotes.visible = quant.visible = vortex;
 		
