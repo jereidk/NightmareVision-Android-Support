@@ -93,7 +93,7 @@ class OurLittleFriend extends FlxSprite
 	function buildOffsets(?path:String)
 	{
 		path ??= _offsetPath;
-		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in FunkinAssets.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
+		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in File.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
 		{
 			var value = i.trim().split(',');
 			offsets.set(k, [Std.parseFloat(value[0]), Std.parseFloat(value[1])]);
@@ -278,7 +278,6 @@ class ChartEditorState extends MusicBeatState
 	**/
 	var curSelectedNotes:Array<Array<Dynamic>> = [];
 	var holdingNotes:Array<Array<Dynamic>> = [null, null, null, null, null, null, null, null];
-	var tempBpm:Float = 0;
 	var playbackSpeed:Float = 1;
 	
 	public static var vocals:FlxSound = null;
@@ -410,7 +409,6 @@ class ChartEditorState extends MusicBeatState
 		
 		FlxG.mouse.visible = true;
 		
-		tempBpm = _song.bpm;
 		
 		addSection();
 		
