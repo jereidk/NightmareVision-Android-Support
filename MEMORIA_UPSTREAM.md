@@ -410,7 +410,12 @@ d26f708 fix: ChartEditorState BPM handling and voices loading
 28. ✅ ChartEditorState.hx - VERIFICADO (9 bugs corregidos)
 29. ✅ PauseSubState.hx - VERIFICADO (TurboControl, skipToTime portados)
 30. ✅ CharacterEditorState.hx - VERIFICADO (LOOSE mode en loadAtlas)
-31. 🔄 **SIGUIENTE** - PENDIENTE
+31. ✅ PlayState.hx - VERIFICADO (playbackRate, FlxCameraEx→FlxCamera, Change Noteskin handler)
+32. ✅ GameOverSubstate.hx - VERIFICADO (LOOSE mode en Paths.sound)
+33. ✅ MainMenuState.hx - MODIFICADO (features Android)
+34. ✅ import.hx - MODIFICADO (features Android)
+35. ✅ CreditsRollSubState.hx - MODIFICADO (features Android)
+36. 🔄 **SIGUIENTE** - PENDIENTE: Verificar resto de archivos vs upstream
 
 ---
 
@@ -512,26 +517,34 @@ git config user.email "gokuultrq@gmail.com"
 | `4ec9c1f` | Section 1: 11 commits squashed - upstream alignment |
 | `13fdeea` | Section 2: 7 commits squashed - PsychHUD getSongTime, Conductor, Chart, WeekData, CosmicubeData, ClientPrefs, TitleState |
 | `2d54613` | Section 3: 4 commits squashed - FreeplayState circles flow, SustainSplash, CharacterGroup, Character |
-| `c967ec5` | docs: update MEMORIA_UPSTREAM.md - Section 3 complete |
-| `8d5b4ba` | Section 4: ChartEditorState tempBpm cleanup, File.getContent |
-| `78425c9` | Section 4: ChartEditorState chartingMode, directories, section BPM |
-| `d26f708` | Section 4: ChartEditorState BPM handling and voices loading |
-| `55f74e5` | Section 4: add LOOSE mode to loadAtlas() in CharacterEditorState |
-| `4a4da76` | Section 4: port TurboControl and skipToTime from upstream to PauseSubState |
+| `d2baf4c` | PlayState: playbackRate + FlxCameraEx→FlxCamera |
+| `cb00b2a` | PlayState: Change Noteskin handler + Math.max in getSongTime |
+| `3d0134f` | PlayState: align with upstream |
+| `001a921` | PlayState: align with upstream |
+| `c6fdbd0` | PlayState: remove stray playbackRate line |
+| `50f4f1f` | GameOverSubstate: LOOSE mode en Paths.sound() |
+| `4a4da76` | PauseSubState: TurboControl + skipToTime |
+| `55f74e5` | CharacterEditorState: LOOSE mode en loadAtlas() |
+| `d26f708` | ChartEditorState: BPM handling + voices |
+| `78425c9` | ChartEditorState: chartingMode + directories + section BPM |
+| `8d5b4ba` | ChartEditorState: tempBpm cleanup + File.getContent |
+| `511e418` | docs: update MEMORIA_UPSTREAM.md |
 
 ---
 
-## PRÓXIMOS PASOS
+## TODOS LOS ARCHIVOS MODIFICADOS (9 archivos .hx)
 
-1. ⏳ MainMenuState.hx - Análisis pendiente
-2. ⏳ PlayState.hx - Archivo crítico, requiere análisis profundo
-3. ⏳ GlobalScriptManager.hx - Carga de scripts globales
-4. ⏳ WeekData.hx - Análisis ya completado
-5. ⏳ Metadata.hx - Pendiente
-6. ⏳ shaders/ - Carpeta funkin/game/shaders/
-7. ⏳ OptionsState.hx - Verificar diferencias pendientes
-8. ⏳ Init.hx - Verificar diferencias pendientes
-9. ⏳ Otros archivos menores
+| Archivo | Cambio | Tipo |
+|---------|--------|------|
+| `source/funkin/import.hx` | Modificado | Android |
+| `source/funkin/scripts/FunkinScript.hx` | Modificado | Android |
+| `source/funkin/states/PlayState.hx` | playbackRate, FlxCameraEx→FlxCamera, Change Noteskin handler | FIX |
+| `source/funkin/states/MainMenuState.hx` | Features Android | Android |
+| `source/funkin/states/editors/ChartEditorState.hx` | 9 fixes upstream | FIX |
+| `source/funkin/states/editors/CharacterEditorState.hx` | LOOSE mode | FIX |
+| `source/funkin/states/substates/PauseSubState.hx` | TurboControl, skipToTime | SYNC |
+| `source/funkin/states/substates/GameOverSubstate.hx` | LOOSE mode en Paths.sound() | FIX |
+| `source/funkin/states/substates/CreditsRollSubState.hx` | Modificado | Android |
 
 ---
 
