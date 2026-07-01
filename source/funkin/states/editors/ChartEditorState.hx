@@ -359,6 +359,7 @@ class ChartEditorState extends MusicBeatState
 		}
 		
 		Conductor.bpm = _song.bpm;
+                PlayState.chartingMode = true;
 		Conductor.mapBPMChanges(_song);
 		initialKeyCount = _song.keys;
 		
@@ -1498,7 +1499,7 @@ class ChartEditorState extends MusicBeatState
 		
 		#if MODS_ALLOWED
 		var eventPushedMap:Map<String, Bool> = new Map<String, Bool>();
-		var directories:Array<String> = [];
+		var directories:Array<String> = [Paths.getCorePath('data/events/'), Paths.getCorePath('events/')];
 		
 		#if MODS_ALLOWED
 		directories.push(Paths.mods('data/events/'));
@@ -2026,7 +2027,13 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'section_bpm')
 			{
 				_song.notes[curSec].bpm = nums.value;
-				updateGrid();
+
+				if (_song.notes[curSec].changeBPM)
+				{
+					Conductor.mapBPMChanges(_song);
+
+					updateGrid();
+				}
 			}
 			else if (wname == 'inst_volume')
 			{
