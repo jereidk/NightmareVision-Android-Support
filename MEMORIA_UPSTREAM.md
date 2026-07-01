@@ -223,7 +223,57 @@ var daSection:SwagSection = getFreeplaySections(song, NORMAL);
 
 ---
 
-## RESUMEN DE ARCHIVOS VERIFICADOS (Sesiones 1-2)
+## SECCIÓN 4: ChartEditorState y Editor States
+
+### Commits de Sección 4
+```
+8d5b4ba fix: ChartEditorState upstream alignment - tempBpm cleanup and File.getContent
+78425c9 fix: ChartEditorState chartingMode, events directories, and section BPM
+d26f708 fix: ChartEditorState BPM handling and voices loading
+55f74e5 fix: add LOOSE mode to loadAtlas() in CharacterEditorState
+4a4da76 feat: port TurboControl and skipToTime from upstream to PauseSubState
+```
+
+### Archivos Modificados en Sección 4:
+
+| Archivo | Cambio | Tipo |
+|---------|--------|------|
+| ChartEditorState.hx | BPM handling, mapBPMChanges, tempBpm cleanup | **FIX** |
+| CharacterEditorState.hx | add LOOSE mode to loadAtlas() | **FIX** |
+| PauseSubState.hx | port TurboControl and skipToTime | **SYNC** |
+
+---
+
+### ✅ ChartEditorState.hx (CRÍTICO - Completado)
+
+**Ubicaciones:**
+- Android: `source/funkin/states/editors/ChartEditorState.hx`
+- Upstream: `source/funkin/states/editors/ChartEditorState.hx`
+
+**Bugs Corregidos (9 fixes):**
+
+| # | Antes (Bug) | Después (Correcto) | Commit |
+|---|-------------|-------------------|--------|
+| 1 | Falta `PlayState.chartingMode` | ✅ Añadido `PlayState.chartingMode = true` | `78425c9` |
+| 2 | `directories = []` vacío | ✅ Core paths para eventos | `78425c9` |
+| 3 | `section_bpm` sin check | ✅ `if (changeBPM)` + `mapBPMChanges` | `78425c9` |
+| 4 | `section_beats` sin mapBPMChanges | ✅ `Conductor.mapBPMChanges(_song)` | `78425c9` |
+| 5 | `tempBpm` como intermediario | ✅ `_song.bpm = nums.value` directo | `78425c9` |
+| 6 | `Paths.voices(..., 'opp', true)` | ✅ Sin parámetro extra | `78425c9` |
+| 7 | `FunkinAssets.getContent()` | ✅ `File.getContent()` | `8d5b4ba` |
+| 8 | `var tempBpm:Float = 0` | ✅ Eliminado | `8d5b4ba` |
+| 9 | `tempBpm = _song.bpm` | ✅ Eliminado | `8d5b4ba` |
+
+**Características Android Preservadas (~120 líneas):**
+- Mobile controls: `chartMobileBtns`, `chartMobilePlayLbl`
+- Virtual pad: `addVirtualPad(LEFT_FULL, A_B)`
+- Discord message personalizado: "Uhm idk mane burp"
+- BACK button handler para Android
+- Touch controls para el editor
+
+---
+
+## RESUMEN DE ARCHIVOS VERIFICADOS (Sesiones 1-4)
 
 ### ✅ SIN DIFERENCIAS (IDENTICOS)
 | Archivo | Líneas |
@@ -265,6 +315,8 @@ var daSection:SwagSection = getFreeplaySections(song, NORMAL);
 | WeekData.hx | NORMAL enum en getFreeplaySections |
 | CosmicubeData.hx | Missing slash en path |
 | ClientPrefs.hx | autoPause en load() |
+| ChartEditorState.hx | 9 fixes: chartingMode, directories, mapBPMChanges, tempBpm cleanup |
+| CharacterEditorState.hx | LOOSE mode en loadAtlas() para mods |
 
 ---
 
@@ -355,7 +407,10 @@ var daSection:SwagSection = getFreeplaySections(song, NORMAL);
 25. ✅ FPSModifier.hx - VERIFICADO (identicos)
 26. ✅ DirectionModifier.hx - VERIFICADO (identicos)
 27. ✅ modchart/ - VERIFICADO (VSlice mejoras Android)
-28. 🔄 **SIGUIENTE** - PENDIENTE
+28. ✅ ChartEditorState.hx - VERIFICADO (9 bugs corregidos)
+29. ✅ PauseSubState.hx - VERIFICADO (TurboControl, skipToTime portados)
+30. ✅ CharacterEditorState.hx - VERIFICADO (LOOSE mode en loadAtlas)
+31. 🔄 **SIGUIENTE** - PENDIENTE
 
 ---
 
@@ -458,6 +513,11 @@ git config user.email "gokuultrq@gmail.com"
 | `13fdeea` | Section 2: 7 commits squashed - PsychHUD getSongTime, Conductor, Chart, WeekData, CosmicubeData, ClientPrefs, TitleState |
 | `2d54613` | Section 3: 4 commits squashed - FreeplayState circles flow, SustainSplash, CharacterGroup, Character |
 | `c967ec5` | docs: update MEMORIA_UPSTREAM.md - Section 3 complete |
+| `8d5b4ba` | Section 4: ChartEditorState tempBpm cleanup, File.getContent |
+| `78425c9` | Section 4: ChartEditorState chartingMode, directories, section BPM |
+| `d26f708` | Section 4: ChartEditorState BPM handling and voices loading |
+| `55f74e5` | Section 4: add LOOSE mode to loadAtlas() in CharacterEditorState |
+| `4a4da76` | Section 4: port TurboControl and skipToTime from upstream to PauseSubState |
 
 ---
 
@@ -469,7 +529,9 @@ git config user.email "gokuultrq@gmail.com"
 4. ⏳ WeekData.hx - Análisis ya completado
 5. ⏳ Metadata.hx - Pendiente
 6. ⏳ shaders/ - Carpeta funkin/game/shaders/
-7. ⏳ Otros archivos menores
+7. ⏳ OptionsState.hx - Verificar diferencias pendientes
+8. ⏳ Init.hx - Verificar diferencias pendientes
+9. ⏳ Otros archivos menores
 
 ---
 
