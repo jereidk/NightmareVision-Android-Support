@@ -3315,7 +3315,6 @@ class PlayState extends MusicBeatState
 			focusPlayer ??= (note.singers == null ? playField.owner : note.singers[0]);
 
 			if (focusPlayer == boyfriend) focusPlayer = null;
-					playbackRate = playbackRate;
 		}
 	}
 
