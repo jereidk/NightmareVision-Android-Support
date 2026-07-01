@@ -699,9 +699,18 @@ class FreeplayState extends AmongUIState
 	
 	// Convert to public static for my menu support. I'm a fat gay boy.
 	// hello
-	public function goToSection(sect:Int)
+	public function goToSection(sect:Int, wrap:Bool = false)
 	{
-		if (sect != curMonth) changeSection(sect - curMonth);
+		if (sect == curMonth) return;
+
+		if (wrap)
+		{
+			final diff:Int = (sect - curMonth);
+			if (diff < -weeks.length * .5) smoothMonth -= weeks.length;
+			if (diff > weeks.length * .5) smoothMonth += weeks.length;
+		}
+
+		changeSection(sect - curMonth);
 	}
 	
 	function checkLock(song:SongInformation)

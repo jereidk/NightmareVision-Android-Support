@@ -24,6 +24,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	public var parent:FreeplayState;
 	
 	var bg:FlxSprite;
+	var bgThing:FlxSprite;  // Upstream field, needed for tween animation
 	var cubeCamera:FlxCamera;
 	var menuBackButton:FlxSprite;
 	var otherTitleText:FlxText;
@@ -33,6 +34,8 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	var CIRC_WRAP = 7;
 	var curSelection:Int = 0;
 	var WEEKS_WRAP = 0;
+	var lockMovement:Bool = true;  // Upstream feature: prevents interaction during animation
+	final uiTweenOffsetY:Float = 120;  // Upstream feature: slide-in offset
 	
 	public function new(parent:FreeplayState, month:Int = 0)
 	{
@@ -45,12 +48,13 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		
 		bg = new flixel.system.FlxBGSprite();
 		bg.color = FlxColor.BLACK;
-		bg.alpha = 0.72;
+		bg.alpha = 0;  // Upstream: starts at 0, animates to 0.72
 		add(bg);
-		var bullshit:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menu/freeplay/resetPrompt'));
-		bullshit.screenCenter();
-		add(bullshit);
-		(cubeCamera = new FlxCamera(bullshit.x + 6, bullshit.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
+		// sorry bullshit - keeping variable name for compatibility, now as class field
+		bgThing = new FlxSprite().loadGraphic(Paths.image('menu/freeplay/resetPrompt'));
+		bgThing.screenCenter();
+		add(bgThing);
+		(cubeCamera = new FlxCamera(bgThing.x + 6, bgThing.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
 		FlxG.cameras.add(cubeCamera, false);
 		
 		otherTitleText = new FlxText(340, 205, 0, Lang.str('freeplay'), 50);
@@ -58,7 +62,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);
 		
-		menuBackButton = new FlxSprite(bullshit.x + bullshit.width - 5, bullshit.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
+		menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.x -= menuBackButton.width;
 		add(menuBackButton);
 	}
@@ -106,6 +110,41 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		super.create();
 		changeSelection();
 
+		// ── Upstream entrance animation (adapted) ──────────────────────────
+		// Animate bg from transparent to visible
+		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
+
+		// Slide in bgThing, otherTitleText, and menuBackButton from bottom
+		for (obj in [bgThing, otherTitleText, menuBackButton])
+		{
+			var alpha:Float = obj.alpha;
+			obj.alpha = 0;
+			obj.y += uiTweenOffsetY;
+			var tween = FlxTween.tween(obj, {y: obj.y - uiTweenOffsetY, alpha: alpha}, .35, {ease: FlxEase.circOut});
+
+			// Keep cubeCamera aligned with bgThing as it slides
+			if (obj == bgThing)
+			{
+				tween.onUpdate = function(_) {
+					cubeCamera.y = bgThing.y + 67;
+				};
+			}
+		}
+
+		// Fade in bubble sprites
+		for (obj in bubl.members)
+		{
+			if (obj == null) continue;
+
+			var alpha:Float = obj.alpha;
+			obj.alpha = 0;
+			FlxTween.tween(obj, {alpha: alpha}, .35, {ease: FlxEase.circOut});
+		}
+
+		// Unlock movement after animation completes (upstream feature)
+		new FlxTimer().start(.35, function(_) lockMovement = false);
+		// ─────────────────────────────────────────────────────────────────
+
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B);
@@ -130,7 +169,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	
 	function acceptWeek(sect:Int)
 	{
-		parent.goToSection(sect);
+		parent.goToSection(sect, true);  // Upstream: pass wrap=true for smooth navigation
 		FlxG.sound.play(Paths.sound('panelAppear'), .5);
 		close();
 	}
@@ -143,6 +182,13 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
+		// Upstream: lock interaction during entrance animation
+		if (lockMovement)
+		{
+			super.update(elapsed);
+			return;
+		}
+
 		if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			var mousePos = FlxG.mouse.getWorldPosition();
