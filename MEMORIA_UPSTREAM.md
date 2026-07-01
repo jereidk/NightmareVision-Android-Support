@@ -44,6 +44,80 @@
 
 ---
 
+## SECCIÓN 3: FreeplayState y Character Updates
+
+### Commit Final (Sección 3)
+```
+2d54613 fix: align Android codebase with upstream improvements (Section 3)
+```
+
+### Archivos Modificados en Sección 3:
+
+| Archivo | Cambio | Tipo |
+|---------|--------|------|
+| FreeplayState.hx | adopt upstream circles flow | **SYNC** |
+| SustainSplash.hx | complete texture cache system | **FIX** |
+| CharacterGroup.hx | add signals (onAdd, onChange) | **SYNC** |
+| Character.hx | align with upstream improvements | **SYNC** |
+
+---
+
+### ✅ FreeplayState.hx (CRÍTICO)
+
+**Ubicaciones:**
+- Android: `source/funkin/states/FreeplayState.hx`
+- Upstream: `source/funkin/states/FreeplayState.hx`
+
+**Cambios Aplicados:**
+
+1. **Flujo de círculos** - Adoptado patrón exacto del upstream:
+   ```haxe
+   // ANTES (Android):
+   if (click) { goToSection(tab.ID); break; }
+   
+   // DESPUÉS (upstream):
+   if (click) { clickedTab = tab; clickedWeek = weekIndex; scrollFrom = ...; }
+   // Después del loop:
+   if (clickedWeek != null) { smoothMonth = scrollFrom; goToSection(clickedWeek); }
+   ```
+
+2. **Typedef FreeplayWeek** - Añadido `?graphic:String`
+
+3. **addWeeks()** - Sistema de lazy loading:
+   ```haxe
+   // Sprites vacíos creados
+   for (i in 0...10) {
+       final circ:FlxSprite = circles.add(new FlxSprite());
+       circ.ID = i;
+       circ.zIndex = Std.int(Math.abs(i - 5));
+   }
+   circles.sort(SortUtil.sortByZ, flixel.util.FlxSort.ASCENDING);
+   ```
+
+4. **Imports añadidos:**
+   - `mobile.utils.MobileNavUtil`
+   - `mobile.backend.flixel.input.FlxMobileInputID`
+   - `funkin.utils.SortUtil`
+
+5. **Mobile controls:**
+   ```haxe
+   if (controlLEFT.PRESSED #if mobile || controls.mobilePadPressed([LEFT]) #end) changeSection(-1);
+   ```
+
+6. **BACK handler:**
+   ```haxe
+   #if android
+   if (controls.BACK) {
+       FlxG.sound.play(Paths.sound('cancelMenu'));
+       FlxG.switchState(MainMenuState.new);
+   }
+   #end
+   ```
+
+**✅ TODAS LAS DIFERENCIAS SON ANDROID-SPECIFIC**
+
+---
+
 ## ANÁLISIS DETALLADO POR ARCHIVO
 
 ### ✅ PsychHUD.hx (CRÍTICO)
@@ -360,9 +434,22 @@ git config user.email "gokuultrq@gmail.com"
 |--------|-------------|
 | `4ec9c1f` | Section 1: 11 commits squashed - upstream alignment |
 | `13fdeea` | Section 2: 7 commits squashed - PsychHUD getSongTime, Conductor, Chart, WeekData, CosmicubeData, ClientPrefs, TitleState |
+| `2d54613` | Section 3: 4 commits squashed - FreeplayState circles flow, SustainSplash, CharacterGroup, Character |
+
+---
+
+## PRÓXIMOS PASOS
+
+1. ⏳ MainMenuState.hx - Análisis pendiente
+2. ⏳ PlayState.hx - Archivo crítico, requiere análisis profundo
+3. ⏳ GlobalScriptManager.hx - Carga de scripts globales
+4. ⏳ WeekData.hx - Análisis ya completado
+5. ⏳ Metadata.hx - Pendiente
+6. ⏳ shaders/ - Carpeta funkin/game/shaders/
+7. ⏳ Otros archivos menores
 
 ---
 
 *Generado: 2026-07-01*
-*Actualizado: Sección 2 completada*
-*Continuar desde: Archivos restantes*
+*Actualizado: Sección 3 completada*
+*Continuar desde: MainMenuState.hx*
