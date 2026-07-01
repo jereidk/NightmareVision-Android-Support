@@ -1796,6 +1796,26 @@ class PlayState extends MusicBeatState
 						speed: speed
 					});
 					
+			case 'Change Noteskin':
+				var fieldID:Int = 0;
+				switch (event.value2.toLowerCase())
+				{
+					case 'dad' | 'opponent' | '1':
+						fieldID = 1;
+					default:
+						fieldID = Std.parseInt(event.value1);
+						if (Math.isNaN(fieldID)) fieldID = 0;
+				}
+
+				var skin = new NoteSkin(event.value1, SONG.keys, fieldID);
+
+				// load the skin so game no lag when change le skin
+				Paths.getAtlasFrames(skin.noteTexture);
+				Paths.getAtlasFrames(skin.splashTexture);
+				Paths.getAtlasFrames(skin.sustainSplashTexture);
+
+				skin = FlxDestroyUtil.destroy(skin);
+
 			case 'Change Character':
 				var charType:Int = 0;
 				switch (event.value1.toLowerCase())
@@ -3170,7 +3190,7 @@ class PlayState extends MusicBeatState
 	{
 		if (audio.inst?.playing)
 		{
-			return @:privateAccess audio.inst._channel.position;
+			return Math.max(@:privateAccess audio.inst._channel.position, audio.inst.time);
 		}
 		else
 		{
