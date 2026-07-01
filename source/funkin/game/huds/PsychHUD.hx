@@ -267,20 +267,20 @@ class PsychHUD extends BaseHUD
 		
 		if (!parent.startingSong && !parent.paused && parent.updateTime && !parent.endingSong)
 		{
-			var curTime:Float = Math.max(0, Conductor.songPosition - ClientPrefs.noteOffset);
+			var curTime:Float = FlxMath.bound(parent.getSongTime() - ClientPrefs.noteOffset, 0, parent.songLength);
 			parent.songPercent = (curTime / parent.songLength);
-			
-			var songCalc:Float = (parent.songLength - curTime);
+
+			var songCalc:Float = (ClientPrefs.timeBarType == 'Time Left' ? (parent.songLength - curTime) : curTime);
 			if (ClientPrefs.timeBarType == 'Time Elapsed') songCalc = curTime;
-			
+
 			var secondsTotal:Int = Math.floor(songCalc / 1000);
 			if (secondsTotal < 0) secondsTotal = 0;
-			
+
 			if (ClientPrefs.timeBarType != 'Song Name' && secondsTotal != _lastSecond)
-				{
-					_lastSecond = secondsTotal;
-					timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
-				}
+			{
+				_lastSecond = secondsTotal;
+				timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
+			}
 		}
 		
 		healthLerp = FlxMath.lerp(healthLerp, parent.health, 0.15);

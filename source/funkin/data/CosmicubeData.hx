@@ -92,7 +92,7 @@ class CosmicubeData
 
 				var fileName:String = file.substr(0, file.indexOf('.json'));
 
-				var meta:CosmicubeMetadata = haxe.Json.parse(FunkinAssets.getContent('$dir$file'));
+				var meta:CosmicubeMetadata = haxe.Json.parse(FunkinAssets.getContent('$dir/$file'));
 				meta.fileName = fileName;
 				meta.mod = modFolder;
 				
@@ -115,7 +115,7 @@ class CosmicubeData
 
 			var fileName:String = file.substr(0, file.indexOf('.json'));
 
-			var data:ShopItemData = haxe.Json.parse(FunkinAssets.getContent('$dir$file'));
+			var data:ShopItemData = haxe.Json.parse(FunkinAssets.getContent('$dir/$file'));
 			data.currency = meta.currency;
 			data.fileName = fileName;
 			
