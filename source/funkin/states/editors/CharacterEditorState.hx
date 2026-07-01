@@ -1455,7 +1455,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		character.imageFile = uiElements.characterDialogBox.imageFileTextField.value;
 		
-		character.loadAtlas(character.imageFile);
+		character.loadAtlas(character.imageFile, LOOSE);
 		
 		for (anim in oldAnims)
 		{
