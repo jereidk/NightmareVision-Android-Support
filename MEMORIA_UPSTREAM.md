@@ -304,15 +304,28 @@ var daSection:SwagSection = getFreeplaySections(song, NORMAL);
 
 ## FLUJO DE INVESTIGACIÓN
 
-### Metodología:
+### Metodología CORRECTA (Nueva):
+1. **Copiar upstream como base** → `cp /workspace/upstream_check/source/path/file.hx source/path/file.hx`
+2. **Añadir features Android** una por una con python script
+3. **Verificar diff** → Solo deben quedar diferencias `+` (Android-specific)
+4. **Commitear**
+5. **Al final: squash** de todos los commits en uno mega
+
+### Método Alternativo (Modificar archivo existente):
 1. Comparar líneas con `wc -l`
 2. Ver diff completo con `diff`
-3. Analizar cada diferencia si es:
+3. Analizar cada diferencia:
    - **Bug en Android** → Corregir
    - **Mejora de Android** → Mantener
    - **Equivalente** → Mantener Android
 4. Commitear cambios
 5. Al final: squash de todos los commits en uno mega
+
+### Reglas de Oro:
+- ⚠️ **NUNCA** editar archivos con python línea por línea - corrompe el archivo
+- ✅ **SIEMPRE** usar scripts de Python completos o `sed` para cambios simples
+- ✅ Si el archivo está corrupto: `git checkout <archivo>` y empezar de nuevo
+- ✅ Usar `cp upstream <android>` y añadir features es más seguro que modificar
 
 ### Orden de archivos verificados:
 1. ✅ FunkinAssets.hx - VERIFICADO
@@ -378,30 +391,51 @@ var daSection:SwagSection = getFreeplaySections(song, NORMAL);
 ## COMANDOS ÚTILES
 
 ```bash
-# Token: Usar variable de entorno $GITHUB_TOKEN
-# Comparar un archivo
+# ============== COMPARAR ARCHIVOS ==============
 cd /workspace/project/NightmareVision-Android-Support
-wc -l source/funkin/states/TitleState.hx /workspace/upstream_check/source/funkin/states/TitleState.hx
-diff source/funkin/states/TitleState.hx /workspace/upstream_check/source/funkin/states/TitleState.hx
 
-# Ver estado de git
+# Comparar líneas
+wc -l source/funkin/states/FreeplayState.hx /workspace/upstream_check/source/funkin/states/FreeplayState.hx
+
+# Ver diff completo
+diff source/funkin/states/FreeplayState.hx /workspace/upstream_check/source/funkin/states/FreeplayState.hx
+
+# ============== MÉTODO SEGURO (Copiar upstream + añadir Android) ==============
+# 1. Copiar upstream como base
+cp /workspace/upstream_check/source/path/file.hx source/path/file.hx
+
+# 2. Hacer cambios con script Python
+python3 << 'PYEOF'
+with open('source/path/file.hx', 'r') as f:
+    content = f.read()
+# ... añadir features Android ...
+with open('source/path/file.hx', 'w') as f:
+    f.write(content)
+PYEOF
+
+# 3. Verificar que solo quedan diferencias Android
+diff /workspace/upstream_check/source/path/file.hx source/path/file.hx
+
+# ============== GIT ==============
+# Ver estado
 git status
 git log --oneline -5
 
-# Hacer cambios y commit
+# Hacer commit individual
 git add <archivo>
 git commit -m "fix: descripción"
 
-# Squash commits
+# Squash commits (todos desde base hasta HEAD)
 git reset --soft <commit-base>
-git commit -m "fix: mensaje mega commit"
+git commit -m "fix: mensaje mega commit
 
-# Push con token
-git push https://github.com/jereidk/NightmareVision-Android-Support.git HEAD:refs/heads/claude/impostor-legacy-android-79u6sz --force
-```
+Co-authored-by: OpenHands <openhands@all-hands.dev>"
 
----
+# Push a remote
+git push https://$GITHUB_TOKEN@github.com/jereidk/NightmareVision-Android-Support.git HEAD:refs/heads/claude/impostor-legacy-android-79u6sz --force
 
+# ============== SI EL ARCHIVO SE CORROMPE ==============
+git checkout source/path/file.hx  # Restaurar
 ```
 
 ---
@@ -416,18 +450,6 @@ git config user.email "gokuultrq@gmail.com"
 
 ---
 
-## PRÓXIMOS PASOS
-
-1. ⏳ Continuar análisis de archivos restantes
-2. ⏳ PlayState.hx - Archivo crítico, requiere análisis profundo
-3. ⏳ FreeplayState.hx - Carga de canciones
-4. ⏳ GlobalScriptManager.hx - Carga de scripts globales
-5. ⏳ WeekData.hx - Análisis ya completado
-6. ⏳ Metadata.hx - Pendiente
-7. ⏳ Otros archivos menores
-
----
-
 ## HISTORIAL DE COMMITS
 
 | Commit | Descripción |
@@ -435,6 +457,7 @@ git config user.email "gokuultrq@gmail.com"
 | `4ec9c1f` | Section 1: 11 commits squashed - upstream alignment |
 | `13fdeea` | Section 2: 7 commits squashed - PsychHUD getSongTime, Conductor, Chart, WeekData, CosmicubeData, ClientPrefs, TitleState |
 | `2d54613` | Section 3: 4 commits squashed - FreeplayState circles flow, SustainSplash, CharacterGroup, Character |
+| `c967ec5` | docs: update MEMORIA_UPSTREAM.md - Section 3 complete |
 
 ---
 
