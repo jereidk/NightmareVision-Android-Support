@@ -168,25 +168,26 @@ class Character extends Bopper implements IFlags
 		while (doubleGhosts.length < count)
 		{
 			final ghost = new FunkinSprite();
-			ghost.visible = false;
 			ghost.useRenderTexture = true;
 			ghost.antialiasing = true;
-			ghost.alpha = ghostAlpha;
-			
+			ghost.visible = false;
+
 			doubleGhosts.push(ghost);
 		}
 	}
 	
-	public function loadCharacter(name:String, force:Bool = false):Void
+	public function loadCharacter(name:String, force:Bool = false):Character
 	{
-		if (curCharacter == name && !force) return;
-		
+		if (curCharacter == name && !force) return this;
+			
 		for (ghost in doubleGhosts) ghost?.destroy();
 		doubleGhosts.resize(0);
-		
+			
 		loadFile(CharacterParser.fetchInfo(curCharacter = name));
-		
+			
 		genGhosts(PlayState.SONG?.keys ?? 0);
+
+		return this;
 	}
 	
 	// clean this up
@@ -276,16 +277,20 @@ class Character extends Bopper implements IFlags
 				{
 					addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				}
+				else
+				{
+					addOffset(anim.anim, 0, 0);
+				}
 			}
 		}
 		else
 		{
 			addAnimByPrefix('idle', 'BF idle dance', 24, false);
 		}
-		
+
 		dance(true);
+		if (!animation.curAnim?.looped) finishAnim();
 		setBaseFrameSize();
-		dance(true);
 	}
 	
 	override function update(elapsed:Float)
@@ -400,7 +405,7 @@ class Character extends Bopper implements IFlags
 		}
 	}
 	
-	public function playGhostAnim(ghostID = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
+	public function playGhostAnim(ghostID:Int = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
 		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
 
