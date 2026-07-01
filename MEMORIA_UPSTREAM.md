@@ -323,14 +323,11 @@ git reset --soft <commit-base>
 git commit -m "fix: mensaje mega commit"
 
 # Push con token
-git push https://<TU_TOKEN>@github.com/jereidk/NightmareVision-Android-Support.git HEAD:refs/heads/claude/impostor-legacy-android-79u6sz --force
+git push https://github.com/jereidk/NightmareVision-Android-Support.git HEAD:refs/heads/claude/impostor-legacy-android-79u6sz --force
 ```
 
 ---
 
-## TOKEN DE GITHUB
-
-```
 ```
 
 ---
