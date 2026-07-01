@@ -81,7 +81,7 @@ class SongMetaEditor extends UISubState
 		if (_song != null)
 		{
 			_song = Paths.sanitize(_song);
-			var songPath = Paths.getPath('songs/$_song/meta.json', null, true);
+			var songPath = Paths.getPath('songs/$_song/meta.json', NORMAL);
 			loadMeta(songPath);
 		}
 	}
@@ -216,7 +216,7 @@ class SongMetaEditor extends UISubState
 			{
 				//
 				
-				final file = Paths.getPath('songs/$_song/meta.json', null, true);
+				final file = Paths.getPath('songs/$_song/meta.json', NORMAL);
 				if (FunkinAssets.exists(file))
 				{
 					FileUtil.saveFileToPath(getEncodedMeta(), file);

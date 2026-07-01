@@ -323,20 +323,21 @@ class Mods
 	public static function loadTopModConfig():Null<ModMeta>
 	{
 		var pack = getPack();
+
+		WindowUtil.setTitle(pack?.windowTitle ?? 'VS IMPOSTOR LEGACY ' + Main.LEGACY_VERSION);
+
 		if (pack == null) return null;
-		
-		WindowUtil.setTitle(pack.windowTitle ?? 'VS IMPOSTOR LEGACY v' + Main.LEGACY_VERSION);
-		
+
 		inline function resetIcon()
 		{
-			final path = Paths.getPath('images/branding/icon/icon64.png', null, true);
+			final path = Paths.getPath('images/branding/icon/icon64.png', NORMAL);
 			
 			if (FunkinAssets.exists(path)) FlxG.stage.window.setIcon(Image.fromBytes(FunkinAssets.getBytes(path)));
 		}
 		
 		if (pack.iconFile != null)
 		{
-			final path = Paths.getPath('images/${pack.iconFile}.png', null, true);
+			final path = Paths.getPath('images/${pack.iconFile}.png', NORMAL);
 			
 			if (FunkinAssets.exists(path)) FlxG.stage.window.setIcon(Image.fromBytes(FunkinAssets.getBytes(path)));
 			else

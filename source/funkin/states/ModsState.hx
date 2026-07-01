@@ -2,6 +2,8 @@ package funkin.states;
 
 import flixel.text.FlxText;
 
+import funkin.FunkinAssets;
+
 class ModsState extends MusicBeatState
 {
 	var modList = [];
@@ -74,6 +76,7 @@ class ModsState extends MusicBeatState
 		FunkinSound.play(Paths.sound('confirmMenu'));
 		Mods.updateModList(modList[curDir]);
 		Mods.loadTopMod();
+		FunkinAssets.invalidateAssetListCache(); // Refresh asset list after mod priority change
 		
 		Logger.log('${modList[curDir]} is now prioritized');
 	}

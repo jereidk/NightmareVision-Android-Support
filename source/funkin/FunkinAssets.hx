@@ -163,62 +163,63 @@ class FunkinAssets
 
 		var bitmap:Null<BitmapData> = null;
 
-		// On Android, Assets.getBitmapData is more reliable than BitmapData.fromFile
-		// because it handles the context/lazy loading properly. Try it first for
-		// files that might be bundled in the APK or cached by OpenFL.
-		#if android
+		// Try FileSystem first (external storage / mods, DLC) for mod override support.
+		// This ensures mods take priority over APK assets, matching getSoundUnsafe() behavior.
+		#if (MODS_ALLOWED || ASSET_REDIRECT)
 		try
 		{
-			if (Assets.exists(path, IMAGE)) {
-				bitmap = Assets.getBitmapData(path, useCache);
+			if (FileSystem.exists(path)) {
+				var loadPath = path;
+				#if (android && sys)
+				try
+				{
+					// On Android, BitmapData.fromFile needs the full path with storage directory
+					// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
+					loadPath = StorageSystem.getDirectory() + path;
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('getBitmapData: Failed to get storage directory: $e', WARN);
+					loadPath = path;
+				}
+				#end
+
+				try
+				{
+					bitmap = BitmapData.fromFile(loadPath);
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('getBitmapData: BitmapData.fromFile failed for "$loadPath": $e', WARN);
+				}
 			}
 		}
 		catch (e:Dynamic)
 		{
-			Logger.log('getBitmapData: Assets.getBitmapData failed for "$path": $e', WARN);
+			Logger.log('getBitmapData: FileSystem check failed for "$path": $e', WARN);
 		}
 		#end
 
-		// If Assets didn't work or we're not on Android, try FileSystem + BitmapData.fromFile
-		// for external files (DLC, mods, etc.)
-		#if (MODS_ALLOWED || ASSET_REDIRECT)
+		// Fallback to APK bundled assets via Assets.getBitmapData.
+		// This handles files that are packaged inside the APK or cached by OpenFL.
 		if (bitmap == null)
 		{
+			#if android
 			try
 			{
-				if (FileSystem.exists(path)) {
-					// On Android, BitmapData.fromFile needs the full path with storage directory
-					var loadPath = path;
-					#if (android && sys)
-					try
-					{
-						// Build full path: storageDir + path
-						// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
-						loadPath = StorageSystem.getDirectory() + path;
-					}
-					catch (e:Dynamic)
-					{
-						Logger.log('getBitmapData: Failed to get storage directory: $e', WARN);
-						loadPath = path;
-					}
-					#end
-
-					try
-					{
-						bitmap = BitmapData.fromFile(loadPath);
-					}
-					catch (e:Dynamic)
-					{
-						Logger.log('getBitmapData: BitmapData.fromFile failed for "$loadPath": $e', WARN);
-					}
+				if (Assets.exists(path, IMAGE)) {
+					bitmap = Assets.getBitmapData(path, useCache);
 				}
 			}
 			catch (e:Dynamic)
 			{
-				Logger.log('getBitmapData: FileSystem check failed for "$path": $e', WARN);
+				Logger.log('getBitmapData: Assets.getBitmapData failed for "$path": $e', WARN);
 			}
+			#else
+			// For non-Android platforms without MODS_ALLOWED
+			bitmap = Assets.getBitmapData(path, useCache);
+			#end
 		}
-		#end
 
 		return bitmap;
 	}

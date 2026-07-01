@@ -146,7 +146,7 @@ class Init extends FlxState
 		
 		FlxSprite.defaultAntialiasing = ClientPrefs.globalAntialiasing;
 		
-		DiscordClient.init();
+		DiscordClient.check();  // Upstream: checks ClientPrefs.discordRPC before init
 		
 		#if MODS_ALLOWED
 		funkin.Mods.pushGlobalMods();
@@ -178,6 +178,8 @@ class Init extends FlxState
 		FlxG.autoPause = ClientPrefs.autoPause;
 		
 		// ready backends
+		funkin.data.Lang.reloadLangFile();
+
 		funkin.backend.plugins.HotReloadPlugin.init();
 		
 		funkin.backend.plugins.DebugTextPlugin.init();
