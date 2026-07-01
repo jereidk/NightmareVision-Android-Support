@@ -1918,7 +1918,7 @@ class PlayState extends MusicBeatState
 			#end
 			
 			paused = false;
-					playbackRate = 1;
+					playbackRate = playbackRate;
 			scripts.call('onResume', []);
 			
 			resetDiscordRPC(startTimer != null && startTimer.finished);
@@ -2211,11 +2211,11 @@ class PlayState extends MusicBeatState
 
 		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
 		{
-			var tauntTarget:Character = (focusPlayer ?? boyfriend);
-			if (tauntTarget.canTaunt && tauntTarget.hasAnim('hey'))
+			var focusPlayer:Character = (focusPlayer ?? boyfriend);
+			if (focusPlayer.canTaunt && focusPlayer.hasAnim('hey'))
 			{
-				tauntTarget.playAnim('hey');
-				tauntTarget.specialAnim = tauntTarget.holding = true;
+				focusPlayer.playAnim('hey');
+				focusPlayer.specialAnim = focusPlayer.holding = true;
 			}
 		}
 
@@ -3428,7 +3428,6 @@ class PlayState extends MusicBeatState
 		FlxDestroyUtil.destroyArray(NoteUtil.noteskins);
 		NoteUtil.noteskins.resize(0);
 
-		followingCams.resize(0);
 
 		super.destroy();
 	}
