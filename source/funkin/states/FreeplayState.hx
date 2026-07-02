@@ -129,7 +129,10 @@ class FreeplayState extends AmongUIState
 	var CARD_Y:Float = (FlxG.height * .45);
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
-	
+
+	var CIRCLE_PADDING:Float = 10; // spacing between circle icons
+	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
+
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
 	var CARD_FADE:Float = .25;
@@ -656,50 +659,26 @@ class FreeplayState extends AmongUIState
 		}
 		
 		if (cutscenePhase != NONE && controls.ACCEPT) skipUnlockCutscene();
-		
-		var clickedTab:Null<FlxSprite> = null, clickedWeek:Null<Int> = null, scrollFrom:Null<Float> = null;
-		
-		for (tab in circles)
+
+		// Update circle appearance based on distance from center
+		for (c in circles)
 		{
-			final diff:Float = (tab.ID - 4);
-			final scrollDiff:Float = (diff - FlxMath.mod(smoothMonth, 1));
-			final cos:Float = FlxMath.fastCos((1 - scrollDiff / TAB_RADIUS) * Math.PI / 2);
-			
-			final weekIndex:Int = Std.int(FlxMath.mod(diff + Math.floor(smoothMonth), weeks.length));
-			final week:FreeplayWeek = weeks[weekIndex];
-			
-			if (tab.graphic?.key != week.graphic)
+			final distFromCenter:Float = Math.abs(c.ID - curMonth);
+			final normalizedDist:Float = Math.min(distFromCenter / 3.0, 1.0);
+
+			// Fade circles that are far from current month
+			c.alpha = FlxMath.lerp(1.0, CIRCLE_FADE, normalizedDist);
+
+			// Add subtle scale effect for focused circles
+			final targetScale:Float = FlxMath.lerp(1.1, 0.95, normalizedDist);
+			c.scale.x = MathUtil.fpsLerp(c.scale.x, targetScale, 0.12);
+			c.scale.y = c.scale.x;
+
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
 			{
-				tab.loadGraphic(week.graphic);
-				
-				tab.setGraphicSize(-1, 71);
-				tab.updateHitbox();
+				goToSection(c.ID);
+				break;
 			}
-			
-			// tab.color = FlxColor.interpolate(FlxColor.BLUE, FlxColor.RED, tab.ID / 9);
-			
-			tab.x = ((FlxG.width - tab.width) * .5 + cos * TAB_DISTANCE);
-			
-			tab.alpha = Math.max(0, 1 - FlxEase.quintIn(Math.abs(scrollDiff / 5)) * .6 - FlxEase.quintOut(Math.abs(scrollDiff / 5)) * .4);
-			
-			if (!lockMovement && clickedTab == null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(tab))
-			{
-				/*if (
-					clickedTab == null ||
-					Math.abs(FlxG.mouse.x - (tab.x + tab.width * .5)) < Math.abs(FlxG.mouse.x - (clickedTab.x + clickedTab.width * .5))
-				)*/
-				
-				clickedTab = tab;
-				clickedWeek = weekIndex;
-				scrollFrom = (smoothMonth + weekIndex - curMonth - diff);
-			}
-		}
-		
-		if (clickedWeek != null)
-		{
-			smoothMonth = scrollFrom;
-			
-			goToSection(clickedWeek);
 		}
 		
 		for (c in cards)
@@ -919,15 +898,23 @@ class FreeplayState extends AmongUIState
 		
 		for (circ in circles) circ.destroy();
 		circles.clear();
-		
-		for (i in 0 ... 10)
+
+		final tempweeks:Int = (weeks.length > 9 ? 9 : weeks.length);
+
+		for (i in 0...tempweeks)
 		{
-			final circ:FlxSprite = circles.add(new FlxSprite());
-			
+			var w:String = weeks[i].section;
+			Mods.currentModDirectory = weeks[i].mod;
+
+			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
+			circ.setGraphicSize(-1, 71);
+			circ.updateHitbox();
+			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
-			circ.zIndex = Std.int(Math.abs(i - 5));
+
+			circles.add(circ);
 		}
-		
-		circles.sort(SortUtil.sortByZ, flixel.util.FlxSort.ASCENDING);
+
+		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
 	}
 }
