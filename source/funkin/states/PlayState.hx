@@ -670,6 +670,13 @@ class PlayState extends MusicBeatState
 		trace('[PlayState]   camOther.flashSprite = ${camOther.flashSprite}');
 
 		trace('[PlayState] About to reset cameras...');
+		trace('[PlayState]   FlxG.game = ${FlxG.game}');
+		trace('[PlayState]   FlxG.game.numChildren = ${FlxG.game?.numChildren}');
+		trace('[PlayState]   FlxG.cameras.list.length = ${FlxG.cameras.list.length}');
+		for (i => cam in FlxG.cameras.list)
+		{
+			trace('[PlayState]   cameras[$i] = ${Type.getClassName(Type.getClass(cam))} (flashSprite=${cam.flashSprite})');
+		}
 		FlxG.cameras.reset(camGame);
 		trace('[PlayState] Reset cameras');
 
