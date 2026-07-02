@@ -655,11 +655,11 @@ class PlayState extends MusicBeatState
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 		
-		camGame = new FlxCamera();
+		camGame = new extensions.flixel.FlxCameraEx();
 		trace('[PlayState] Created camGame = ${camGame != null ? "OK" : "NULL"}');
-		camHUD = new FlxCamera();
+		camHUD = new extensions.flixel.FlxCameraEx();
 		trace('[PlayState] Created camHUD = ${camHUD != null ? "OK" : "NULL"}');
-		camOther = new FlxCamera();
+		camOther = new extensions.flixel.FlxCameraEx();
 		trace('[PlayState] Created camOther = ${camOther != null ? "OK" : "NULL"}');
 
 		camHUD.bgColor = 0x0;
