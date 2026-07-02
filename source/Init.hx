@@ -149,6 +149,10 @@ class Init extends FlxState
 		DiscordClient.check();  // Upstream: checks ClientPrefs.discordRPC before init
 		
 		#if MODS_ALLOWED
+		// Populate Mods.enabled from modsList.txt first — pushGlobalMods/loadTopMod
+		// read from it, so without this the top mod and global mods (e.g. installed
+		// DLC) stay unset until the first MusicBeatState refresh.
+		funkin.Mods.updateModList();
 		funkin.Mods.pushGlobalMods();
 		funkin.Mods.loadTopMod();
 		funkin.FunkinAssets.invalidateAssetListCache(); // Refresh asset list after loading mods

@@ -325,45 +325,72 @@ class DLCManager {
 
                 // Stream the response body straight to disk through a counting Output so
                 // we can report real byte-level progress and keep peak memory low.
-                // haxe.Http.customRequest() is blocking but follows redirects (GitHub
-                // release URLs 302 to *.githubusercontent.com), exactly like request().
+                // sys.Http does NOT follow redirects (it silently accepts any 2xx/3xx
+                // status), and GitHub release URLs answer 302 with an empty body before
+                // redirecting to *.githubusercontent.com — so we follow Location headers
+                // ourselves, re-opening the output file for each hop.
                 // The download phase is mapped onto 5%–55% of the overall task.
-                var http:Http = new Http(entry.downloadUrl);
-                var error = "";
-                http.onError = (e) -> error = e;
-
+                var url       = entry.downloadUrl;
+                var redirects = 0;
                 var estTotal  = entry.sizeMb > 0 ? Std.int(entry.sizeMb * 1024 * 1024) : 0;
                 var startTime = haxe.Timer.stamp();
-                var lastPct   = -1;
 
-                var fileOut = File.write(zipPath, true);
-                var counter = new DownloadProgressOutput(fileOut, (written) -> {
-                    // Prefer the exact Content-Length from the (post-redirect) headers,
-                    // fall back to the registry's declared size if it isn't available.
-                    var total = estTotal;
-                    var cl = http.responseHeaders != null ? http.responseHeaders.get("Content-Length") : null;
-                    if (cl != null) { var p = Std.parseInt(cl); if (p != null && p > 0) total = p; }
+                while (true) {
+                    var http:Http = new Http(url);
+                    var error  = "";
+                    var status = 0;
+                    http.onError  = (e) -> error  = e;
+                    http.onStatus = (s) -> status = s;
 
-                    var pct = total > 0 ? 5 + Std.int(Math.min(50, (written / total) * 50)) : 5;
-                    if (pct != lastPct) {
-                        lastPct = pct;
-                        var mb    = written / (1024.0 * 1024.0);
-                        var totMb = total   / (1024.0 * 1024.0);
-                        var secs  = haxe.Timer.stamp() - startTime;
-                        var spd   = secs > 0 ? mb / secs : 0.0;
-                        _setProgress(pct, 'Downloading: ${_fmtMB(mb)} / ${total > 0 ? _fmtMB(totMb) : "?"} MB  •  ${_fmtMB(spd)} MB/s');
+                    var lastPct = -1;
+                    var fileOut = File.write(zipPath, true);
+                    var counter = new DownloadProgressOutput(fileOut, (written) -> {
+                        // Prefer the exact Content-Length from the (post-redirect) headers,
+                        // fall back to the registry's declared size if it isn't available.
+                        var total = estTotal;
+                        var cl = http.responseHeaders != null ? http.responseHeaders.get("Content-Length") : null;
+                        if (cl == null && http.responseHeaders != null) cl = http.responseHeaders.get("content-length");
+                        if (cl != null) { var p = Std.parseInt(cl); if (p != null && p > 0) total = p; }
+
+                        var pct = total > 0 ? 5 + Std.int(Math.min(50, (written / total) * 50)) : 5;
+                        if (pct != lastPct) {
+                            lastPct = pct;
+                            var mb    = written / (1024.0 * 1024.0);
+                            var totMb = total   / (1024.0 * 1024.0);
+                            var secs  = haxe.Timer.stamp() - startTime;
+                            var spd   = secs > 0 ? mb / secs : 0.0;
+                            _setProgress(pct, 'Downloading: ${_fmtMB(mb)} / ${total > 0 ? _fmtMB(totMb) : "?"} MB  •  ${_fmtMB(spd)} MB/s');
+                        }
+                    });
+
+                    try {
+                        http.customRequest(false, counter);
+                    } catch (e:Dynamic) {
+                        try { counter.close(); } catch (_:Dynamic) {}
+                        throw "Download failed: " + Std.string(e);
                     }
-                });
-
-                try {
-                    http.customRequest(false, counter);
-                } catch (e:Dynamic) {
                     try { counter.close(); } catch (_:Dynamic) {}
-                    throw "Download failed: " + Std.string(e);
-                }
-                try { counter.close(); } catch (_:Dynamic) {}
 
-                if (error != "") throw "Download failed: " + error;
+                    if (error != "") throw "Download failed: " + error;
+
+                    if (status >= 300 && status < 400) {
+                        var loc = http.responseHeaders != null
+                            ? (http.responseHeaders.get("Location") ?? http.responseHeaders.get("location"))
+                            : null;
+                        if (loc == null) throw "Redirect (HTTP " + status + ") without a Location header";
+                        if (++redirects > 5) throw "Too many redirects";
+                        // Resolve relative redirects against the current URL's origin
+                        if (loc.startsWith("/")) {
+                            var schemeEnd = url.indexOf("://") + 3;
+                            var hostEnd   = url.indexOf("/", schemeEnd);
+                            loc = (hostEnd == -1 ? url : url.substring(0, hostEnd)) + loc;
+                        }
+                        url = loc;
+                        continue;
+                    }
+
+                    break;
+                }
                 if (!FileSystem.exists(zipPath) || FileSystem.stat(zipPath).size == 0)
                     throw "Download returned an empty file";
 
