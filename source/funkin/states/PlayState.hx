@@ -655,8 +655,8 @@ class PlayState extends MusicBeatState
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 		
-		camGame = FlxG.camera;
-		trace('[PlayState] camGame = ${camGame != null ? "OK" : "NULL"}');
+		camGame = new FlxCamera();
+		trace('[PlayState] Created camGame = ${camGame != null ? "OK" : "NULL"}');
 		camHUD = new FlxCamera();
 		trace('[PlayState] Created camHUD = ${camHUD != null ? "OK" : "NULL"}');
 		camOther = new FlxCamera();
