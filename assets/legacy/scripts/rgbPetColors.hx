@@ -78,8 +78,8 @@ function applyPetRGB(pet:Pet)
 function onCreatePost()
 {
 	applyPetRGB(pet);
-	pet.onChange.add(applyPetRGB);
-	
+	// pet.onChange.add(applyPetRGB); // onChange doesn't exist in Pet/Bopper
+
 	reloadPetRGB(boyfriend);
 }
 
