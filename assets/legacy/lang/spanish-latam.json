@@ -678,6 +678,10 @@
         "who48": "¿Entiendes?",
         "who49": "Arrrrggghhhhh!!!!",
         "who50": "¡¡YO SOY ELQUELOSMATARÁATODOSEMPEZANDOCONTIGO!!",
-        "who51": "¡AH HAH! ¡¡FUISTE TÚ TODO ESTE TIEMPO!!"
+        "who51": "¡AH HAH! ¡¡FUISTE TÚ TODO ESTE TIEMPO!!",
+		"who52": "¡AH HAH! ¿¿¿ASÍ QUE FUÍSTE TÚ TODO ESTE TIEMPO???",
+		"who-end": "ElQueLosMataráATo2EmpezandoContigo no era el IMPOSTOR",
+		"victory": "VICTORIA",
+		"credits_thanks": "¡Gracias por jugar!"
     }
 }
