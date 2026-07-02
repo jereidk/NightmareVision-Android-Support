@@ -141,12 +141,10 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
 		super(script, {name: name, autoRun: false, autoPreset: false}, shareables);
-		
-		for (k => v in funkin.data.Defines.defines) parser.preprocesorValues.set(k, v);
-		
+
 		(cast interp : InterpEx).parent = FlxG.state;
 		// interp = new InterpEx(FlxG.state);
-		
+
 		this.modFolder = modFolder;
 		
 		preset();
@@ -232,7 +230,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 			Iris.print(formatPosInfos(pos.fileName, pos.lineNumber, x), pos);
 		}));
 		#end
-		
+
+		for (k => v in funkin.data.Defines.defines) parser.preprocesorValues.set(k, v);
+
 		set("StringTools", StringTools);
 		set("Date", Date);
 		set("Sys", Sys);
