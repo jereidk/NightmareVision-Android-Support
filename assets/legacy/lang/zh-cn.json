@@ -668,6 +668,11 @@
         "who48": "懂没？\nGet it?",
         "who49": "啊啊啊啊啊啊啊！！\nArrrrggghhhhh!!!!",
         "who50": "我要杀了你们所有人！从你开始！！\nI'M GOING2KILLEVERY1STARTINGWITHU!!",
-        "who51": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG!!"
+        "who51": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG!!",
+        "who52": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG???",
+        "who-end": "要杀了你们所有人从你开始 不是伪装者。",
+
+        "victory": "胜利",
+        "credits_thanks": "感谢你的游玩!"
     }
 }
