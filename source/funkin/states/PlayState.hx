@@ -402,10 +402,17 @@ class PlayState extends MusicBeatState
 	public static var deathCounter:Int = 0;
 	
 	public var defaultCamZoomAdd:Float = 0;
-	
+
+	#if android
+	// Adaptive resolution: rolling 10-frame avg; zoom out 10% when FPS < 30, restore when > 50
+	var _drsRing:Array<Float> = [for (_ in 0...10) 1 / 60];
+	var _drsRingIdx:Int = 0;
+	var _drsActive:Bool = false;
+	#end
+
 	/**
 	 * Default camera zoom the game will attempt to return to.
-	 * 
+	 *
 	 * set via the Stage json
 	 */
 	public var defaultCamZoom:Float = 1.05;
@@ -2007,7 +2014,19 @@ class PlayState extends MusicBeatState
 	override public function update(elapsed:Float):Void
 	{
 		canPlayAwardSound = true;
-		
+
+		#if android
+		_drsRing[_drsRingIdx % 10] = elapsed;
+		_drsRingIdx++;
+		var _drsSum:Float = 0;
+		for (t in _drsRing) _drsSum += t;
+		final _drsAvg:Float = _drsSum / 10;
+		if (!_drsActive && _drsAvg > 1 / 30)
+			{ _drsActive = true;  Logger.log('[DRS] on (${Std.int(1 / _drsAvg)} fps avg)', NOTICE); }
+		else if (_drsActive && _drsAvg < 1 / 50)
+			{ _drsActive = false; Logger.log('[DRS] off (${Std.int(1 / _drsAvg)} fps avg)', NOTICE); }
+		#end
+
 		if (cameraLerping && !inCutscene)
 		{
 			final lerpRate = 0.04 * cameraSpeed;
@@ -2253,7 +2272,8 @@ class PlayState extends MusicBeatState
 
 		if (camZooming)
 		{
-			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
+			final _drsScale:Float = #if android (_drsActive ? 0.9 : 1.0) #else 1.0 #end;
+			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, (defaultCamZoom + defaultCamZoomAdd) * _drsScale, 6.25 * camZoomingDecay, elapsed);
 			camHUD.zoom = MathUtil.decayLerp(camHUD.zoom, defaultHudZoom, 6.25 * camZoomingDecay, elapsed);
 		}
 		
@@ -3553,7 +3573,8 @@ class PlayState extends MusicBeatState
 	
 	inline function camZoom():Void
 	{
-		FlxG.camera.zoom += 0.015 * camZoomingMult;
+		final _drsMult:Float = #if android (_drsActive ? 0.9 : 1.0) #else 1.0 #end;
+		FlxG.camera.zoom += 0.015 * camZoomingMult * _drsMult;
 		camHUD.zoom += 0.03 * camZoomingMult;
 	}
 	
