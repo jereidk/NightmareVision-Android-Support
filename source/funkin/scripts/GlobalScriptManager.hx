@@ -165,6 +165,7 @@ class GlobalScriptManager
 	{
 		_updateParent();
 		scriptGroup.set('state', state);
+		FunkinScript.updateCameraForScripts();  // Update camOther for scripts
 		scriptGroup.call('onStateCreate', [state]);
 	}
 
