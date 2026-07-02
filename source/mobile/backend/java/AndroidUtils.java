@@ -184,8 +184,8 @@ public class AndroidUtils extends Extension {
 
     /**
      * Signals Android's game scheduler what the app is currently doing.
-     * inGameplay=true  → MODE_GAMEPLAY_INTERACTING: raises CPU/GPU governor target
-     * inGameplay=false → MODE_NONE: allows scheduler to throttle between sessions
+     * inGameplay=true  → MODE_GAMEPLAY_INTERRUPTIBLE (2): raises CPU/GPU governor target
+     * inGameplay=false → MODE_NONE (1): allows scheduler to throttle between sessions
      * Requires API 33 (Android 13); silently no-ops on older devices.
      */
     public static void setGameplayState(final boolean inGameplay) {
@@ -198,9 +198,9 @@ public class AndroidUtils extends Extension {
                 try {
                     GameManager gm = (GameManager) activity.getSystemService(Context.GAME_SERVICE);
                     if (gm == null) return;
-                    // MODE_GAMEPLAY_INTERACTING=2, MODE_NONE=0 (API 33 constants);
-                    // use literals so compileSdk below 33 is not required.
-                    int mode = inGameplay ? 2 : 0;
+                    // API 33 GameState mode literals (avoids compileSdk 33 requirement):
+                    // MODE_GAMEPLAY_INTERRUPTIBLE=2, MODE_NONE=1, MODE_UNKNOWN=0
+                    int mode = inGameplay ? 2 : 1;
                     gm.setGameState(new GameState(false, mode));
                 } catch (Exception e) {
                     android.util.Log.w("AndroidUtils", "setGameplayState: " + e);
