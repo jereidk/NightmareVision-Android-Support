@@ -1161,11 +1161,9 @@ class PlayState extends MusicBeatState
 			strums.generateReceptors();
 			strums.ID = lane;
 
-			if (_isVSlice && lane != 0)
-			{
-				strums.visible = false;
-				strums.underlay.visible = false;
-			}
+			// In VSlice, player and opponent BOTH use centered positions (like Funkin original)
+			// The difference is: player lanes (0) show receptors, opponent lanes (1) don't need them visible
+			// But both lanes should show their respective notes
 
 			playFields.add(strums);
 			underlays.add(strums.underlay);

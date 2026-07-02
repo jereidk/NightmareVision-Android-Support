@@ -292,7 +292,19 @@ class ModManager implements IFlxDestroyable
 		if (!obj.active) return pos;
 		
 		pos.x = getBaseX(data, player);
-		pos.y = (50 + diff + Note.swagWidth * .5);
+		
+		// VSlice uses centered Y position (like Funkin original)
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+		{
+			// Notes fall from above, with receptor at vsliceBaseY
+			// visualDiff is negative when note is approaching (coming from above)
+			// We need to position notes ABOVE the receptor when visualDiff is negative
+			pos.y = vsliceBaseY + diff;
+		}
+		else
+		{
+			pos.y = (50 + diff + Note.swagWidth * .5);
+		}
 		pos.z = 0;
 		
 		if (activeMods[player] != null)
