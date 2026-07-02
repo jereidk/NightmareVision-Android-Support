@@ -1,6 +1,9 @@
 package funkin.states;
 
 import mobile.utils.MobileNavUtil;
+import mobile.backend.flixel.input.FlxMobileInputID;
+
+import funkin.input.TurboControl;
 
 import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
@@ -13,6 +16,7 @@ import funkin.states.editors.ChartEditorState;
 import funkin.states.*;
 import funkin.states.substates.*;
 import funkin.utils.MathUtil;
+import funkin.utils.SortUtil;
 import funkin.game.shaders.ColorSwap;
 import funkin.game.shaders.RimLight;
 // import sys.io.File;
@@ -28,6 +32,7 @@ typedef FreeplayWeek =
 	var section:String;
 	var ?mod:String;
 	var title:String;
+	var ?graphic:String;
 }
 
 abstract SongInformation(Array<Dynamic>) to Array<Dynamic>
@@ -82,6 +87,7 @@ class FreeplayState extends AmongUIState
 	public static var curMonth:Int = 0;
 	public static var curSelect:Int = 0;
 	
+	var smoothMonth:Float = 0;
 	var smoothSelect:Float = 0;
 	
 	var reload_timer:Float = 0;
@@ -121,7 +127,8 @@ class FreeplayState extends AmongUIState
 	
 	var CARD_X:Float = 70;
 	var CARD_Y:Float = (FlxG.height * .45);
-	var CIRCLE_PADDING:Float = 12;
+	var TAB_DISTANCE:Float = 320;
+	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 	
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
@@ -136,11 +143,25 @@ class FreeplayState extends AmongUIState
 	
 	var menuWeekSelect:FlxSprite;
 	
+	var turboGroup:TurboControlGroup;
+	var controlDOWN:TurboControl = TurboControl.fromControl('ui_down');
+	var controlUP:TurboControl = TurboControl.fromControl('ui_up');
+	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
+	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
+	
 	override function create()
 	{
 		super.create();
 		
 		Mods.currentModDirectory = null;
+		
+		smoothMonth = curMonth;
+		
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlDOWN);
+		turboGroup.add(controlUP);
+		turboGroup.add(controlLEFT);
+		turboGroup.add(controlRIGHT);
 		
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
@@ -182,6 +203,17 @@ class FreeplayState extends AmongUIState
 		score_rating = [Lang.str('score'), Lang.str('accuracy')];
 		
 		addWeeks();
+
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlDOWN);
+		turboGroup.add(controlUP);
+		turboGroup.add(controlLEFT);
+		turboGroup.add(controlRIGHT);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
+		#end
 		
 		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow'));
 		porGlow.color = FlxColor.RED;
@@ -218,13 +250,8 @@ class FreeplayState extends AmongUIState
 		
 		scriptGroup.call('onCreatePost', []);
 		changeSection(0, false);
-
-		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		addVirtualPadCamera();
-		#end
 	}
-
+	
 	function refreshCards()
 	{
 		if (cards == null)
@@ -233,8 +260,6 @@ class FreeplayState extends AmongUIState
 			add(cards);
 			
 			cachedCards = new FlxTypedGroup();
-			add(cachedCards);
-			cachedCards.kill();
 		}
 		
 		scriptGroup.call('onSectionChange', [curMonth]);
@@ -322,7 +347,7 @@ class FreeplayState extends AmongUIState
 	
 	function getSongInfo(songID:String):Array<String>
 	{
-		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', null, true);
+		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', NORMAL);
 		var info:Array<String> = CoolUtil.coolTextFile(txt);
 		if (info != null && info.length > 0) return info;
 		return ['UNKNOWN', 'NO SONG INFO FOUND'];
@@ -361,11 +386,19 @@ class FreeplayState extends AmongUIState
 	{
 		curMonth += by;
 		
-		if (curMonth > weeks.length - 1) curMonth = 0;
-		if (curMonth < 0) curMonth = weeks.length - 1;
+		if (curMonth >= weeks.length)
+		{
+			smoothMonth -= weeks.length;
+			curMonth = 0;
+		}
+		else if (curMonth < 0)
+		{
+			smoothMonth += weeks.length;
+			curMonth = weeks.length - 1;
+		}
 		
-		for (c in circles)
-			c.alpha = c.ID == curMonth ? 1 : 0.3;
+		FlxTween.cancelTweensOf(this, ['smoothMonth']);
+		FlxTween.tween(this, {smoothMonth: curMonth}, .3, {ease: FlxEase.quartOut});
 			
 		sectionText.text = weeks[curMonth].title;
 		if (backToTop) smoothSelect = curSelect = 0;
@@ -599,38 +632,74 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controls.UI_LEFT) changeSection(-1);
-			else if (controls.UI_RIGHT) changeSection(1);
+			if (controlLEFT.PRESSED #if mobile || controls.mobilePadPressed([LEFT]) #end) changeSection(-1);
+			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadPressed([RIGHT]) #end) changeSection(1);
 			
-			if (controls.UI_UP || FlxG.mouse.wheel > 0) changeSong(-1, false);
-			else if (controls.UI_DOWN || FlxG.mouse.wheel < 0) changeSong(1, false);
+			if (FlxG.mouse.wheel != 0)
+			{
+				if (FlxG.mouse.y >= circles.findMinY() && FlxG.mouse.y <= circles.findMaxY())
+				{
+					changeSection(FlxG.mouse.wheel > 0 ? 1 : -1);
+				}
+				else if (FlxG.mouse.y >= (upperBar.y + upperBar.height))
+				{
+					changeSong(FlxG.mouse.wheel < 0 ? 1 : -1, false);
+				}
+			}
+			
+			if (controlUP.PRESSED #if mobile || controls.mobilePadPressed([UP]) #end) changeSong(-1, false);
+			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadPressed([DOWN]) #end) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
-
-			#if android
-			if (controls.BACK)
-			{
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				FlxG.switchState(MainMenuState.new);
-			}
-			#end
-
-			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
 			
-			for (c in circles)
+			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
+		}
+		
+		if (cutscenePhase != NONE && controls.ACCEPT) skipUnlockCutscene();
+		
+		var clickedTab:Null<FlxSprite> = null, clickedWeek:Null<Int> = null, scrollFrom:Null<Float> = null;
+		
+		for (tab in circles)
+		{
+			final diff:Float = (tab.ID - 4);
+			final scrollDiff:Float = (diff - FlxMath.mod(smoothMonth, 1));
+			final cos:Float = FlxMath.fastCos((1 - scrollDiff / TAB_RADIUS) * Math.PI / 2);
+			
+			final weekIndex:Int = Std.int(FlxMath.mod(diff + Math.floor(smoothMonth), weeks.length));
+			final week:FreeplayWeek = weeks[weekIndex];
+			
+			if (tab.graphic?.key != week.graphic)
 			{
-				if (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
-				{
-					goToSection(c.ID);
-					
-					break;
-				}
+				tab.loadGraphic(week.graphic);
+				
+				tab.setGraphicSize(-1, 71);
+				tab.updateHitbox();
+			}
+			
+			// tab.color = FlxColor.interpolate(FlxColor.BLUE, FlxColor.RED, tab.ID / 9);
+			
+			tab.x = ((FlxG.width - tab.width) * .5 + cos * TAB_DISTANCE);
+			
+			tab.alpha = Math.max(0, 1 - FlxEase.quintIn(Math.abs(scrollDiff / 5)) * .6 - FlxEase.quintOut(Math.abs(scrollDiff / 5)) * .4);
+			
+			if (!lockMovement && clickedTab == null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(tab))
+			{
+				/*if (
+					clickedTab == null ||
+					Math.abs(FlxG.mouse.x - (tab.x + tab.width * .5)) < Math.abs(FlxG.mouse.x - (clickedTab.x + clickedTab.width * .5))
+				)*/
+				
+				clickedTab = tab;
+				clickedWeek = weekIndex;
+				scrollFrom = (smoothMonth + weekIndex - curMonth - diff);
 			}
 		}
 		
-		if (cutscenePhase != NONE)
+		if (clickedWeek != null)
 		{
-			if (controls.ACCEPT) skipUnlockCutscene();
+			smoothMonth = scrollFrom;
+			
+			goToSection(clickedWeek);
 		}
 		
 		for (c in cards)
@@ -684,9 +753,18 @@ class FreeplayState extends AmongUIState
 	
 	// Convert to public static for my menu support. I'm a fat gay boy.
 	// hello
-	public function goToSection(sect:Int)
+	public function goToSection(sect:Int, wrap:Bool = false)
 	{
-		if (sect != curMonth) changeSection(sect - curMonth);
+		if (sect == curMonth) return;
+		
+		if (wrap)
+		{
+			final diff:Int = (sect - curMonth);
+			if (diff < -weeks.length * .5) smoothMonth -= weeks.length;
+			if (diff > weeks.length * .5) smoothMonth += weeks.length;
+		}
+		
+		changeSection(sect - curMonth);
 	}
 	
 	function checkLock(song:SongInformation)
@@ -830,31 +908,26 @@ class FreeplayState extends AmongUIState
 					freeplayWeek.songs.push(song);
 			}
 			
+			Mods.currentModDirectory = freeplayWeek.mod;
+			
+			freeplayWeek.graphic = Paths.image('${ext}sections/${freeplayWeek.section}')?.key; // yeaa go to HELL !!!
+			
 			weeks.push(freeplayWeek);
 		}
 		
-		for (circ in circles)
-			circ.destroy();
+		Mods.currentModDirectory = null;
+		
+		for (circ in circles) circ.destroy();
 		circles.clear();
 		
-		final tempweeks:Int = (weeks.length > 9 ? 9 : weeks.length);
-		
-		for (i in 0...tempweeks)
+		for (i in 0 ... 10)
 		{
-			var w:String = weeks[i].section;
-			Mods.currentModDirectory = weeks[i].mod;
+			final circ:FlxSprite = circles.add(new FlxSprite());
 			
-			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
-			circ.setGraphicSize(-1, 71);
-			circ.updateHitbox();
-			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
-			
-			circles.add(circ);
+			circ.zIndex = Std.int(Math.abs(i - 5));
 		}
 		
-		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
-		
-		Mods.currentModDirectory = null;
+		circles.sort(SortUtil.sortByZ, flixel.util.FlxSort.ASCENDING);
 	}
 }
