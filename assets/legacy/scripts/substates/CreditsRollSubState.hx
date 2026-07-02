@@ -542,7 +542,7 @@ function loadCredits():Void
 		
 		if (credit.image != null)
 		{
-			var image:FlxSprite = creditCluster.add(new FlxSprite(0, 0, Paths.image(credit.image)));
+			var image:FlxSprite = creditCluster.add(new FlxSprite(0, 0, Paths.image(credit.image, null, null, PathsTestMode.LOOSE)));
 			
 			image.scale.set(credit.scale ?? 1, credit.scale ?? 1);
 			image.updateHitbox();
@@ -574,8 +574,8 @@ function loadCredits():Void
 			var iconPath:String = 'credits/icons/' + credit.icon;
 			if (isFlagIcon) iconPath = 'credits/icons/flags/' + credit.icon.substr(6);
 			
-			final iconExists:Bool = Paths.fileExists('images/' + iconPath + '.png');
-			var icon:FlxSprite = new FlxSprite(0, 0, Paths.image(iconExists ? iconPath : 'credits/icons/unknown'));
+			final iconExists:Bool = Paths.fileExists('images/' + iconPath + '.png', null, PathsTestMode.LOOSE);
+			var icon:FlxSprite = new FlxSprite(0, 0, Paths.image(iconExists ? iconPath : 'credits/icons/unknown', null, null, PathsTestMode.LOOSE));
 			
 			icon.visible = iconExists;
 			icon.shader = newShader('outline2');
