@@ -198,7 +198,9 @@ public class AndroidUtils extends Extension {
                 try {
                     GameManager gm = (GameManager) activity.getSystemService(Context.GAME_SERVICE);
                     if (gm == null) return;
-                    int mode = inGameplay ? GameState.MODE_GAMEPLAY_INTERACTING : GameState.MODE_NONE;
+                    // MODE_GAMEPLAY_INTERACTING=2, MODE_NONE=0 (API 33 constants);
+                    // use literals so compileSdk below 33 is not required.
+                    int mode = inGameplay ? 2 : 0;
                     gm.setGameState(new GameState(false, mode));
                 } catch (Exception e) {
                     android.util.Log.w("AndroidUtils", "setGameplayState: " + e);
