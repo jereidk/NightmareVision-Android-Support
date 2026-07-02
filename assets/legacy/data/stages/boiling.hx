@@ -16,8 +16,8 @@ function onLoad()
 {
 	lava = new FlxSprite(270, -330);
 	lava.frames = Paths.getSparrowAtlas(ext + 'wallBP');
-     lava.scale.set(2, 2); // wallBP resized 50%, compensate with 2x scale
-     lava.updateHitbox();
+	lava.scale.set(2, 2); // wallBP resized 50%, compensate with 2x scale
+	lava.updateHitbox();
 	lava.animation.addByPrefix('bop', 'Back wall and lava', 24, true);
 	if (!ClientPrefs.lowQuality) lava.animation.play('bop');
 	lava.scrollFactor.set(0.8, 0.8);
@@ -85,17 +85,13 @@ function onCreatePost()
 	add(lavaOverlay);
 	if (!ClientPrefs.lowQuality) add(emberEmitter);
 	
-	if (hasBfSkin && game.boyfriend.curCharacter == 'bfpolus')
+	if (ClientPrefs.bfSkin == 'bfpolus')
 	{
 		triggerEventNote('Change Character', 'dad', 'maroonplayableoplava');
 		game.dad.x = 1050;
 		game.dad.y = 330;
 		triggerEventNote('Change Character', 'boyfriend', 'bf-lava');
 		camSpecialThing([1760, 400], [1900, 400]);
-	}
-	if (game.boyfriend.curCharacter == 'maroonplayable')
-	{
-		triggerEventNote('Change Character', 'boyfriend', 'maroonplayablelava');
 	}
 	
 	pet.zIndex = 0;

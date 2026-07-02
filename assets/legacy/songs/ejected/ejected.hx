@@ -1,3 +1,5 @@
+var cutscene = (hasBfSkin || hasGfSkin) ? 'week2/ejected-empty' : 'week2/ejected';
+
 function onCreatePost()
 {
 	camGame.alpha = camHUD.alpha = 0;
@@ -16,7 +18,6 @@ function onCreatePost()
 		camGame.flash(0xFFFFFFFF, 0.35);
 		intro.kill();
 	});
-	var cutscene = (hasBfSkin || hasGfSkin) ? 'week2/ejected-empty' : 'week2/ejected';
 	intro.load(Paths.video(cutscene), [FunkinVideoSprite.muted]);
 	intro.antialiasing = ClientPrefs.globalAntialiasing;
 	

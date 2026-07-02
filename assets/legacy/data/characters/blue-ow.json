@@ -130,8 +130,5 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 10,
 	"scale": 0.8,
-	"_editor_isPlayer": true,
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true
+	"_editor_isPlayer": true
 }

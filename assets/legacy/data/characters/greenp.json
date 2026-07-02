@@ -1,162 +1,163 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
-			"loop": false,
 			"offsets": [
 				35,
 				104
 			],
-			"anim": "idle",
+			"loop": false,
 			"fps": 24,
-			"name": "Gidle",
-			"indices": []
+			"anim": "idle",
+			"indices": [],
+			"name": "Gidle"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				42,
 				92
 			],
-			"anim": "singLEFT",
+			"loop": false,
 			"fps": 24,
-			"name": "Gleft",
-			"indices": []
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "Gleft"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				16,
 				93
 			],
-			"anim": "singDOWN",
+			"loop": false,
 			"fps": 24,
-			"name": "Gdown",
-			"indices": []
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "Gdown"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				28,
 				232
 			],
-			"anim": "singUP",
+			"loop": false,
 			"fps": 24,
-			"name": "Gup",
-			"indices": []
+			"anim": "singUP",
+			"indices": [],
+			"name": "Gup"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				-2,
 				138
 			],
-			"anim": "singRIGHT",
+			"loop": false,
 			"fps": 24,
-			"name": "Gright",
-			"indices": []
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "Gright"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				35,
 				173
 			],
-			"anim": "singLEFTmiss",
+			"loop": false,
 			"fps": 24,
-			"name": "Gmiss left",
-			"indices": []
+			"anim": "singLEFTmiss",
+			"indices": [],
+			"name": "Gmiss left"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				22,
 				143
 			],
-			"anim": "singDOWNmiss",
+			"loop": false,
 			"fps": 24,
-			"name": "Gmiss down",
-			"indices": []
+			"anim": "singDOWNmiss",
+			"indices": [],
+			"name": "Gmiss down"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				10,
 				195
 			],
-			"anim": "singUPmiss",
+			"loop": false,
 			"fps": 24,
-			"name": "Gmiss up",
-			"indices": []
+			"anim": "singUPmiss",
+			"indices": [],
+			"name": "Gmiss up"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				-11,
 				171
 			],
-			"anim": "singRIGHTmiss",
+			"loop": false,
 			"fps": 24,
-			"name": "Gmiss right",
-			"indices": []
+			"anim": "singRIGHTmiss",
+			"indices": [],
+			"name": "Gmiss right"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				-14,
 				119
 			],
-			"anim": "firstDeath",
+			"loop": false,
 			"fps": 24,
-			"name": "BF dies",
-			"indices": []
+			"anim": "firstDeath",
+			"indices": [],
+			"name": "BF dies"
 		},
 		{
-			"loop": true,
 			"offsets": [
 				-15,
 				103
 			],
-			"anim": "deathLoop",
+			"loop": true,
 			"fps": 24,
-			"name": "BF Dead Loop",
-			"indices": []
+			"anim": "deathLoop",
+			"indices": [],
+			"name": "BF Dead Loop"
 		},
 		{
-			"loop": false,
 			"offsets": [
 				-15,
 				176
 			],
-			"anim": "deathConfirm",
+			"loop": false,
 			"fps": 24,
-			"name": "BF Dead confirm",
-			"indices": []
+			"anim": "deathConfirm",
+			"indices": [],
+			"name": "BF Dead confirm"
 		},
 		{
 			"loop": false,
 			"flipY": false,
-			"offsets": [
-				26,
-				152
-			],
-			"anim": "scared",
-			"fps": 24,
-			"name": "Gscared",
-			"indices": [],
-			"flipX": true
-		},
-		{
 			"offsets": [
 				14,
 				174
 			],
-			"flipY": false,
-			"loop": false,
-			"fps": 24,
 			"anim": "hey",
-			"flipX": false,
+			"fps": 24,
+			"name": "Ghey",
 			"indices": [],
-			"name": "Ghey"
+			"flipX": false
+		},
+		{
+			"offsets": [
+				26,
+				152
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "scared",
+			"loop": true,
+			"name": "Gscared"
 		}
 	],
 	"no_antialiasing": false,
@@ -167,9 +168,17 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {
+		"finaleHealthBarColor": [
+			"0xFF1E4824",
+			"0xFF4C683C",
+			"0xFF00221F"
+		]
+	},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "greenmini",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": true,
 	"flip_x": true,
@@ -179,16 +188,7 @@
 		-254
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
-	"_editor_isPlayer": true,
-	"flags": {
-		"finaleHealthBarColor": [
-			"0xFF1E4824",
-			"0xFF4C683C",
-			"0xFF00221F"
-		]
-	},
-	"pausePortrait": "",
-	"afterimages": true
+	"_editor_isPlayer": true
 }

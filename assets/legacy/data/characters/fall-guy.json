@@ -133,20 +133,11 @@
 		10
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": true,
 	"flags": {
-		"turbulenceOffset": [
-			-20,
-			60
-		],
-		"finaleHealthBarColor": [
-			"0xFFFF6699",
-			"0xFFFFB999",
-			"0xFFCC3399"
-		]
-	},
-	"pausePortrait": "",
-	"afterimages": true
+		"turbulenceOffset": [-20,60],
+		"finaleHealthBarColor": ["0xFFFF6699", "0xFFFFB999", "0xFFCC3399"]
+	}
 }

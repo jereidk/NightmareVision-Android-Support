@@ -1,4 +1,5 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"offsets": [
@@ -112,7 +113,7 @@
 		},
 		{
 			"offsets": [
-				207,
+				208,
 				-90
 			],
 			"loop": true,
@@ -135,18 +136,17 @@
 	],
 	"no_antialiasing": false,
 	"image": "characters/triple/pink/pretender",
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true,
 	"position": [
 		-500,
 		100
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "pretenderpink",
+	"afterimages": true,
 	"gameover_character": "pretender",
 	"vslice_sustains": false,
 	"flip_x": true,

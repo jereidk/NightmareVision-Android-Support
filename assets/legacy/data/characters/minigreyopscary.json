@@ -1,5 +1,5 @@
 {
-	"pausePortrait": "grey",
+    "pausePortrait": "grey",
 	"animations": [
 		{
 			"offsets": [
@@ -138,6 +138,5 @@
 	"_editor_isPlayer": false,
 	"flags": {
 		"backlit": true
-	},
-	"afterimages": true
+	}
 }

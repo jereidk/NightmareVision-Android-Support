@@ -39,8 +39,6 @@ function onUpdate(elapsed)
 
 function onLoad()
 {
-
-	pet.scale.set(1.5,1.5);
 	var sky:FlxSprite = new FlxSprite(-1100, -800).loadGraphic(Paths.image(ext + 'back'));
 	sky.scrollFactor.set(0, 0);
 	add(sky);
@@ -89,4 +87,8 @@ function onLoad()
 		setLuaSpriteScrollFactor('balcony', 1, 1);
 		addLuaSprite('balcony',false);
 	 */
+}
+
+function onCreatePost(){
+	pet.scale.set(1.5,1.5);
 }

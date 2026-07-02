@@ -61,14 +61,6 @@ var camTwistIntensity:Float = 0;
 var camTwistIntensity2:Float = 3;
 var camTwist:Bool = false;
 
-// Camera cache to avoid unnecessary work every frame
-var cachedCamState:String = '';
-var cachedDadOff:Dynamic = -1;
-var cachedBfOff:Dynamic = -1;
-var cachedDisplacement:FlxPoint = FlxPoint.weak();
-
-public var tauntCharacter:Character;
-
 function onLoad()
 {
 	hasBfSkin = (ClientPrefs.bfSkin != 'default' && !isStoryMode);
@@ -91,7 +83,7 @@ function onCreatePost()
 	WATERMARK.setPosition((FlxG.width - WATERMARK.width), (FlxG.height - WATERMARK.height));
 	add(WATERMARK);
 	
-	DebugDisplay.addPlugin(() -> ('[ TAB to expand or collapse dev info ]' + (showDevInfo ? dbText : '')));
+	DebugDisplay.addPlugin(() -> ('[ TAB to hide or show debug menu ]' + (showDevInfo ? dbText : '')));
 }
 
 /**
@@ -106,8 +98,6 @@ public function camSpecialThing(?dad = null, ?bf = null, ?zoom:Float = -1, ?snap
 	if (zoom > 0) defaultCamZoom = zoom;
 	if (bf != null && bf != -1) bfOff = bf;
 	if (dad != null && dad != -1) dadOff = dad;
-	// Invalidate cache when camera settings change
-	cachedCamState = '';
 	if (snaptoo != -1 && snaptoo != null)
 	{
 		var huh = (snaptoo == 0 ? dad : bf);
@@ -123,8 +113,6 @@ public function resetCam()
 	// Reset hardbaked positions for camera
 	dadOff = -1;
 	bfOff = -1;
-	// Invalidate cache
-	cachedCamState = '';
 }
 
 function onMoveCamera(whosTurn:Bool)
@@ -133,17 +121,6 @@ function onMoveCamera(whosTurn:Bool)
 	if (dadOff == -1 && bfOff == -1) return;
 	
 	if (game.camCurTarget == boyfriend) whosTurn = 'boyfriend'; // sure watever i dont care. hmph
-	
-	// Build cache key from current state
-	var camStateKey = whosTurn;
-	if (game.camCurTarget != null) camStateKey += '_forced';
-	
-	// Skip all work if camera state hasn't changed
-	if (camStateKey == cachedCamState && dadOff == cachedDadOff && bfOff == cachedBfOff) return;
-	
-	cachedCamState = camStateKey;
-	cachedDadOff = dadOff;
-	cachedBfOff = bfOff;
 	
 	if (whosTurn == 'dad')
 	{
@@ -160,18 +137,15 @@ function onMoveCamera(whosTurn:Bool)
 		var character = switch (whosTurn)
 		{
 			case 'gf': gf;
-			case 'dad': (game.opponentStrums?.owner ?? dad);
-			default: (game.playerStrums?.owner ?? boyfriend);
+			case 'dad': (opponentStrums?.owner ?? dad);
+			default: (playerStrums?.owner ?? boyfriend);
 		}
 		
 		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
 		
-		// Use cached displacement instead of creating new FlxPoint every frame
-		var displacement = character.getSingDisplacement();
-		cachedDisplacement.x = displacement.x;
-		cachedDisplacement.y = displacement.y;
-		camFollow.x += cachedDisplacement.x;
-		camFollow.y += cachedDisplacement.y;
+		final displacement = character.getSingDisplacement();
+		camFollow.x += displacement.x;
+		camFollow.y += displacement.y;
 	}
 }
 
@@ -246,22 +220,19 @@ function onPopUpScorePost(note, rating)
 
 function onUpdate(elapsed)
 {
-	if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
-	{
-		var tauntCharacter:Character = (tauntCharacter ?? boyfriend);
-		
-		if (tauntCharacter.hasAnim('hey'))
-		{
-			tauntCharacter.playAnim('hey');
-			tauntCharacter.specialAnim = tauntCharacter.holding = true;
-		}
-	}
-	
 	if (!ClientPrefs.inDevMode) return;
 	if (FlxG.keys.justPressed.TAB)
 	{
 		showDevInfo = !showDevInfo;
-		dbGroup.visible = !dbGroup.visible;
+		
+		if (showDevInfo)
+		{
+			game.add(dbGroup);
+		}
+		else
+		{
+			game.remove(dbGroup, true);
+		}
 	}
 	
 	if (showDevInfo)
@@ -299,23 +270,6 @@ function onUpdate(elapsed)
 			+ notes.length;
 	}
 }
-
-function setTauntCharacter(note:Note)
-{
-	final playField = note.playField;
-	
-	if (playField?.isPlayer) // jsut made some bullshit
-	{
-		tauntCharacter = (note.owner ?? (note.gfNote ? gf : null));
-		tauntCharacter ??= (note.singers == null ? playField.owner : note.singers[0]);
-		
-		if (tauntCharacter == boyfriend) tauntCharacter = null; // ok
-	}
-}
-
-function noteMiss(note:Note) setTauntCharacter(note);
-function goodNoteHit(note:Note) setTauntCharacter(note);
-function extraNoteHit(note:Note) setTauntCharacter(note);
 
 public function getBool(sss:String, bbb:Bool, ?withSlashN:Bool = true):String
 {
@@ -471,6 +425,11 @@ function onEvent(eventName, value1, value2)
 	}
 }
 
+function onSongStart()
+{
+	//boyfriend = null;
+}
+
 function onStepHit()
 {
 	if (camTwist)
@@ -501,11 +460,4 @@ function onBeatHit()
 		FlxTween.tween(camGame, {angle: twistShit * camTwistIntensity}, Conductor.stepCrotchet * 0.002, {ease: FlxEase.circOut});
 		FlxTween.tween(camGame, {x: -twistShit * camTwistIntensity}, Conductor.crochet * 0.001, {ease: FlxEase.linear});
 	}
-}
-
-// Called by PauseSubState dev option (Android-accessible via pause menu)
-function onToggleDebugInfo()
-{
-	showDevInfo = !showDevInfo;
-	dbGroup.visible = !dbGroup.visible;
 }

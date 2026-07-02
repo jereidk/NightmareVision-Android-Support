@@ -99,7 +99,5 @@
 	"scale": 1,
 	"flags": {
 		"lightsDownSpeaker": true
-	},
-	"pausePortrait": "",
-	"afterimages": true
+	}
 }

@@ -178,19 +178,11 @@
 		-297
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": true,
 	"flags": {
-		"turbulenceOffset": [
-			10,
-			-50
-		],
-		"rgbPetColor": [
-			"0xFFFD132B",
-			"0xFF700E4A"
-		]
-	},
-	"pausePortrait": "",
-	"afterimages": true
+		"turbulenceOffset": [10, -50],
+		"rgbPetColor": ["0xFFFD132B", "0xFF700E4A"]
+	}
 }

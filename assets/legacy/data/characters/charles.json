@@ -141,13 +141,13 @@
 	"no_antialiasing": false,
 	"image": "characters/henry/charles",
 	"position": [
-		-201,
-		-1
+		0,
+		130
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
 	"scalableOffsets": false,
-	"afterimages": false,
+	"afterimages": true,
 	"gameover_confirm_sound": null,
 	"healthicon": "charles",
 	"gameover_character": null,
@@ -161,7 +161,5 @@
 	"gameover_loop_sound": null,
 	"sing_duration": 6.2,
 	"scale": 0.8,
-	"_editor_isPlayer": false,
-	"pausePortrait": "",
-	"flags": {}
+	"_editor_isPlayer": false
 }

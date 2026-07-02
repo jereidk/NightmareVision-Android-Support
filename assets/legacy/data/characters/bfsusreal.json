@@ -1,157 +1,181 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "idle",
-			"indices": [],
-			"name": "idle"
+			"fps": 24,
+			"name": "idle",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "hey",
-			"indices": [],
-			"name": "hey"
+			"fps": 24,
+			"name": "hey",
+			"indices": []
 		},
 		{
-			"offsets": [
-				0,
-				0
-			],
 			"loop": true,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "hey-loop",
-			"indices": [],
-			"name": "hey loop"
+			"fps": 24,
+			"name": "hey loop",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singLEFT",
-			"indices": [],
-			"name": "left"
+			"fps": 24,
+			"name": "left",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singDOWN",
-			"indices": [],
-			"name": "down"
+			"fps": 24,
+			"name": "down",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singUP",
-			"indices": [],
-			"name": "up"
+			"fps": 24,
+			"name": "up",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singRIGHT",
-			"indices": [],
-			"name": "right"
+			"fps": 24,
+			"name": "right",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "shoot",
-			"indices": [],
-			"name": "fire"
+			"fps": 24,
+			"name": "fire",
+			"indices": []
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
 			"anim": "pull",
-			"fps": 24,
-			"name": "charge",
+			"flipX": false,
 			"indices": [],
-			"flipX": false
+			"name": "charge"
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
 			"anim": "singDOWNmiss",
-			"fps": 24,
-			"name": "miss down",
+			"flipX": false,
 			"indices": [],
-			"flipX": false
+			"name": "miss down"
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
+			"fps": 24,
+			"loop": true,
+			"anim": "singDOWNmiss-loop",
+			"indices": [6, 7],
+			"wait": "i get that reference",
+			"name": "miss down"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
 			"anim": "singLEFTmiss",
-			"fps": 24,
-			"name": "miss left",
+			"flipX": false,
 			"indices": [],
-			"flipX": false
+			"name": "miss left"
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
 			"anim": "singRIGHTmiss",
-			"fps": 24,
-			"name": "miss right",
+			"flipX": false,
 			"indices": [],
-			"flipX": false
+			"name": "miss right"
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				0
 			],
-			"anim": "singUPmiss",
+			"flipY": false,
+			"loop": false,
 			"fps": 24,
-			"name": "miss up",
+			"anim": "singUPmiss",
+			"flipX": false,
 			"indices": [],
-			"flipX": false
+			"name": "miss up"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"anim": "yellowReaction",
+			"fps": 24,
+			"name": "fire",
+			"indices": []
 		}
 	],
 	"no_antialiasing": false,
@@ -162,26 +186,25 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
-	"scalableOffsets": false,
-	"gameover_confirm_sound": null,
-	"healthicon": "bf",
-	"gameover_character": "bf-dead",
-	"vslice_sustains": false,
-	"flip_x": true,
-	"healthbar_colour": -13520687,
-	"camera_position": [
-		300,
-		-31
-	],
-	"gameover_loop_sound": null,
-	"sing_duration": 4,
-	"scale": 1,
-	"_editor_isPlayer": true,
 	"flags": {
 		"variants": {
 			"pixel": "bfsus-pixel"
 		}
 	},
-	"pausePortrait": "",
-	"afterimages": true
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"afterimages": true,
+	"gameover_character": "bf-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		-102,
+		36
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
+	"scale": 1,
+	"_editor_isPlayer": true
 }

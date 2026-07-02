@@ -124,12 +124,10 @@
 		0
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": true,
 	"flags": {
 		"defeatRetro": "bf"
-	},
-	"pausePortrait": "",
-	"afterimages": true
+	}
 }

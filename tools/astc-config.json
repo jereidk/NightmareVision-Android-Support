@@ -1,28 +1,41 @@
 {
-  "_comment": "Configuration for tools/convert_astc.py",
+  "_comment": "Configuration for tools/convert_astc.py - 12x12 exhaustive mode",
   "_doc": {
-    "block_overrides": "Map of filename substrings to ASTC block size. Applied before edge_energy analysis.",
-    "excludes": "List of filename substrings. Matching files are NEVER converted (left as PNG).",
-    "block_sizes": "4x4 = best quality (sprites/characters), 6x6 = good quality, 8x8 = default, 10x10 = smooth backgrounds only"
+    "blocksize": "Default block size (12x12 for Impostor Legacy)",
+    "quality": "Compression quality (exhaustive = best)",
+    "colorprofile": "cs for sRGB, cl for linear",
+    "min_size": "Minimum width/height in pixels. Sprites smaller than this are excluded (default: 500)",
+    "overrides": "Map of filename substrings to ASTC block size overrides",
+    "exclusions": "List of filename substrings. Matching files are NEVER converted"
   },
 
-  "block_overrides": {
-    "NOTE_assets":  "4x4",
-    "Arrows":       "4x4",
-    "icon-":        "4x4",
-    "GF_assets":    "6x6",
-    "greenmenu":    "10x10",
-    "menuBGBlue":   "10x10",
-    "stageBack":    "10x10",
-    "stageFront":   "8x8"
+  "blocksize": "12x12",
+  "quality": "exhaustive",
+  "colorprofile": "cs",
+  "min_size": 500,
+
+  "overrides": {
+    "NOTE_assets":  {"blocksize": "6x6"},
+    "Arrows":       {"blocksize": "6x6"},
+    "sustainHold":  {"blocksize": "6x6"},
+    "noteSplashes": {"blocksize": "6x6"},
+    "icon-":        {"blocksize": "4x4"},
+    "GF_assets":    {"blocksize": "12x12"},
+    "greenmenu":    {"blocksize": "12x12"},
+    "menuBGBlue":   {"blocksize": "12x12"},
+    "stageBack":    {"blocksize": "12x12"},
+    "stageFront":   {"blocksize": "12x12"},
+    "finale/light": {"blocksize": "12x12"},
+    "finalframe":   {"blocksize": "12x12"}
   },
 
-  "excludes": [
+  "exclusions": [
     "pixel",
     "Pixel",
     "PIXEL",
-    "font",
+    "fonts",
     "Font",
+    "alphabet",
     "icon.png",
     "icon-hd.png",
     "logo.png",

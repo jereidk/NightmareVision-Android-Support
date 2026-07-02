@@ -104,9 +104,6 @@
 		0,
 		0
 	],
-	"sing_duration": 4,
-	"scale": 1,
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true
+	"sing_duration": 6,
+	"scale": 1
 }

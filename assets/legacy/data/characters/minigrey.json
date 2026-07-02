@@ -154,20 +154,11 @@
 		-43
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 0.7,
 	"_editor_isPlayer": true,
 	"flags": {
-		"finaleHealthBarColor": [
-			"0xFF59587A",
-			"0xFFC07EF1",
-			"0xFF282C4F"
-		],
-		"turbulenceOffset": [
-			-70,
-			150
-		]
-	},
-	"pausePortrait": "",
-	"afterimages": true
+		"finaleHealthBarColor": ["0xFF59587A", "0xFFC07EF1", "0xFF282C4F"],
+		"turbulenceOffset": [-70, 150]
+	}
 }

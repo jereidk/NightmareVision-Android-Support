@@ -4,6 +4,7 @@ import funkin.data.CosmicubeData;
 import funkin.states.TitleState;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
+import flixel.FlxCamera;
 
 // ── 2-finger hold progress bar ────────────────────────────────────────────────
 var holdTime:Float  = 0;
@@ -125,7 +126,7 @@ function buildPanel()
 	// Button rows — idx matches the switch in handleBtnTap()
 	lblUnlock    = addRow(unlockLabel(),    0xFF1E1B4B, 0);
 	lblUnlockReq = addRow(unlockReqLabel(), 0xFF1E1B4B, 1);
-	                addRow('Give Max Money 💰',      0xFF14532D, 2);
+	                addRow('Press 2 to be rich',      0xFF14532D, 2);
 	                addRow('Reset Money & Cube Unlocks', 0xFF7F1D1D, 3);
 	                addRow('✕  Close',               0xFF1C1C1C, 4);
 }
@@ -181,7 +182,7 @@ function handleBtnTap(idx:Int)
 			if (lblUnlockReq != null) lblUnlockReq.text = unlockReqLabel();
 
 		case 2: // Max money
-			CosmicubeData.currentMoney = 2_147_483_647;
+			CosmicubeData.currentMoney += 1000000;
 			ClientPrefs.flush();
 
 		case 3: // Reset money + cube unlocks
@@ -243,7 +244,7 @@ function onUpdate()
 	}
 	if (FlxG.keys.justPressed.TWO)
 	{
-		CosmicubeData.currentMoney = 2_147_483_647;
+		CosmicubeData.currentMoney += 1000000;
 		ClientPrefs.flush();
 		trace('FREE MONEY');
 	}

@@ -129,7 +129,5 @@
 		"ghost": true,
 		"floating": true,
 		"seeThrough": true
-	},
-	"pausePortrait": "",
-	"afterimages": true
+	}
 }

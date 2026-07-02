@@ -1,4 +1,5 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"loop": false,
@@ -121,10 +122,12 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": "stage/fnf_loss_sfx-pico",
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": "Jorsawsee_End",
 	"healthicon": "pico",
-	"gameover_character": "picolobby-death",
+	"afterimages": true,
+	"gameover_character": "picoroomcode-death",
 	"vslice_sustains": true,
 	"flip_x": true,
 	"healthbar_colour": -4728747,
@@ -133,10 +136,7 @@
 		70
 	],
 	"gameover_loop_sound": "Jorsawsee_Loop",
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
-	"_editor_isPlayer": true,
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true
+	"_editor_isPlayer": true
 }

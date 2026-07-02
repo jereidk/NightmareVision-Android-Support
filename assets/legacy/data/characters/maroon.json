@@ -1,57 +1,15 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
+			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"loop": false,
-			"fps": 24,
-			"anim": "singRIGHT",
-			"indices": [],
-			"name": "right"
-		},
-		{
-			"offsets": [
-				0,
-				0
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "singDOWN",
-			"indices": [],
-			"name": "down"
-		},
-		{
-			"offsets": [
-				0,
-				0
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "singLEFT",
-			"indices": [],
-			"name": "left"
-		},
-		{
-			"offsets": [
-				0,
-				0
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "singUP",
-			"indices": [],
-			"name": "up"
-		},
-		{
-			"offsets": [
-				0,
-				0
-			],
-			"loop": false,
-			"fps": 24,
 			"anim": "idle",
+			"fps": 24,
+			"name": "idle",
 			"indices": [
 				0,
 				1,
@@ -67,19 +25,37 @@
 				11,
 				12,
 				13
-			],
-			"name": "idle"
+			]
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"anim": "hey",
+			"loop": false,
 			"fps": 24,
-			"name": "hey",
-			"indices": []
+			"anim": "hey",
+			"indices": [],
+			"name": "hey"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "idle",
+			"flipX": false,
+			"indices": [
+				14,
+				15,
+				16,
+				17,
+				18
+			],
+			"name": "idle-loop"
 		},
 		{
 			"loop": true,
@@ -88,9 +64,9 @@
 				0,
 				0
 			],
-			"anim": "idle",
+			"anim": "idle-loop",
 			"fps": 24,
-			"name": "idle-loop",
+			"name": "idle",
 			"indices": [
 				14,
 				15,
@@ -105,35 +81,171 @@
 				0,
 				0
 			],
-			"indices": [
-				14,
-				15,
-				16,
-				17,
-				18
-			],
-			"fps": 24,
-			"flipX": false,
 			"flipY": false,
-			"anim": "idle-loop",
 			"loop": true,
-			"name": "idle"
+			"fps": 24,
+			"anim": "singDOWN-loop",
+			"flipX": false,
+			"indices": [
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			],
+			"name": "down"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singLEFT-loop",
+			"flipX": false,
+			"indices": [
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			],
+			"name": "left"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singRIGHT-loop",
+			"flipX": false,
+			"indices": [
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			],
+			"name": "right"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "singUP-loop",
+			"flipX": false,
+			"indices": [
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10
+			],
+			"name": "up"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singLEFT",
+			"flipX": false,
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
+			"name": "left"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singRIGHT",
+			"flipX": false,
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
+			"name": "right"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singUP",
+			"flipX": false,
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
+			"name": "up"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"flipY": false,
+			"loop": false,
+			"fps": 24,
+			"anim": "singDOWN",
+			"flipX": false,
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
+			"name": "down"
 		}
 	],
 	"no_antialiasing": false,
 	"image": "characters/triple/maroon/maroon",
-	"pausePortrait": "",
-	"flags": {},
-	"afterimages": true,
 	"position": [
 		-350,
 		200
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "maroon",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
@@ -144,6 +256,6 @@
 	],
 	"gameover_loop_sound": null,
 	"sing_duration": 6,
-	"scale": 0.9,
+	"scale": 1,
 	"_editor_isPlayer": false
 }
