@@ -635,9 +635,9 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controlLEFT.PRESSED #if mobile || controls.mobilePadPressed([LEFT]) #end) changeSection(-1);
-			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadPressed([RIGHT]) #end) changeSection(1);
-			
+			if (controlLEFT.PRESSED #if mobile || controls.mobilePadJustReleased([LEFT]) #end) changeSection(-1);
+			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadJustReleased([RIGHT]) #end) changeSection(1);
+
 			if (FlxG.mouse.wheel != 0)
 			{
 				if (FlxG.mouse.y >= circles.findMinY() && FlxG.mouse.y <= circles.findMaxY())
@@ -649,9 +649,9 @@ class FreeplayState extends AmongUIState
 					changeSong(FlxG.mouse.wheel < 0 ? 1 : -1, false);
 				}
 			}
-			
-			if (controlUP.PRESSED #if mobile || controls.mobilePadPressed([UP]) #end) changeSong(-1, false);
-			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadPressed([DOWN]) #end) changeSong(1, false);
+
+			if (controlUP.PRESSED #if mobile || controls.mobilePadJustReleased([UP]) #end) changeSong(-1, false);
+			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadJustReleased([DOWN]) #end) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
 			

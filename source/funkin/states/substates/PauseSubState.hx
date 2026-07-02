@@ -172,12 +172,6 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		
 		skipToTime = FlxMath.mod(skipToTime + secs * 1000, PlayState.instance.audio.inst?.length ?? PlayState.instance.songLength);
 		updateSkipTimeOption();
-
-                #if mobile
-                controls.isInSubstate = true;
-                addVirtualPad(UP_DOWN, A_B);
-                addVirtualPadCamera();
-                #end
 	}
 	
 	override function update(elapsed:Float)
