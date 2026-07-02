@@ -105,6 +105,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
                         options.push('[DEV] debug info');
                         options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
                 }
+		if (PlayState.chartingMode)
 		{
 			options.insert(2, 'skiptotime');
 			options.insert(3, 'leavechartingmode');
@@ -118,9 +119,9 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 			
 			if (options[i] == 'skiptotime') skipToTimeOption = opt;
 			
-			opt.setFormat(Paths.font('liber.ttf'), 48, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			opt.setFormat(Paths.font('liber.ttf'), Std.int(48 * scale), FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			opt.borderSize = 2;
-			opt.y = FlxG.height / 2 + (i * 60) - opt.height;
+			opt.y = FlxG.height / 2 + (i * 60 * scale) - opt.height;
 			opt.ID = i;
 			pauseGroup.add(opt);
 			optionText.push(opt);
