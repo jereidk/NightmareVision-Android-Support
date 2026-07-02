@@ -296,10 +296,11 @@ class ModManager implements IFlxDestroyable
 		// VSlice uses centered Y position (like Funkin original)
 		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
 		{
-			// Notes fall from above, with receptor at vsliceBaseY
-			// visualDiff is negative when note is approaching (coming from above)
-			// We need to position notes ABOVE the receptor when visualDiff is negative
-			pos.y = vsliceBaseY + diff;
+			// Notes fall from above toward the receptor at vsliceBaseY
+			// pos.y is the CENTER of the note/receptor
+			// Receptor center is at vsliceBaseY + STRUMLINE_SIZE/2
+			// diff (visPos) is the visual distance - positive means approaching
+			pos.y = vsliceBaseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE / 2 + diff;
 		}
 		else
 		{
