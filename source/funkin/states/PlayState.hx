@@ -665,11 +665,19 @@ class PlayState extends MusicBeatState
 		camHUD.bgColor = 0x0;
 		camOther.bgColor = 0x0;
 		trace('[PlayState] Set camera colors');
+		trace('[PlayState]   camGame.flashSprite = ${camGame.flashSprite}');
+		trace('[PlayState]   camHUD.flashSprite = ${camHUD.flashSprite}');
+		trace('[PlayState]   camOther.flashSprite = ${camOther.flashSprite}');
 
+		trace('[PlayState] About to reset cameras...');
 		FlxG.cameras.reset(camGame);
 		trace('[PlayState] Reset cameras');
+
+		trace('[PlayState] About to add camHUD...');
 		FlxG.cameras.add(camHUD, false);
 		trace('[PlayState] Added camHUD');
+
+		trace('[PlayState] About to add camOther...');
 		FlxG.cameras.add(camOther, false);
 		trace('[PlayState] Added camOther');
 
