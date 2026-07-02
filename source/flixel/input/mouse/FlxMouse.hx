@@ -964,7 +964,7 @@ class FlxMouse extends FlxPointer implements IFlxInputManager
 		_lastY = gameY;
 		_lastLeftButtonState = _leftButton.current;
 		_lastWheel = deltaWheel.y;
-		return new MouseRecord(_lastX, _lastY, _leftButton.current, _lastWheel);
+		return new MouseRecord(_lastX, _lastY, _leftButton.current, Std.int(_lastWheel));
 	}
 
 	@:allow(flixel.system.replay.FlxReplay)
