@@ -179,4 +179,64 @@ public class AndroidUtils extends Extension {
             }
         });
     }
+
+    /**
+     * Opens the data folder in the system file manager.
+     * Similar to FunkinCrew/Funkin's "Open Data Folder" and Shadow Engine's approach.
+     * This uses Android's Intent system to open the folder in the user's preferred file manager.
+     */
+    public static void openDataFolder(final String folderPath) {
+        if (folderPath == null || folderPath.isEmpty()) return;
+        
+        final Activity activity = mainActivity;
+        if (activity == null) return;
+        
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File folder = new File(folderPath);
+                    if (!folder.exists()) {
+                        android.util.Log.w("AndroidUtils", "Data folder does not exist: " + folderPath);
+                        return;
+                    }
+                    
+                    // First, scan the folder to ensure it's indexed
+                    String[] paths = { folderPath };
+                    MediaScannerConnection.scanFile(
+                        activity.getApplicationContext(),
+                        paths,
+                        null,
+                        null
+                    );
+                    
+                    // Use Intent to open the folder in the file manager
+                    // Works with most file managers including:
+                    // - Android's native Files app
+                    // - Google Files
+                    // - Samsung My Files
+                    // - etc.
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                    intent.setDataAndType(Uri.fromFile(folder), "resource/folder");
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    
+                    // Try to open with file manager, fallback tochooser if none available
+                    try {
+                        activity.startActivity(intent);
+                    } catch (Exception e1) {
+                        // Fallback: try with GET_CONTENT intent to open folder picker
+                        android.content.Intent chooser = android.content.Intent.createChooser(
+                            new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT),
+                            "Open Data Folder"
+                        );
+                        chooser.setDataAndType(Uri.fromFile(folder), "resource/folder");
+                        chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(chooser);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());
+                }
+            }
+        });
+    }
 }

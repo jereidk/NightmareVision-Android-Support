@@ -14,8 +14,8 @@ import openfl.display.BitmapData;
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
 {
-	id:String,        // 'haptic' | 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha'
-	kind:String,      // 'bool' | 'string' | 'percent'
+	id:String,        // 'haptic' | 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha' | 'openDataFolder'
+	kind:String,      // 'bool' | 'string' | 'percent' | 'button'
 	label:String,
 	desc:String,
 	?choices:Array<String>, // display strings (string kind)
@@ -451,6 +451,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				v = FlxMath.bound(v, 0, 1);
 				v = Math.round(v * 100) / 100;
 				_setFloat(opt.id, v);
+
+			case 'button' | 'customize':
+				// Buttons and customize options are triggered on selection, not on direction change
 		}
 
 		FunkinSound.play(Paths.sound('scrollMenu'));
@@ -484,6 +487,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		else if (opt.id == 'vpadCustomize')
 		{
 			openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
+		}
+		else if (opt.id == 'openDataFolder')
+		{
+			mobile.backend.AndroidUtils.openDataFolder();
 		}
 
 		_updateRows();
@@ -597,7 +604,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.')
 			});
 		}
-		else
+		else if (ClientPrefs.gameInputMode == 'Virtual Pad')
 		{
 			_opts.push({
 				id: 'padAlpha', kind: 'percent',
@@ -605,23 +612,24 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.')
 			});
 
-		_opts.push({
-			id: 'vpadLayout', kind: 'string',
-			label: '✦ ' + Lang.str('opt_vpadlayout', 'Pad Layout'),
-			desc:  Lang.str('opt_vpadlayout_desc', 'Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.'),
-			choices: [Lang.str('choice_vpad_leftfull', 'Left Side'), Lang.str('choice_vpad_rightfull', 'Right Side'), Lang.str('choice_vpad_custom', 'Custom')],
-			stored:  ['LeftFull', 'RightFull', 'Custom']
-		});
-
-		if (ClientPrefs.virtualPadLayout == 'Custom')
-		{
 			_opts.push({
-				id: 'vpadCustomize', kind: 'customize',
-				label: '⚙ ' + Lang.str('opt_vpadcustomize', 'Customize Pad'),
-				desc:  Lang.str('opt_vpadcustomize_desc', 'Open the pad customizer to drag buttons to new positions.')
+				id: 'vpadLayout', kind: 'string',
+				label: '✦ ' + Lang.str('opt_vpadlayout', 'Pad Layout'),
+				desc:  Lang.str('opt_vpadlayout_desc', 'Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.'),
+				choices: [Lang.str('choice_vpad_leftfull', 'Left Side'), Lang.str('choice_vpad_rightfull', 'Right Side'), Lang.str('choice_vpad_custom', 'Custom')],
+				stored:  ['LeftFull', 'RightFull', 'Custom']
 			});
+
+			if (ClientPrefs.virtualPadLayout == 'Custom')
+			{
+				_opts.push({
+					id: 'vpadCustomize', kind: 'customize',
+					label: '⚙ ' + Lang.str('opt_vpadcustomize', 'Customize Pad'),
+					desc:  Lang.str('opt_vpadcustomize_desc', 'Open the pad customizer to drag buttons to new positions.')
+				});
+			}
 		}
-		}
+		// VSlice controls: no pad/hitbox specific options here
 
 		#if mobile
 		_opts.push({
@@ -630,6 +638,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort).'),
                         choices: [Lang.str('choice_aspect_fit', 'Fit (16:9)'), Lang.str('choice_aspect_stretch', 'Stretch'), Lang.str('choice_aspect_expand', 'Expand')],
                         stored:  ['fit', 'stretch', 'expand']
+		});
+
+		_opts.push({
+			id: 'openDataFolder', kind: 'button',
+			label: '📁 ' + Lang.str('opt_opendatafolder', 'Open Data Folder'),
+			desc:  Lang.str('opt_opendatafolder_desc', 'Opens the game data folder in your file manager.\nUse this to install mods or access save files.')
 		});
 		#end
 
@@ -660,6 +674,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 					(idx >= 0 && idx < opt.choices.length) ? opt.choices[idx] : _getStr(opt.id);
 				}
 				else _getStr(opt.id);
+			case 'button':
+				'[  ▶  ]';
 			default: '';
 		};
 	}

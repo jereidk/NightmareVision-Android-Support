@@ -9,6 +9,7 @@ class AndroidUtils
 	static var _getFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getFullscreen", "()I");
 	static var _toggleFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "toggleFullscreen", "()V");
 	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
+	static var _openDataFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
@@ -67,6 +68,18 @@ class AndroidUtils
 		var folderPath = StorageSystem.getDirectory();
 		try { _scanFolder([folderPath]); }
 		catch (e:Dynamic) { trace("scanModFolder error: " + e); }
+	}
+
+	/**
+	 * Opens the data folder in the system file manager.
+	 * Similar to FunkinCrew/Funkin's "Open Data Folder" option.
+	 * Uses Android Intent to open the folder in the user's preferred file manager.
+	 */
+	public static function openDataFolder():Void
+	{
+		var folderPath = StorageSystem.getDirectory();
+		try { _openDataFolder([folderPath]); }
+		catch (e:Dynamic) { trace("openDataFolder error: " + e); }
 	}
 }
 #end
