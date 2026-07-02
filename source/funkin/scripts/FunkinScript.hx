@@ -281,13 +281,10 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set('FlxPoint', flixel.math.FlxPoint.FlxBasePoint);
 		set('FlxParticle', flixel.effects.particles.FlxParticle);
 		set('FlxEmitter', flixel.effects.particles.FlxEmitter);
-
+		
 		set('FlxCameraFollowStyle', flixel.FlxCamera.FlxCameraFollowStyle);
 		set("FlxTextBorderStyle", flixel.text.FlxText.FlxTextBorderStyle);
 		set("FlxBarFillDirection", flixel.ui.FlxBar.FlxBarFillDirection);
-
-		// Camera: initialized to default, updated dynamically when state changes
-		set('camOther', flixel.FlxG.cameras.list[0]);
 		
 		set("FlxAnimate", animate.FlxAnimate);
 		set("FlxAnimateFrames", animate.FlxAnimateFrames);
@@ -417,41 +414,18 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("newShader", (?fragFile:String, ?vertFile:String) -> {
 			var fragPath = fragFile != null ? Paths.fragment(fragFile) : null;
 			var vertPath = vertFile != null ? Paths.vertex(vertFile) : null;
-
+			
 			if (fragPath != null)
 			{
 				if (FunkinAssets.exists(fragPath)) fragPath = FunkinAssets.getContent(fragPath);
 			}
-
+			
 			if (vertPath != null)
 			{
 				if (FunkinAssets.exists(vertPath)) vertPath = FunkinAssets.getContent(vertPath);
 			}
-
+			
 			return new funkin.backend.FunkinShader.FunkinRuntimeShader(fragPath, vertPath);
 		});
-	}
-
-	/**
-	 * Updates camOther variable to match the current state's camOther (if it exists).
-	 * Called automatically when state changes via GlobalScriptManager.
-	 */
-	public static function updateCameraForScripts():Void
-	{
-		// This will be set by GlobalScriptManager when state changes
-		if (GlobalScriptManager.instance != null)
-		{
-			var state = flixel.FlxG.state;
-			if (state != null && Reflect.hasField(state, 'camOther'))
-			{
-				var cam = Reflect.getProperty(state, 'camOther');
-				if (cam is flixel.FlxCamera)
-					GlobalScriptManager.instance.set('camOther', cam);
-			}
-			else
-			{
-				GlobalScriptManager.instance.set('camOther', flixel.FlxG.cameras.list[0]);
-			}
-		}
 	}
 }
