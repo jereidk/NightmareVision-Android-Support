@@ -68,7 +68,7 @@ class CosmicubeData
 		cosmicubeMetas.clear();
 		cosmicubeItems.clear();
 		
-		var directories:Array<String> = [Paths.mods(), Paths.getCorePath() + '/'];
+		var directories:Array<String> = [Paths.mods(), Paths.getCorePath()];
 
 		for (mod in Mods.parseList().enabled)
 			directories.push(Paths.mods('$mod/'));
@@ -83,7 +83,7 @@ class CosmicubeData
 			}
 
 			var dir:String = '${dir}data/cosmicube/';
-			
+
 			if (!FunkinAssets.exists(dir)) continue;
 
 			for (file in FunkinAssets.readDirectory(dir))
@@ -92,13 +92,13 @@ class CosmicubeData
 
 				var fileName:String = file.substr(0, file.indexOf('.json'));
 
-				var meta:CosmicubeMetadata = haxe.Json.parse(FunkinAssets.getContent('$dir/$file'));
+				var meta:CosmicubeMetadata = haxe.Json.parse(FunkinAssets.getContent('$dir$file'));
 				meta.fileName = fileName;
 				meta.mod = modFolder;
-				
+
 				cosmicubeList.push(fileName);
 				cosmicubeMetas.set(fileName, meta);
-				cosmicubeItems.set(fileName, getShopItems('$dir/$fileName/', meta));
+				cosmicubeItems.set(fileName, getShopItems('$dir$fileName/', meta));
 			}
 		}
 	}
@@ -115,7 +115,7 @@ class CosmicubeData
 
 			var fileName:String = file.substr(0, file.indexOf('.json'));
 
-			var data:ShopItemData = haxe.Json.parse(FunkinAssets.getContent('$dir/$file'));
+			var data:ShopItemData = haxe.Json.parse(FunkinAssets.getContent('$dir$file'));
 			data.currency = meta.currency;
 			data.fileName = fileName;
 			
