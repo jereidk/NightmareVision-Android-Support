@@ -665,11 +665,6 @@ class PlayState extends MusicBeatState
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
 
-		scripts.set('camGame', camGame);
-		scripts.set('camHUD', camHUD);
-		scripts.set('camOther', camOther);
-		trace('[PlayState] Exposed cameras to scripts');
-		
 		grpNoteSplashes = new FlxTypedContainer<NoteSplash>();
 		
 		persistentUpdate = true;
