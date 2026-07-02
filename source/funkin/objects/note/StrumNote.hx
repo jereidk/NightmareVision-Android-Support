@@ -3,6 +3,7 @@ package funkin.objects.note;
 import funkin.backend.math.Vector3;
 
 import flixel.FlxSprite;
+import flixel.FlxG;
 import flixel.math.FlxPoint;
 
 import funkin.objects.*;
@@ -12,6 +13,12 @@ import funkin.data.*;
 
 class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 {
+	// Funkin original constants for VSlice fidelity
+	public static final STRUMLINE_SIZE:Int = 104;
+	public static final NOTE_SPACING:Int = STRUMLINE_SIZE + 8; // 112
+	static final INITIAL_OFFSET:Float = -0.275 * STRUMLINE_SIZE; // -28.6
+	static final NUDGE:Float = 2.0;
+
 	public var intThing:Int = 0;
 	public var lastNote:Dynamic = null;
 
@@ -139,10 +146,55 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public function postAddedToGroup()
 	{
 		playAnim('static');
-		x -= swagWidth / 2;
-		x = x - (swagWidth * 2) + (swagWidth * noteData) + 54;
+		
+		// Funkin original VSlice positioning formula
+		// This replicates the exact receptor positions from FunkinCrew/Funkin
+		// Add parent baseX to center receptors correctly
+		x = (parent != null ? parent.baseX : 0) + getXPos(noteData);
 		
 		ID = noteData;
+	}
+	
+	/**
+	 * Get the relative X position for a receptor based on its direction.
+	 * This replicates FunkinCrew/Funkin's exact positioning formula.
+	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
+	 * @return The relative X position within the strumline
+	 */
+	public static function getXPos(direction:Int):Float
+	{
+		var pos:Float = 0;
+		
+		#if mobile
+		// In Arrow control scheme on mobile, apply aspect ratio adjustment
+		if (ClientPrefs.noteLayout == 'VSlice' && ClientPrefs.gameInputMode == 'Touch')
+		{
+			pos = 35 * (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
+		}
+		#end
+		
+		return switch (direction)
+		{
+			case 0: -pos * 2; // LEFT
+			case 1: -(pos * 2) + (1 * NOTE_SPACING); // DOWN
+			case 2: pos + (2 * NOTE_SPACING); // UP
+			case 3: pos + (3 * NOTE_SPACING); // RIGHT
+			default: -pos * 2;
+		};
+	}
+	
+	/**
+	 * Get the centered X position for VSlice receptors.
+	 * Includes centering calculation for both receptors and notes.
+	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
+	 * @return The centered X position
+	 */
+	public static function getCenteredXPos(direction:Int):Float
+	{
+		// Calculate center position for VSlice
+		var receptorGroupWidth:Float = 4 * NOTE_SPACING + STRUMLINE_SIZE;
+		var centerOffset:Float = (FlxG.width - receptorGroupWidth) / 2;
+		return centerOffset + getXPos(direction);
 	}
 	
 	override function update(elapsed:Float)

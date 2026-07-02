@@ -1127,12 +1127,15 @@ class PlayState extends MusicBeatState
 		final _isVSlice = (ClientPrefs.noteLayout == 'VSlice');
 		if (_isVSlice)
 		{
-			Note.swagWidth = 237;
+			// Funkin original VSlice values: STRUMLINE_SIZE = 104, NOTE_SPACING = 112
+			Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE; // 104
 			var safeTop:Float = 0;
 			#if mobile
 			safeTop = mobile.backend.ScreenUtil.safeArea().top;
 			#end
-			modManager.vsliceBaseY = FlxG.height - safeTop - 255;
+			// Position receptors at bottom, matching Funkin's Arrow scheme hitbox
+			// yPos = FlxG.height - hintHeight*2 - 24 (hintHeight=149, so ~FlxG.height-322)
+			modManager.vsliceBaseY = FlxG.height - safeTop - funkin.objects.note.StrumNote.STRUMLINE_SIZE * 3 - 50;
 		}
 
 		for (lane in 0...SONG.lanes)
@@ -1142,7 +1145,16 @@ class PlayState extends MusicBeatState
 			
 			final auto = (lane != 0 || cpuControlled);
 			
-			var strums = new PlayField(0, 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
+			// For VSlice, center the receptors on screen (Funkin original behavior)
+			var baseX:Float = 0;
+			if (_isVSlice)
+			{
+				// Calculate center position for 4 receptors with NOTE_SPACING
+				var receptorGroupWidth:Float = 4 * funkin.objects.note.StrumNote.NOTE_SPACING + funkin.objects.note.StrumNote.STRUMLINE_SIZE;
+				baseX = (FlxG.width - receptorGroupWidth) / 2;
+			}
+			
+			var strums = new PlayField(baseX, _isVSlice ? modManager.vsliceBaseY : 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
 			if (_isVSlice && lane == 0) strums._skin.receptorScale = 1.0;
 			scripts.call('preReceptorGeneration', [strums, lane]);

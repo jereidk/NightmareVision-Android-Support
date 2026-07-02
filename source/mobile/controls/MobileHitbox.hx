@@ -206,7 +206,7 @@ class MobileHitbox extends TouchInputManager
 
 	/**
 	 * Builds the Arrows layout - uses note-style arrow sprites as hitbox buttons.
-	 * Inspired by FunkinCrew's Arrows scheme.
+	 * EXACT replication of FunkinCrew's Arrows scheme.
 	 * Arrows are positioned at the bottom of the screen, centered.
 	 */
 	function buildArrows(safe:{top:Float, bottom:Float, left:Float, right:Float}):Void
@@ -215,17 +215,16 @@ class MobileHitbox extends TouchInputManager
 		var safeLeft   = Std.int(safe.left);
 		var safeRight  = Std.int(safe.right);
 
-		// Arrow dimensions matching NOTE_assets atlas
-		var hintWidth:Int = 157;
-		var hintHeight:Int = 154;
+		// Funkin original dimensions (from FunkinCrew/Funkin FunkinHitbox.hx)
+		var hintWidth:Int = 146;
+		var hintHeight:Int = 149;
 		var noteSpacing:Int = 80;
 
-		// Calculate X position to center arrows
-		var totalWidth:Float = (hintWidth + noteSpacing) * 4 - noteSpacing;
-		var xPos:Float = (FlxG.width - totalWidth) / 2;
+		// Calculate X position to center arrows (same as Funkin)
+		var xPos:Int = Math.floor((FlxG.width - (hintWidth + noteSpacing) * 4) / 2);
 
-		// Y position at bottom, above safe area
-		var yPos:Float = FlxG.height - safeTop - hintHeight * 2 - 24;
+		// Y position at bottom (same as Funkin: FlxG.height - hintHeight * 2 - 24)
+		var yPos:Int = Math.floor(FlxG.height - hintHeight * 2 - 24);
 
 		// Arrow directions in order: LEFT, DOWN, UP, RIGHT
 		var arrowNames:Array<String> = ['left', 'down', 'up', 'right'];
@@ -238,7 +237,7 @@ class MobileHitbox extends TouchInputManager
 
 		for (i in 0...4)
 		{
-			var btn = createArrowHint(xPos + i * (hintWidth + noteSpacing), yPos, hintWidth, hintHeight, arrowNames[i], arrowIDs[i]);
+			var btn = createArrowHint(xPos + i * hintWidth + noteSpacing * i, yPos, hintWidth, hintHeight, arrowNames[i], arrowIDs[i]);
 			add(btn);
 			buttons.push(btn);
 		}
@@ -567,12 +566,16 @@ class MobileHitbox extends TouchInputManager
 
 	static function layoutFromPrefs():HitboxLayout
 	{
+		// VSlice always uses Arrows layout to match Funkin original
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+			return ARROWS;
+		
 		return switch (funkin.data.ClientPrefs.hitboxLayout)
 		{
 			case 'Two Thumb': TWO_THUMB;
 			case 'DPad':      DPAD;
 			case 'Arrows':    ARROWS;
-			case 'Triangle':   TRIANGLE;
+			case 'Triangle':  TRIANGLE;
 			default:          FOUR_LANES;
 		};
 	}

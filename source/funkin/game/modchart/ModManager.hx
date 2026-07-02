@@ -216,8 +216,13 @@ class ModManager implements IFlxDestroyable
 	
 	public function getBaseX(direction:Int, player:Int):Float
 	{
+		// VSlice uses Funkin original receptor positioning (centered)
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+		{
+			return funkin.objects.note.StrumNote.getCenteredXPos(direction);
+		}
+		
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
-		if (funkin.data.ClientPrefs.noteLayout == 'VSlice') return x;
 		switch (player)
 		{
 			case 0:
