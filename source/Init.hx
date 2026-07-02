@@ -76,6 +76,9 @@ class Init extends FlxState
 
 		// 1. crash.log written by CrashHandler (Haxe exception) or by the
 		//    Java handler (JVM crash) during the previous session.
+		//    We collect the message here but defer the popup until after
+		//    ClientPrefs.load() so we can offer backup restore if available.
+		var _pendingCrashMessage:Null<String> = null;
 		#if sys
 		try
 		{
@@ -83,8 +86,7 @@ class Init extends FlxState
 			{
 				final log = sys.io.File.getContent(_crashLogPath);
 				sys.FileSystem.deleteFile(_crashLogPath);
-				final preview = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
-				mobile.backend.utils.PopUp.showAlert('Crash detectado', preview, 'OK');
+				_pendingCrashMessage = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
 			}
 			else
 			{
@@ -93,7 +95,7 @@ class Init extends FlxState
 				//    session that killed the process before any handler could write.
 				final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
 				if (nativeInfo != null && nativeInfo.length > 0)
-					mobile.backend.utils.PopUp.showAlert('Crash nativo detectado', nativeInfo, 'OK');
+					_pendingCrashMessage = nativeInfo;
 			}
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
@@ -219,6 +221,47 @@ class Init extends FlxState
 		FunkinAssets.cache.currentTrackedSounds.addPermanentKey('assets/music/freakyMenu.ogg');
 		
 		super.create();
+
+		// ── Crash recovery dialog ─────────────────────────────────────────────
+		// Shown here (after ClientPrefs.load) so we know save + backups are ready.
+		// PopUp.showConfirm is non-blocking on Android: the dialog appears over the
+		// loading screen, the game transitions behind it, and the callback fires on
+		// the Haxe thread when the user responds.
+		#if android
+		if (_pendingCrashMessage != null)
+		{
+			if (funkin.data.ClientPrefs.hasBackup())
+			{
+				mobile.backend.utils.PopUp.showConfirm(
+					'El juego se cerró inesperadamente',
+					_pendingCrashMessage + '\n\n¿Restaurar el backup del progreso anterior?',
+					'Restaurar backup',
+					'Continuar sin restaurar',
+					() -> {
+						final backupData = funkin.data.ClientPrefs.attemptLoadBackup();
+						if (backupData != null && Reflect.fields(backupData).length > 0)
+						{
+							for (field in (Reflect.fields(backupData) : Array<String>))
+								Reflect.setField(FlxG.save.data, field, Reflect.field(backupData, field));
+							funkin.data.ClientPrefs.load();
+							funkin.data.ClientPrefs.flushSave();
+							mobile.backend.utils.PopUp.showAlert('Backup restaurado', 'Tu progreso fue restaurado al estado anterior al crash.', 'OK');
+						}
+						else
+						{
+							mobile.backend.utils.PopUp.showAlert('Sin backup disponible', 'No se encontró un backup válido.', 'OK');
+						}
+					},
+					null
+				);
+			}
+			else
+			{
+				mobile.backend.utils.PopUp.showAlert('El juego se cerró inesperadamente', _pendingCrashMessage, 'OK');
+			}
+		}
+		#end
+		// ─────────────────────────────────────────────────────────────────────
 
 		// Signal OS that we finished loading and are entering menus (not active gameplay).
 		#if android

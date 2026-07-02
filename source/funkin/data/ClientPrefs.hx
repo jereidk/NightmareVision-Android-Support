@@ -453,6 +453,13 @@ class ClientPrefs
 		}
 	}
 	
+	/** Returns true if numbered backup file exists on disk without consuming it. */
+	public static function hasBackup(name:String = 'funkin', n:Int = 1):Bool
+	{
+		final path:String = SaveUtil.getPath('', FlxG.stage.application.meta.get('file') + '/$name');
+		return FileSystem.exists(path.withoutExtension() + '-backup$n.sol');
+	}
+
 	public static function tryBindingSave(name:String = 'funkin'):Void
 	{
 		FlxG.save.bind(name, CoolUtil.getSavePath(), function(data:String, exception:haxe.Exception) {
