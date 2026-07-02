@@ -83,29 +83,33 @@ class FunkinSprite extends FlxAnimate
 	@:access(animate.FlxAnimateSpritemapCollection)
 	public function loadAtlas(path:String, ?settings:FlxAnimateSettings, mode:PathsTestMode = NORMAL):FunkinSprite
 	{
+		trace('[FunkinSprite] loadAtlas($path, mode=$mode)');
 		final splitPath = path.split(',');
-		
+
 		var framesFound:Array<FlxAtlasFrames> = [];
-		
+
 		var containsFlxAnimate:Bool = false;
-		
+
 		for (path in splitPath)
 		{
 			path = path.trim();
-			
+
 			final isAtlasSprite = FunkinAssets.exists(Paths.getPath('images/$path/Animation.json', mode));
+			trace('[FunkinSprite]   Checking atlas for: $path → isAtlasSprite=$isAtlasSprite');
 			if (isAtlasSprite)
 			{
+				trace('[FunkinSprite]   Loading FlxAnimate frames from: images/$path');
 				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', mode), null, null, null, false, settings ?? {cacheOnLoad: true});
+				trace('[FunkinSprite]   FlxAnimate frames loaded: ${atlas != null ? "OK" : "NULL"}');
 				if (atlas != null)
 				{
 					for (spritemap in cast(atlas.parent, FlxAnimateSpritemapCollection).spritemaps)
 					{
 						if (spritemap.bitmap != null) FunkinAssets.cache.cacheBitmap(spritemap.key, spritemap.bitmap);
 					}
-					
+
 					containsFlxAnimate = true;
-					
+
 					framesFound.push(atlas);
 				}
 			}

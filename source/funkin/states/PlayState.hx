@@ -620,8 +620,9 @@ class PlayState extends MusicBeatState
 	
 	override public function create():Void
 	{
+		trace('[PlayState] ===== CREATE START =====');
 		FlxG.sound.music?.stop();
-		
+
 		FunkinAssets.cache.clearStoredMemory();
 		
 		funkin.backend.DebugDisplay.addPlugin(() -> 'curStep: $curStep • curBeat: $curBeat • curSection: $curSection');
@@ -655,19 +656,27 @@ class PlayState extends MusicBeatState
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 		
 		camGame = FlxG.camera;
+		trace('[PlayState] camGame = ${camGame != null ? "OK" : "NULL"}');
 		camHUD = new FlxCamera();
+		trace('[PlayState] Created camHUD = ${camHUD != null ? "OK" : "NULL"}');
 		camOther = new FlxCamera();
-		
+		trace('[PlayState] Created camOther = ${camOther != null ? "OK" : "NULL"}');
+
 		camHUD.bgColor = 0x0;
 		camOther.bgColor = 0x0;
-		
+		trace('[PlayState] Set camera colors');
+
 		FlxG.cameras.reset(camGame);
+		trace('[PlayState] Reset cameras');
 		FlxG.cameras.add(camHUD, false);
+		trace('[PlayState] Added camHUD');
 		FlxG.cameras.add(camOther, false);
+		trace('[PlayState] Added camOther');
 
 		scripts.set('camGame', camGame);
 		scripts.set('camHUD', camHUD);
 		scripts.set('camOther', camOther);
+		trace('[PlayState] Exposed cameras to scripts');
 		
 		grpNoteSplashes = new FlxTypedContainer<NoteSplash>();
 		
@@ -698,10 +707,14 @@ class PlayState extends MusicBeatState
 		allowGFSkin = (!isStoryMode && (SONG.allowGFskin ?? true));
 		allowPet = (!isStoryMode && (SONG.allowPet ?? true));
 		
+		trace('[PlayState] Creating stage (${SONG.stage})...');
 		stage = new Stage(SONG.stage);
+		trace('[PlayState] Stage created, applying data...');
 		applyStageData(stage.stageData);
-		
+
+		trace('[PlayState] Building stage...');
 		stage.buildStage();
+		trace('[PlayState] Stage built OK');
 		
 		if (stage.runScript(scripts))
 		{
@@ -737,32 +750,42 @@ class PlayState extends MusicBeatState
 		
 		if (allowPet)
 		{
+			trace('[PlayState] Loading pet...');
 			pet.loadPet(ClientPrefs.equipment.get('pet'));
 			checkStageFlag(pet);
 			startPetScript(pet);
+			trace('[PlayState] Pet loaded OK');
 		}
-		
+
 		if (!stage.stageData.hide_girlfriend)
 		{
+			trace('[PlayState] Creating girlfriend...');
 			gf = new Character((allowGFSkin ? ClientPrefs.equipment.get('speakerSkin') : null) ?? gfVersion);
+			trace('[PlayState] GF created, loading animations...');
 			checkStageFlag(gf);
 			gfGroup.addChar(gf);
 			gfGroup.parent = gf;
 			startCharacterScript(gf.curCharacter, gf);
 			trace('[DEBUG] GF Created: visible=${gf.visible}, alpha=${gf.alpha}, x=${gf.x}, y=${gf.y}');
 		}
-		
+
+		trace('[PlayState] Creating dad (${SONG.player2})...');
 		dad = new Character(SONG.player2);
+		trace('[PlayState] Dad created, loading animations...');
 		checkStageFlag(dad);
 		dadGroup.addChar(dad);
 		dadGroup.parent = dad;
 		startCharacterScript(dad.curCharacter, dad);
-		
+		trace('[PlayState] Dad OK');
+
+		trace('[PlayState] Creating boyfriend...');
 		boyfriend = new Character((allowBFSkin ? ClientPrefs.equipment.get('playerSkin') : null) ?? SONG.player1, true);
+		trace('[PlayState] BF created, loading animations...');
 		checkStageFlag(boyfriend);
 		boyfriendGroup.addChar(boyfriend);
 		boyfriendGroup.parent = boyfriend;
 		startCharacterScript(boyfriend.curCharacter, boyfriend);
+		trace('[PlayState] BF OK');
 		
 		var camPos:FlxPoint = FlxPoint.get(girlfriendCameraOffset[0], girlfriendCameraOffset[1]);
 		if (gf != null)
@@ -935,14 +958,17 @@ class PlayState extends MusicBeatState
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000;
 		
 		scripts.call('onCreatePost', []);
-		
+
 		callHUDFunc(hud -> hud.cachePopUpScore());
-		
+
+		trace('[PlayState] Calling super.create()...');
 		super.create();
-		
+		trace('[PlayState] super.create() OK');
+
 		FunkinAssets.cache.clearUnusedMemory();
-		
+
 		refreshZ(stage);
+		trace('[PlayState] ===== CREATE END (success) =====');
 	}
 	
 	function set_songSpeed(value:Float):Float
