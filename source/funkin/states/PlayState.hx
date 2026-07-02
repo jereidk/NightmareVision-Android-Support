@@ -1162,12 +1162,12 @@ class PlayState extends MusicBeatState
 			
 			final auto = (lane != 0 || cpuControlled);
 			
-			// For VSlice, center the receptors on screen (Funkin original behavior)
+			// For VSlice, center the receptors on screen
 			var baseX:Float = 0;
 			if (_isVSlice)
 			{
-				// Calculate center position for 4 receptors with NOTE_SPACING
-				var receptorGroupWidth:Float = 4 * funkin.objects.note.StrumNote.NOTE_SPACING + funkin.objects.note.StrumNote.STRUMLINE_SIZE;
+				// Span = 3 gaps + 1 note width = 3*NOTE_SPACING + STRUMLINE_SIZE = 440
+				final receptorGroupWidth:Float = 3 * funkin.objects.note.StrumNote.NOTE_SPACING + funkin.objects.note.StrumNote.STRUMLINE_SIZE;
 				baseX = (FlxG.width - receptorGroupWidth) / 2;
 			}
 			
