@@ -68,11 +68,11 @@ class CosmicubeData
 		cosmicubeMetas.clear();
 		cosmicubeItems.clear();
 		
-		var directories:Array<String> = [Paths.mods(), Paths.getCorePath()];
-		
+		var directories:Array<String> = [Paths.mods(), Paths.getCorePath() + '/'];
+
 		for (mod in Mods.parseList().enabled)
 			directories.push(Paths.mods('$mod/'));
-			
+
 		// parse items stuff
 		for (dir in directories)
 		{
@@ -81,7 +81,7 @@ class CosmicubeData
 			{
 				modFolder = dir.substring(Paths.mods().length, dir.length - 1);
 			}
-			
+
 			var dir:String = '${dir}data/cosmicube/';
 			
 			if (!FunkinAssets.exists(dir)) continue;
