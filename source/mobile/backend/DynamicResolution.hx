@@ -25,6 +25,7 @@ import funkin.backend.Logger.Severity;
  * GL handle is the same context3D.gl Dynamic used by AstcLoader.
  */
 @:nullSafety(Off)
+@:access(openfl.display3D.Context3D)
 class DynamicResolution
 {
 	public static var active(default, null):Bool = false;

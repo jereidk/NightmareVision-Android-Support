@@ -165,7 +165,7 @@ class Application #if lime extends LimeApplication #end
 	#end
 
 	#if (android && cpp)
-	@:noCompletion override private function render(context:RenderContext):Void
+	@:noCompletion override public function render(context:RenderContext):Void
 	{
 		if (DynamicResolution.shouldSkipRender())
 		{
