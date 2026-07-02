@@ -136,7 +136,6 @@
 		<config:android permission="android.permission.READ_MEDIA_DOCUMENTS" />
 		<config:android permission="android.permission.ACCESS_WIFI_STATE"/>
 		<config:android permission="android.permission.CAPTURE_AUDIO_OUTPUT" />
-		<config:android permission="android.permission.VIBRATE"/>
 
 		<android extension="mobile.backend.java.FileUtils" />
 		<android extension="mobile.backend.java.AndroidUtils" />
