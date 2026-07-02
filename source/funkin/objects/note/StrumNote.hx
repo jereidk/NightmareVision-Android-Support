@@ -149,8 +149,14 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		
 		// Funkin original VSlice positioning formula
 		// This replicates the exact receptor positions from FunkinCrew/Funkin
-		// Add parent baseX to center receptors correctly
-		x = (parent != null ? parent.baseX : 0) + getXPos(noteData);
+		if (ClientPrefs.noteLayout == 'VSlice')
+		{
+			x = getCenteredXPos(noteData);
+		}
+		else
+		{
+			x = (parent != null ? parent.baseX : 0) + getXPos(noteData);
+		}
 		
 		ID = noteData;
 	}
@@ -194,7 +200,8 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		// Calculate center position for VSlice
 		var receptorGroupWidth:Float = 4 * NOTE_SPACING + STRUMLINE_SIZE;
 		var centerOffset:Float = (FlxG.width - receptorGroupWidth) / 2;
-		return centerOffset + getXPos(direction);
+		// Include INITIAL_OFFSET for exact match with Funkin
+		return centerOffset + getXPos(direction) + INITIAL_OFFSET;
 	}
 	
 	override function update(elapsed:Float)
