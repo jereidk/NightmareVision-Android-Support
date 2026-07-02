@@ -655,38 +655,15 @@ class PlayState extends MusicBeatState
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 		
-		camGame = new extensions.flixel.FlxCameraEx();
-		trace('[PlayState] Created camGame = ${camGame != null ? "OK" : "NULL"}');
-		camHUD = new extensions.flixel.FlxCameraEx();
-		trace('[PlayState] Created camHUD = ${camHUD != null ? "OK" : "NULL"}');
-		camOther = new extensions.flixel.FlxCameraEx();
-		trace('[PlayState] Created camOther = ${camOther != null ? "OK" : "NULL"}');
+		camGame = FlxG.camera;
+		camHUD = new FlxCamera();
+		camOther = new FlxCamera();
 
 		camHUD.bgColor = 0x0;
 		camOther.bgColor = 0x0;
-		trace('[PlayState] Set camera colors');
-		trace('[PlayState]   camGame.flashSprite = ${camGame.flashSprite}');
-		trace('[PlayState]   camHUD.flashSprite = ${camHUD.flashSprite}');
-		trace('[PlayState]   camOther.flashSprite = ${camOther.flashSprite}');
 
-		trace('[PlayState] About to reset cameras...');
-		trace('[PlayState]   FlxG.game = ${FlxG.game}');
-		trace('[PlayState]   FlxG.game.numChildren = ${FlxG.game?.numChildren}');
-		trace('[PlayState]   FlxG.cameras.list.length = ${FlxG.cameras.list.length}');
-		for (i => cam in FlxG.cameras.list)
-		{
-			trace('[PlayState]   cameras[$i] = ${Type.getClassName(Type.getClass(cam))} (flashSprite=${cam.flashSprite})');
-		}
-		FlxG.cameras.reset(camGame);
-		trace('[PlayState] Reset cameras');
-
-		trace('[PlayState] About to add camHUD...');
 		FlxG.cameras.add(camHUD, false);
-		trace('[PlayState] Added camHUD');
-
-		trace('[PlayState] About to add camOther...');
 		FlxG.cameras.add(camOther, false);
-		trace('[PlayState] Added camOther');
 
 		scripts.set('camGame', camGame);
 		scripts.set('camHUD', camHUD);
