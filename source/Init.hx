@@ -116,7 +116,20 @@ class Init extends FlxState
 		// getText: FunkinAssets.getContent throws on missing files; wrap so FlxAnimate
 		//   gets null instead (matches the original FlxAnimateAssets behaviour).
 		animate.FlxAnimateAssets.getBitmapData = (path) -> cast funkin.FunkinAssets.getBitmapData(path);
-		animate.FlxAnimateAssets.exists       = (path, _) -> funkin.FunkinAssets.exists(path);
+		// When the APK ships only .astc (no .png counterpart), FunkinAssets.exists()
+		// returns false for the .png path — FlxAnimate then treats the image as
+		// missing and eventually calls addChild(null) → Error #2007.
+		// Fix: also return true when a .astc counterpart exists for a .png query.
+		animate.FlxAnimateAssets.exists = (path, _) -> {
+			if (funkin.FunkinAssets.exists(path)) return true;
+			#if (android && cpp)
+			if (path.endsWith('.png')) {
+				var astcPath = mobile.backend.AstcLoader.deriveAstcPath(path);
+				return astcPath != null && funkin.FunkinAssets.exists(astcPath);
+			}
+			#end
+			return false;
+		};
 		animate.FlxAnimateAssets.getText      = (path) -> { try return funkin.FunkinAssets.getContent(path) catch (e:Dynamic) { Logger.log('Failed to get text content for: $path - $e', WARN); return cast null; }; };
 		// Replace .astc with .png in FlxAnimate's folder scanner so spritemap
 		// image selection always resolves to a .png counterpart that FlxAnimate
