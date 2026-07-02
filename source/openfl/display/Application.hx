@@ -7,6 +7,10 @@ import lime.app.Application as LimeApplication;
 import lime.ui.Window as LimeWindow;
 import lime.ui.WindowAttributes;
 #end
+#if (android && cpp)
+import mobile.backend.DynamicResolution;
+import lime.graphics.RenderContext;
+#end
 #if ((sys || air) && (!flash_doc_gen || air_doc_gen))
 import openfl.desktop.NativeApplication;
 #end
@@ -157,6 +161,19 @@ class Application #if lime extends LimeApplication #end
 		}
 
 		onCreateWindow.dispatch(window);
+	}
+	#end
+
+	#if (android && cpp)
+	@:noCompletion override private function render(context:RenderContext):Void
+	{
+		if (DynamicResolution.shouldSkipRender())
+		{
+			DynamicResolution.reuseLastFrame();
+			return;
+		}
+		super.render(context);
+		DynamicResolution.saveCurrentFrame();
 	}
 	#end
 
