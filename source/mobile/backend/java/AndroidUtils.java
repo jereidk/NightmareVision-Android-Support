@@ -1,6 +1,8 @@
 package mobile.backend.java;
 
 import android.app.Activity;
+import android.app.GameManager;
+import android.app.GameState;
 import android.content.Context;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -175,6 +177,31 @@ public class AndroidUtils extends Extension {
                     );
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "Error scanning folder: " + e.toString());
+                }
+            }
+        });
+    }
+
+    /**
+     * Signals Android's game scheduler what the app is currently doing.
+     * inGameplay=true  → MODE_GAMEPLAY_INTERACTING: raises CPU/GPU governor target
+     * inGameplay=false → MODE_NONE: allows scheduler to throttle between sessions
+     * Requires API 33 (Android 13); silently no-ops on older devices.
+     */
+    public static void setGameplayState(final boolean inGameplay) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        final Activity activity = mainActivity;
+        if (activity == null) return;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    GameManager gm = (GameManager) activity.getSystemService(Context.GAME_SERVICE);
+                    if (gm == null) return;
+                    int mode = inGameplay ? GameState.MODE_GAMEPLAY_INTERACTING : GameState.MODE_NONE;
+                    gm.setGameState(new GameState(false, mode));
+                } catch (Exception e) {
+                    android.util.Log.w("AndroidUtils", "setGameplayState: " + e);
                 }
             }
         });

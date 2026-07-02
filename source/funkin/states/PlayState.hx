@@ -1302,6 +1302,7 @@ class PlayState extends MusicBeatState
 
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(true);
+		mobile.backend.AndroidUtils.setGameplayState(true);
 		#end
 
 		if (!ScriptConstants.stopping(scripts.call('onStartCountdown')))
@@ -3443,6 +3444,7 @@ class PlayState extends MusicBeatState
 
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
+		mobile.backend.AndroidUtils.setGameplayState(false);
 		#end
 
 		scripts.call('onDestroy', [], true);

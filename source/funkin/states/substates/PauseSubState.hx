@@ -54,7 +54,11 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		
 		var cam:FlxCamera = CameraUtil.lastCamera;
 		instance = this;
-		
+
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(false);
+		#end
+
 		initStateScript('PauseSubState');
 		
 		pauseMusic = new FlxSound();
@@ -250,6 +254,9 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	
 	override function destroy()
 	{
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(true);
+		#end
 		if (pauseMusic != null) pauseMusic.destroy();
 		super.destroy();
 	}

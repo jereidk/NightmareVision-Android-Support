@@ -219,7 +219,12 @@ class Init extends FlxState
 		FunkinAssets.cache.currentTrackedSounds.addPermanentKey('assets/music/freakyMenu.ogg');
 		
 		super.create();
-		
+
+		// Signal OS that we finished loading and are entering menus (not active gameplay).
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(false);
+		#end
+
 		final nextState:Class<FlxState> = Main.startMeta.skipSplash || !ClientPrefs.toggleSplashScreen ? Main.startMeta.initialState : Splash;
 		FlxG.switchState(() -> Type.createInstance(nextState, []));
 	}

@@ -10,6 +10,7 @@ class AndroidUtils
 	static var _toggleFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "toggleFullscreen", "()V");
 	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
 	static var _openDataFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
+	static var _setGameplayState = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setGameplayState", "(Z)V");
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
@@ -80,6 +81,18 @@ class AndroidUtils
 		var folderPath = StorageSystem.getDirectory();
 		try { _openDataFolder([folderPath]); }
 		catch (e:Dynamic) { trace("openDataFolder error: " + e); }
+	}
+
+	/**
+	 * Signals Android's GameManager what state the app is in (API 33+ only).
+	 * true  → MODE_GAMEPLAY_INTERACTING (active gameplay)
+	 * false → MODE_NONE (menus, pause, loading)
+	 * Silent no-op on API < 33 or if the call fails.
+	 */
+	public static inline function setGameplayState(inGameplay:Bool):Void
+	{
+		try { _setGameplayState([inGameplay]); }
+		catch (e:Dynamic) {}
 	}
 }
 #end
