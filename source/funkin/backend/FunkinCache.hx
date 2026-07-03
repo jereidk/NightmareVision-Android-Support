@@ -117,7 +117,22 @@ class FunkinCache
 				removeFromCache(key);
 			}
 		}
-		
+
+		// Secondary sweep: free textures that entered FlxG.bitmap without going
+		// through FunkinCache (FlxAnimate destroySpritemaps, script-loaded graphics,
+		// makeGraphic remnants). We only touch entries absent from our own tracking
+		// and with no live sprite references (useCount <= 0).
+		@:privateAccess
+		final bitmapKeys = [for (k in FlxG.bitmap._cache.keys()) k];
+		for (key in bitmapKeys)
+		{
+			if (currentTrackedGraphics.exists(key)) continue;
+			@:privateAccess
+			final graphic = FlxG.bitmap._cache.get(key);
+			if (graphic != null && graphic.useCount <= 0)
+				FlxG.bitmap.remove(graphic, true);
+		}
+
 		openfl.system.System.gc();
 		#if cpp
 		cpp.vm.Gc.compact();

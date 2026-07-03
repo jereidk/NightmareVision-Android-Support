@@ -121,8 +121,11 @@ class OptionsState extends MusicBeatState
 
 	override function create()
 	{
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
 		DiscordClient.changePresence("Options Menu");
-		
+
 		initStateScript();
 		persistentUpdate = true;
 		
