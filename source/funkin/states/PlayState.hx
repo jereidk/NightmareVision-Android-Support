@@ -256,6 +256,9 @@ class PlayState extends MusicBeatState
 	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
 	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
 	final _scriptMoveCamArgs:Array<Dynamic> = [''];
+	final _scriptEmptyArgs:Array<Dynamic> = [];
+	final _scriptScoreArgs:Array<Dynamic> = [false];
+	final _scriptKeyArgs:Array<Dynamic> = [0];
 
 	// Cached zoom for screenDim to skip redundant updateHitbox/screenCenter every frame.
 	var _lastScreenDimZoom:Float = -1;
@@ -2468,11 +2471,12 @@ class PlayState extends MusicBeatState
 	
 	public function updateScoreBar(miss:Bool = false):Void
 	{
-		if (!ScriptConstants.stopping(scripts.call('onUpdateScore', [miss])))
+		_scriptScoreArgs[0] = miss;
+		if (!ScriptConstants.stopping(scripts.call('onUpdateScore', _scriptScoreArgs)))
 		{
 			callHUDFunc(hud -> hud.onUpdateScore(songScore, funkin.utils.MathUtil.floorDecimal(ratingPercent * 100, 2), songMisses, miss));
-			
-			ScriptConstants.stopping(scripts.call('onUpdateScorePost', [miss]));
+
+			ScriptConstants.stopping(scripts.call('onUpdateScorePost', _scriptScoreArgs));
 		}
 	}
 	
@@ -3334,37 +3338,38 @@ class PlayState extends MusicBeatState
 			
 			if (ghostTapped && anyInput)
 			{
-				scripts.call('onGhostTap', [key]);
-				
+				_scriptKeyArgs[0] = key;
+				scripts.call('onGhostTap', _scriptKeyArgs);
+
 				if (!ClientPrefs.ghostTapping)
 				{
 					for (field in playFields.members)
 					{
 						if (field.canInput()) field.onMissPress.dispatch(key, field);
 					}
-					
-					if (!ScriptConstants.stopping(scripts.call('noteMissPress', [key])))
+					if (!ScriptConstants.stopping(scripts.call('noteMissPress', _scriptKeyArgs)))
 					{
 						health -= (healthLoss * pressMissDamage * (++missCombo + 1) / 2);
-						
+
 						FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(.1, .2));
 					}
 				}
 			}
 		}
-		
+
 		Conductor.songPosition = prevTime;
-		
-		scripts.call('onKeyPress', [key]);
-		scripts.call('onInputPress', [key]);
+
+		_scriptKeyArgs[0] = key;
+		scripts.call('onKeyPress', _scriptKeyArgs);
+		scripts.call('onInputPress', _scriptKeyArgs);
 	}
-	
+
 	function onInputRelease(event:InputEvent):Void
 	{
 		final key:Int = event.noteData;
-		
+
 		if (!startedCountdown || paused) return;
-		
+
 		for (field in playFields.members)
 		{
 			if (field.inControl && !field.autoPlayed && field.playerControls)
@@ -3382,8 +3387,9 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		scripts.call('onKeyRelease', [key]);
-		scripts.call('onInputRelease', [key]);
+		_scriptKeyArgs[0] = key;
+		scripts.call('onKeyRelease', _scriptKeyArgs);
+		scripts.call('onInputRelease', _scriptKeyArgs);
 	}
 	
 	public function setFocusPlayerFromNote(note:Note)
@@ -3657,7 +3663,7 @@ class PlayState extends MusicBeatState
 	
 	public function RecalculateRating(badHit:Bool = false)
 	{
-		if (!ScriptConstants.stopping(scripts.call('onRecalculateRating')))
+		if (!ScriptConstants.stopping(scripts.call('onRecalculateRating', _scriptEmptyArgs)))
 		{
 			if (totalPlayed > 0) ratingPercent = (totalNotesHit / totalPlayed);
 			
