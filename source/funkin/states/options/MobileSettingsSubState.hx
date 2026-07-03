@@ -869,27 +869,34 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		var color = ZONE_COLORS[colorIndex];
 		var diameter = Std.int(radius * 2);
 
-		// Create a circular bitmap with gradient
-		var bitmap = new BitmapData(diameter, diameter, true, 0x00000000);
-		var cx = Std.int(radius);
-		var cy = Std.int(radius);
-
-		for (px in 0...diameter)
+		var cacheKey = 'zone_circle_${colorIndex}_${diameter}';
+		var graphic = FlxG.bitmap.get(cacheKey);
+		if (graphic == null)
 		{
-			for (py in 0...diameter)
+			var bitmap = new BitmapData(diameter, diameter, true, 0x00000000);
+			var cx = Std.int(radius);
+			var cy = Std.int(radius);
+
+			for (px in 0...diameter)
 			{
-				var dx = px - cx;
-				var dy = py - cy;
-				var dist = Math.sqrt(dx * dx + dy * dy);
-				if (dist <= radius)
+				for (py in 0...diameter)
 				{
-					var alpha = Std.int((1.0 - (dist / radius)) * 200);
-					bitmap.setPixel32(px, py, (color & 0x00FFFFFF) | (alpha << 24));
+					var dx = px - cx;
+					var dy = py - cy;
+					var dist = Math.sqrt(dx * dx + dy * dy);
+					if (dist <= radius)
+					{
+						var alpha = Std.int((1.0 - (dist / radius)) * 200);
+						bitmap.setPixel32(px, py, (color & 0x00FFFFFF) | (alpha << 24));
+					}
 				}
 			}
+
+			graphic = FlxG.bitmap.add(bitmap, false, cacheKey);
 		}
 
-		var spr = new FlxSprite(X - radius, Y - radius).loadGraphic(bitmap);
+		var spr = new FlxSprite(X - radius, Y - radius);
+		spr.loadGraphic(graphic);
 		spr.alpha = _idleAlpha();
 		add(spr);
 

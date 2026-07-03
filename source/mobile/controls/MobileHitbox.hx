@@ -54,6 +54,7 @@ class MobileHitbox extends TouchInputManager
 	private final alphaTarget:Float;
 
 	private var _cachedGraphics:Map<Int, flixel.graphics.FlxGraphic> = new Map();
+	private var _cachedTriangleGraphics:Map<String, flixel.graphics.FlxGraphic> = new Map();
 
 	public function new(?forcedLayout:HitboxLayout):Void
 	{
@@ -506,7 +507,13 @@ class MobileHitbox extends TouchInputManager
 			}
 		}
 
-		var bgGraphic:flixel.graphics.FlxGraphic = FlxG.bitmap.add(bitmap, false, "hitbox_triangle_" + direction + "_" + Width + "x" + Height);
+		var triangleKey = "hitbox_triangle_" + direction + "_" + Width + "x" + Height;
+		var bgGraphic:flixel.graphics.FlxGraphic = _cachedTriangleGraphics.get(triangleKey);
+		if (bgGraphic == null)
+		{
+			bgGraphic = FlxG.bitmap.add(bitmap, false, triangleKey);
+			_cachedTriangleGraphics.set(triangleKey, bgGraphic);
+		}
 		hint.loadGraphic(bgGraphic);
 
 		hint.solid = hint.moves = false;
@@ -642,5 +649,13 @@ class MobileHitbox extends TouchInputManager
 			graphic.destroy();
 		}
 		_cachedGraphics.clear();
+
+		for (key in _cachedTriangleGraphics.keys())
+		{
+			var graphic = _cachedTriangleGraphics.get(key);
+			FlxG.bitmap.remove(graphic);
+			graphic.destroy();
+		}
+		_cachedTriangleGraphics.clear();
 	}
 }
