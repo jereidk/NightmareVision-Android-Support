@@ -32,6 +32,7 @@ class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(NONE, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 	

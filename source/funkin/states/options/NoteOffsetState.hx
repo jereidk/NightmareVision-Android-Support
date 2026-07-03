@@ -125,7 +125,7 @@ class NoteOffsetState extends MusicBeatState
 		super.create();
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
 		addVirtualPadCamera();
 		#end
 	}
@@ -194,7 +194,7 @@ class NoteOffsetState extends MusicBeatState
 		}
 		#end
 		
-		if (controls.RESET)
+		if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 		{
 			holdTime = 0;
 			barPercent = 0;

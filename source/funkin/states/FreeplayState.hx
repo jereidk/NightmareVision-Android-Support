@@ -209,7 +209,7 @@ class FreeplayState extends AmongUIState
 		turboGroup.add(controlRIGHT);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, FREEPLAY);
 		addVirtualPadCamera();
 		#end
 		
@@ -584,7 +584,7 @@ class FreeplayState extends AmongUIState
 	{
 		if (!lockMovement && cutscenePhase == NONE)
 		{
-			if (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X))
+			if (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X) #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
@@ -597,7 +597,7 @@ class FreeplayState extends AmongUIState
 				openSubState(new WeekPickerSubstate(this, curMonth));
 			}
 			
-			if (controls.RESET) resetScorePrompt();
+			if (controls.RESET #if mobile || virtualPad?.buttonR?.justPressed == true #end) resetScorePrompt();
 			
 			if (FlxG.sound.music.volume < 0.7)
 			{

@@ -180,7 +180,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -417,7 +418,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		{
 			mouseControlActive = true;
 		}
-		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK || controls.RESET)
+		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK || controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 		{
 			mouseControlActive = false;
 			mouseHeldDirection = 0;
@@ -575,7 +576,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				}
 			}
 			
-			if (controls.RESET)
+			if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				for (i in 0...optionsArray.length)
 				{
