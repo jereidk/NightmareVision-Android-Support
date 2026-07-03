@@ -338,7 +338,9 @@ class MusicBeatState extends FlxUIState
 		else if (PlayState.SONG != null) rollbackSection();
 		
 		final scriptArgs = [elapsed];
+		var _smT = haxe.Timer.stamp();
 		scriptGroup.call('onUpdate', scriptArgs);
+		SystemMonitor.reportScriptTime('onUpdate', (haxe.Timer.stamp() - _smT) * 1000);
 		if (GlobalScriptManager.instance != null)
 			GlobalScriptManager.instance.onUpdate(elapsed);
 		PluginsManager.callOnScripts('onUpdate', scriptArgs);

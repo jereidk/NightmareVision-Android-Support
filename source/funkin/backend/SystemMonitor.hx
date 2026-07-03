@@ -54,9 +54,28 @@ class SystemMonitor
 	static inline final SPIKE_FACTOR:Float = 3.5;
 	static inline final SPIKE_COOLDOWN:Float = 2.0;
 
-	// State-transition leak tracking
+	// Self-suppression: skip spike detection right after file I/O so we
+	// don't report the write latency as a fake frame spike.
+	static var _suppressUntil:Float = 0.0;
+	static inline final WRITE_SUPPRESS_S:Float = 0.15;
+
+	// Script timing: annotate the next spike with which script event caused it
+	static var _lastScriptNote:String = '';
+	static inline final SCRIPT_NOTE_MS:Float = 5.0;   // >5ms → annotate next spike
+	static inline final SCRIPT_LOG_MS:Float = 33.0;   // >33ms (1 frame @30fps) → write immediately
+
+	// Member-growth leak detection
+	static var _prevMemberCount:Int = -1;
+	static var _memberGrowthStreak:Int = 0;
+	static var _memberCheckTimer:Int = 0;
+	static inline final MEMBER_CHECK_INTERVAL:Int = 60;   // check every N frames
+	static inline final MEMBER_GROWTH_THRESHOLD:Int = 8;  // members added per interval
+	static inline final MEMBER_GROWTH_STREAK:Int = 4;     // consecutive checks before warning
+
+	// State-transition texture tracking
 	static var _texCountBefore:Int = 0;
 	static var _prevStateName:String = '';
+	static var _catsBefore:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
 
 	/**
 	 * Initialize system monitoring
@@ -233,35 +252,72 @@ class SystemMonitor
 
 	/**
 	 * Call every frame (from MusicBeatState.update).
-	 * Logs a warning to sysmon.log when a frame takes SPIKE_FACTOR × the rolling average.
+	 * Detects frame spikes and steady member-count growth within a state.
+	 * Skips detection right after file I/O to avoid self-reporting write latency.
 	 */
 	public static function checkFrame(elapsed:Float):Void
 	{
 		if (!enabled) return;
 
+		var now = haxe.Timer.stamp();
+
+		// Self-suppression window: file I/O in _write can take 20-100ms on
+		// Android flash storage. Still update the EMA but skip spike reporting.
+		if (now < _suppressUntil)
+		{
+			_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
+			return;
+		}
+
 		_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
 
-		if (elapsed > _smoothElapsed * SPIKE_FACTOR)
+		if (elapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
 		{
-			var now = haxe.Timer.stamp();
-			if (now - _lastSpikeTime > SPIKE_COOLDOWN)
-			{
-				_lastSpikeTime = now;
-				var spikeMs = Std.int(elapsed * 1000);
-				var normalMs = Std.int(_smoothElapsed * 1000);
-				#if flixel
-				var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
-				_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state');
-				#else
-				_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
-				#end
-			}
+			_lastSpikeTime = now;
+			var spikeMs = Std.int(elapsed * 1000);
+			var normalMs = Std.int(_smoothElapsed * 1000);
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			var note = _lastScriptNote.length > 0 ? '  [script: $_lastScriptNote]' : '';
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$note');
+			#else
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
+			#end
+			_lastScriptNote = '';
+		}
+
+		#if flixel
+		if (++_memberCheckTimer >= MEMBER_CHECK_INTERVAL)
+		{
+			_memberCheckTimer = 0;
+			_checkMemberGrowth();
+		}
+		#end
+	}
+
+	/**
+	 * Report how long a script event took. Call around scriptGroup.call() in
+	 * MusicBeatState. Fast events (<5ms) are silently discarded; slow ones
+	 * annotate the next spike; very slow ones (>33ms) are written immediately.
+	 */
+	public static function reportScriptTime(event:String, ms:Float):Void
+	{
+		if (!enabled) return;
+		if (ms < SCRIPT_NOTE_MS) return;
+		_lastScriptNote = '$event ${Std.int(ms)}ms';
+		if (ms > SCRIPT_LOG_MS)
+		{
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			_write('[SLOW SCRIPT] $event  ${Std.int(ms)}ms  state=$state');
+			#else
+			_write('[SLOW SCRIPT] $event  ${Std.int(ms)}ms');
+			#end
 		}
 	}
 
 	/**
 	 * Called by FunkinCache when a texture exceeds 4096 px on either axis.
-	 * Mirrors the warning to sysmon.log so it persists between runs.
 	 */
 	public static function notifyOversizedTexture(key:String, w:Int, h:Int):Void
 	{
@@ -274,6 +330,13 @@ class SystemMonitor
 	{
 		_prevStateName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
 		_texCountBefore = _getRawBitmapCount();
+
+		_catsBefore = new haxe.ds.StringMap();
+		@:privateAccess for (k in FlxG.bitmap._cache.keys())
+		{
+			var cat = _texCategory(k);
+			_catsBefore.set(cat, (_catsBefore.get(cat) ?? 0) + 1);
+		}
 	}
 
 	static function _onPostStateSwitch():Void
@@ -283,8 +346,57 @@ class SystemMonitor
 		var newName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
 		var sign = diff >= 0 ? '+' : '';
 		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})');
+
+		if (diff > 5)
+		{
+			// Show which path categories gained the most textures
+			var newByCat:Array<String> = [];
+			var catsAfter = new haxe.ds.StringMap<Int>();
+			@:privateAccess for (k in FlxG.bitmap._cache.keys())
+			{
+				var cat = _texCategory(k);
+				catsAfter.set(cat, (catsAfter.get(cat) ?? 0) + 1);
+			}
+			for (cat => n in catsAfter)
+			{
+				var before = _catsBefore.get(cat) ?? 0;
+				if (n > before) newByCat.push('$cat:+${n - before}');
+			}
+			newByCat.sort((a, b) -> Std.parseInt(b.split(':+')[1]) - Std.parseInt(a.split(':+')[1]));
+			if (newByCat.length > 0)
+				_write('  New textures: ' + newByCat.join('  '));
+		}
+
 		if (diff > 30)
-			_write('  [!] Large texture growth — verify $_prevStateName calls clearStoredMemory/clearUnusedMemory');
+			_write('  [!] Large texture growth — verify $_prevStateName clears assets on exit');
+
+		_catsBefore = new haxe.ds.StringMap(); // free string memory
+
+		// Reset member-growth tracking for the incoming state
+		_prevMemberCount = -1;
+		_memberGrowthStreak = 0;
+		_memberCheckTimer = 0;
+	}
+
+	static function _checkMemberGrowth():Void
+	{
+		if (FlxG.state == null) return;
+		var count = FlxG.state.members.length;
+		if (_prevMemberCount >= 0 && count > _prevMemberCount + MEMBER_GROWTH_THRESHOLD)
+		{
+			_memberGrowthStreak++;
+			if (_memberGrowthStreak >= MEMBER_GROWTH_STREAK)
+			{
+				_memberGrowthStreak = 0;
+				var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+				_write('[LEAK?] $state members: $_prevMemberCount → $count (+${count - _prevMemberCount}) across ${MEMBER_CHECK_INTERVAL * MEMBER_GROWTH_STREAK} frames — objects added but not removed');
+			}
+		}
+		else if (count <= _prevMemberCount)
+		{
+			_memberGrowthStreak = 0;
+		}
+		_prevMemberCount = count;
 	}
 
 	static function _getRawBitmapCount():Int
@@ -294,6 +406,12 @@ class SystemMonitor
 		return n;
 	}
 	#end
+
+	static inline function _texCategory(key:String):String
+	{
+		var i = key.indexOf('/');
+		return i > 0 ? key.substring(0, i) : '_root';
+	}
 
 	static inline function _shortName(cls:String):String
 	{
@@ -312,7 +430,10 @@ class SystemMonitor
 			out.writeString(timestamp() + ' ' + line + '\n');
 			out.flush();
 			out.close();
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to write to log file: $e', WARN); }
+			// Suppress spike detection after file I/O so write latency
+			// doesn't appear as a fake frame spike in the log.
+			_suppressUntil = haxe.Timer.stamp() + WRITE_SUPPRESS_S;
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: _write failed: $e', WARN); }
 		#end
 	}
 
