@@ -52,7 +52,7 @@ class StoryMenuState extends AmongUIState
 		PlayState.chartingMode = false;
 		
 		FunkinAssets.cache.clearStoredMemory();
-		// FunkinAssets.cache.clearUnusedMemory();
+		FunkinAssets.cache.clearUnusedMemory();
 		
 		maze = new StoryNode('root');
 		cruiser = new StoryCruiser();

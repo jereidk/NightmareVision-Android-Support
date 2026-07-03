@@ -177,7 +177,7 @@ class FreeplayState extends AmongUIState
 		PlayState.chartingMode = false;
 		
 		FunkinAssets.cache.clearStoredMemory();
-		// FunkinAssets.cache.clearUnusedMemory();
+		FunkinAssets.cache.clearUnusedMemory();
 		
 		DiscordClient.changePresence("Freeplay Menu");
 		

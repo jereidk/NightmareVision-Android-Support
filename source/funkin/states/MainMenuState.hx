@@ -68,6 +68,7 @@ class MainMenuState extends MusicBeatState
 		// Paths.image/getSparrowAtlas calls so that shared assets (starFG, starBG, logo)
 		// are revived from cache instead of reloaded, preventing double-allocation.
 		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
 
 		persistentUpdate = persistentDraw = true;
 
