@@ -90,8 +90,6 @@ class FreeplayState extends AmongUIState
 	var smoothMonth:Float = 0;
 	var smoothSelect:Float = 0;
 	
-	var reload_timer:Float = 0;
-	
 	// Tween bullshit
 	var portraitTween:FlxTween;
 	var portraitAlphaTween:FlxTween;
@@ -133,6 +131,9 @@ class FreeplayState extends AmongUIState
 	var CIRCLE_PADDING:Float = 10; // spacing between circle icons
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
+	var circlesMinY:Float = 0;
+	var circlesMaxY:Float = 0;
+
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
 	var CARD_FADE:Float = .25;
@@ -159,13 +160,7 @@ class FreeplayState extends AmongUIState
 		Mods.currentModDirectory = null;
 		
 		smoothMonth = curMonth;
-		
-		add(turboGroup = new TurboControlGroup());
-		turboGroup.add(controlDOWN);
-		turboGroup.add(controlUP);
-		turboGroup.add(controlLEFT);
-		turboGroup.add(controlRIGHT);
-		
+
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
 		circles.zIndex = 22;
@@ -445,8 +440,10 @@ class FreeplayState extends AmongUIState
 	
 	function changeSong(by:Int = 0, change = false)
 	{
+		if (week_songs.length == 0) return;
+
 		prevSel = curSelect;
-		
+
 		curSelect += by;
 		
 		if (curSelect < 0) snapCards(week_songs.length);
@@ -504,43 +501,11 @@ class FreeplayState extends AmongUIState
 			portrait.color = FlxColor.WHITE;
 		}
 		
-		if (!reset)
+		if (reset || prevPort != porty)
 		{
-			if (prevPort != porty)
-			{
-				if (portraitTween != null)
-				{
-					portraitTween.cancel();
-				}
-				if (portraitAlphaTween != null)
-				{
-					portraitAlphaTween.cancel();
-				}
-				if (colorTween != null)
-				{
-					colorTween.cancel();
-				}
-				portrait.x = 504.65;
-				portrait.alpha = 0;
-				colorTween = FlxTween.color(porGlow, 0.2, porGlow.color, color);
-				portraitTween = FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.expoOut});
-				portraitAlphaTween = FlxTween.tween(portrait, {alpha: 1}, 0.3, {ease: FlxEase.expoOut});
-			}
-		}
-		else
-		{
-			if (portraitTween != null)
-			{
-				portraitTween.cancel();
-			}
-			if (portraitAlphaTween != null)
-			{
-				portraitAlphaTween.cancel();
-			}
-			if (colorTween != null)
-			{
-				colorTween.cancel();
-			}
+			portraitTween?.cancel();
+			portraitAlphaTween?.cancel();
+			colorTween?.cancel();
 			portrait.x = 504.65;
 			portrait.alpha = 0;
 			colorTween = FlxTween.color(porGlow, 0.2, porGlow.color, color);
@@ -640,7 +605,7 @@ class FreeplayState extends AmongUIState
 
 			if (FlxG.mouse.wheel != 0)
 			{
-				if (FlxG.mouse.y >= circles.findMinY() && FlxG.mouse.y <= circles.findMaxY())
+				if (FlxG.mouse.y >= circlesMinY && FlxG.mouse.y <= circlesMaxY)
 				{
 					changeSection(FlxG.mouse.wheel > 0 ? 1 : -1);
 				}
@@ -916,5 +881,7 @@ class FreeplayState extends AmongUIState
 		}
 
 		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
+		circlesMinY = circles.findMinY();
+		circlesMaxY = circles.findMaxY();
 	}
 }
