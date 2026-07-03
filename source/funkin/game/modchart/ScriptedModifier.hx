@@ -23,7 +23,7 @@ class ScriptedModifier extends Modifier
 		
 		final scriptPath:String = FunkinScript.getPath('scripts/modifiers/$name');
 		
-		if (FunkinAssets.exists(scriptPath)) script = FunkinScript.fromFile(scriptPath, name, PlayState.instance?.scripts?.scriptShareables);
+		if (FunkinAssets.exists(scriptPath)) script = FunkinScript.fromFile(scriptPath, name, null, PlayState.instance?.scripts?.scriptShareables);
 		
 		if (script == null || script.__garbage)
 		{

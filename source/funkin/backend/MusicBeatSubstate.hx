@@ -157,7 +157,7 @@ class MusicBeatSubstate extends FlxSubState
 
 		if (FunkinAssets.exists(scriptFile))
 		{
-			var _script = FunkinScript.fromFile(scriptFile, scriptName, scriptGroup.scriptShareables);
+			var _script = FunkinScript.fromFile(scriptFile, scriptName, null, scriptGroup.scriptShareables);
 			if (_script.__garbage)
 			{
 				_script = FlxDestroyUtil.destroy(_script);
@@ -180,7 +180,7 @@ class MusicBeatSubstate extends FlxSubState
 		return scripted;
 	}
 	
-	inline function isHardcodedState() return (scriptGroup != null && !scriptGroup.call('customMenu') == true) || (scriptGroup == null);
+	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
 	public function refreshZ(?group:FlxTypedGroup<FlxBasic>)
 	{

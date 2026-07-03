@@ -116,7 +116,7 @@ class GlobalScriptManager
 
 				if (scriptGroup.exists(scriptName)) continue;
 
-				var script = FunkinScript.fromFile(fullPath, scriptName);
+				var script = FunkinScript.fromFile(fullPath, scriptName, null, scriptGroup.scriptShareables);
 				if (script != null && !script.__garbage)
 				{
 					scriptGroup.parent = FlxG.state;
