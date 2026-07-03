@@ -591,6 +591,9 @@
         "weirdroute6": "El Capitán...",
         "weirdroute7": "INTRODUCIR CÓDIGO",
 	    "opt_category_credits": "Créditos",
+	    "opt_category_editors": "Editors",
+	    "opt_category_mobile": "Mobile",
+	    "opt_category_dlc": "DLC Manager",
 		
 		//Who captions fanmade
         "who1": "Yo no he sido.",

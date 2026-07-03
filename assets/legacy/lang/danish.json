@@ -564,6 +564,9 @@
         "opt_language": "Sprog",
         "opt_language_desc": "Vælg dit sprog! P.s. Alle sprog udover English (United States) er oversat af fællesskabet!",
         "opt_category_credits": "Sluttekster", //means end texts
+        "opt_category_editors": "Editors",
+        "opt_category_mobile": "Mobile",
+        "opt_category_dlc": "DLC Manager",
 		"opt_subtitles": "Undertekster",
 		"opt_subtitles_desc": "Der bliver vidst undertekster på skærmen imens der spilles videoer eller sang animationer.",
 		"opt_unlockedFramerate": "Billedhastighed Uden Grænser",

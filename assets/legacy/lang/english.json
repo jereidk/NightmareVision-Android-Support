@@ -562,6 +562,7 @@
 		"opt_category_dlc": "DLC Manager",
 		"opt_category_credits": "Credits",
 		"opt_category_notes": "Notes",
+		"opt_category_editors": "Editors",
 		"opt_controllermode": "Controller Mode",
 		"opt_controllermode_desc": "Enables controller support.",
 		"opt_downscroll": "Downscroll",
