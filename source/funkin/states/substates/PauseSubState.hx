@@ -135,6 +135,10 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		looksie.origin.set(25, 75);
 		looksie.cameras = [cam];
 		looksie.flipX = true;
+		#if mobile
+		looksie.x = FlxG.width - looksie.width;
+		looksie.flipX = false;
+		#end
 		
 		add(pauseGroup);
 		add(looksie);
@@ -191,8 +195,13 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 			if (controlLEFT.PRESSED) changeSkipTime(-1);
 			if (controlRIGHT.PRESSED) changeSkipTime(1);
 			
+			#if mobile
+			if (controls.mobilePadJustReleased([UP])) changeSelection(-1);
+			else if (controls.mobilePadJustReleased([DOWN])) changeSelection(1);
+			#else
 			if (controls.UI_UP_P || FlxG.mouse.wheel > 0) changeSelection(-1);
-			if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
+			else if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
+			#end
 			
 			if (ClientPrefs.inDevMode && (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X)))
 			{
@@ -304,12 +313,6 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		FlxG.sound.play(Paths.sound('hover'), 0.5);
 		curSelect = FlxMath.wrap(curSelect + by, 0, options.length - 1);
 		updateSkipTimeOption();
-
-                #if mobile
-                controls.isInSubstate = true;
-                addVirtualPad(UP_DOWN, A_B);
-                addVirtualPadCamera();
-                #end
 	}
 	
 	function acceptChoice():Void

@@ -128,7 +128,7 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_PADDING:Float = 10; // spacing between circle icons
+	var CIRCLE_PADDING:Float = 16; // spacing between circle icons
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
 	var circlesMinY:Float = 0;
@@ -228,6 +228,7 @@ class FreeplayState extends AmongUIState
 		add(infoText);
 		
 		// look mom! new controls system!
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -238,6 +239,7 @@ class FreeplayState extends AmongUIState
 		bottomControls.camera = camUpper;
 		bottomControls.zIndex = 12;
 		add(bottomControls);
+		#end
 		
 		sectionText = new FlxText(0, 80, FlxG.width, '---', 35);
 		sectionText.setFormat(Paths.font("AmaticSC-Bold.ttf", false), 70, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -404,7 +406,8 @@ class FreeplayState extends AmongUIState
 		
 		refreshCards();
 		changeSong(0, true);
-		
+		preloadSectionPortraits(curMonth);
+
 		if (by != 0) FlxG.sound.play(Paths.sound(by > 0 ? 'panelAppear' : 'panelDisappear'), 0.5);
 	}
 	
@@ -633,7 +636,8 @@ class FreeplayState extends AmongUIState
 			final normalizedDist:Float = Math.min(distFromCenter / 3.0, 1.0);
 
 			// Fade circles that are far from current month
-			c.alpha = FlxMath.lerp(1.0, CIRCLE_FADE, normalizedDist);
+			final targetAlpha:Float = FlxMath.lerp(1.0, CIRCLE_FADE, normalizedDist);
+			c.alpha = MathUtil.fpsLerp(c.alpha, targetAlpha, 0.12);
 
 			// Add subtle scale effect for focused circles
 			final targetScale:Float = FlxMath.lerp(1.1, 0.95, normalizedDist);
@@ -801,11 +805,10 @@ class FreeplayState extends AmongUIState
 		
 		function fetchWeekSongs(weekData:WeekData):Array<Array<Dynamic>>
 		{
-			var cachedPortraits:Array<String> = [];
 			var songs:Array<Array<Dynamic>> = [];
-			
+
 			if (weekData == null) return songs;
-			
+
 			// maybe should just rewrite the way the song stuff is read instead of mangling it to match lol
 			for (song in weekData.songs)
 			{
@@ -817,19 +820,9 @@ class FreeplayState extends AmongUIState
 					(cost > 0 ? 'shop' : (song[7] == true ? 'special' : 'story')), song[5] ?? [Paths.sanitize(song[0])], cost,
 					song[4], weekData.currency, shouldHideUntilDoubleTrouble, weekData.folder
 				];
-				
-				// Lagspike prevention down below
-				// check the array to see if it contains the string of the portrait so we don't cache the same portrait if its already been cached
-				if (!cachedPortraits.contains(song[3]))
-				{
-					cachedPortraits.push(song[3]);
-					
-					final image:String = 'menu/freeplay/portraits/${song[3]}';
-					if (Paths.fileExists('images/$image.png', LOOSE)) Paths.image(image, LOOSE);
-				}
 				songs.push(data);
 			}
-			
+
 			return songs;
 		}
 		
@@ -873,9 +866,9 @@ class FreeplayState extends AmongUIState
 			Mods.currentModDirectory = weeks[i].mod;
 
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
-			circ.setGraphicSize(-1, 71);
+			circ.setGraphicSize(-1, 56);
 			circ.updateHitbox();
-			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width * .5);
+			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (circ.width + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
 
 			circles.add(circ);
@@ -884,5 +877,24 @@ class FreeplayState extends AmongUIState
 		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
 		circlesMinY = circles.findMinY();
 		circlesMaxY = circles.findMaxY();
+
+		preloadSectionPortraits(curMonth);
+	}
+
+	function preloadSectionPortraits(sectionIndex:Int):Void
+	{
+		if (sectionIndex < 0 || sectionIndex >= weeks.length) return;
+		final section = weeks[sectionIndex];
+		final seenPorts = new haxe.ds.StringMap<Bool>();
+		for (i in 0...section.songs.length)
+		{
+			final si:SongInformation = cast section.songs[i];
+			final porty:String = si.portrait;
+			if (seenPorts.exists(porty)) continue;
+			seenPorts.set(porty, true);
+			Mods.currentModDirectory = si.mod;
+			Paths.image(ext + 'portraits/' + porty);
+		}
+		Mods.currentModDirectory = null;
 	}
 }

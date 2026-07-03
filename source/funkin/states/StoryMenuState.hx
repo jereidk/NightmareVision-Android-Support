@@ -111,6 +111,7 @@ class StoryMenuState extends AmongUIState
 		add(maze);
 		add(cruiser);
 		
+		#if !mobile
 		var bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -119,6 +120,7 @@ class StoryMenuState extends AmongUIState
 		bottomControls.cameras = [camUpper];
 		bottomControls.zIndex = 10;
 		add(bottomControls);
+		#end
 		
 		
 		for (node in nodes) node.curScript?.executeFunc('onCreatePost', [], node);
@@ -129,11 +131,11 @@ class StoryMenuState extends AmongUIState
 		goTo(node);
 		cruiser.snapToNode();
 		
-		FlxG.camera.x = 70;
-		FlxG.camera.width -= 140;
+		FlxG.camera.x = 50;
+		FlxG.camera.width -= 120;
 		#if mobile
-		FlxG.camera.y = 160;
-		FlxG.camera.height = 500;
+		FlxG.camera.y = 100;
+		FlxG.camera.height = 560;
 		#else
 		FlxG.camera.y = 250;
 		FlxG.camera.height = 410;

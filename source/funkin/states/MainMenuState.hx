@@ -162,11 +162,13 @@ class MainMenuState extends MusicBeatState
 		versionShit.setFormat(Paths.font('vcr.ttf', false), 16, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
 
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'],
 			['enter', 'conf']
 		], false);
 		add(bottomControls);
+		#end
 
 		Conductor.bpm = 102;
 		Conductor.bpmChangeMap.resize(0);
