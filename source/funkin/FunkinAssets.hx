@@ -394,7 +394,7 @@ class FunkinAssets
 		{
 			if (useCache && cache.currentTrackedGraphics.exists(key))
 			{
-				cache.localTrackedAssets.push(key);
+				cache.localTrackedAssets.set(key, true);
 				return cache.currentTrackedGraphics.get(key);
 			}
 		}
@@ -522,7 +522,7 @@ class FunkinAssets
 	{
 		if (useCache && cache.currentTrackedSounds.exists(key))
 		{
-			cache.localTrackedAssets.push(key);
+			cache.localTrackedAssets.set(key, true);
 			return cache.currentTrackedSounds.get(key);
 		}
 		

@@ -66,9 +66,10 @@ class FunkinCache
 		// }
 
 		// clear all sounds that are cached
-		for (key in currentTrackedSounds.keys())
+		final soundKeys = [for (k in currentTrackedSounds.keys()) k];
+		for (key in soundKeys)
 		{
-			if (!localTrackedAssets.contains(key) && !currentTrackedSounds.permanentKeys.contains(key))
+			if (!localTrackedAssets.exists(key) && !currentTrackedSounds.permanentKeys.contains(key))
 			{
 				removeFromCache(key);
 			}
@@ -81,7 +82,7 @@ class FunkinCache
 		{
 			for (key in currentTrackedGraphics.keys())
 			{
-				if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
+				if (!localTrackedAssets.exists(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 				{
 					final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
 					Paths.tempAtlasFramesCache.remove(cacheKey);
@@ -94,7 +95,7 @@ class FunkinCache
 		}
 
 		// flags everything to be cleared out next unused memory clear
-		localTrackedAssets.resize(0);
+		localTrackedAssets.clear();
 		openfl.Assets.cache.clear("songs");
 	}
 	
@@ -103,16 +104,17 @@ class FunkinCache
 	 */
 	public function clearUnusedMemory()
 	{
-		for (key in currentTrackedGraphics.keys())
+		final graphicKeys = [for (k in currentTrackedGraphics.keys()) k];
+		for (key in graphicKeys)
 		{
-			if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
+			if (!localTrackedAssets.exists(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 			{
 				// tempAtlasFramesCache stores keys WITHOUT the .png extension,
-			// while currentTrackedGraphics stores keys WITH extension.
-			// Strip extension to clear stale frame cache entries.
-			final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
-			Paths.tempAtlasFramesCache.remove(cacheKey);
-			removeFromCache(key);
+				// while currentTrackedGraphics stores keys WITH extension.
+				// Strip extension to clear stale frame cache entries.
+				final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
+				Paths.tempAtlasFramesCache.remove(cacheKey);
+				removeFromCache(key);
 			}
 		}
 		
@@ -128,7 +130,7 @@ class FunkinCache
 	
 	public final currentTrackedSounds:CacheMap<Sound> = new CacheMap();
 	
-	public final localTrackedAssets:Array<String> = [];
+	public final localTrackedAssets:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap<Bool>();
 	
 	/**
 	 * Removes a asset from the cache
@@ -205,8 +207,7 @@ class FunkinCache
 		newGraphic.persist = true;
 		newGraphic.destroyOnNoUse = false;
 		
-		// Prevent duplicates in localTrackedAssets
-		if (!Lambda.has(localTrackedAssets, key)) localTrackedAssets.push(key);
+		localTrackedAssets.set(key, true);
 		currentTrackedGraphics.set(key, newGraphic);
 		return newGraphic;
 	}
@@ -214,9 +215,7 @@ class FunkinCache
 	public function cacheSound(key:String, sound:Sound):Sound
 	{
 		currentTrackedSounds.set(key, sound);
-		
-		// Prevent duplicates in localTrackedAssets
-		if (!Lambda.has(localTrackedAssets, key)) localTrackedAssets.push(key);
+		localTrackedAssets.set(key, true);
 		
 		return sound;
 	}
@@ -231,9 +230,10 @@ class FunkinCache
 	public function clearCategoryAssets(categoryPrefix:String, clearFromPermanent:Bool = false):Int
 	{
 		var clearedCount = 0;
-		
+
 		// Clear graphics
-		for (key in currentTrackedGraphics.keys())
+		final gKeys = [for (k in currentTrackedGraphics.keys()) k];
+		for (key in gKeys)
 		{
 			if (key.contains(categoryPrefix))
 			{
@@ -243,9 +243,10 @@ class FunkinCache
 				clearedCount++;
 			}
 		}
-		
+
 		// Clear sounds
-		for (key in currentTrackedSounds.keys())
+		final sKeys = [for (k in currentTrackedSounds.keys()) k];
+		for (key in sKeys)
 		{
 			if (key.contains(categoryPrefix))
 			{
