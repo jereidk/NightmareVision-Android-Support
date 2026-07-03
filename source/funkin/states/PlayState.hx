@@ -252,6 +252,13 @@ class PlayState extends MusicBeatState
 	public var eventNotes:Array<EventNote> = [];
 	// Index into queueNotes so we advance by pointer rather than O(n) shift().
 	var _noteSpawnIdx:Int = 0;
+
+	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
+	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
+	final _scriptMoveCamArgs:Array<Dynamic> = [''];
+
+	// Cached zoom for screenDim to skip redundant updateHitbox/screenCenter every frame.
+	var _lastScreenDimZoom:Float = -1;
 	
 	/**
 	 * Target the game camera follows
@@ -2262,8 +2269,9 @@ class PlayState extends MusicBeatState
 		
 		tempVector.put();
 		
-		scripts.call('onUpdate', [elapsed]);
-		
+		_scriptUpdateArgs[0] = elapsed;
+		scripts.call('onUpdate', _scriptUpdateArgs);
+
 		super.update(elapsed);
 		input.update();
 
@@ -2313,7 +2321,19 @@ class PlayState extends MusicBeatState
 			}
 		}
 		
-		scripts.call('onUpdatePost', [elapsed]);
+		if (ClientPrefs.underlayType == 'Screen Dim' && screenDim != null)
+		{
+			final curZoom = screenDim.camera.zoom;
+			if (curZoom != _lastScreenDimZoom)
+			{
+				_lastScreenDimZoom = curZoom;
+				screenDim.scale.set(screenDim.camera.width / curZoom, screenDim.camera.height / curZoom);
+				screenDim.updateHitbox();
+				screenDim.screenCenter();
+			}
+		}
+
+		scripts.call('onUpdatePost', _scriptUpdateArgs);
 	}
 	
 	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
@@ -2884,14 +2904,16 @@ class PlayState extends MusicBeatState
 				displacement.putWeak();
 			}
 			
-			scripts.call('onMoveCamera', ['gf']);
+			_scriptMoveCamArgs[0] = 'gf';
+			scripts.call('onMoveCamera', _scriptMoveCamArgs);
 			scripts.set('whosTurn', 'gf');
 			return;
 		}
-		
+
 		var isDad = !SONG.notes[curSection].mustHitSection;
 		moveCamera(isDad);
-		scripts.call('onMoveCamera', [isDad ? 'dad' : 'boyfriend']);
+		_scriptMoveCamArgs[0] = isDad ? 'dad' : 'boyfriend';
+		scripts.call('onMoveCamera', _scriptMoveCamArgs);
 	}
 	
 	public function getCharacterCameraPos(char:Null<Character>):FlxPoint
