@@ -16,6 +16,7 @@ import mobile.backend.flixel.input.TouchInputManager;
 import mobile.backend.flixel.input.FlxMobileInputID;
 
 import funkin.data.ClientPrefs;
+import funkin.FunkinAssets;
 
 #if MODS_ALLOWED
 import sys.FileSystem;
@@ -311,15 +312,15 @@ class MobileVirtualPad extends TouchInputManager
 		var graphic:FlxGraphic = null;
 		var path:String = 'assets/mobile/virtualpad/${Graphic}.png';
 		var cacheKey:String = path;
-		
+
 		#if MODS_ALLOWED
 		var modsPath:String = Paths.modFolders('mobile/virtualpad/${Graphic}.png');
 		if (FileSystem.exists(modsPath))
 		{
 			cacheKey = modsPath;
-			graphic = FlxG.bitmap.get(cacheKey);
-			
-			if (graphic == null) graphic = FlxGraphic.fromBitmapData(BitmapData.fromFile(modsPath), false, cacheKey);
+			graphic = FunkinAssets.cache.currentTrackedGraphics.get(cacheKey);
+			if (graphic == null)
+				graphic = FunkinAssets.cache.cacheBitmap(cacheKey, BitmapData.fromFile(modsPath));
 		}
 		else
 		#end
@@ -329,10 +330,12 @@ class MobileVirtualPad extends TouchInputManager
 				path = 'assets/mobile/virtualpad/default.png';
 				cacheKey = path;
 			}
-			
-			graphic = FlxG.bitmap.get(cacheKey);
-			if (graphic == null) graphic = FlxGraphic.fromBitmapData(Assets.getBitmapData(path), false, cacheKey);
+
+			graphic = FunkinAssets.cache.currentTrackedGraphics.get(cacheKey);
+			if (graphic == null)
+				graphic = FunkinAssets.cache.cacheBitmap(cacheKey, Assets.getBitmapData(path));
 		}
+		FunkinAssets.cache.currentTrackedGraphics.addPermanentKey(cacheKey);
 		
 		var button = new FlxButton(X, Y, IDs);
 		
