@@ -118,16 +118,22 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	}
 	
 	public var splashLayer:FlxTypedContainer<FlxTypedContainer<Dynamic>>;
-	
+
 	/**
 	 * The container that all notesplashes are held in
 	 */
 	public var grpNoteSplashes:FlxTypedContainer<NoteSplash>;
-	
+
 	/**
 		The container that all sustain notesplashes are held in
 	**/
 	public var grpSusSplashes:FlxTypedContainer<SustainSplash>;
+
+	// Pre-allocated args for script calls in noteHit/noteMiss to avoid per-hit heap allocation.
+	final _noteScriptArgs:Array<Dynamic> = [null, 0];
+	final _noteTypeExclusions:Array<String> = [''];
+	final _gfCharArray:Array<Null<Character>> = [null];
+	final _ownerCharArray:Array<Null<Character>> = [null];
 	
 	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default')
 	{
@@ -279,10 +285,12 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		var scriptFunc:String = '';
 		if (field.playerControls) scriptFunc = 'goodNoteHit';
 		else scriptFunc = field.ID == 1 ? 'opponentNoteHit' : 'extraNoteHit';
-		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
-		PlayState.instance.scripts.call('${scriptFunc}Pre', scriptArgs);
+
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		PlayState.instance.scripts.call(scriptFunc + 'Pre', scriptArgs);
 		
 		final strum:StrumNote = note.strum;
 		
@@ -338,8 +346,26 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			PlayState.instance.missCombo = 0;
 		}
 		
-		var chars:Array<Null<Character>> = note.gfNote ? [PlayState.instance.gf] : field.singers;
-		if (note.owner != null) chars = (note.singers != null && note.singers.length > 0 ? note.singers : [note.owner]);
+		var chars:Array<Null<Character>>;
+		if (note.owner != null)
+		{
+			if (note.singers != null && note.singers.length > 0)
+				chars = note.singers;
+			else
+			{
+				_ownerCharArray[0] = note.owner;
+				chars = _ownerCharArray;
+			}
+		}
+		else if (note.gfNote)
+		{
+			_gfCharArray[0] = PlayState.instance.gf;
+			chars = _gfCharArray;
+		}
+		else
+		{
+			chars = field.singers;
+		}
 		
 		for (char in chars)
 			if (char != null) characterSing(char, note, field.playerControls);
@@ -358,9 +384,10 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		final globalScript = PlayState.instance.callNoteTypeScript(note.noteType, 'hit', scriptArgs);
 		if (ScriptConstants.stopping(globalScript)) return;
 
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, scriptFunc, scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, [note.noteType]);
-		
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, _noteTypeExclusions);
+
 		if (!note.isSustainNote) field.disposeNote(note);
 	}
 	
@@ -402,10 +429,13 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			}
 		}
 		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, 'noteMiss', scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, [note.noteType]);
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, _noteTypeExclusions);
 		
 		// hold note missing stuff, makes the hold unhittable (and kills it, might make it just transparent if i can fix some stuff)
 		if (!note.hitCausesMiss && !note.canMiss)
