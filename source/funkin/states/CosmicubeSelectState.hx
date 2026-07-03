@@ -143,7 +143,7 @@ class CosmicubeSelectState extends AmongUIState
 			card.looksie.alpha = MathUtil.fpsLerp(card.looksie.alpha, looksie && card.selected ? 1 : .5, .2);
 			card.checkbox.alpha = MathUtil.fpsLerp(card.checkbox.alpha, !looksie && card.selected ? 1 : .5, .2);
 			
-			if (!lockMovement && card.selected && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
+			if (!lockMovement && card.selected && MobileNavUtil.allowPointerNav() && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
 			{
 				final overlapLooksie:Bool = FlxG.mouse.overlaps(card.looksie), overlapCheckbox:Bool = FlxG.mouse.overlaps(card.checkbox);
 				

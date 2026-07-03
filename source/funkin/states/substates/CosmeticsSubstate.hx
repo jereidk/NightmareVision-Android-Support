@@ -1158,10 +1158,17 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				
 				if (!mouseMode)
 				{
+					#if mobile
+					if (controls.mobilePadJustReleased([LEFT])) gridMove(-1, 0);
+					if (controls.mobilePadJustReleased([RIGHT])) gridMove(1, 0);
+					if (controls.mobilePadJustReleased([UP])) gridMove(0, -1);
+					if (controls.mobilePadJustReleased([DOWN])) gridMove(0, 1);
+					#else
 					if (controlLEFT.PRESSED) gridMove(-1, 0);
 					if (controlRIGHT.PRESSED) gridMove(1, 0);
 					if (controlUP.PRESSED) gridMove(0, -1);
 					if (controlDOWN.PRESSED) gridMove(0, 1);
+					#end
 				}
 				
 				if (controls.ACCEPT)
