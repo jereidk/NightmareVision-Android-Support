@@ -152,7 +152,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		if (additionalVars != null)
 		{
 			for (key => obj in additionalVars)
-				set(key, additionalVars.get(obj));
+				set(key, obj);
 		}
 		
 		tryExecute();

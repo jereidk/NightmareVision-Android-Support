@@ -994,7 +994,7 @@ class PlayState extends MusicBeatState
 		
 		if (FunkinAssets.exists(hscriptPath, TEXT))
 		{
-			var script = initFunkinScript(hscriptPath, false, false);
+			var script = initFunkinScript(hscriptPath, null, false);
 			
 			script?.set('parent', char);
 			
@@ -1011,7 +1011,7 @@ class PlayState extends MusicBeatState
 		
 		if (FunkinAssets.exists(hscriptPath, TEXT))
 		{
-			var script = initFunkinScript(hscriptPath, false, false);
+			var script = initFunkinScript(hscriptPath, null, false);
 			
 			script?.set('parent', pet);
 			
