@@ -1338,9 +1338,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	{
 		if (character == null) return;
 		
-		uiElements.characterDialogBox.flipXCheckbox.selected = character.originalFlipX;
-		uiElements.characterDialogBox.vSliceSusCheckbox.selected = character.vSliceSustains;
-		uiElements.characterDialogBox.afterimagesCheckbox.selected = character.ghostsEnabled;
+		uiElements.characterDialogBox.flipXCheckbox.value = character.originalFlipX;
+		uiElements.characterDialogBox.vSliceSusCheckbox.value = character.vSliceSustains;
+		uiElements.characterDialogBox.afterimagesCheckbox.value = character.ghostsEnabled;
 		uiElements.characterDialogBox.antialiasingCheckbox.value = !character.noAntialiasing;
 		uiElements.characterDialogBox.scaledOffsetsCheckbox.value = character.scalableOffsets;
 		
@@ -1377,7 +1377,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		uiElements.animationList.animationList.selectItemBy((item) -> return item.id == character.getAnimName());
 		
-		uiElements.toolBar.isPlayerCheckBox.selected = character.isPlayer;
+		uiElements.toolBar.isPlayerCheckBox.value = character.isPlayer;
 	}
 	
 	function fillAnimationFields(?animationName:String)
