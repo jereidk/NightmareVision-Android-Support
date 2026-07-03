@@ -31,7 +31,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 	var otherTitleText:FlxText;
 	var bgThing:FlxSprite;
 	var menuBackButton:FlxSprite;
-	var bottomControls:funkin.objects.menu.AmongControls;
+	var bottomControls:Null<funkin.objects.menu.AmongControls>;
 	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	
 	var song:String;
@@ -152,18 +152,20 @@ class ResetScoreSubState extends MusicBeatSubstate
 			}
 		}
 		
+		#if !mobile
 		bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
 			['esc', 'back'] // back
 		], false);
 		add(bottomControls);
+		#end
 		
 		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
 		
 		for (obj in members)
 		{
-			if (obj == bg || obj == bottomControls || !Std.isOfType(obj, FlxSprite)) continue;
+			if (obj == bg || (bottomControls != null && obj == bottomControls) || !Std.isOfType(obj, FlxSprite)) continue;
 			
 			var sprite:FlxSprite = cast obj;
 			var alpha:Float = sprite.alpha;
@@ -265,7 +267,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		
 		for (obj in members)
 		{
-			if (obj == bg || obj == bottomControls || !Std.isOfType(obj, FlxSprite)) continue;
+			if (obj == bg || (bottomControls != null && obj == bottomControls) || !Std.isOfType(obj, FlxSprite)) continue;
 			
 			var sprite:FlxSprite = cast obj;
 			FlxTween.cancelTweensOf(sprite);

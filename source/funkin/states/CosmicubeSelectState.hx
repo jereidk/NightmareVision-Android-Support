@@ -61,6 +61,7 @@ class CosmicubeSelectState extends AmongUIState
 		
 		Mods.currentModDirectory = prevMod;
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'], //select
 			['enter', 'conf'], //conf
@@ -70,6 +71,7 @@ class CosmicubeSelectState extends AmongUIState
 		bottomControls.camera = camUpper;
 		bottomControls.zIndex = 12;
 		add(bottomControls);
+		#end
 		
 		localCurrency = null;
 		

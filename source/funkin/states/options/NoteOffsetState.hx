@@ -89,12 +89,14 @@ class NoteOffsetState extends MusicBeatState
 		timeTxt.visible = true;
 		timeTxt.cameras = [camHUD];
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'opt_category_adjustdelay'], // select
 			['esc', 'back'] // back
 		], true);
 		bottomControls.camera = camHUD;
 		add(bottomControls);
+		#end
 		
 		barPercent = ClientPrefs.noteOffset;
 		updateNoteDelay();

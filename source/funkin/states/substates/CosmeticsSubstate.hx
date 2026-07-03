@@ -105,7 +105,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var cosmeticDataById:Map<String, ShopItemData> = [];
 	var cosmeticColorCache:Map<String, FlxColor> = [];
 	var _portraitCache:Map<String, Bool> = [];
-	var controlsDisplay:AmongControls;
+	var controlsDisplay:Null<AmongControls>;
 	
 	var initialBFSkin:String;
 	var initialGFSkin:String;
@@ -271,6 +271,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		gridScrollBar.visible = false;
 		add(gridScrollBar);
 		
+		#if !mobile
 		controlsDisplay = new AmongControls([
 			['arrow', 'select'],
 			['enter', 'conf'],
@@ -278,6 +279,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		], false);
 		controlsDisplay.cameras = overlayCameras;
 		add(controlsDisplay);
+		#end
 		
 		updateCategoryDisplay();
 		
@@ -317,6 +319,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(UP_DOWN, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -1228,6 +1231,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				if (controls.UI_UP_P || controls.UI_DOWN_P) mouseMode = false;
 				#end
 				
+				#if mobile
+				if (controls.mobilePadJustReleased([DOWN])) { selectedCategory = FlxMath.wrap(selectedCategory + 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				else if (controls.mobilePadJustReleased([UP])) { selectedCategory = FlxMath.wrap(selectedCategory - 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				else if (FlxG.mouse.wheel != 0) { selectedCategory = FlxMath.wrap(selectedCategory - FlxG.mouse.wheel, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				#else
 				if (controls.UI_DOWN_P || controls.UI_UP_P || FlxG.mouse.wheel != 0)
 				{
 					var diff = FlxG.mouse.wheel != 0 ? -FlxG.mouse.wheel : controls.UI_DOWN ? 1 : -1;
@@ -1235,6 +1243,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
 					updateCategoryDisplay();
 				}
+				#end
 				
 				if (controls.ACCEPT)
 				{

@@ -114,12 +114,14 @@ class GameOverSubstate extends MusicBeatSubstate
 		camCTRL.bgColor = 0x0;
 		FlxG.cameras.add(camCTRL, false);
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['enter', 'restartsong'], // conf
 			['esc', 'backtomenu'] // back
 		], false);
 		bottomControls.camera = camCTRL;
 		add(bottomControls);
+		#end
 		
 		super.create();
 		

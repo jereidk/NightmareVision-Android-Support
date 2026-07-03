@@ -74,6 +74,7 @@ class MissCounterSubstate extends MusicBeatSubstate
 		changeSelection(0);
 		openDeath();
 		
+		#if !mobile
 		var bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -82,9 +83,10 @@ class MissCounterSubstate extends MusicBeatSubstate
 		bottomControls.color = FlxColor.RED;
 		bottomControls.zIndex = 10;
 		add(bottomControls);
-		
+
 		bottomControls.alpha = 0;
 		FlxTween.tween(bottomControls, {alpha: 1}, 0.25, {ease: FlxEase.circIn});
+		#end
 
 		#if mobile
 		controls.isInSubstate = true;

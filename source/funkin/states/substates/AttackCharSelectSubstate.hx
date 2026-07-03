@@ -97,6 +97,7 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 		}
 		changeSelection(0);
 		
+		#if !mobile
 		var bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -104,9 +105,10 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 		], false);
 		bottomControls.zIndex = 10;
 		add(bottomControls);
-		
+
 		bottomControls.alpha = 0;
 		FlxTween.tween(bottomControls, {alpha: 1}, 0.35, {ease: FlxEase.circOut});
+		#end
 
 		#if mobile
 		controls.isInSubstate = true;

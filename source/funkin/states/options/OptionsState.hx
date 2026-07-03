@@ -68,7 +68,7 @@ class OptionsState extends MusicBeatState
 	var buttonBaseY:Float = 112;
 	var buttonSpacing:Float = 65;
 	
-	var bottomControls:AmongControls;
+	var bottomControls:Null<AmongControls>;
 
 	public function openSelectedSubstate(label:String)
 	{
@@ -194,6 +194,7 @@ class OptionsState extends MusicBeatState
 			versionText.antialiasing = ClientPrefs.globalAntialiasing;
 			add(versionText);
 			
+			#if !mobile
 			bottomControls = new AmongControls([
 				['arrow', 'select'], // select
 				['enter', 'conf'], // conf
@@ -201,6 +202,7 @@ class OptionsState extends MusicBeatState
 			], true);
 			bottomControls.zIndex = 12;
 			add(bottomControls);
+			#end
 
 			changeSelection();
 			refreshOptionFonts();
@@ -250,7 +252,9 @@ class OptionsState extends MusicBeatState
 		optionsHeader.font = Paths.font('AmaticSC-Bold.ttf');
 		optionsHeader.y = (38 + Math.round((optionsHeader.size - optionsHeader.height) * .5));
 		
-		@:privateAccess bottomControls.refreshBar();
+		#if !mobile
+		@:privateAccess bottomControls?.refreshBar();
+		#end
 		
 		for (txt in optionTexts.members)
 		{
