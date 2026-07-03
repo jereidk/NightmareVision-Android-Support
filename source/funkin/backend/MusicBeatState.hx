@@ -162,7 +162,7 @@ class MusicBeatState extends FlxUIState
 	public var scriptName:String = '';
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
 	
-	inline function isHardcodedState() return (scriptGroup != null && !scriptGroup.call('customMenu') == true) || (scriptGroup == null);
+	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
 	{
@@ -197,11 +197,7 @@ class MusicBeatState extends FlxUIState
 		}
 		
 		if (callOnLoad) scriptGroup.call('onLoad', []);
-		
-		// Notify global scripts about the new state
-		if (GlobalScriptManager.instance != null)
-			GlobalScriptManager.instance.onStateCreate(this);
-		
+
 		return scripted;
 	}
 	
@@ -290,6 +286,7 @@ class MusicBeatState extends FlxUIState
 		FlxTransitionableState.skipNextTransOut = false;
 		
 		PluginsManager.callOnScripts('onStateCreate');
+		GlobalScriptManager.instance?.onStateCreate(this);
 	}
 	
 	var _updatedMods:Bool = false;

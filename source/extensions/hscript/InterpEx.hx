@@ -147,11 +147,11 @@ class InterpEx extends crowplexus.hscript.Interp
 				v = fop(expr(e1), expr(e2));
 				if (l == null)
 				{
-					if (parentFields.contains(id) || parentFields.contains('set_$id'))
+					if (!variables.exists(id) && (parentFields.contains(id) || parentFields.contains('set_$id')))
 					{
 						Reflect.setProperty(parent, id, v);
 					}
-					else if (sharedFields?.exists(id))
+					else if (!variables.exists(id) && sharedFields?.exists(id))
 					{
 						sharedFields.set(id, v);
 					}

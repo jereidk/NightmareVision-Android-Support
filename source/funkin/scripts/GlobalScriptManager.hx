@@ -61,8 +61,9 @@ class GlobalScriptManager
 		// Automatically load all scripts from assets/scripts/global/
 		_loadScripts();
 
-		// Update parent reference when state changes
-		FlxG.signals.preStateSwitch.add(function()
+		// Update parent reference after state changes so global scripts
+		// reference the new state, not the outgoing one.
+		FlxG.signals.postStateSwitch.add(function()
 		{
 			_updateParent();
 		});

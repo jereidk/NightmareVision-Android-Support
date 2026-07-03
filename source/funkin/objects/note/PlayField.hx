@@ -356,7 +356,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		field.spawnSusSplash(note, field.playerControls);
 		
 		final globalScript = PlayState.instance.callNoteTypeScript(note.noteType, 'hit', scriptArgs);
-		
+		if (ScriptConstants.stopping(globalScript)) return;
+
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, scriptFunc, scriptArgs);
 		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, [note.noteType]);
 		
