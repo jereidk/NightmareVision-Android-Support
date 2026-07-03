@@ -75,7 +75,15 @@ class SystemMonitor
 	// State-transition texture tracking
 	static var _texCountBefore:Int = 0;
 	static var _prevStateName:String = '';
-	static var _catsBefore:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+	// Keys present before the switch — diffed on post to list exactly what loaded
+	static var _keysBefore:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
+	// Last texture count seen when each state NAME was exited — re-entry leak detector
+	static var _stateTexOnExit:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+
+	// GC spike detection
+	#if cpp
+	static var _lastGcUsage:Float = 0.0;
+	#end
 
 	/**
 	 * Initialize system monitoring
@@ -271,6 +279,13 @@ class SystemMonitor
 
 		_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
 
+		// GC delta: a large drop in heap usage means GC ran during this frame
+		#if cpp
+		var gcNow = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		var gcFreed = _lastGcUsage - gcNow;
+		_lastGcUsage = gcNow;
+		#end
+
 		if (elapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
 		{
 			_lastSpikeTime = now;
@@ -278,8 +293,11 @@ class SystemMonitor
 			var normalMs = Std.int(_smoothElapsed * 1000);
 			#if flixel
 			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
-			var note = _lastScriptNote.length > 0 ? '  [script: $_lastScriptNote]' : '';
-			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$note');
+			// Attribute the cause: GC > slow script > unknown
+			var cause =
+				#if cpp (gcFreed > 1024 * 1024) ? '  [GC freed ${Std.int(gcFreed / 1024)}KB]' : #end
+				(_lastScriptNote.length > 0 ? '  [script: $_lastScriptNote]' : '  [cause unknown]');
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$cause');
 			#else
 			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
 			#end
@@ -331,12 +349,13 @@ class SystemMonitor
 		_prevStateName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
 		_texCountBefore = _getRawBitmapCount();
 
-		_catsBefore = new haxe.ds.StringMap();
+		// Snapshot the full key set so we can diff exactly what loads next
+		_keysBefore = new haxe.ds.StringMap();
 		@:privateAccess for (k in FlxG.bitmap._cache.keys())
-		{
-			var cat = _texCategory(k);
-			_catsBefore.set(cat, (_catsBefore.get(cat) ?? 0) + 1);
-		}
+			_keysBefore.set(k, true);
+
+		// Record how many textures this state had when it exited
+		_stateTexOnExit.set(_prevStateName, _texCountBefore);
 	}
 
 	static function _onPostStateSwitch():Void
@@ -347,30 +366,31 @@ class SystemMonitor
 		var sign = diff >= 0 ? '+' : '';
 		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})');
 
-		if (diff > 5)
+		if (diff > 0)
 		{
-			// Show which path categories gained the most textures
-			var newByCat:Array<String> = [];
-			var catsAfter = new haxe.ds.StringMap<Int>();
+			// Collect the actual keys that are new (not in pre-switch snapshot)
+			var newKeys:Array<String> = [];
 			@:privateAccess for (k in FlxG.bitmap._cache.keys())
-			{
-				var cat = _texCategory(k);
-				catsAfter.set(cat, (catsAfter.get(cat) ?? 0) + 1);
-			}
-			for (cat => n in catsAfter)
-			{
-				var before = _catsBefore.get(cat) ?? 0;
-				if (n > before) newByCat.push('$cat:+${n - before}');
-			}
-			newByCat.sort((a, b) -> Std.parseInt(b.split(':+')[1]) - Std.parseInt(a.split(':+')[1]));
-			if (newByCat.length > 0)
-				_write('  New textures: ' + newByCat.join('  '));
+				if (!_keysBefore.exists(k)) newKeys.push(k);
+
+			newKeys.sort((a, b) -> Reflect.compare(a, b));
+
+			// Show up to 15 — display only the filename portion to keep lines short
+			var shown = newKeys.slice(0, 15).map(_keyTail);
+			_write('  Loaded by $newName (${newKeys.length}): ' + shown.join(', ')
+				+ (newKeys.length > 15 ? '  … +${newKeys.length - 15} more' : ''));
 		}
 
-		if (diff > 30)
-			_write('  [!] Large texture growth — verify $_prevStateName clears assets on exit');
+		// Re-entry leak detector: if we've visited this state before and it
+		// now has more textures than when we last left it, something accumulated.
+		var prevExitCount = _stateTexOnExit.get(newName);
+		if (prevExitCount != null && after > prevExitCount + 5)
+			_write('  [REVISIT LEAK] $newName had $prevExitCount textures last exit, now ${after} (+${after - prevExitCount}) — accumulating each visit');
 
-		_catsBefore = new haxe.ds.StringMap(); // free string memory
+		if (diff > 30)
+			_write('  [!] $newName loaded $diff textures — verify it releases them on exit');
+
+		_keysBefore = new haxe.ds.StringMap(); // free snapshot memory
 
 		// Reset member-growth tracking for the incoming state
 		_prevMemberCount = -1;
@@ -407,10 +427,12 @@ class SystemMonitor
 	}
 	#end
 
-	static inline function _texCategory(key:String):String
+	// Returns the last path segment of a texture key, e.g.
+	// "assets/images/characters/bf/bf-idle" → "bf-idle"
+	static inline function _keyTail(key:String):String
 	{
-		var i = key.indexOf('/');
-		return i > 0 ? key.substring(0, i) : '_root';
+		var i = key.lastIndexOf('/');
+		return i >= 0 ? key.substring(i + 1) : key;
 	}
 
 	static inline function _shortName(cls:String):String
