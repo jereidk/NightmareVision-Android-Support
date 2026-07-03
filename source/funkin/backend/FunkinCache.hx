@@ -190,7 +190,10 @@ class FunkinCache
 	{
 		#if android
 		if (bitmap.width > 4096 || bitmap.height > 4096)
+		{
 			Logger.log('Oversized texture [$key]: ${bitmap.width}x${bitmap.height} exceeds 4096px — compress or convert to ASTC', WARN);
+			SystemMonitor.notifyOversizedTexture(key, bitmap.width, bitmap.height);
+		}
 		#end
 
 		if (allowGPU && ClientPrefs.gpuCaching)

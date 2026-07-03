@@ -46,7 +46,17 @@ class SystemMonitor
 	 * Previous FPS values for averaging
 	 */
 	static var fpsHistory:Array<Int> = [];
-	static inline var FPS_HISTORY_SIZE:Int = 60; // Keep 1 second of history at 60fps
+	static inline var FPS_HISTORY_SIZE:Int = 60;
+
+	// Frame-spike tracking
+	static var _smoothElapsed:Float = 0.016;
+	static var _lastSpikeTime:Float = -999.0;
+	static inline final SPIKE_FACTOR:Float = 3.5;
+	static inline final SPIKE_COOLDOWN:Float = 2.0;
+
+	// State-transition leak tracking
+	static var _texCountBefore:Int = 0;
+	static var _prevStateName:String = '';
 
 	/**
 	 * Initialize system monitoring
@@ -82,6 +92,11 @@ class SystemMonitor
 			_write('  Platform: ' + getPlatform());
 			_write('  OS: ' + getOSInfo());
 			_write('');
+
+			#if flixel
+			FlxG.signals.preStateSwitch.add(_onPreStateSwitch);
+			FlxG.signals.postStateSwitch.add(_onPostStateSwitch);
+			#end
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to initialize: $e', WARN); }
 		#end
 	}
@@ -112,23 +127,12 @@ class SystemMonitor
 		lines.push('============================================================');
 
 		// FPS Stats
-		var fps:Int = 0;
 		#if flixel
-		fps = 60; // targetFPS not available
-		fpsHistory.push(fps);
-		if (fpsHistory.length > FPS_HISTORY_SIZE) fpsHistory.shift();
-		
-		var avgFps = 0;
-		if (fpsHistory.length > 0) {
-			var sum = 0;
-			for (f in fpsHistory) sum += f;
-			avgFps = Std.int(sum / fpsHistory.length);
-		}
-		
+		var fps = DebugDisplay.instance != null ? DebugDisplay.instance.currentFPS : 0;
+		var avgMs = _smoothElapsed > 0 ? Std.int(_smoothElapsed * 1000) : 0;
 		lines.push('[FPS]');
-		lines.push('  Current: ' + fps);
-		lines.push('  Average: ' + avgFps);
-		lines.push('  History: ' + fpsHistory.length + ' samples');
+		lines.push('  Current: $fps');
+		lines.push('  Avg frame: ~${avgMs}ms');
 		#end
 
 		// Memory Stats
@@ -223,6 +227,78 @@ class SystemMonitor
 		_write('  From: ' + fromState);
 		_write('  To: ' + toState);
 		logSnapshot('POST_STATE_' + toState);
+	}
+
+	// ==================== AUTO DIAGNOSTICS ====================
+
+	/**
+	 * Call every frame (from MusicBeatState.update).
+	 * Logs a warning to sysmon.log when a frame takes SPIKE_FACTOR × the rolling average.
+	 */
+	public static function checkFrame(elapsed:Float):Void
+	{
+		if (!enabled) return;
+
+		_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
+
+		if (elapsed > _smoothElapsed * SPIKE_FACTOR)
+		{
+			var now = haxe.Timer.stamp();
+			if (now - _lastSpikeTime > SPIKE_COOLDOWN)
+			{
+				_lastSpikeTime = now;
+				var spikeMs = Std.int(elapsed * 1000);
+				var normalMs = Std.int(_smoothElapsed * 1000);
+				#if flixel
+				var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+				_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state');
+				#else
+				_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
+				#end
+			}
+		}
+	}
+
+	/**
+	 * Called by FunkinCache when a texture exceeds 4096 px on either axis.
+	 * Mirrors the warning to sysmon.log so it persists between runs.
+	 */
+	public static function notifyOversizedTexture(key:String, w:Int, h:Int):Void
+	{
+		if (!enabled) return;
+		_write('[OVERSIZED] $key  ${w}x${h}  — compress or convert to ASTC');
+	}
+
+	#if flixel
+	static function _onPreStateSwitch():Void
+	{
+		_prevStateName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
+		_texCountBefore = _getRawBitmapCount();
+	}
+
+	static function _onPostStateSwitch():Void
+	{
+		var after = _getRawBitmapCount();
+		var diff = after - _texCountBefore;
+		var newName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
+		var sign = diff >= 0 ? '+' : '';
+		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})');
+		if (diff > 30)
+			_write('  [!] Large texture growth — verify $_prevStateName calls clearStoredMemory/clearUnusedMemory');
+	}
+
+	static function _getRawBitmapCount():Int
+	{
+		var n = 0;
+		@:privateAccess for (_ in FlxG.bitmap._cache.keys()) n++;
+		return n;
+	}
+	#end
+
+	static inline function _shortName(cls:String):String
+	{
+		var i = cls.lastIndexOf('.');
+		return i >= 0 ? cls.substring(i + 1) : cls;
 	}
 
 	// ==================== HELPERS ====================
@@ -335,32 +411,13 @@ class SystemMonitor
 	#if flixel
 	static function getBitmapCacheCount():String
 	{
-		try {
-			var count = 0;
-			@:privateAccess
-			for (key in FlxG.bitmap._cache.keys()) {
-				count++;
-			}
-			return Std.string(count);
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get bitmap cache count: $e', WARN); }
-		return '?';
+		return Std.string(_getRawBitmapCount());
 	}
 
 	static function getEstimatedGPUMemory():String
 	{
-		try {
-			var count = 0;
-			@:privateAccess
-			for (key in FlxG.bitmap._cache.keys()) {
-				var graphic = FlxG.bitmap.get(key);
-				if (graphic != null && graphic.bitmap != null) {
-					count++;
-				}
-			}
-			// Rough estimate: ~0.5MB per texture on average
-			return Std.string(count * 0.5) + ' MB (est.)';
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to estimate GPU memory: $e', WARN); }
-		return '0 MB';
+		// ~0.5 MB per texture (rough)
+		return Std.string(_getRawBitmapCount() * 0.5) + ' MB (est.)';
 	}
 	#end
 

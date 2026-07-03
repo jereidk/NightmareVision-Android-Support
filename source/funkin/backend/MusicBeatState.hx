@@ -318,6 +318,7 @@ class MusicBeatState extends FlxUIState
 	override function update(elapsed:Float)
 	{
 		addPlayTimeDelta();
+		SystemMonitor.checkFrame(elapsed);
 		
 		final oldStep:Int = curStep;
 		
