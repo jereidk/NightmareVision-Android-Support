@@ -131,11 +131,21 @@ class StoryMenuState extends AmongUIState
 		
 		FlxG.camera.x = 70;
 		FlxG.camera.width -= 140;
+		#if mobile
+		FlxG.camera.y = 160;
+		FlxG.camera.height = 500;
+		#else
 		FlxG.camera.y = 250;
 		FlxG.camera.height = 410;
-		
+		#end
+
 		FlxG.camera.zoom = .42;
 		FlxG.camera.follow(cruiser, TOPDOWN, .15);
+		// Pre-set the correct deadzone so snapToTarget centers the cruiser
+		// in the actual camera viewport (not FlxG.height which TOPDOWN uses by default)
+		var _wDz:Float = Math.min((800 - (FlxG.width + 800) * (1 - FlxG.camera.zoom)), (FlxG.camera.width - cruiser.width) * .5);
+		var _hDz:Float = Math.min(950 - (FlxG.height + 800) * (1 - FlxG.camera.zoom), (FlxG.camera.height - cruiser.height) * .5);
+		FlxG.camera.deadzone.set(_wDz, _hDz, FlxG.camera.width - _wDz * 2, FlxG.camera.height - _hDz * 2);
 		FlxG.camera.snapToTarget();
 		
 		scriptGroup.call('onCreatePost', []);
