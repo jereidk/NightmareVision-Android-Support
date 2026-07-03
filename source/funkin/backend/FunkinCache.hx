@@ -51,19 +51,7 @@ class FunkinCache
 	 */
 	public function clearStoredMemory() // maybe rename
 	{
-		// @:privateAccess
-		// for (key in FlxG.bitmap._cache.keys())
-		// {
-		// 	// ok this is dumb fix this later
-		// 	if (!currentTrackedGraphics.exists(key)
-		// 		&& !key.startsWith('pixels')
-		// 		&& !key.contains('editors/notification_neutral.png')
-		// 		&& !key.contains('editors/notification_success.png')
-		// 		&& !key.contains('editors/notification_warn.png')) // for haxeui is a bit hacky will do for now //find out hwo to avoid haxeui nicer or just do a different caching method //rewrite soonish ok.
-		// 	{
-		// 		disposeGraphic(FlxG.bitmap.get(key));
-		// 	}
-		// }
+		Paths.tempAtlasFramesCache.clear();
 
 		// clear all sounds that are cached
 		final soundKeys = [for (k in currentTrackedSounds.keys()) k];
@@ -73,25 +61,6 @@ class FunkinCache
 			{
 				removeFromCache(key);
 			}
-		}
-
-		// Clear stale atlas frame cache entries. This prevents cache coherency issues
-		// where frame data points to disposed bitmaps when transitioning between songs.
-		// tempAtlasFramesCache keys are stored WITHOUT .png extension.
-		try
-		{
-			for (key in currentTrackedGraphics.keys())
-			{
-				if (!localTrackedAssets.exists(key) && !currentTrackedGraphics.permanentKeys.contains(key))
-				{
-					final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
-					Paths.tempAtlasFramesCache.remove(cacheKey);
-				}
-			}
-		}
-		catch (e:Dynamic)
-		{
-			Logger.log('clearStoredMemory: Failed to clear tempAtlasFramesCache: $e', WARN);
 		}
 
 		// flags everything to be cleared out next unused memory clear
@@ -109,11 +78,6 @@ class FunkinCache
 		{
 			if (!localTrackedAssets.exists(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 			{
-				// tempAtlasFramesCache stores keys WITHOUT the .png extension,
-				// while currentTrackedGraphics stores keys WITH extension.
-				// Strip extension to clear stale frame cache entries.
-				final cacheKey = key.endsWith('.png') ? key.substr(0, key.length - 4) : key;
-				Paths.tempAtlasFramesCache.remove(cacheKey);
 				removeFromCache(key);
 			}
 		}
