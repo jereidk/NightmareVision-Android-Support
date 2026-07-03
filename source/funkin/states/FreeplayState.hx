@@ -155,29 +155,29 @@ class FreeplayState extends AmongUIState
 	
 	override function create()
 	{
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
 		super.create();
-		
+
 		Mods.currentModDirectory = null;
-		
+
 		smoothMonth = curMonth;
 
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
 		circles.zIndex = 22;
 		add(circles);
-		
+
 		// 1.1 feature
 		menuWeekSelect = new FlxSprite(12, 8).loadGraphic(Paths.image('menu/common/menuOther'));
 		menuWeekSelect.x = FlxG.width - (menuWeekSelect.width + 12); // im
 		menuWeekSelect.camera = camUpper;
 		menuWeekSelect.zIndex = 25;
 		add(menuWeekSelect);
-		
+
 		PlayState.isStoryMode = false;
 		PlayState.chartingMode = false;
-		
-		FunkinAssets.cache.clearStoredMemory();
-		FunkinAssets.cache.clearUnusedMemory();
 		
 		DiscordClient.changePresence("Freeplay Menu");
 		

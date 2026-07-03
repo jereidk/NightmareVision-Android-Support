@@ -44,15 +44,15 @@ class StoryMenuState extends AmongUIState
 	
 	public override function create():Void
 	{
-		super.create();
-		
-		Mods.currentModDirectory = null;
-		
-		PlayState.isStoryMode = true;
-		PlayState.chartingMode = false;
-		
 		FunkinAssets.cache.clearStoredMemory();
 		FunkinAssets.cache.clearUnusedMemory();
+
+		super.create();
+
+		Mods.currentModDirectory = null;
+
+		PlayState.isStoryMode = true;
+		PlayState.chartingMode = false;
 		
 		maze = new StoryNode('root');
 		cruiser = new StoryCruiser();
