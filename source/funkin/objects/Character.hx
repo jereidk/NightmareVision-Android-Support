@@ -330,7 +330,7 @@ class Character extends Bopper implements IFlags
 			holdTimer = 0;
 		}
 		
-		if (isAnimFinished() && hasAnim(getAnimName() + '-loop')) playAnim(getAnimName() + '-loop');
+		if (isAnimFinished()) { final _ln = getAnimName() + '-loop'; if (hasAnim(_ln)) playAnim(_ln); }
 		
 		if (ghostsEnabled)
 		{
@@ -390,18 +390,18 @@ class Character extends Bopper implements IFlags
 	
 	public function getSingDisplacement():FlxPoint
 	{
-		return switch (getAnimName().substr(4).split('-')[0].toLowerCase())
+		// Use charCodeAt to avoid substr/split/toLowerCase string allocations every frame.
+		// Bit-OR with 32 converts uppercase ASCII letters to lowercase (A-Z → a-z).
+		// Character 4 of a sing anim is the first letter of the direction: singUp, singDown, etc.
+		final name = getAnimName();
+		if (name.length < 5) return FlxPoint.weak();
+		return switch (name.charCodeAt(4) | 32)
 		{
-			case 'up':
-				FlxPoint.weak(0, -camDisplacement);
-			case 'down':
-				FlxPoint.weak(0, camDisplacement);
-			case 'left':
-				FlxPoint.weak(-camDisplacement, 0);
-			case 'right':
-				FlxPoint.weak(camDisplacement, 0);
-			default:
-				FlxPoint.weak();
+			case 117: FlxPoint.weak(0, -camDisplacement); // 'u' / 'U' → up
+			case 100: FlxPoint.weak(0,  camDisplacement); // 'd' / 'D' → down
+			case 108: FlxPoint.weak(-camDisplacement, 0); // 'l' / 'L' → left
+			case 114: FlxPoint.weak( camDisplacement, 0); // 'r' / 'R' → right
+			default:  FlxPoint.weak();
 		}
 	}
 	

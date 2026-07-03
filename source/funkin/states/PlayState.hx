@@ -250,6 +250,8 @@ class PlayState extends MusicBeatState
 	public var notes:FlxTypedGroup<Note>;
 	public var queueNotes:Array<QueueNote> = [];
 	public var eventNotes:Array<EventNote> = [];
+	// Index into queueNotes so we advance by pointer rather than O(n) shift().
+	var _noteSpawnIdx:Int = 0;
 	
 	/**
 	 * Target the game camera follows
@@ -1434,8 +1436,10 @@ class PlayState extends MusicBeatState
 	
 	public function clearNotesBefore(time:Float):Void
 	{
-		while (queueNotes.length > 0 && queueNotes[0].strumTime - 350 < time)
-			queueNotes.shift();
+		// Advance the index past notes that are before `time`; compact lazily.
+		while (_noteSpawnIdx < queueNotes.length && queueNotes[_noteSpawnIdx].strumTime - 350 < time)
+			_noteSpawnIdx++;
+		if (_noteSpawnIdx > 0) { queueNotes.splice(0, _noteSpawnIdx); _noteSpawnIdx = 0; }
 			
 		var i:Int = (notes.length - 1);
 		while (i >= 0)
@@ -1771,6 +1775,7 @@ class PlayState extends MusicBeatState
 		
 		eventNotes.sort(function(a:EventNote, b:EventNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
+		_noteSpawnIdx = 0;
 		
 		speedChanges.sort(SortUtil.svSort);
 		
@@ -1792,8 +1797,11 @@ class PlayState extends MusicBeatState
 		
 	public function getSV(time:Float):SpeedEvent
 	{
-		var event:SpeedEvent = {};
-		
+		// Reuse speedChanges[0] as the initial "best" instead of allocating a new SpeedEvent
+		// on every frame.  speedChanges always starts with a default {} entry (startTime=0,
+		// speed=1) so this is equivalent to the original logic for all valid song positions.
+		var event:SpeedEvent = speedChanges[0];
+
 		for (shit in speedChanges)
 		{
 			if (shit.startTime <= time && shit.startTime >= event.startTime)
@@ -1802,7 +1810,7 @@ class PlayState extends MusicBeatState
 				event = shit;
 			}
 		}
-		
+
 		return event;
 	}
 	
@@ -2113,8 +2121,8 @@ class PlayState extends MusicBeatState
 		
 		final spawnOffset:Float = (spawnTime / songSpeed);
 		
-		while (queueNotes.length > 0 && (queueNotes[0].strumTime - Conductor.songPosition) < spawnOffset)
-			recycleNote(queueNotes.shift());
+		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+			recycleNote(queueNotes[_noteSpawnIdx++]);
 			
 		var tempVector = funkin.backend.math.Vector3.get();
 		
@@ -2992,8 +3000,8 @@ class PlayState extends MusicBeatState
 				if (daNote.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
 			});
 			
-			for (daNote in queueNotes)
-				if (daNote.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
+			for (i in _noteSpawnIdx...queueNotes.length)
+				if (queueNotes[i].strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
 				
 			if (doDeathCheck()) return;
 		}
@@ -3197,8 +3205,9 @@ class PlayState extends MusicBeatState
 	{
 		while (notes.length > 0)
 			disposeNote(notes.members[0]);
-			
+
 		queueNotes.resize(0);
+		_noteSpawnIdx = 0;
 		eventNotes.resize(0);
 	}
 	

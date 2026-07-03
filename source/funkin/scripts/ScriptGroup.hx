@@ -78,15 +78,18 @@ class ScriptGroup implements IFlxDestroyable
 	@:inheritDoc(funkin.scripts.FunkinScript.set)
 	public function set(varName:String, arg:Dynamic)
 	{
+		if (members.length == 0) return;
 		for (i in members)
 		{
 			i.set(varName, arg);
 		}
 	}
-	
+
 	@:inheritDoc(funkin.scripts.FunkinScript.call)
 	public function call(event:String, ?args:Array<Dynamic>, ignoreStops:Bool = false, ?exclusions:Array<String>):Dynamic
 	{
+		// Fast path: skip all allocations when no scripts are loaded (common during vanilla gameplay).
+		if (members.length == 0) return ScriptConstants.CONTINUE_FUNC;
 		exclusions ??= [];
 		
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
