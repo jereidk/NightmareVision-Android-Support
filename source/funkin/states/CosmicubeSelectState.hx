@@ -80,7 +80,8 @@ class CosmicubeSelectState extends AmongUIState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -97,12 +98,12 @@ class CosmicubeSelectState extends AmongUIState
 	{
 		if (!lockMovement)
 		{
-			if (FlxG.keys.justPressed.TAB)
+			if (FlxG.keys.justPressed.TAB #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				lockMovement = true;
-				
+
 				FlxG.sound.play(Paths.sound('scrollMenu'), .6);
-				
+
 				openSubState(new CosmeticsSubstate());
 			}
 			

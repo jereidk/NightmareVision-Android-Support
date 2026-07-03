@@ -318,7 +318,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(UP_DOWN, A_B);
+		addVirtualPad(LEFT_FULL, A_B);
 		addVirtualPadCamera();
 		#end
 	}
@@ -1179,16 +1179,17 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					closeGrid();
 				}
 				
+				#if !mobile
 				if (FlxG.mouse.wheel != 0)
 				{
 					autoScroll = true;
-					
+
 					gridTargetScrollY -= FlxG.mouse.wheel * GRID_SPACING_Y * 0.5;
 					var maxScroll:Float = getGridMaxScroll();
 					if (gridTargetScrollY > maxScroll) gridTargetScrollY = maxScroll;
 					if (gridTargetScrollY < 0) gridTargetScrollY = 0;
 				}
-				
+
 				if (mouseMode && !gridScrollBar.interacting)
 				{
 					var hovered:Int = -1;
@@ -1200,7 +1201,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 							break;
 						}
 					}
-					
+
 					if (hovered != gridCursorIndex)
 					{
 						gridCursorIndex = hovered;
@@ -1208,16 +1209,24 @@ class CosmeticsSubstate extends MusicBeatSubstate
 						updateGridHighlights();
 					}
 				}
-				
-				if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
+				#end
+
+				if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...gridNodes.length)
 					{
 						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], gridCamera))
 						{
-							gridCursorIndex = i;
-							updateGridHighlights();
-							gridEquipCurrent();
+							if (gridCursorIndex == i)
+							{
+								gridEquipCurrent();
+							}
+							else
+							{
+								gridCursorIndex = i;
+								FlxG.sound.play(Paths.sound('hover'), 0.4);
+								updateGridHighlights();
+							}
 							break;
 						}
 					}
@@ -1234,7 +1243,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				#if mobile
 				if (controls.mobilePadJustReleased([DOWN])) { selectedCategory = FlxMath.wrap(selectedCategory + 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
 				else if (controls.mobilePadJustReleased([UP])) { selectedCategory = FlxMath.wrap(selectedCategory - 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
-				else if (FlxG.mouse.wheel != 0) { selectedCategory = FlxMath.wrap(selectedCategory - FlxG.mouse.wheel, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
 				#else
 				if (controls.UI_DOWN_P || controls.UI_UP_P || FlxG.mouse.wheel != 0)
 				{
@@ -1260,6 +1268,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					confirmAndClose();
 				}
 				
+				#if !mobile
 				if (mouseMode && FlxG.mouse.justMoved)
 				{
 					for (i in 0...categoryTexts.length)
@@ -1277,18 +1286,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 						}
 					}
 				}
-				
-				if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
+				#end
+
+				if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...categoryTexts.length)
 					{
 						final isOver = FlxG.mouse.overlaps(categoryTexts[i], overlayCamera) || (categoryPreviewBgs[i] != null && FlxG.mouse.overlaps(categoryPreviewBgs[i], overlayCamera));
-						
+
 						if (isOver)
 						{
-							selectedCategory = i;
-							updateCategoryDisplay();
-							openGridForCategory(i);
+							if (selectedCategory == i)
+							{
+								openGridForCategory(i);
+							}
+							else
+							{
+								selectedCategory = i;
+								FlxG.sound.play(Paths.sound('hover'), 0.5);
+								updateCategoryDisplay();
+							}
 							break;
 						}
 					}
