@@ -518,6 +518,7 @@ class FreeplayState extends AmongUIState
 	
 	function acceptSong()
 	{
+		if (week_songs.length == 0) return;
 		var s:SongInformation = week_songs[curSelect];
 		
 		if (ws_lock[curSelect])
@@ -679,7 +680,7 @@ class FreeplayState extends AmongUIState
 	
 	function resetScorePrompt():Void
 	{
-		if (ws_lock[curSelect]) return;
+		if (week_songs.length == 0 || ws_lock[curSelect]) return;
 		
 		var song:SongInformation = week_songs[curSelect];
 		
