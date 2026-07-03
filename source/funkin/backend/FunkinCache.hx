@@ -178,8 +178,9 @@ class FunkinCache
 	 */
 	public function disposeGraphic(graphic:Null<FlxGraphic>)
 	{
-		if (graphic != null && graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
-		@:nullSafety(Off) FlxG.bitmap.remove(graphic);
+		if (graphic == null) return;
+		if (graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
+		FlxG.bitmap.remove(graphic);
 	}
 	
 	/**
