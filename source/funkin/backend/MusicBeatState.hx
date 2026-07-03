@@ -181,7 +181,7 @@ class MusicBeatState extends FlxUIState
 
 		if (FunkinAssets.exists(scriptFile))
 		{
-			var newScript = FunkinScript.fromFile(scriptFile, scriptName, scriptGroup.scriptShareables);
+			var newScript = FunkinScript.fromFile(scriptFile, scriptName, null, scriptGroup.scriptShareables);
 			if (newScript.__garbage)
 			{
 				newScript = FlxDestroyUtil.destroy(newScript);

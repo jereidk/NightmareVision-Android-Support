@@ -108,10 +108,10 @@ class GlobalScriptManager
 			var loaded = 0;
 			for (file in files)
 			{
-				if (!file.endsWith('.hx')) continue;
+				if (!FunkinScript.isHxFile(file)) continue;
 
 				var fullPath = '$dirPath$file';
-				var scriptName = 'global_' + file.substr(0, file.length - 3);
+				var scriptName = 'global_' + haxe.io.Path.withoutExtension(file);
 
 				if (scriptGroup.exists(scriptName)) continue;
 

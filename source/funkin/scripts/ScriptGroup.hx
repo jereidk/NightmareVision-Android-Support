@@ -153,11 +153,9 @@ class ScriptGroup implements IFlxDestroyable
 	public function clear(callOnDestroy:Bool = true)
 	{
 		if (callOnDestroy) call('onDestroy', null, true);
-		for (i in 0...members.length)
-		{
-			var script = members[0];
-			members.remove(script);
+		var toDestroy = members.copy();
+		members = [];
+		for (script in toDestroy)
 			script.destroy();
-		}
 	}
 }

@@ -24,7 +24,7 @@ class ScriptedFlxColor
 	
 	public static function fromHSB(h:Float, s:Float, b:Float, a:Float = 1):Int return cast FlxColor.fromHSB(h, s, b, a);
 	
-	public static function fromHSL(h:Float, s:Float, l:Float, a:Float = 1):Int return cast FlxColor.fromHSB(h, s, l, a);
+	public static function fromHSL(h:Float, s:Float, l:Float, a:Float = 1):Int return cast FlxColor.fromHSL(h, s, l, a);
 	
 	public static function fromInt(num:Int):Int return cast FlxColor.fromInt(num);
 	
@@ -98,7 +98,7 @@ class ScriptedFlxRandom
 	}
 	
 	@:inheritDoc(flixel.math.FlxRandom.int)
-	public function int(min:Int = 0, max:Int = FlxMath.MAX_VALUE_INT, ?excludes:Array<Int>):Int
+	public static function int(min:Int = 0, max:Int = FlxMath.MAX_VALUE_INT, ?excludes:Array<Int>):Int
 	{
 		return FlxG.random.int(min, max, excludes);
 	}
@@ -110,7 +110,7 @@ class ScriptedFlxRandom
 	}
 	
 	@:inheritDoc(flixel.math.FlxRandom.floatNormal)
-	public function floatNormal(mean:Float = 0, stdDev:Float = 1):Float
+	public static function floatNormal(mean:Float = 0, stdDev:Float = 1):Float
 	{
 		return FlxG.random.floatNormal(mean, stdDev);
 	}

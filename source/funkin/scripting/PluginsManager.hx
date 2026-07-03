@@ -28,7 +28,7 @@ class PluginsManager
 			{
 				final scriptName = file.withoutDirectory().withoutExtension();
 				
-				var script = FunkinScript.fromFile(file, scriptName, loadedScripts.scriptShareables);
+				var script = FunkinScript.fromFile(file, scriptName, null, loadedScripts.scriptShareables);
 				if (script.__garbage)
 				{
 					script = FlxDestroyUtil.destroy(script);
@@ -78,7 +78,7 @@ class PluginsManager
 		
 		if (script == null) return null;
 		
-		return script.call(func, args).returnValue;
+		return script.call(func, args)?.returnValue;
 	}
 	
 	static function onStateSwitchPost():Void

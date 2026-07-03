@@ -1044,7 +1044,7 @@ class PlayState extends MusicBeatState
 			}
 		}
 		
-		var script:FunkinScript = FunkinScript.fromFile(filePath, name, scripts.scriptShareables);
+		var script:FunkinScript = FunkinScript.fromFile(filePath, name, null, scripts.scriptShareables);
 		if (script.__garbage)
 		{
 			script = FlxDestroyUtil.destroy(script);

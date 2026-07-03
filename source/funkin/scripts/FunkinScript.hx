@@ -386,7 +386,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 			set('seenCutscene', PlayState.seenCutscene);
 			set('week', funkin.data.WeekData.weeksList[PlayState.storyMeta.curWeek]);
 			set('difficultyName', funkin.backend.Difficulty.difficulties[PlayState.storyMeta.difficulty]);
-			set('songLength', FlxG.sound.music.length);
+			set('songLength', FlxG.sound.music?.length ?? 0);
 			set('healthGainMult', PlayState.instance.healthGain);
 			set('healthLossMult', PlayState.instance.healthLoss);
 			set('instakillOnMiss', PlayState.instance.instakillOnMiss);
