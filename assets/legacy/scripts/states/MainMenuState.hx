@@ -10,6 +10,11 @@ import flixel.FlxCamera;
 import openfl.display.BitmapData;
 import openfl.sensors.Accelerometer;
 import openfl.events.AccelerometerEvent;
+import openfl.text.TextField;
+import openfl.text.TextFieldType;
+import openfl.text.TextFormat;
+import openfl.text.TextFormatAlign;
+import openfl.events.KeyboardEvent;
 
 // ── Secret gesture: shake the device to open the panel ───────────────────────
 // Deliberately NOT a tap/hold/touch gesture and NOT a typed code — the panel
@@ -29,6 +34,17 @@ var SHAKE_WINDOW:Float            = 2.2;  // all peaks must land within this man
 // each shake. Nothing explains what it is; only someone who already knows
 // the gesture will recognize it building.
 var chargeGlow:FlxSprite = null;
+
+// ── Second access route: a typed code on the device keyboard ────────────────
+// Unlike the shake, this one is meant to be findable — a small, deliberately
+// styled corner button that opens a real text field (native Android keyboard
+// pops up automatically once it gets focus). Change DEV_CODE to whatever you want.
+var DEV_CODE:String = 'nightmare';
+
+var codeTriggerBg:FlxSprite  = null;
+var codeTriggerLbl:FlxText   = null;
+var codeField:TextField      = null;
+var codeBoxOpen:Bool         = false;
 
 // ── Dev panel state ───────────────────────────────────────────────────────────
 var panelOpen:Bool          = false;
@@ -77,6 +93,20 @@ function onLoad()
 		accel = new Accelerometer();
 		accel.addEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
 	}
+
+	// Small, visible corner button — bottom-left, next to the version text —
+	// for the code-entry route. Understated but findable on purpose.
+	codeTriggerBg = new FlxSprite(12, FlxG.height - 46);
+	codeTriggerBg.pixels = roundedRect(22, 22, COL_BG_TOP, 6);
+	codeTriggerBg.alpha = 0.65;
+	codeTriggerBg.scrollFactor.set();
+	add(codeTriggerBg);
+
+	codeTriggerLbl = new FlxText(12, FlxG.height - 44, 22, '>', 16);
+	codeTriggerLbl.alignment = 'center';
+	codeTriggerLbl.color = COL_ACCENT;
+	codeTriggerLbl.scrollFactor.set();
+	add(codeTriggerLbl);
 }
 
 // buildPanel() runs here — AFTER the compiled state finishes adding all menu
@@ -94,6 +124,95 @@ function onDestroy()
 		accel.removeEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
 		accel = null;
 	}
+	closeCodeBox(false);
+}
+
+// ── Code-entry route ──────────────────────────────────────────────────────────
+function toggleCodeBox()
+{
+	if (codeBoxOpen) closeCodeBox(false);
+	else openCodeBox();
+}
+
+function openCodeBox()
+{
+	if (codeField != null) return;
+	codeBoxOpen = true;
+	if (codeTriggerLbl != null) codeTriggerLbl.text = 'x';
+
+	var format = new TextFormat(null, 20, 0xFFECE8FF);
+	format.align = TextFormatAlign.CENTER;
+
+	codeField = new TextField();
+	codeField.type = TextFieldType.INPUT;
+	codeField.width = 260;
+	codeField.height = 40;
+	codeField.background = true;
+	codeField.backgroundColor = 0xFF14142A;
+	codeField.border = true;
+	codeField.borderColor = COL_ACCENT;
+	codeField.defaultTextFormat = format;
+	codeField.multiline = false;
+	codeField.maxChars = 32;
+	codeField.text = '';
+
+	// Anchored to the raw window corner (not the logical Flixel resolution) —
+	// on a device whose aspect ratio doesn't match, this may need nudging.
+	// Adjust these two offsets if it lands somewhere odd on-device.
+	codeField.x = 12;
+	codeField.y = FlxG.stage.stageHeight - 140;
+
+	try
+	{
+		FlxG.game.parent.addChild(codeField);
+		FlxG.stage.focus = codeField;
+		codeField.setSelection(0, 0);
+	}
+	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
+
+	codeField.addEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
+}
+
+function onCodeFieldKey(e:Dynamic)
+{
+	if (e.keyCode == 13) submitCode(); // Enter / Done on the soft keyboard
+}
+
+function submitCode()
+{
+	if (codeField == null) return;
+
+	var typed = StringTools.trim(codeField.text).toLowerCase();
+	if (typed == DEV_CODE)
+	{
+		closeCodeBox(true);
+		openPanel();
+	}
+	else
+	{
+		codeField.text = '';
+		codeField.backgroundColor = COL_DANGER;
+		FlxG.sound.play(Paths.sound('error'), 0.6);
+		haxe.Timer.delay(function() {
+			if (codeField != null) codeField.backgroundColor = 0xFF14142A;
+		}, 400);
+	}
+}
+
+function closeCodeBox(success:Bool)
+{
+	codeBoxOpen = false;
+	if (codeTriggerLbl != null) codeTriggerLbl.text = '>';
+
+	if (codeField == null) return;
+
+	codeField.removeEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
+	if (FlxG.stage.focus == codeField) FlxG.stage.focus = null;
+	try { if (codeField.parent != null) codeField.parent.removeChild(codeField); }
+	catch (e:Dynamic) {}
+	codeField = null;
+
+	if (!success) FlxG.sound.play(Paths.sound('cancelMenu'), 0.5);
 }
 
 // ── Shake detection ───────────────────────────────────────────────────────────
@@ -485,8 +604,32 @@ function onUpdate()
 		trace('no money :(');
 	}
 
-	// ── Panel interaction (only reachable via the shake gesture) ────────────
+	// ── Code-entry trigger (only live while the panel itself isn't open) ────
+	// Note: only the trigger toggles the box. We deliberately don't try to
+	// detect "tapped outside the field" here — the raw TextField lives in
+	// real window pixels while FlxG.touches reports logical game coordinates,
+	// so the two don't line up and a naive "anything else closes it" check
+	// would fire the moment you tap the field itself to type.
+	if (!panelOpen)
+	{
+		var touches = FlxG.touches.list;
+		if (touches != null)
+		{
+			for (touch in touches)
+			{
+				if (!touch.justReleased) continue;
+				if (touch.x >= 12 && touch.x <= 34 && touch.y >= FlxG.height - 46 && touch.y <= FlxG.height - 24)
+					toggleCodeBox();
+				break;
+			}
+		}
+	}
+
+	// ── Panel interaction (only reachable via the shake gesture or code) ────
 	if (!panelOpen) return;
+
+	// The panel opened while the code box was still up — tidy it away.
+	if (codeBoxOpen) closeCodeBox(true);
 
 	if (panelCooldown > 0) { panelCooldown--; return; }
 
