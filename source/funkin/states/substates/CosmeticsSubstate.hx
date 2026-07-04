@@ -94,6 +94,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var gridScrollBar:ScrollBar;
 	var gridScrollY:Float = 0;
 	var gridTargetScrollY:Float = 0;
+	var gridOriginX:Float = 0;
 	var gridOriginY:Float = 200;
 	
 	public var autoScroll:Bool = true;
@@ -187,7 +188,17 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		FlxG.cameras.add(gridCamera, false);
 		gridCameras = [gridCamera];
 		gridOriginY = (skinThingBg.y + skinThingBg.height * 0.5) - GRID_SPACING_Y;
-		
+
+		// Derive column centering from the panel/camera's own inner region
+		// (same maskInset values used above) instead of FlxG.width. Both
+		// happened to agree in testing, but on some devices/aspect-ratio
+		// settings the grid columns rendered bunched at the panel's right
+		// edge with the rest empty — computing this straight from the
+		// camera's own bounds removes any chance of the two disagreeing.
+		final gridInnerX0:Float = skinThingBg.x + maskInsetLeft;
+		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
+		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
+
 		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 		menuBackButton.cameras = overlayCameras;
@@ -565,8 +576,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		clearGridCards();
 		
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
-		var gridOriginX:Float = (FlxG.width - (GRID_COLS * GRID_SPACING_X)) * 0.5 + GRID_SPACING_X * 0.5;
-		
+
 		for (i in 0...gridItemIds.length)
 		{
 			var col:Int = i % GRID_COLS;
@@ -799,7 +809,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			gridScrollY = FlxMath.bound(gridScrollY, 0, getGridMaxScroll());
 		}
 		
-		var gridOriginX:Float = (FlxG.width - (GRID_COLS * GRID_SPACING_X)) * 0.5 + GRID_SPACING_X * 0.5;
 		for (i in 0...gridNodes.length)
 		{
 			var col:Int = i % GRID_COLS;
