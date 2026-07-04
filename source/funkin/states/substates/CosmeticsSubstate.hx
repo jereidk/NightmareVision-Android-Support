@@ -231,19 +231,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		add(titleText);
 		
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
-		for (i in 0...3)
+		// Row spacing: 140px. Centre the 3 rows vertically on screen.
+		final rowSpacing:Float = 140;
+		final rowCount:Int = 3;
+		final startY:Float = Math.round((FlxG.height - rowSpacing * (rowCount - 1)) * 0.5);
+		final cardCenterX:Float = 395;
+		final textX:Float = 510;
+		final textRowHeight:Float = 44; // fixed height of each row for predictable card alignment
+		final labels = ['BF', 'GF', 'PET'];
+		for (i in 0...rowCount)
 		{
-			var label = ['BF', 'GF', 'PET'][i];
-			var yPos:Float = 220 + (i * 140);
-			
-			var optText = new FlxText(510, yPos, 500, '', 30);
+			final yPos:Float = startY + i * rowSpacing;
+
+			var optText = new FlxText(textX, yPos + (textRowHeight - 32) * 0.5, 500, '', 32);
 			optText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 			optText.borderSize = 2;
 			optText.antialiasing = false;
 			optText.cameras = overlayCameras;
 			categoryTexts.push(optText);
-			
-			createCategoryPreviewCard(nodeAtlas, 395, yPos + (optText.height * 0.5), label);
+
+			createCategoryPreviewCard(nodeAtlas, cardCenterX, yPos + textRowHeight * 0.5, labels[i]);
 		}
 		
 		for (t in categoryTexts)
