@@ -130,10 +130,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public var grpSusSplashes:FlxTypedContainer<SustainSplash>;
 
 	// Pre-allocated args for script calls in noteHit/noteMiss to avoid per-hit heap allocation.
-	final _noteScriptArgs:Array<Dynamic> = [null, 0];
-	final _noteTypeExclusions:Array<String> = [''];
-	final _gfCharArray:Array<Null<Character>> = [null];
-	final _ownerCharArray:Array<Null<Character>> = [null];
+	// Must be static because noteHit/noteMiss are static callbacks.
+	static final _noteScriptArgs:Array<Dynamic> = [null, 0];
+	static final _noteTypeExclusions:Array<String> = [''];
+	static final _gfCharArray:Array<Null<Character>> = [null];
+	static final _ownerCharArray:Array<Null<Character>> = [null];
 	
 	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default')
 	{
@@ -439,7 +440,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			{
 				if (char.animTimer <= 0)
 				{
-					final baseMiss = _skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss';
+					final baseMiss = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss';
 					final animToPlay:String = (note.noteType == 'Alt Animation') ? baseMiss + '-alt' : baseMiss;
 					char.playAnim(animToPlay, true);
 					char.holdTimer = 0;

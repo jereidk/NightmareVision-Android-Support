@@ -267,9 +267,6 @@ class PlayState extends MusicBeatState
 	final _scriptEventTriggerArgs:Array<Dynamic> = ['', ''];
 	final _scriptCountdownArgs:Array<Dynamic> = [0];
 
-	// Cached zoom for screenDim to skip redundant updateHitbox/screenCenter every frame.
-	var _lastScreenDimZoom:Float = -1;
-	
 	/**
 	 * Target the game camera follows
 	 */
@@ -2337,18 +2334,6 @@ class PlayState extends MusicBeatState
 			}
 		}
 		
-		if (ClientPrefs.underlayType == 'Screen Dim' && screenDim != null)
-		{
-			final curZoom = screenDim.camera.zoom;
-			if (curZoom != _lastScreenDimZoom)
-			{
-				_lastScreenDimZoom = curZoom;
-				screenDim.scale.set(screenDim.camera.width / curZoom, screenDim.camera.height / curZoom);
-				screenDim.updateHitbox();
-				screenDim.screenCenter();
-			}
-		}
-
 		scripts.call('onUpdatePost', _scriptUpdateArgs);
 	}
 	
