@@ -97,10 +97,12 @@ class MusicBeatState extends FlxUIState
 				return;
 			}
 
-			// VSlice controls: static arrow receptors (ARROWS hitbox, ignores layout pref).
+			// VSlice controls: tap the actual VSlice receptor sprites directly —
+			// invisible zones matching their real position/size (VSLICE_MATCH),
+			// not the separate Arrows scheme's own fixed-position flicker sprites.
 			if (ClientPrefs.gameInputMode == 'VSlice controls')
 			{
-				hitbox = new MobileHitbox(ARROWS);
+				hitbox = new MobileHitbox(VSLICE_MATCH);
 				hitboxCam = new FlxCamera();
 				hitboxCam.bgColor.alpha = 0;
 				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);

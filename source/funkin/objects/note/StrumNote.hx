@@ -193,6 +193,23 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		final receptorGroupWidth:Float = (3 * NOTE_SPACING + STRUMLINE_SIZE) * spacingScale; // 440 * scale
 		return (FlxG.width - receptorGroupWidth) / 2 + direction * NOTE_SPACING * spacingScale;
 	}
+
+	/**
+	 * Y position (top edge) of the VSlice receptor row. Shared by
+	 * PlayState.generatePlayfields() (which positions the real receptors) and
+	 * MobileHitbox's VSLICE_MATCH layout (which builds invisible touch zones
+	 * matching them) — MobileHitbox is constructed before the playfields exist
+	 * each song, so it can't just read a live receptor's position and needs
+	 * this computed independently, but identically.
+	 */
+	public static function getVSliceBaseY():Float
+	{
+		var safeTop:Float = 0;
+		#if mobile
+		safeTop = mobile.backend.ScreenUtil.safeArea().top;
+		#end
+		return FlxG.height - safeTop - STRUMLINE_SIZE * 3 - 50;
+	}
 	
 	override function update(elapsed:Float)
 	{

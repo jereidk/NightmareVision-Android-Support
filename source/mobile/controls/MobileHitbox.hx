@@ -36,6 +36,14 @@ enum HitboxLayout
 	 * Left zone covers LEFT+DOWN, Right zone covers UP+RIGHT.
 	 */
 	TRIANGLE;
+	/**
+	 * Invisible zones positioned/sized to exactly match the 4 VSlice note-layout
+	 * receptor sprites (see StrumNote.getCenteredXPos()/getVSliceBaseY()) — for
+	 * the "VSlice controls" gameplay input mode, where you tap the actual note
+	 * on screen instead of a separate fixed-position zone. Not a user-selectable
+	 * Hitbox Layout choice; only used when gameInputMode is 'VSlice controls'.
+	 */
+	VSLICE_MATCH;
 }
 
 /**
@@ -65,11 +73,12 @@ class MobileHitbox extends TouchInputManager
 
 		switch (forcedLayout ?? layoutFromPrefs())
 		{
-			case TWO_THUMB:  buildTwoThumb(safe);
-			case FOUR_LANES: buildFourLanes(safe);
-			case DPAD:       buildDPad(safe);
-			case ARROWS:     buildArrows(safe);
-			case TRIANGLE:   buildTriangle(safe);
+			case TWO_THUMB:    buildTwoThumb(safe);
+			case FOUR_LANES:   buildFourLanes(safe);
+			case DPAD:         buildDPad(safe);
+			case ARROWS:       buildArrows(safe);
+			case TRIANGLE:     buildTriangle(safe);
+			case VSLICE_MATCH: buildVSliceMatch();
 		}
 
 		scrollFactor.set();
@@ -239,6 +248,39 @@ class MobileHitbox extends TouchInputManager
 		for (i in 0...4)
 		{
 			var btn = createArrowHint(xPos + i * hintWidth + noteSpacing * i, yPos, hintWidth, hintHeight, arrowNames[i], arrowIDs[i]);
+			add(btn);
+			buttons.push(btn);
+		}
+
+		buttonLeft  = buttons[0];
+		buttonDown  = buttons[1];
+		buttonUp    = buttons[2];
+		buttonRight = buttons[3];
+	}
+
+	/**
+	 * Builds invisible zones positioned/sized to exactly match the 4 VSlice
+	 * receptor sprites (funkin.objects.note.StrumNote's getCenteredXPos()/
+	 * getVSliceBaseY(), the same formulas PlayState.generatePlayfields() uses
+	 * to place the real receptors). Tapping the note you actually see is what
+	 * registers input here — no separate arrow graphic flickering in nearby.
+	 */
+	function buildVSliceMatch():Void
+	{
+		final size:Int = funkin.objects.note.StrumNote.STRUMLINE_SIZE;
+		final y:Float = funkin.objects.note.StrumNote.getVSliceBaseY();
+
+		var ids:Array<Array<FlxMobileInputID>> = [
+			[FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT],
+			[FlxMobileInputID.hitboxDOWN,  FlxMobileInputID.noteDOWN],
+			[FlxMobileInputID.hitboxUP,    FlxMobileInputID.noteUP],
+			[FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]
+		];
+
+		for (direction in 0...4)
+		{
+			final x:Float = funkin.objects.note.StrumNote.getCenteredXPos(direction);
+			var btn = createHint(x, y, size, size, getArrowColor(direction), ids[direction]);
 			add(btn);
 			buttons.push(btn);
 		}
@@ -573,10 +615,13 @@ class MobileHitbox extends TouchInputManager
 
 	static function layoutFromPrefs():HitboxLayout
 	{
-		// VSlice always uses Arrows layout to match Funkin original
-		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
-			return ARROWS;
-		
+		// Arrows is an independent Hitbox Layout choice — it used to be forced
+		// whenever Note Layout was VSlice, but that scheme's own visible arrow
+		// sprites (which fade in/out on tap at their own fixed position) had
+		// nothing to do with the actual VSlice receptors on screen. Touch input
+		// for VSlice note layout is handled separately via VSLICE_MATCH, which
+		// is only ever selected explicitly by 'VSlice controls' gameInputMode
+		// (see MusicBeatState.addMobileControls()), never through this switch.
 		return switch (funkin.data.ClientPrefs.hitboxLayout)
 		{
 			case 'Two Thumb': TWO_THUMB;

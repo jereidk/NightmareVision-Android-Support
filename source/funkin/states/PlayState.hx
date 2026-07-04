@@ -1167,39 +1167,18 @@ class PlayState extends MusicBeatState
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 		Note.swagWidth = 160 * 0.7;
+		// Plain, unscaled Funkin original VSlice values (STRUMLINE_SIZE=104, NOTE_SPACING=112,
+		// scale 1.0) — no separate "match the touch hitbox" scale-up. On mobile the touch
+		// hitbox instead tracks these exact receptor positions (see addMobileControls()),
+		// so there's no fixed-size zone for the visuals to match in the first place.
 		funkin.objects.note.StrumNote.spacingScale = 1.0;
-		var vsliceStrumScale:Float = 1.0;
 		final _isVSlice = (ClientPrefs.noteLayout == 'VSlice');
 		if (_isVSlice)
 		{
-			// Funkin original VSlice values: STRUMLINE_SIZE = 104, NOTE_SPACING = 112
 			Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE; // 104
-			var safeTop:Float = 0;
-			#if mobile
-			safeTop = mobile.backend.ScreenUtil.safeArea().top;
-
-			// Match FunkinCrew/Funkin's own mobile touch adaptation (PlayState.initNoteHitbox()):
-			// on touch, the invisible ARROWS hitbox zones (MobileHitbox, 146x149 with 80px gaps)
-			// are much bigger/further apart than our 112px desktop note spacing. That mismatch
-			// is why taps often landed on the wrong lane or nowhere at all — the receptors the
-			// player could see had nothing to do with the touch zones underneath them. Spread and
-			// scale the notes up using the exact same aspect-ratio formula the original game uses.
-			//
-			// MobileHitbox.layoutFromPrefs() forces the ARROWS scheme whenever noteLayout is
-			// VSlice regardless of gameInputMode ('Hitbox' or 'VSlice controls' both end up
-			// there) — only 'Virtual Pad' skips the touch hitbox entirely for an on-screen D-pad.
-			if (ClientPrefs.gameInputMode != 'Virtual Pad')
-			{
-				final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
-				vsliceStrumScale = ((FlxG.height / FlxG.width) * 1.95) * amplification;
-				final noteSpacingScale:Float = ((FlxG.height / FlxG.width) * 2.8) * amplification;
-				funkin.objects.note.StrumNote.spacingScale = noteSpacingScale * vsliceStrumScale;
-				Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE * vsliceStrumScale;
-			}
-			#end
-			// Position receptors at bottom, matching Funkin's Arrow scheme hitbox
-			// yPos = FlxG.height - hintHeight*2 - 24 (hintHeight=149, so ~FlxG.height-322)
-			modManager.vsliceBaseY = FlxG.height - safeTop - funkin.objects.note.StrumNote.STRUMLINE_SIZE * vsliceStrumScale * 3 - 50;
+			// Shared with MobileHitbox's VSLICE_MATCH layout so the touch zones it
+			// builds (before these playfields even exist) land exactly here.
+			modManager.vsliceBaseY = funkin.objects.note.StrumNote.getVSliceBaseY();
 		}
 
 		for (lane in 0...SONG.lanes)
@@ -1217,10 +1196,9 @@ class PlayState extends MusicBeatState
 			if (_isVSlice && lane == 0)
 			{
 				// noteScale defaults to 0.7 (our engine-wide default), leaving falling notes
-				// visually smaller than the 104px VSlice receptor they're meant to match — set
-				// both from the same scale so notes and receptor stay visually consistent.
-				strums._skin.receptorScale = vsliceStrumScale;
-				strums._skin.noteScale = vsliceStrumScale;
+				// visually smaller than the 104px VSlice receptor they're meant to match.
+				strums._skin.receptorScale = 1.0;
+				strums._skin.noteScale = 1.0;
 			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
@@ -2218,7 +2196,14 @@ class PlayState extends MusicBeatState
 				}
 				
 				final field = daNote.playField;
-				
+
+				// Hiding a PlayField (opponentStrums off, middleScroll, or VSlice's
+				// always-hide-opponent) only ever hid the receptor group — the actual
+				// falling notes live in their own `notes` group and kept rendering
+				// regardless, which is why VSlice still showed the opponent's arrows
+				// falling. Keep the notes in sync with their own field's visibility.
+				daNote.visible = field.visible;
+
 				if (field.inControl && field.autoPlayed)
 				{
 					if (!daNote.wasGoodHit && !daNote.ignoreNote && daNote.strumTime <= Conductor.songPosition) field.onNoteHit.dispatch(daNote, field);
