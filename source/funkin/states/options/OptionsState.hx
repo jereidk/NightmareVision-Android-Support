@@ -27,7 +27,6 @@ class OptionsState extends MusicBeatState
 		'mobile',
 		'dlc',
 		#end
-		'editors',
 		'credits'
 	];
 	
@@ -100,9 +99,6 @@ class OptionsState extends MusicBeatState
 			case 'dlc':
 				openSubState(new funkin.states.options.MobileDLCSubState());
 			#end
-			case 'editors':
-				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
-				return;
 			case 'credits':
 				openSubState(new funkin.states.substates.CreditsRollSubState(true, resumeMenuMusic, resumeMenuMusic));
 		}
