@@ -1,7 +1,5 @@
 package funkin.states;
 
-import funkin.backend.macro.GitMacro;
-
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxBackdrop;
@@ -11,11 +9,14 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 
+import openfl.display.BitmapData;
+
 import funkin.data.*;
 import funkin.data.CosmicubeData;
 import funkin.data.GameFlags;
 import funkin.objects.menu.AmongControls;
 import funkin.utils.ProgressionUtil;
+import funkin.utils.CoolUtil;
 import funkin.states.options.*;
 import funkin.states.*;
 import funkin.states.editors.MasterEditorMenu;
@@ -49,11 +50,17 @@ class MainMenuState extends MusicBeatState
 	var introTimer:Float = 0;
 	
 	var menuShinies:Array<FlxSprite> = [];
-	
+
 	static final BIG_LABEL_KEYS = ['storymode', 'freeplay', 'cosmi'];
 	static final SMALL_LABEL_KEYS = ['options', 'awards'];
 	static final ICON_PREFIXES = ['Red and Green instance 1', 'Cone instance 1', 'Polus instance 1', 'Gear instance 1', 'Trophy instance 1'];
 	static final MENU_LABEL_MIN_SIZE:Int = 12;
+
+	static final YT_CHANNEL_URL:String = 'https://youtube.com/@jere-idk?si=zqgS9D-dDx8IWmJ_';
+
+	var ytGlow:FlxSprite;
+	var ytIcon:FlxSprite;
+	var portCreditText:FlxText;
 	
 	override function create()
 	{
@@ -144,23 +151,7 @@ class MainMenuState extends MusicBeatState
 			menuButtons[0].y -= 15;
 		}
 
-		final rtl:Bool = Lang.hasSpecial('rightToLeft');
-
-		#if mobile
-		var portCredit = new FlxText(rtl ? 12 : 0, FlxG.height - 42, 0, 'Android port by Jere', 14);
-		portCredit.scrollFactor.set();
-		portCredit.setFormat(Paths.font('vcr.ttf', false), 14, 0xFF6CFF7A, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		portCredit.borderSize = 1.5;
-		add(portCredit);
-		#end
-
-		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.height - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
-		#if debug
-		versionShit.text += ' (${GitMacro.getGitCommitHash()})';
-		#end
-		versionShit.scrollFactor.set();
-		versionShit.setFormat(Paths.font('vcr.ttf', false), 16, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		add(versionShit);
+		buildPortCredit();
 
 		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
@@ -352,6 +343,126 @@ class MainMenuState extends MusicBeatState
 		}
 	}
 	
+	/**
+	 * Small YouTube-styled icon + "Android Port By Jere" credit, centered at
+	 * the bottom of the menu (replaces the old left-aligned port/version text).
+	 * Tapping the icon opens the channel in the browser.
+	 */
+	function buildPortCredit():Void
+	{
+		final iconSize:Int = 52;
+		final iconY:Float  = FlxG.height - 104;
+		final textY:Float  = FlxG.height - 42;
+
+		ytGlow = new FlxSprite(0, 0).loadGraphic(_glowBitmap(iconSize + 28, 0xFFFF0000));
+		ytGlow.screenCenter(X);
+		ytGlow.y = iconY - 14;
+		ytGlow.scrollFactor.set();
+		ytGlow.blend = ADD;
+		add(ytGlow);
+
+		ytIcon = new FlxSprite(0, iconY).loadGraphic(_youtubeIconBitmap(iconSize));
+		ytIcon.screenCenter(X);
+		ytIcon.y = iconY;
+		ytIcon.scrollFactor.set();
+		add(ytIcon);
+
+		portCreditText = new FlxText(0, textY, FlxG.width, 'Android Port By Jere', 20);
+		portCreditText.alignment = 'center';
+		portCreditText.setFormat(Paths.font('vcr.ttf', false), 20, 0xFF6CFF7A, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		portCreditText.borderSize = 2;
+		portCreditText.scrollFactor.set();
+		add(portCreditText);
+
+		// Gentle breathing pulse on the icon + its glow so the whole thing feels
+		// a little alive instead of a static credit line.
+		FlxTween.tween(ytIcon, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
+			{ease: FlxEase.quadInOut, type: PINGPONG});
+		FlxTween.tween(ytGlow, {alpha: 0.35}, 1.1, {ease: FlxEase.quadInOut, type: PINGPONG});
+	}
+
+	/** Simple YouTube-style badge: a red rounded square with a white play triangle. */
+	function _youtubeIconBitmap(size:Int):BitmapData
+	{
+		var bmp = new BitmapData(size, size, true, 0x00000000);
+		final r = Std.int(size * 0.28);
+		final red = 0xFFFF0000;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				var inside = true;
+
+				if (px < r && py < r)
+				{
+					final dx = r - px, dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px >= size - r && py < r)
+				{
+					final dx = px - (size - r - 1), dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px < r && py >= size - r)
+				{
+					final dx = r - px, dy = py - (size - r - 1);
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px >= size - r && py >= size - r)
+				{
+					final dx = px - (size - r - 1), dy = py - (size - r - 1);
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+
+				if (inside) bmp.setPixel32(px, py, red);
+			}
+		}
+
+		// White play triangle, pointing right, roughly centered.
+		final cy:Float    = size * 0.5;
+		final triW:Float  = size * 0.34;
+		final triH:Float  = size * 0.4;
+		final baseX:Float = size * 0.5 - triW * 0.42;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				final t = (px - baseX) / triW;
+				if (t < 0 || t > 1) continue;
+				final halfH = (triH * 0.5) * (1 - t);
+				if (Math.abs(py - cy) <= halfH) bmp.setPixel32(px, py, 0xFFFFFFFF);
+			}
+		}
+
+		return bmp;
+	}
+
+	/** Soft radial glow, used as an ambient halo behind the YouTube icon. */
+	function _glowBitmap(size:Int, color:Int):BitmapData
+	{
+		var bmp = new BitmapData(size, size, true, 0x00000000);
+		final radius:Float = size * 0.5;
+		final cx:Float = radius, cy:Float = radius;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				final dx = px - cx, dy = py - cy;
+				final dist = Math.sqrt(dx * dx + dy * dy);
+				if (dist <= radius)
+				{
+					final alpha = Std.int((1.0 - dist / radius) * 130);
+					bmp.setPixel32(px, py, (color & 0x00FFFFFF) | (alpha << 24));
+				}
+			}
+		}
+
+		return bmp;
+	}
+
 	function updateMenuSelection()
 	{
 		var isFinale = ClientPrefs.finaleState == ACTIVE;
@@ -441,7 +552,13 @@ class MainMenuState extends MusicBeatState
 		
 		starBG.x -= 4.5 * elapsed;
 		starFG.x -= 9 * elapsed;
-		
+
+		if (ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+		{
+			FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
+			CoolUtil.browserLoad(YT_CHANNEL_URL);
+		}
+
 		if (FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
 		
 		#if !mobile
