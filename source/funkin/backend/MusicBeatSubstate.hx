@@ -139,6 +139,8 @@ class MusicBeatSubstate extends FlxSubState
 	public var scriptName:String = '';
 	public var scriptPrefix:String = 'substates';
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
+
+	final _updateArgs:Array<Dynamic> = [0.0];
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
 	{
@@ -206,8 +208,9 @@ class MusicBeatSubstate extends FlxSubState
 			}
 		}
 		
-		scriptGroup.call('onUpdate', [elapsed]);
-		
+		_updateArgs[0] = elapsed;
+		scriptGroup.call('onUpdate', _updateArgs);
+
 		super.update(elapsed);
 	}
 	

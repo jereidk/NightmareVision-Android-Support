@@ -186,6 +186,12 @@ class PsychHUD extends BaseHUD
 	{
 		return Highscore.getLetterRank(acc, misses);
 	}
+
+	// Pre-cached graphic references to avoid rebuilding frame data on every note hit.
+	var _ratingGraphicsCache:Map<String, FlxGraphic> = new Map();
+	var _numGraphicsCache:Array<Null<FlxGraphic>> = [];
+	// Pre-allocated digit array to avoid per-hit Array<Int> allocation.
+	final _scoreDigits:Array<Int> = [0, 0, 0, 0];
 	
 	public function doScoreBop():Void
 	{

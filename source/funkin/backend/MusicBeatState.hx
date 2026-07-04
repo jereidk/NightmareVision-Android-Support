@@ -161,6 +161,8 @@ class MusicBeatState extends FlxUIState
 	public var scripted:Bool = false;
 	public var scriptName:String = '';
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
+
+	final _updateArgs:Array<Dynamic> = [0.0];
 	
 	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
@@ -337,13 +339,13 @@ class MusicBeatState extends FlxUIState
 		}
 		else if (PlayState.SONG != null) rollbackSection();
 		
-		final scriptArgs = [elapsed];
+		_updateArgs[0] = elapsed;
 		var _smT = haxe.Timer.stamp();
-		scriptGroup.call('onUpdate', scriptArgs);
+		scriptGroup.call('onUpdate', _updateArgs);
 		SystemMonitor.reportScriptTime('onUpdate', (haxe.Timer.stamp() - _smT) * 1000);
 		if (GlobalScriptManager.instance != null)
 			GlobalScriptManager.instance.onUpdate(elapsed);
-		PluginsManager.callOnScripts('onUpdate', scriptArgs);
+		PluginsManager.callOnScripts('onUpdate', _updateArgs);
 		super.update(elapsed);
 	}
 	
