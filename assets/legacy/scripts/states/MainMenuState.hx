@@ -172,6 +172,12 @@ function openCodeBox()
 		FlxG.game.parent.addChild(codeField);
 		FlxG.stage.focus = codeField;
 		codeField.setSelection(0, 0);
+
+		// On Android, focusing a TextField doesn't reliably raise the soft
+		// keyboard through OpenFL's own FOCUS_IN wiring (it only fires if the
+		// field was already on stage when focus lands, which is timing-sensitive).
+		// Kick Lime's window text input directly so the keyboard always shows.
+		if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = true;
 	}
 	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
 
@@ -222,6 +228,8 @@ function closeCodeBox(success:Bool)
 
 	codeField.removeEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
 	if (FlxG.stage.focus == codeField) FlxG.stage.focus = null;
+	try { if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = false; }
+	catch (e:Dynamic) {}
 	try { if (codeField.parent != null) codeField.parent.removeChild(codeField); }
 	catch (e:Dynamic) {}
 	codeField = null;

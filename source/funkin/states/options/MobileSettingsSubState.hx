@@ -682,13 +682,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		// Position highlight smoothly (accounting for scroll)
 		final highlightY = OPT_Y0 + (_selVisual - topIndex) * OPT_H - 2;
-		for (i in 0...MAX_OPT)
-		{
-			// Check if this visual row corresponds to the selected option
-			final visualIndex = topIndex + i;
-			if (visualIndex == _sel && _rowHi[i].visible)
-				_rowHi[i].y = highlightY;
-		}
 
 		for (i in 0...MAX_OPT)
 		{
@@ -698,7 +691,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			final show = (opt != null);
 			final selected = show && (optIndex == _sel);
 
-			_rowHi[i].visible    = selected;
+			// Set visibility and position together — reading _rowHi[i].visible
+			// here would still reflect *last* frame's mapping (rows are reused
+			// slots that get remapped to different option indices as the list
+			// scrolls), which made the highlight lag a frame behind or freeze
+			// on the wrong row while scrolling.
+			_rowHi[i].visible = selected;
+			if (selected) _rowHi[i].y = highlightY;
 			_rowLabel[i].visible = show;
 			_rowValue[i].visible = show;
 			_rowLeft[i].visible  = show;
