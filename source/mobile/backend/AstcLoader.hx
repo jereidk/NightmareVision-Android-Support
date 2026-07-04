@@ -12,6 +12,7 @@ import openfl.Assets as OflAssets;
 import openfl.Assets;
 import openfl.events.Event;
 import lime.utils.UInt8Array;
+import lime.utils.ArrayBuffer;
 #end
 
 /**
@@ -310,9 +311,9 @@ class AstcLoader
 	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
 	{
 		var imgLen:Int = bytes.length - HEADER_SIZE;
-		var imgData = new UInt8Array(imgLen);
-		for (i in 0...imgLen)
-			imgData[i] = bytes.get(HEADER_SIZE + i);
+		// View into the existing buffer at HEADER_SIZE — zero allocation, zero copy.
+		// ArrayBuffer.fromBytes wraps the haxe.io.Bytes pointer on C++ without copying.
+		var imgData = new UInt8Array(ArrayBuffer.fromBytes(bytes), HEADER_SIZE, imgLen);
 
 		var astcTex = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, astcTex);
