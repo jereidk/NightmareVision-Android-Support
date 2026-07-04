@@ -231,38 +231,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		add(titleText);
 		
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
-		// Lay the 3 category rows out inside the panel's own inner (unmasked)
-		// region instead of hardcoded screen coordinates, so they track the
-		// actual "skin thing" background regardless of its size. Previously
-		// cardCenterX/textX (395/510, textWidth 500) were tuned for a
-		// different panel size — the text box spanned to x=1010 while the
-		// panel's right edge sits at ~x=925, so labels overshot the visible
-		// canvas and everything read as pushed off to the right.
-		final innerX0:Float = skinThingBg.x + maskInsetLeft;
-		final innerX1:Float = skinThingBg.x + skinThingBg.width - maskInsetRight;
-		final innerY0:Float = skinThingBg.y + maskInsetTop;
-		final innerY1:Float = skinThingBg.y + skinThingBg.height - maskInsetBottom;
-
+		// Row spacing: 140px. Centre the 3 rows vertically on screen.
+		final rowSpacing:Float = 140;
 		final rowCount:Int = 3;
-		final rowSpacing:Float = (innerY1 - innerY0) / rowCount;
-		final cardCenterX:Float = innerX0 + 80;
-		final textX:Float = cardCenterX + 95;
-		final textWidth:Float = innerX1 - textX - 10;
+		final startY:Float = Math.round((FlxG.height - rowSpacing * (rowCount - 1)) * 0.5);
+		final cardCenterX:Float = 395;
+		final textX:Float = 510;
 		final textRowHeight:Float = 44; // fixed height of each row for predictable card alignment
 		final labels = ['BF', 'GF', 'PET'];
 		for (i in 0...rowCount)
 		{
-			final rowCenterY:Float = innerY0 + rowSpacing * (i + 0.5);
-			final yPos:Float = rowCenterY - textRowHeight * 0.5;
+			final yPos:Float = startY + i * rowSpacing;
 
-			var optText = new FlxText(textX, yPos + (textRowHeight - 32) * 0.5, textWidth, '', 32);
+			var optText = new FlxText(textX, yPos + (textRowHeight - 32) * 0.5, 500, '', 32);
 			optText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 			optText.borderSize = 2;
 			optText.antialiasing = false;
 			optText.cameras = overlayCameras;
 			categoryTexts.push(optText);
 
-			createCategoryPreviewCard(nodeAtlas, cardCenterX, rowCenterY, labels[i]);
+			createCategoryPreviewCard(nodeAtlas, cardCenterX, yPos + textRowHeight * 0.5, labels[i]);
 		}
 		
 		for (t in categoryTexts)
