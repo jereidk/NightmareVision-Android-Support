@@ -54,28 +54,32 @@ function onLoad()
 	
 	var bgScale = 1.3;
 	
-	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props', 'dead');
+	// The "props" atlas got split into two ASTC pages (props-0: bg/dark,
+	// props-1: dead/fore/lamp/splat) at some point, but this script still
+	// asked for all six frames from a single "props" atlas that no longer
+	// exists — every one of these sprites loaded blank as a result.
+	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props-1', 'dead');
 	bg1.scrollFactor.set(0.8, 0.8);
 	bg1.scale.set(bgScale, bgScale);
-	
-	var bg2:FlxSprite = new FlxSprite(-790, -530).loadFromSheet(ext + 'props', 'bg');
+
+	var bg2:FlxSprite = new FlxSprite(-790, -530).loadFromSheet(ext + 'props-0', 'bg');
 	bg2.updateHitbox();
 	bg2.scrollFactor.set(0.9, 0.9);
 	bg2.scale.set(bgScale, bgScale);
-	
-	var bg3:FlxSprite = new FlxSprite(370, 1200).loadFromSheet(ext + 'props', 'splat');
+
+	var bg3:FlxSprite = new FlxSprite(370, 1200).loadFromSheet(ext + 'props-1', 'splat');
 	bg3.updateHitbox();
 	bg3.scale.set(bgScale, bgScale);
-	
-	var bg4:FlxSprite = new FlxSprite(990, -380).loadFromSheet(ext + 'props', 'lamp');
+
+	var bg4:FlxSprite = new FlxSprite(990, -380).loadFromSheet(ext + 'props-1', 'lamp');
 	bg4.updateHitbox();
 	bg4.scale.set(bgScale, bgScale);
-	
-	var bg5:FlxSprite = new FlxSprite(-750, 160).loadFromSheet(ext + 'props', 'fore');
+
+	var bg5:FlxSprite = new FlxSprite(-750, 160).loadFromSheet(ext + 'props-1', 'fore');
 	bg5.updateHitbox();
 	bg5.scale.set(bgScale, bgScale);
-	
-	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props', 'dark');
+
+	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props-0', 'dark');
 	dark.scale.set(1.3, 1.3);
 	dark.blend = BlendMode.MULTIPLY;
 	

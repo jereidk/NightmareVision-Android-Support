@@ -16,6 +16,7 @@ import android.view.WindowManager;
 import android.view.WindowInsetsController;
 import org.haxe.extension.Extension;
 import java.io.File;
+import java.io.IOException;
 
 public class AndroidUtils extends Extension {
 
@@ -238,29 +239,33 @@ public class AndroidUtils extends Extension {
                         null,
                         null
                     );
-                    
-                    // Use Intent to open the folder in the file manager
-                    // Works with most file managers including:
-                    // - Android's native Files app
-                    // - Google Files
-                    // - Samsung My Files
-                    // - etc.
-                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                    intent.setDataAndType(Uri.fromFile(folder), "resource/folder");
+
+                    String canonicalPath;
+                    try { canonicalPath = folder.getCanonicalPath(); }
+                    catch (IOException e) { canonicalPath = folder.getAbsolutePath(); }
+
+                    // Jump straight into this app's own DocumentsProvider root
+                    // (ModFolderDocumentsProvider, registered in AndroidManifest) via
+                    // the modern SAF "browse" action. The previous approach used
+                    // Uri.fromFile() with ACTION_VIEW, which throws
+                    // FileUriExposedException on Android 7+ when handed to another
+                    // app — this silently failed on every real device every time.
+                    android.net.Uri docUri = android.provider.DocumentsContract.buildDocumentUri(
+                        "com.motorfrog.impostor.documents", canonicalPath);
+                    android.content.Intent intent = new android.content.Intent(android.provider.DocumentsContract.ACTION_BROWSE);
+                    intent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
                     intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                    
-                    // Try to open with file manager, fallback tochooser if none available
+                    intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
                     try {
                         activity.startActivity(intent);
                     } catch (Exception e1) {
-                        // Fallback: try with GET_CONTENT intent to open folder picker
-                        android.content.Intent chooser = android.content.Intent.createChooser(
-                            new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT),
-                            "Open Data Folder"
-                        );
-                        chooser.setDataAndType(Uri.fromFile(folder), "resource/folder");
-                        chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                        activity.startActivity(chooser);
+                        android.util.Log.e("AndroidUtils", "ACTION_BROWSE failed, falling back to SAF tree picker: " + e1);
+                        // Fallback: generic "pick a folder" SAF picker. The user has to
+                        // navigate to the app's root manually, but this always works.
+                        android.content.Intent fallback = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
+                        fallback.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(fallback);
                     }
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());

@@ -300,6 +300,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if mobile
 		_handleTouch();
 		#end
+
+		// _scrollOffsetVisual/_selVisual above are lerped every single frame,
+		// but _updateRows() (the only place that reads them and repositions the
+		// rows) used to only run from inside _handleInput()/_handleTouch() on
+		// the exact frame a new selection was made. That froze the visible
+		// window at whatever it looked like on that one frame until the next
+		// keypress — so scrolling past the bottom of the list moved the
+		// selection (and let you configure the now off-screen option) without
+		// the view ever catching up to show it. Call it unconditionally so the
+		// scroll animation actually renders every frame.
+		_updateRows();
 	}
 
 	// ── Input ────────────────────────────────────────────────────────────────
@@ -313,14 +324,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_sel = (_sel <= 0) ? _opts.length - 1 : _sel - 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
 			_updateScrollOffset();
-			_updateRows();
 		}
 		if (controls.UI_DOWN_P)
 		{
 			_sel = (_sel >= _opts.length - 1) ? 0 : _sel + 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
 			_updateScrollOffset();
-			_updateRows();
 		}
 
 		if (controls.UI_LEFT_P)  _changeSelected(-1);
@@ -410,7 +419,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_sel = optIndex;
 				FunkinSound.play(Paths.sound('hover'), 0.5);
 				_updateScrollOffset();
-				_updateRows();
 			}
 
 			final opt = _opts[optIndex];
@@ -682,6 +690,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		// Position highlight smoothly (accounting for scroll)
 		final highlightY = OPT_Y0 + (_selVisual - topIndex) * OPT_H - 2;
+		for (i in 0...MAX_OPT)
+		{
+			// Check if this visual row corresponds to the selected option
+			final visualIndex = topIndex + i;
+			if (visualIndex == _sel && _rowHi[i].visible)
+				_rowHi[i].y = highlightY;
+		}
 
 		for (i in 0...MAX_OPT)
 		{
@@ -691,13 +706,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			final show = (opt != null);
 			final selected = show && (optIndex == _sel);
 
-			// Set visibility and position together — reading _rowHi[i].visible
-			// here would still reflect *last* frame's mapping (rows are reused
-			// slots that get remapped to different option indices as the list
-			// scrolls), which made the highlight lag a frame behind or freeze
-			// on the wrong row while scrolling.
-			_rowHi[i].visible = selected;
-			if (selected) _rowHi[i].y = highlightY;
+			_rowHi[i].visible    = selected;
 			_rowLabel[i].visible = show;
 			_rowValue[i].visible = show;
 			_rowLeft[i].visible  = show;

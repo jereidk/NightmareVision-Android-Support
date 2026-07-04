@@ -46,7 +46,7 @@ var chargeGlow:FlxSprite = null;
 // Unlike the shake, this one is meant to be findable — a small, deliberately
 // styled corner button that opens a real text field (native Android keyboard
 // pops up automatically once it gets focus). Change DEV_CODE to whatever you want.
-var DEV_CODE:String = 'nightmare';
+var DEV_CODE:String = 'jereidk';
 
 var CODE_TRIGGER_SIZE:Int   = 28;
 var CODE_TRIGGER_MARGIN:Int = 12;
@@ -155,10 +155,17 @@ function openCodeBox()
 	codeField.backgroundColor = 0xFF14142A;
 	codeField.border = true;
 	codeField.borderColor = COL_ACCENT;
+	codeField.embedFonts = false;
 	codeField.defaultTextFormat = format;
 	codeField.multiline = false;
 	codeField.maxChars = 32;
 	codeField.text = '';
+	// Belt-and-suspenders on top of defaultTextFormat: on some Android/OpenFL
+	// combos, characters typed through the native soft keyboard render but
+	// stay invisible unless textColor is also set directly and the format is
+	// force-applied to the (currently empty) text range up front.
+	codeField.textColor = 0xFFECE8FF;
+	codeField.setTextFormat(format);
 
 	// Anchored to the raw window corner (not the logical Flixel resolution),
 	// tucked just under the keyboard-icon button in the top-right. On a
