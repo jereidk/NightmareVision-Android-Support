@@ -8,6 +8,7 @@ import flixel.text.FlxText;
 import flixel.FlxSprite;
 import flixel.FlxCamera;
 import openfl.display.BitmapData;
+import openfl.geom.Rectangle;
 import openfl.sensors.Accelerometer;
 import openfl.events.AccelerometerEvent;
 import openfl.text.TextField;
@@ -41,8 +42,10 @@ var chargeGlow:FlxSprite = null;
 // pops up automatically once it gets focus). Change DEV_CODE to whatever you want.
 var DEV_CODE:String = 'nightmare';
 
+var CODE_TRIGGER_SIZE:Int   = 28;
+var CODE_TRIGGER_MARGIN:Int = 12;
+
 var codeTriggerBg:FlxSprite  = null;
-var codeTriggerLbl:FlxText   = null;
 var codeField:TextField      = null;
 var codeBoxOpen:Bool         = false;
 
@@ -94,19 +97,14 @@ function onLoad()
 		accel.addEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
 	}
 
-	// Small, visible corner button — bottom-left, next to the version text —
-	// for the code-entry route. Understated but findable on purpose.
-	codeTriggerBg = new FlxSprite(12, FlxG.height - 46);
-	codeTriggerBg.pixels = roundedRect(22, 22, COL_BG_TOP, 6);
-	codeTriggerBg.alpha = 0.65;
+	// Small, visible corner button — top-right — for the code-entry route.
+	// Understated but findable on purpose; the icon itself reads as a tiny
+	// stylized keyboard so it doesn't need a text label to explain itself.
+	codeTriggerBg = new FlxSprite(FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN, CODE_TRIGGER_MARGIN);
+	codeTriggerBg.pixels = keyboardIcon(CODE_TRIGGER_SIZE, COL_BG_TOP, COL_ACCENT);
+	codeTriggerBg.alpha = 0.75;
 	codeTriggerBg.scrollFactor.set();
 	add(codeTriggerBg);
-
-	codeTriggerLbl = new FlxText(12, FlxG.height - 44, 22, '>', 16);
-	codeTriggerLbl.alignment = 'center';
-	codeTriggerLbl.color = COL_ACCENT;
-	codeTriggerLbl.scrollFactor.set();
-	add(codeTriggerLbl);
 }
 
 // buildPanel() runs here — AFTER the compiled state finishes adding all menu
@@ -138,7 +136,7 @@ function openCodeBox()
 {
 	if (codeField != null) return;
 	codeBoxOpen = true;
-	if (codeTriggerLbl != null) codeTriggerLbl.text = 'x';
+	pulseCodeTrigger(true);
 
 	var format = new TextFormat(null, 20, 0xFFECE8FF);
 	format.align = TextFormatAlign.CENTER;
@@ -156,11 +154,12 @@ function openCodeBox()
 	codeField.maxChars = 32;
 	codeField.text = '';
 
-	// Anchored to the raw window corner (not the logical Flixel resolution) —
-	// on a device whose aspect ratio doesn't match, this may need nudging.
-	// Adjust these two offsets if it lands somewhere odd on-device.
-	codeField.x = 12;
-	codeField.y = FlxG.stage.stageHeight - 140;
+	// Anchored to the raw window corner (not the logical Flixel resolution),
+	// tucked just under the keyboard-icon button in the top-right. On a
+	// device whose aspect ratio doesn't match, this may need nudging —
+	// adjust these two offsets if it lands somewhere odd on-device.
+	codeField.x = FlxG.stage.stageWidth - 272;
+	codeField.y = 56;
 
 	try
 	{
@@ -171,6 +170,15 @@ function openCodeBox()
 	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
 
 	codeField.addEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
+}
+
+function pulseCodeTrigger(active:Bool)
+{
+	if (codeTriggerBg == null) return;
+	FlxTween.cancelTweensOf(codeTriggerBg.scale);
+	codeTriggerBg.alpha = active ? 1.0 : 0.75;
+	codeTriggerBg.scale.set(active ? 1.15 : 1.0, active ? 1.15 : 1.0);
+	FlxTween.tween(codeTriggerBg.scale, {x: 1.0, y: 1.0}, 0.25, {ease: FlxEase.quadOut});
 }
 
 function onCodeFieldKey(e:Dynamic)
@@ -202,7 +210,7 @@ function submitCode()
 function closeCodeBox(success:Bool)
 {
 	codeBoxOpen = false;
-	if (codeTriggerLbl != null) codeTriggerLbl.text = '>';
+	pulseCodeTrigger(false);
 
 	if (codeField == null) return;
 
@@ -328,6 +336,33 @@ function roundedRectTop(w:Int, h:Int, color:Int, radius:Int):BitmapData
 			if (inside) bmp.setPixel32(px, py, color);
 		}
 	}
+
+	return bmp;
+}
+
+// Small stylized keyboard glyph, drawn procedurally (no font-glyph reliance,
+// no risk of a Unicode symbol silently failing to render): a rounded body
+// with a 4-column row of key-caps and a wide spacebar row underneath.
+function keyboardIcon(size:Int, bgColor:Int, keyColor:Int):BitmapData
+{
+	var bmp = roundedRect(size, size, bgColor, Std.int(size * 0.22));
+
+	var margin:Int  = Std.int(size * 0.16);
+	var cols:Int    = 4;
+	var gap:Int     = Std.int(size * 0.06);
+	var usableW:Int = size - margin * 2;
+	var keyW:Float  = (usableW - gap * (cols - 1)) / cols;
+	var keyH:Int    = Std.int(size * 0.14);
+	var rowY:Int    = Std.int(size * 0.28);
+
+	for (col in 0...cols)
+	{
+		var kx = Std.int(margin + col * (keyW + gap));
+		bmp.fillRect(new Rectangle(kx, rowY, keyW, keyH), keyColor);
+	}
+
+	var barY:Int = rowY + keyH + gap;
+	bmp.fillRect(new Rectangle(margin, barY, usableW, keyH), keyColor);
 
 	return bmp;
 }
@@ -618,7 +653,11 @@ function onUpdate()
 			for (touch in touches)
 			{
 				if (!touch.justReleased) continue;
-				if (touch.x >= 12 && touch.x <= 34 && touch.y >= FlxG.height - 46 && touch.y <= FlxG.height - 24)
+				var triggerX0 = FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN - 6;
+				var triggerX1 = FlxG.width - CODE_TRIGGER_MARGIN + 6;
+				var triggerY0 = CODE_TRIGGER_MARGIN - 6;
+				var triggerY1 = CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 6;
+				if (touch.x >= triggerX0 && touch.x <= triggerX1 && touch.y >= triggerY0 && touch.y <= triggerY1)
 					toggleCodeBox();
 				break;
 			}
