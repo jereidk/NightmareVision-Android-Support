@@ -58,7 +58,7 @@ class MainMenuState extends MusicBeatState
 
 	static final YT_CHANNEL_URL:String = 'https://youtube.com/@jere-idk?si=zqgS9D-dDx8IWmJ_';
 
-	var ytGlow:FlxSprite;
+	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
 	var portCreditText:FlxText;
 	
@@ -350,99 +350,48 @@ class MainMenuState extends MusicBeatState
 	 */
 	function buildPortCredit():Void
 	{
-		final iconSize:Int = 52;
-		final iconY:Float  = FlxG.height - 104;
-		final textY:Float  = FlxG.height - 42;
+		final iconSize:Int = 44;
+		final iconX:Float  = 18;
+		final iconY:Float  = 16;
+		final ringColor:Int = 0xFF6CFF7A;
 
-		ytGlow = new FlxSprite(0, 0).loadGraphic(_glowBitmap(iconSize + 28, 0xFFFF0000));
-		ytGlow.screenCenter(X);
-		ytGlow.y = iconY - 14;
-		ytGlow.scrollFactor.set();
-		ytGlow.blend = ADD;
-		add(ytGlow);
+		// Ring sits a touch larger than the avatar and behind it, like a
+		// colored profile-picture border.
+		ytRing = new FlxSprite(iconX - 3, iconY - 3).loadGraphic(_ringBitmap(iconSize + 6, ringColor, 3));
+		ytRing.scrollFactor.set();
+		add(ytRing);
 
-		ytIcon = new FlxSprite(0, iconY).loadGraphic(_youtubeIconBitmap(iconSize));
-		ytIcon.screenCenter(X);
-		ytIcon.y = iconY;
+		ytIcon = new FlxSprite(iconX, iconY).loadGraphic(_circleMask(Paths.image('menu/main/ytChannelIcon').bitmap, iconSize));
 		ytIcon.scrollFactor.set();
 		add(ytIcon);
 
-		portCreditText = new FlxText(0, textY, FlxG.width, 'Android Port By Jere', 20);
-		portCreditText.alignment = 'center';
-		portCreditText.setFormat(Paths.font('vcr.ttf', false), 20, 0xFF6CFF7A, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		portCreditText.borderSize = 2;
+		portCreditText = new FlxText(iconX + iconSize + 12, iconY + (iconSize - 22) * 0.5, 300, 'Android Port By Jere', 18);
+		portCreditText.alignment = 'left';
+		portCreditText.setFormat(Paths.font('vcr.ttf', false), 18, ringColor, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		portCreditText.borderSize = 1.5;
 		portCreditText.scrollFactor.set();
 		add(portCreditText);
 
-		// Gentle breathing pulse on the icon + its glow so the whole thing feels
-		// a little alive instead of a static credit line.
+		// Gentle breathing pulse so the corner credit feels a little alive.
 		FlxTween.tween(ytIcon, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
 			{ease: FlxEase.quadInOut, type: PINGPONG});
-		FlxTween.tween(ytGlow, {alpha: 0.35}, 1.1, {ease: FlxEase.quadInOut, type: PINGPONG});
+		FlxTween.tween(ytRing, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
+			{ease: FlxEase.quadInOut, type: PINGPONG});
 	}
 
-	/** Simple YouTube-style badge: a red rounded square with a white play triangle. */
-	function _youtubeIconBitmap(size:Int):BitmapData
+	/**
+	 * Scales `source` to fit an size×size square and clips it to a circle
+	 * (per-pixel alpha cutoff outside the radius) — same procedural masking
+	 * approach used elsewhere this session, applied to a real image instead
+	 * of a solid fill.
+	 */
+	function _circleMask(source:BitmapData, size:Int):BitmapData
 	{
-		var bmp = new BitmapData(size, size, true, 0x00000000);
-		final r = Std.int(size * 0.28);
-		final red = 0xFFFF0000;
+		var scaled = new BitmapData(size, size, true, 0x00000000);
+		var matrix = new openfl.geom.Matrix();
+		matrix.scale(size / source.width, size / source.height);
+		scaled.draw(source, matrix, null, null, null, true);
 
-		for (px in 0...size)
-		{
-			for (py in 0...size)
-			{
-				var inside = true;
-
-				if (px < r && py < r)
-				{
-					final dx = r - px, dy = r - py;
-					if (dx * dx + dy * dy > r * r) inside = false;
-				}
-				else if (px >= size - r && py < r)
-				{
-					final dx = px - (size - r - 1), dy = r - py;
-					if (dx * dx + dy * dy > r * r) inside = false;
-				}
-				else if (px < r && py >= size - r)
-				{
-					final dx = r - px, dy = py - (size - r - 1);
-					if (dx * dx + dy * dy > r * r) inside = false;
-				}
-				else if (px >= size - r && py >= size - r)
-				{
-					final dx = px - (size - r - 1), dy = py - (size - r - 1);
-					if (dx * dx + dy * dy > r * r) inside = false;
-				}
-
-				if (inside) bmp.setPixel32(px, py, red);
-			}
-		}
-
-		// White play triangle, pointing right, roughly centered.
-		final cy:Float    = size * 0.5;
-		final triW:Float  = size * 0.34;
-		final triH:Float  = size * 0.4;
-		final baseX:Float = size * 0.5 - triW * 0.42;
-
-		for (px in 0...size)
-		{
-			for (py in 0...size)
-			{
-				final t = (px - baseX) / triW;
-				if (t < 0 || t > 1) continue;
-				final halfH = (triH * 0.5) * (1 - t);
-				if (Math.abs(py - cy) <= halfH) bmp.setPixel32(px, py, 0xFFFFFFFF);
-			}
-		}
-
-		return bmp;
-	}
-
-	/** Soft radial glow, used as an ambient halo behind the YouTube icon. */
-	function _glowBitmap(size:Int, color:Int):BitmapData
-	{
-		var bmp = new BitmapData(size, size, true, 0x00000000);
 		final radius:Float = size * 0.5;
 		final cx:Float = radius, cy:Float = radius;
 
@@ -451,12 +400,28 @@ class MainMenuState extends MusicBeatState
 			for (py in 0...size)
 			{
 				final dx = px - cx, dy = py - cy;
+				if (dx * dx + dy * dy > radius * radius) scaled.setPixel32(px, py, 0x00000000);
+			}
+		}
+
+		return scaled;
+	}
+
+	/** Thin colored ring (annulus), used as a border behind the circular avatar. */
+	function _ringBitmap(size:Int, color:Int, thickness:Float):BitmapData
+	{
+		var bmp = new BitmapData(size, size, true, 0x00000000);
+		final outerR:Float = size * 0.5;
+		final innerR:Float = outerR - thickness;
+		final cx:Float = outerR, cy:Float = outerR;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				final dx = px - cx, dy = py - cy;
 				final dist = Math.sqrt(dx * dx + dy * dy);
-				if (dist <= radius)
-				{
-					final alpha = Std.int((1.0 - dist / radius) * 130);
-					bmp.setPixel32(px, py, (color & 0x00FFFFFF) | (alpha << 24));
-				}
+				if (dist <= outerR && dist >= innerR) bmp.setPixel32(px, py, color);
 			}
 		}
 
