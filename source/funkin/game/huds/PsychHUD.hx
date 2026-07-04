@@ -2,6 +2,7 @@ package funkin.game.huds;
 
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.FlxObject;
+import flixel.graphics.FlxGraphic;
 import flixel.util.FlxStringUtil;
 
 import funkin.objects.Bar;
