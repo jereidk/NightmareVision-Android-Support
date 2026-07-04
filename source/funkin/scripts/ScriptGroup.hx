@@ -19,6 +19,8 @@ class ScriptGroup implements IFlxDestroyable
 	/** Minimum milliseconds before a script call is logged (when timingEnabled) */
 	public static var slowThresholdMs:Float = 1.0;
 
+	static final _emptyExclusions:Array<String> = [];
+
 	public var scriptShareables:Sharables = new Sharables();
 	
 	/**
@@ -90,7 +92,7 @@ class ScriptGroup implements IFlxDestroyable
 	{
 		// Fast path: skip all allocations when no scripts are loaded (common during vanilla gameplay).
 		if (members.length == 0) return ScriptConstants.CONTINUE_FUNC;
-		exclusions ??= [];
+		exclusions ??= _emptyExclusions;
 		
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
 		

@@ -311,18 +311,19 @@ class Character extends Bopper implements IFlags
 			}
 		}
 		
+		final _curAnim = getAnimName();
 		if (specialAnim && isAnimFinished() && !holding)
 		{
 			specialAnim = false;
 			dance(forceDance);
 		}
-		else if (getAnimName().endsWith('miss') && isAnimFinished() && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
+		else if (_curAnim.endsWith('miss') && isAnimFinished() && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
 		{
 			dance(forceDance);
 			finishAnim();
 		}
-		
-		if (getAnimName().startsWith('sing') || holding) holdTimer += elapsed;
+
+		if (_curAnim.startsWith('sing') || holding) holdTimer += elapsed;
 		
 		if (!holding && holdTimer >= Conductor.stepCrotchet * 0.001 * singDuration)
 		{
@@ -440,17 +441,17 @@ class Character extends Bopper implements IFlags
 		
 		ghostTweenGrp[ghostID]?.cancel();
 		
-		final direction:String = animName.substring(4).split('-')[0];
-		
+		final _dirCode:Int = (animName.length > 4) ? (animName.charCodeAt(4) | 32) : 0;
+
 		inline function resolveDir(x:Bool):Float
 		{
-			return switch (direction)
+			return switch (_dirCode)
 			{
+				case 117 /* u */: !x ? -ghostDisplacement : 0;
+				case 100 /* d */: !x ?  ghostDisplacement : 0;
+				case 114 /* r */:  x ?  ghostDisplacement : 0;
+				case 108 /* l */:  x ? -ghostDisplacement : 0;
 				default: 0;
-				case 'UP': !x ? -ghostDisplacement : 0;
-				case 'DOWN': !x ? ghostDisplacement : 0;
-				case 'RIGHT': x ? ghostDisplacement : 0;
-				case 'LEFT': x ? -ghostDisplacement : 0;
 			}
 		}
 		
