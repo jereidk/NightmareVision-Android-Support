@@ -54,6 +54,13 @@ class SystemMonitor
 	static inline final SPIKE_FACTOR:Float = 3.5;
 	static inline final SPIKE_COOLDOWN:Float = 2.0;
 
+	// Above this, a wall-clock gap between checkFrame() calls almost certainly
+	// isn't a real single-frame hitch — it's this state's update() not having
+	// run at all for a while (a FlxSubstate without persistentUpdate was open,
+	// or the app was backgrounded), since MusicBeatSubstate doesn't call
+	// checkFrame() itself. Treat gaps past this as a resume, not a spike.
+	static inline final MAX_REASONABLE_GAP:Float = 4.0;
+
 	// Self-suppression: skip spike detection right after file I/O so we
 	// don't report the write latency as a fake frame spike.
 	static var _suppressUntil:Float = 0.0;
@@ -258,6 +265,10 @@ class SystemMonitor
 
 	// ==================== AUTO DIAGNOSTICS ====================
 
+	// Wall-clock timestamp of the previous checkFrame() call, used to measure
+	// the true frame delta independent of Flixel's own elapsed clamp.
+	static var _lastCheckTime:Float = 0.0;
+
 	/**
 	 * Call every frame (from MusicBeatState.update).
 	 * Detects frame spikes and steady member-count growth within a state.
@@ -269,15 +280,34 @@ class SystemMonitor
 
 		var now = haxe.Timer.stamp();
 
+		// `elapsed` here is FlxG.elapsed, which FlxGame.updateElapsed() hard-clamps
+		// to FlxG.maxElapsed (0.1s / 100ms) before any state ever sees it — so a
+		// real 300ms or 2000ms stall was being reported as an identical "100ms"
+		// spike, indistinguishable from a genuine 100ms hitch. Measuring the
+		// wall-clock gap between calls here bypasses that clamp entirely, since
+		// this function runs once per real frame regardless of what value
+		// Flixel hands to game logic.
+		var realElapsed = (_lastCheckTime > 0) ? (now - _lastCheckTime) : elapsed;
+		_lastCheckTime = now;
+
+		// A substate without persistentUpdate was almost certainly open for
+		// this whole gap (checkFrame only runs from MusicBeatState, never
+		// MusicBeatSubstate) — not a genuine hitch. Reset quietly.
+		if (realElapsed > MAX_REASONABLE_GAP)
+		{
+			_smoothElapsed = 0.016;
+			return;
+		}
+
 		// Self-suppression window: file I/O in _write can take 20-100ms on
 		// Android flash storage. Still update the EMA but skip spike reporting.
 		if (now < _suppressUntil)
 		{
-			_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
+			_smoothElapsed = _smoothElapsed * 0.95 + realElapsed * 0.05;
 			return;
 		}
 
-		_smoothElapsed = _smoothElapsed * 0.95 + elapsed * 0.05;
+		_smoothElapsed = _smoothElapsed * 0.95 + realElapsed * 0.05;
 
 		// GC delta: a large drop in heap usage means GC ran during this frame
 		#if cpp
@@ -286,10 +316,10 @@ class SystemMonitor
 		_lastGcUsage = gcNow;
 		#end
 
-		if (elapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
+		if (realElapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
 		{
 			_lastSpikeTime = now;
-			var spikeMs = Std.int(elapsed * 1000);
+			var spikeMs = Std.int(realElapsed * 1000);
 			var normalMs = Std.int(_smoothElapsed * 1000);
 			#if flixel
 			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
