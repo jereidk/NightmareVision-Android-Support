@@ -8,6 +8,7 @@ import funkin.objects.menu.CosmicubeNode;
 import funkin.objects.menu.AwardPopup;
 import funkin.states.substates.CosmeticsSubstate;
 import funkin.utils.ProgressionUtil;
+import mobile.utils.MobileNavUtil;
 
 import flixel.util.FlxStringUtil;
 import flixel.group.FlxSpriteGroup;
@@ -300,58 +301,62 @@ class CosmicubeSubState extends MusicBeatSubstate
 				}
 			}
 			
-			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad' && FlxG.mouse.overlaps(menuBackButton, overlayCamera))
+			if (MobileNavUtil.allowPointerNav())
 			{
-				closeTween();
-			}
-			
-			var cubeFocus:Bool = (FlxG.mouse.x >= cubeCamera.x && FlxG.mouse.y >= cubeCamera.y
-				&& FlxG.mouse.x < (cubeCamera.x + cubeCamera.width) && FlxG.mouse.y < (cubeCamera.y + cubeCamera.height));
-				
-			if (dragging || cubeFocus)
-			{
-				if (FlxG.mouse.justPressed) dragging = true;
-				
-				if (dragging)
+				if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton, overlayCamera))
 				{
-					final deltaX:Float = (mousePos.x - dragPos.x), deltaY:Float = (mousePos.y - dragPos.y);
-					
-					cubeCamera.scroll.x -= deltaX;
-					cubeCamera.scroll.y -= deltaY;
-					
-					if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)
+					closeTween();
+				}
+
+				var cubeFocus:Bool = (FlxG.mouse.x >= cubeCamera.x && FlxG.mouse.y >= cubeCamera.y
+					&& FlxG.mouse.x < (cubeCamera.x + cubeCamera.width) && FlxG.mouse.y < (cubeCamera.y + cubeCamera.height));
+
+				if (dragging || cubeFocus)
+				{
+					if (FlxG.mouse.justPressed) dragging = true;
+
+					if (dragging)
 					{
-						if (selectedNode != null) selectNode(null);
-						
-						dragged = true;
+						final deltaX:Float = (mousePos.x - dragPos.x), deltaY:Float = (mousePos.y - dragPos.y);
+
+						cubeCamera.scroll.x -= deltaX;
+						cubeCamera.scroll.y -= deltaY;
+
+						if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)
+						{
+							if (selectedNode != null) selectNode(null);
+
+							dragged = true;
+						}
 					}
+
+					if (FlxG.mouse.justReleased && !dragged)
+					{
+						var node:CosmicubeNode = getClickedNode(maze);
+
+						if (selectedNode != node) selectNode(node);
+					}
+
+					if (!FlxG.mouse.pressed) dragging = dragged = false;
+
+					if (FlxG.mouse.wheel != 0 && selectedNode == null)
+					{
+						var nextZoom = FlxMath.bound(cubeCamera.zoom + FlxG.mouse.wheel * cubeCamera.zoom / 10, .2, 1.75);
+
+						cubeCamera.scroll.x += ((mousePos.x - cubeCamera.width * .5) * (1 - cubeCamera.zoom / nextZoom));
+						cubeCamera.scroll.y += ((mousePos.y - cubeCamera.height * .5) * (1 - cubeCamera.zoom / nextZoom));
+
+						cubeCamera.zoom = nextZoom;
+
+						FlxG.mouse.getScreenPosition(cubeCamera, mousePos);
+					}
+
+					dragPos.set(mousePos.x, mousePos.y);
 				}
-				
-				if (FlxG.mouse.justReleased && !dragged)
-				{
-					var node:CosmicubeNode = getClickedNode(maze);
-					
-					if (selectedNode != node) selectNode(node);
-				}
-				
-				if (!FlxG.mouse.pressed) dragging = dragged = false;
-				
-				if (FlxG.mouse.wheel != 0 && selectedNode == null)
-				{
-					var nextZoom = FlxMath.bound(cubeCamera.zoom + FlxG.mouse.wheel * cubeCamera.zoom / 10, .2, 1.75);
-					
-					cubeCamera.scroll.x += ((mousePos.x - cubeCamera.width * .5) * (1 - cubeCamera.zoom / nextZoom));
-					cubeCamera.scroll.y += ((mousePos.y - cubeCamera.height * .5) * (1 - cubeCamera.zoom / nextZoom));
-					
-					cubeCamera.zoom = nextZoom;
-					
-					FlxG.mouse.getScreenPosition(cubeCamera, mousePos);
-				}
-				
-				dragPos.set(mousePos.x, mousePos.y);
 			}
-			
-			if (selectedNode != null && (controls.ACCEPT || (FlxG.mouse.justReleased && equipButton.alive && FlxG.mouse.overlaps(equipButton, overlayCamera))))
+
+			if (selectedNode != null && (controls.ACCEPT ||
+				(MobileNavUtil.allowPointerNav() && FlxG.mouse.justReleased && equipButton.alive && FlxG.mouse.overlaps(equipButton, overlayCamera))))
 			{
 				equipNode(selectedNode);
 			}
