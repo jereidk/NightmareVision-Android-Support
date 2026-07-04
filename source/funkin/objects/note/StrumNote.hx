@@ -19,6 +19,16 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	static final INITIAL_OFFSET:Float = -0.275 * STRUMLINE_SIZE; // -28.6
 	static final NUDGE:Float = 2.0;
 
+	/**
+	 * Runtime multiplier applied to NOTE_SPACING/STRUMLINE_SIZE in getCenteredXPos().
+	 * FunkinCrew/Funkin's own mobile touch mode (PlayState.initNoteHitbox()) spreads
+	 * VSlice notes out much further than the 112px desktop spacing so they line up
+	 * with its (fixed-size, much wider) invisible touch hitbox zones. Set from
+	 * PlayState.generatePlayfields() using that same aspect-ratio-based formula;
+	 * stays 1.0 (desktop-identical) everywhere else.
+	 */
+	public static var spacingScale:Float = 1.0;
+
 	public var intThing:Int = 0;
 	public var lastNote:Dynamic = null;
 
@@ -180,8 +190,8 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 */
 	public static function getCenteredXPos(direction:Int):Float
 	{
-		final receptorGroupWidth:Float = 3 * NOTE_SPACING + STRUMLINE_SIZE; // 440
-		return (FlxG.width - receptorGroupWidth) / 2 + direction * NOTE_SPACING;
+		final receptorGroupWidth:Float = (3 * NOTE_SPACING + STRUMLINE_SIZE) * spacingScale; // 440 * scale
+		return (FlxG.width - receptorGroupWidth) / 2 + direction * NOTE_SPACING * spacingScale;
 	}
 	
 	override function update(elapsed:Float)

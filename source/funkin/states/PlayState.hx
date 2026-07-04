@@ -1167,6 +1167,8 @@ class PlayState extends MusicBeatState
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 		Note.swagWidth = 160 * 0.7;
+		funkin.objects.note.StrumNote.spacingScale = 1.0;
+		var vsliceStrumScale:Float = 1.0;
 		final _isVSlice = (ClientPrefs.noteLayout == 'VSlice');
 		if (_isVSlice)
 		{
@@ -1175,31 +1177,51 @@ class PlayState extends MusicBeatState
 			var safeTop:Float = 0;
 			#if mobile
 			safeTop = mobile.backend.ScreenUtil.safeArea().top;
+
+			// Match FunkinCrew/Funkin's own mobile touch adaptation (PlayState.initNoteHitbox()):
+			// on touch, the invisible ARROWS hitbox zones (MobileHitbox, 146x149 with 80px gaps)
+			// are much bigger/further apart than our 112px desktop note spacing. That mismatch
+			// is why taps often landed on the wrong lane or nowhere at all — the receptors the
+			// player could see had nothing to do with the touch zones underneath them. Spread and
+			// scale the notes up using the exact same aspect-ratio formula the original game uses.
+			//
+			// MobileHitbox.layoutFromPrefs() forces the ARROWS scheme whenever noteLayout is
+			// VSlice regardless of gameInputMode ('Hitbox' or 'VSlice controls' both end up
+			// there) — only 'Virtual Pad' skips the touch hitbox entirely for an on-screen D-pad.
+			if (ClientPrefs.gameInputMode != 'Virtual Pad')
+			{
+				final amplification:Float = (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
+				vsliceStrumScale = ((FlxG.height / FlxG.width) * 1.95) * amplification;
+				final noteSpacingScale:Float = ((FlxG.height / FlxG.width) * 2.8) * amplification;
+				funkin.objects.note.StrumNote.spacingScale = noteSpacingScale * vsliceStrumScale;
+				Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE * vsliceStrumScale;
+			}
 			#end
 			// Position receptors at bottom, matching Funkin's Arrow scheme hitbox
 			// yPos = FlxG.height - hintHeight*2 - 24 (hintHeight=149, so ~FlxG.height-322)
-			modManager.vsliceBaseY = FlxG.height - safeTop - funkin.objects.note.StrumNote.STRUMLINE_SIZE * 3 - 50;
+			modManager.vsliceBaseY = FlxG.height - safeTop - funkin.objects.note.StrumNote.STRUMLINE_SIZE * vsliceStrumScale * 3 - 50;
 		}
 
 		for (lane in 0...SONG.lanes)
 		{
 			final character = (lane == 1 ? dad : boyfriend);
 			final isPlayer = (lane != 1);
-			
+
 			final auto = (lane != 0 || cpuControlled);
-			
-			// For VSlice, center the receptors on screen
-			var baseX:Float = 0;
-			if (_isVSlice)
-			{
-				// Span = 3 gaps + 1 note width = 3*NOTE_SPACING + STRUMLINE_SIZE = 440
-				final receptorGroupWidth:Float = 3 * funkin.objects.note.StrumNote.NOTE_SPACING + funkin.objects.note.StrumNote.STRUMLINE_SIZE;
-				baseX = (FlxG.width - receptorGroupWidth) / 2;
-			}
-			
+
+			// For VSlice, center the receptors on screen (getCenteredXPos already applies spacingScale)
+			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0) : 0;
+
 			var strums = new PlayField(baseX, _isVSlice ? modManager.vsliceBaseY : 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
-			if (_isVSlice && lane == 0) strums._skin.receptorScale = 1.0;
+			if (_isVSlice && lane == 0)
+			{
+				// noteScale defaults to 0.7 (our engine-wide default), leaving falling notes
+				// visually smaller than the 104px VSlice receptor they're meant to match — set
+				// both from the same scale so notes and receptor stay visually consistent.
+				strums._skin.receptorScale = vsliceStrumScale;
+				strums._skin.noteScale = vsliceStrumScale;
+			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
 			strums.ID = lane;
