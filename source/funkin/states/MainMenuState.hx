@@ -127,6 +127,14 @@ class MainMenuState extends MusicBeatState
 		var glow = new FlxSprite().loadGraphic(Paths.image(ClientPrefs.finaleState == ACTIVE ? 'menu/main/glowEVIL' : 'menu/main/glow'));
 		glow.scale.set(1.1, 1.1);
 		glow.updateHitbox();
+		// Source image is exactly 1280x720 — on a device wide enough that
+		// 'expand' screen fit grows FlxG.width past that, stretch to cover the
+		// extra width instead of leaving an uncovered gap on either side.
+		if (FlxG.width > glow.width)
+		{
+			glow.scale.x *= FlxG.width / glow.width;
+			glow.updateHitbox();
+		}
 		glow.screenCenter();
 		glow.blend = ADD;
 		add(glow);
@@ -134,6 +142,15 @@ class MainMenuState extends MusicBeatState
 		var vignette = new FlxSprite().loadGraphic(Paths.image('menu/main/vignette'));
 		vignette.scrollFactor.set();
 		vignette.active = false;
+		// Was never centered even at the base resolution (sat at (0,0) covering
+		// only the left 1280px) — stretch and center so wide 'expand' screens
+		// don't end up with the vignette darkening only one side of the screen.
+		if (FlxG.width > vignette.width)
+		{
+			vignette.setGraphicSize(FlxG.width, Std.int(vignette.height));
+			vignette.updateHitbox();
+		}
+		vignette.screenCenter();
 		add(vignette);
 
 		if (ClientPrefs.finaleState == ACTIVE)
