@@ -1,154 +1,334 @@
 import funkin.data.ClientPrefs;
 import funkin.data.FinaleState;
 import funkin.data.CosmicubeData;
+import funkin.data.GameFlags;
+import funkin.utils.ProgressionUtil;
 import funkin.states.TitleState;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
 import flixel.FlxCamera;
+import openfl.display.BitmapData;
+import openfl.sensors.Accelerometer;
+import openfl.events.AccelerometerEvent;
 
-// ── 2-finger hold progress bar ────────────────────────────────────────────────
-var holdTime:Float  = 0;
-var HOLD_TRIGGER:Float = 1.0;
-var holdBar:FlxSprite  = null;
-var holdFill:FlxSprite = null;
+// ── Secret gesture: shake the device to open the panel ───────────────────────
+// Deliberately NOT a tap/hold/touch gesture and NOT a typed code — the panel
+// is undocumented in-game. Tune these if it feels too twitchy or too stubborn;
+// values are in Gs (1.0 = standing still) since that's the unit OpenFL's
+// Accelerometer reports in.
+var accel:Accelerometer          = null;
+var lastAccelMag:Float            = 1.0;
+var shakeTimestamps:Array<Float>  = [];
+var shakeCooldownUntil:Float      = 0;
+var SHAKE_DELTA:Float             = 1.6;  // jolt size (Gs) to count as one shake peak
+var SHAKE_PEAK_COOLDOWN:Float      = 0.22; // min gap between counted peaks
+var SHAKE_COUNT_NEEDED:Int        = 4;    // peaks required
+var SHAKE_WINDOW:Float            = 2.2;  // all peaks must land within this many seconds
 
-// ── Dev panel ─────────────────────────────────────────────────────────────────
-var panelOpen:Bool = false;
-var panelAll:Array<Dynamic>  = [];  // every sprite/text that belongs to the panel
+// Ambient "charge" glow — a small, unlabeled dot that quietly brightens with
+// each shake. Nothing explains what it is; only someone who already knows
+// the gesture will recognize it building.
+var chargeGlow:FlxSprite = null;
+
+// ── Dev panel state ───────────────────────────────────────────────────────────
+var panelOpen:Bool          = false;
+var panelAll:Array<Dynamic> = [];   // every sprite/text belonging to the panel
 var panelBtns:Array<Dynamic> = [];  // {x, y, w, h, idx} button hit-boxes
-var panelCooldown:Int = 0;
-var panelCam:Dynamic = null;          // dedicated top-most camera so panel always renders above game sprites
-var panelWaitingForAllUp:Bool = false; // blocks input until hold-gesture fingers fully lift
+var panelCooldown:Int       = 0;
+var panelCam:Dynamic        = null; // dedicated top-most camera, always renders above game sprites
 
 var lblUnlock:FlxText    = null;
 var lblUnlockReq:FlxText = null;
+var lblReset:FlxText     = null;
+var resetBtnSpr:FlxSprite = null;
+
+// Two-tap confirm guard for the destructive reset button.
+var resetArmed:Bool      = false;
+var resetArmedUntil:Float = 0;
+
+// Panel palette
+var COL_BG:Int       = 0xFF0B0B18;
+var COL_BG_TOP:Int   = 0xFF14142A;
+var COL_ACCENT:Int   = 0xFF9D5CFF;
+var COL_SECTION:Int  = 0xFF6B6B9E;
+var COL_TOGGLE:Int   = 0xFF1E1B4B;
+var COL_TOGGLE_ON:Int = 0xFF3730A5;
+var COL_LOOT:Int     = 0xFF4C1D95;
+var COL_MONEY:Int    = 0xFF14532D;
+var COL_DANGER:Int   = 0xFF7F1D1D;
+var COL_DANGER_ARMED:Int = 0xFFB91C1C;
+var COL_CLOSE:Int    = 0xFF17171F;
 
 // ─────────────────────────────────────────────────────────────────────────────
 function onLoad()
 {
 	if (!ClientPrefs.inDevMode) return;
 
-	var debugText = new FlxText(0, 0, 1280,
-		'content/scripts/states/MainMenuState.hx\n' +
-		'Press 9 to go to credits roll sequence\n' +
-		'Press Shift 7 to toggle Finale Endgame Sequence\n' +
-		'Press 6 to Force unlock Cosmicube requirements\n' +
-		'Press 5 to delete Cosmicube unlocks\n' +
-		'Press 4 to toggle Force Unlock for freeplay and story mode\n' +
-		'Press 3 to delete bought songs\n' +
-		'Press 2 to give a lot of moneys\n' +
-		'Press 1 to set money to 0\n' +
-		'[ Mobile: hold 2 fingers 1 s to open dev panel ]',
-		12.5);
-	debugText.alignment = 'right';
-	add(debugText);
+	// Quiet corner glow — the only visible trace of the whole system, and it
+	// says nothing. Sits bottom-right, basically invisible until it charges.
+	chargeGlow = new FlxSprite(FlxG.width - 16, FlxG.height - 16);
+	chargeGlow.makeGraphic(6, 6, COL_ACCENT);
+	chargeGlow.alpha = 0;
+	chargeGlow.scrollFactor.set();
+	add(chargeGlow);
 
-	// ── Hold-progress bar (drawn at bottom of screen) ────────────────────────
-	holdBar = new FlxSprite(0, FlxG.height - 8);
-	holdBar.makeGraphic(FlxG.width, 8, 0xFF1A1A2E);
-	holdBar.visible = false;
-	add(holdBar);
-
-	holdFill = new FlxSprite(0, FlxG.height - 8);
-	holdFill.makeGraphic(FlxG.width, 8, 0xFF7C3AED);
-	holdFill.scale.x = 0;
-	holdFill.origin.x = 0;
-	holdFill.visible = false;
-	add(holdFill);
+	if (Accelerometer.isSupported)
+	{
+		accel = new Accelerometer();
+		accel.addEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
+	}
 }
 
-// buildPanel() is called here — AFTER the compiled state finishes adding all menu sprites
-// so the panel overlay renders on top of everything (z-index fix).
+// buildPanel() runs here — AFTER the compiled state finishes adding all menu
+// sprites — so the panel overlay renders on top of everything (z-index fix).
 function onCreatePost()
 {
 	if (!ClientPrefs.inDevMode) return;
 	buildPanel();
 }
 
+function onDestroy()
+{
+	if (accel != null)
+	{
+		accel.removeEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
+		accel = null;
+	}
+}
+
+// ── Shake detection ───────────────────────────────────────────────────────────
+function onAccelUpdate(e:Dynamic)
+{
+	if (panelOpen) return;
+
+	var mag = Math.sqrt(e.accelerationX * e.accelerationX + e.accelerationY * e.accelerationY + e.accelerationZ * e.accelerationZ);
+	var delta = Math.abs(mag - lastAccelMag);
+	lastAccelMag = mag;
+
+	var now = haxe.Timer.stamp();
+	if (delta < SHAKE_DELTA || now < shakeCooldownUntil) return;
+
+	shakeCooldownUntil = now + SHAKE_PEAK_COOLDOWN;
+
+	shakeTimestamps.push(now);
+	while (shakeTimestamps.length > 0 && now - shakeTimestamps[0] > SHAKE_WINDOW)
+		shakeTimestamps.shift();
+
+	pulseCharge(shakeTimestamps.length / SHAKE_COUNT_NEEDED);
+
+	if (shakeTimestamps.length >= SHAKE_COUNT_NEEDED)
+	{
+		shakeTimestamps = [];
+		resetCharge();
+		openPanel();
+	}
+}
+
+function pulseCharge(progress:Float)
+{
+	if (chargeGlow == null) return;
+	FlxTween.cancelTweensOf(chargeGlow);
+	chargeGlow.alpha = Math.min(progress, 1.0);
+	chargeGlow.scale.set(1 + progress, 1 + progress);
+	FlxTween.tween(chargeGlow, {alpha: 0}, 0.7, {ease: FlxEase.quadOut});
+}
+
+function resetCharge()
+{
+	if (chargeGlow == null) return;
+	FlxTween.cancelTweensOf(chargeGlow);
+	chargeGlow.alpha = 0;
+	chargeGlow.scale.set(1, 1);
+}
+
+// ── Rounded-rect bitmap helper (built once per panel, cheap to cache) ────────
+function roundedRect(w:Int, h:Int, color:Int, radius:Int):BitmapData
+{
+	var bmp = new BitmapData(w, h, true, 0x00000000);
+	var r = radius;
+
+	for (px in 0...w)
+	{
+		for (py in 0...h)
+		{
+			var inside = true;
+
+			if (px < r && py < r)
+			{
+				var dx = r - px, dy = r - py;
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+			else if (px >= w - r && py < r)
+			{
+				var dx = px - (w - r - 1), dy = r - py;
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+			else if (px < r && py >= h - r)
+			{
+				var dx = r - px, dy = py - (h - r - 1);
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+			else if (px >= w - r && py >= h - r)
+			{
+				var dx = px - (w - r - 1), dy = py - (h - r - 1);
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+
+			if (inside) bmp.setPixel32(px, py, color);
+		}
+	}
+
+	return bmp;
+}
+
+// Same as roundedRect() but only rounds the TOP two corners, with a flat
+// bottom edge — for strips meant to blend seamlessly into whatever sits
+// beneath them (e.g. a top highlight band inside a larger rounded panel).
+function roundedRectTop(w:Int, h:Int, color:Int, radius:Int):BitmapData
+{
+	var bmp = new BitmapData(w, h, true, 0x00000000);
+	var r = radius;
+
+	for (px in 0...w)
+	{
+		for (py in 0...h)
+		{
+			var inside = true;
+
+			if (px < r && py < r)
+			{
+				var dx = r - px, dy = r - py;
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+			else if (px >= w - r && py < r)
+			{
+				var dx = px - (w - r - 1), dy = r - py;
+				if (dx * dx + dy * dy > r * r) inside = false;
+			}
+
+			if (inside) bmp.setPixel32(px, py, color);
+		}
+	}
+
+	return bmp;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 function buildPanel()
 {
-	var PW:Int = 500;
-	var PH:Int = 360;
+	var PW:Int = 560;
+	var PH:Int = 560;
 	var px:Int = Std.int((FlxG.width  - PW) / 2);
 	var py:Int = Std.int((FlxG.height - PH) / 2);
-	var BW:Int = PW - 44;
-	var BH:Int = 52;
-	var BX:Int = px + 22;
+	var BW:Int = PW - 48;
+	var BH:Int = 48;
+	var BX:Int = px + 24;
 
 	function reg(thing) { thing.visible = false; panelAll.push(thing); add(thing); }
 
-	// Semi-transparent full-screen dim
+	// Full-screen dim behind the panel.
 	var overlay = new FlxSprite(0, 0);
-	overlay.makeGraphic(FlxG.width, FlxG.height, 0xAA000000);
+	overlay.makeGraphic(FlxG.width, FlxG.height, 0xBF000000);
 	reg(overlay);
 
-	// Panel background
+	// Panel body — proper rounded corners instead of a flat rectangle.
+	var bgBmp = roundedRect(PW, PH, COL_BG, 22);
 	var bg = new FlxSprite(px, py);
-	bg.makeGraphic(PW, PH, 0xFF0F0F1E);
+	bg.pixels = bgBmp;
 	reg(bg);
 
-	// Accent bar at top of panel
-	var accent = new FlxSprite(px, py);
-	accent.makeGraphic(PW, 6, 0xFF7C3AED);
+	// Subtle top highlight band (fake gradient: a lighter strip along the top,
+	// flat-bottomed so it blends into the panel body beneath it).
+	var topBmp = roundedRectTop(PW, 90, COL_BG_TOP, 22);
+	var topBand = new FlxSprite(px, py);
+	topBand.pixels = topBmp;
+	topBand.alpha = 0.9;
+	reg(topBand);
+
+	// Accent bar.
+	var accent = new FlxSprite(px + 22, py + 18);
+	accent.makeGraphic(6, 46, COL_ACCENT);
 	reg(accent);
 
-	// Title
-	var title = new FlxText(px, py + 14, PW, 'DEV PANEL', 22);
-	title.alignment = 'center';
-	title.color = 0xFFDDD6FE;
+	// Title.
+	var title = new FlxText(px + 40, py + 20, PW - 80, 'DEVELOPER PANEL', 24);
+	title.color = 0xFFECE8FF;
 	reg(title);
 
-	// Divider
-	var div = new FlxSprite(px + 20, py + 50);
-	div.makeGraphic(PW - 40, 1, 0xFF2D2D5E);
-	reg(div);
+	var subtitle = new FlxText(px + 40, py + 48, PW - 80, 'you shouldn\'t be here', 12);
+	subtitle.color = 0xFF6B6B9E;
+	reg(subtitle);
 
-	// ── Helper: add one button row ────────────────────────────────────────────
-	var rowY:Int = py + 64;
+	var rowY:Int = py + 104;
+
+	function sectionLabel(text:String)
+	{
+		var lbl = new FlxText(BX, rowY, BW, text, 13);
+		lbl.color = COL_SECTION;
+		reg(lbl);
+		rowY += 24;
+	}
 
 	function addRow(label:String, bgColor:Int, btnIdx:Int):FlxText
 	{
+		var sprBmp = roundedRect(BW, BH, bgColor, 10);
 		var spr = new FlxSprite(BX, rowY);
-		spr.makeGraphic(BW, BH, bgColor);
+		spr.pixels = sprBmp;
 		reg(spr);
 
-		var lbl = new FlxText(BX, rowY + 15, BW, label, 16);
+		var lbl = new FlxText(BX, rowY + 14, BW, label, 16);
 		lbl.alignment = 'center';
 		lbl.color = 0xFFFFFFFF;
 		reg(lbl);
 
 		panelBtns.push({x: BX, y: rowY, w: BW, h: BH, idx: btnIdx});
-		rowY += BH + 8;
+		rowY += BH + 10;
 		return lbl;
 	}
 
-	// Button rows — idx matches the switch in handleBtnTap()
-	lblUnlock    = addRow(unlockLabel(),    0xFF1E1B4B, 0);
-	lblUnlockReq = addRow(unlockReqLabel(), 0xFF1E1B4B, 1);
-	                addRow('Press 2 to be rich',      0xFF14532D, 2);
-	                addRow('Reset Money & Cube Unlocks', 0xFF7F1D1D, 3);
-	                addRow('✕  Close',               0xFF1C1C1C, 4);
+	sectionLabel('PROGRESSION');
+	lblUnlock    = addRow(unlockLabel(),    ClientPrefs.forceUnlock    ? COL_TOGGLE_ON : COL_TOGGLE, 0);
+	lblUnlockReq = addRow(unlockReqLabel(), ClientPrefs.forceUnlockReq ? COL_TOGGLE_ON : COL_TOGGLE, 1);
+	                addRow('◆  Unlock All Cosmetics',   COL_LOOT,  2);
+	                addRow('★  Grant All Achievements', COL_LOOT,  3);
+
+	rowY += 6;
+	sectionLabel('ECONOMY');
+	                addRow('Grant 1,000,000 Beans', COL_MONEY, 4);
+
+	rowY += 6;
+	sectionLabel('DANGER ZONE');
+	resetBtnSpr = null;
+	lblReset = addRow('⚠  Reset Money & Cosmetics', COL_DANGER, 5);
+	// grab the sprite behind the label we just added (last-1 in panelAll before the label)
+	resetBtnSpr = panelAll[panelAll.length - 2];
+
+	rowY += 8;
+	addRow('✕  Close', COL_CLOSE, 6);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 function unlockLabel():String
-	return (ClientPrefs.forceUnlock    ? '✓  Force Unlock  ON'  : '✗  Force Unlock  OFF');
+	return (ClientPrefs.forceUnlock    ? '✓  Unlock Everything  ON'  : '✗  Unlock Everything  OFF');
 
 function unlockReqLabel():String
-	return (ClientPrefs.forceUnlockReq ? '✓  Force Unlock Req  ON' : '✗  Force Unlock Req  OFF');
+	return (ClientPrefs.forceUnlockReq ? '✓  Bypass Requirements  ON' : '✗  Bypass Requirements  OFF');
+
+function resetLabel():String
+	return (resetArmed ? '⚠  TAP AGAIN TO CONFIRM' : '⚠  Reset Money & Cosmetics');
 
 function openPanel()
 {
 	panelOpen = true;
 	panelCooldown = 5;
-	panelWaitingForAllUp = true; // block input until hold-gesture fingers fully lift
+	resetArmed = false;
 
 	if (lblUnlock    != null) lblUnlock.text    = unlockLabel();
 	if (lblUnlockReq != null) lblUnlockReq.text = unlockReqLabel();
+	if (lblReset     != null) lblReset.text     = resetLabel();
 
-	// Assign panel sprites to a dedicated camera added last in the list.
-	// Being last = renders on top of everything: game sprites, virtual pad, etc.
+	// Dedicated camera added last = renders on top of everything: game
+	// sprites, virtual pad, HUD, all of it.
 	if (panelCam == null)
 	{
 		panelCam = new FlxCamera();
@@ -157,13 +337,34 @@ function openPanel()
 		for (thing in panelAll) thing.cameras = [panelCam];
 	}
 
-	for (thing in panelAll) thing.visible = true;
+	FlxG.sound.play(Paths.sound('panelAppear'), 0.6);
+
+	// Cascading fade/slide-in entrance.
+	var i = 0;
+	for (thing in panelAll)
+	{
+		thing.visible = true;
+		var startY = thing.y;
+		thing.y = startY + 18;
+		thing.alpha = 0;
+
+		var delay = Math.min(i * 0.012, 0.18);
+		FlxTween.tween(thing, {y: startY, alpha: 1}, 0.28, {ease: FlxEase.quintOut, startDelay: delay});
+		i++;
+	}
 }
 
 function closePanel()
 {
 	panelOpen = false;
-	for (thing in panelAll) thing.visible = false;
+	resetArmed = false;
+	FlxG.sound.play(Paths.sound('panelDisappear'), 0.5);
+	for (thing in panelAll)
+	{
+		FlxTween.cancelTweensOf(thing);
+		thing.visible = false;
+		thing.alpha = 1;
+	}
 }
 
 function handleBtnTap(idx:Int)
@@ -175,23 +376,52 @@ function handleBtnTap(idx:Int)
 			ClientPrefs.doubletrouble = ClientPrefs.forceUnlock;
 			ClientPrefs.flush();
 			if (lblUnlock != null) lblUnlock.text = unlockLabel();
+			FlxG.sound.play(Paths.sound('select'), 0.6);
 
 		case 1: // Force Unlock Req toggle
 			ClientPrefs.forceUnlockReq = !ClientPrefs.forceUnlockReq;
 			ClientPrefs.flush();
 			if (lblUnlockReq != null) lblUnlockReq.text = unlockReqLabel();
+			FlxG.sound.play(Paths.sound('select'), 0.6);
 
-		case 2: // Max money
+		case 2: // Unlock all cosmicube cosmetics
+			ClientPrefs.cosmicubeUnlocks = ProgressionUtil.allImpostorItems.copy();
+			ClientPrefs.flush();
+			FlxG.sound.play(Paths.sound('cosmicubePop'), 0.8);
+
+		case 3: // Grant every achievement
+			for (award in GameFlags.getAwards())
+				GameFlags.giveAchievement(award.id);
+			FlxG.sound.play(Paths.sound('unlockSong'), 0.8);
+
+		case 4: // Grant money
 			CosmicubeData.currentMoney += 1000000;
 			ClientPrefs.flush();
+			FlxG.sound.play(Paths.sound('getbeans'), 0.8);
 
-		case 3: // Reset money + cube unlocks
-			CosmicubeData.currentMoney = 0;
-			ClientPrefs.cosmicubeUnlocks.resize(0);
-			ClientPrefs.flush();
-			closePanel();
+		case 5: // Reset money + cube unlocks — two-tap confirm to avoid fat-finger data loss
+			if (!resetArmed)
+			{
+				resetArmed = true;
+				resetArmedUntil = haxe.Timer.stamp() + 3.0;
+				if (lblReset != null) lblReset.text = resetLabel();
+				if (resetBtnSpr != null)
+				{
+					var armedBmp = roundedRect(Std.int(resetBtnSpr.width), Std.int(resetBtnSpr.height), COL_DANGER_ARMED, 10);
+					resetBtnSpr.pixels = armedBmp;
+				}
+				FlxG.sound.play(Paths.sound('warn'), 0.7);
+			}
+			else
+			{
+				CosmicubeData.currentMoney = 0;
+				ClientPrefs.cosmicubeUnlocks.resize(0);
+				ClientPrefs.flush();
+				FlxG.sound.play(Paths.sound('error'), 0.7);
+				closePanel();
+			}
 
-		case 4: // Close
+		case 6: // Close
 			closePanel();
 	}
 }
@@ -201,7 +431,7 @@ function onUpdate()
 {
 	if (!ClientPrefs.inDevMode) return;
 
-	// ── Desktop keyboard shortcuts (unchanged) ────────────────────────────────
+	// ── Desktop keyboard shortcuts (unchanged — dev convenience on PC/editor) ──
 	if (FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.SEVEN)
 	{
 		ClientPrefs.finaleState = (ClientPrefs.finaleState == FinaleState.ACTIVE
@@ -255,23 +485,27 @@ function onUpdate()
 		trace('no money :(');
 	}
 
-	// ── Mobile: 2-finger hold gesture ────────────────────────────────────────
-	var touches = FlxG.touches.list;
-	if (touches == null || touches.length == 0)
+	// ── Panel interaction (only reachable via the shake gesture) ────────────
+	if (!panelOpen) return;
+
+	if (panelCooldown > 0) { panelCooldown--; return; }
+
+	// Auto-revert the destructive-reset arm state if the player doesn't
+	// confirm within the window.
+	if (resetArmed && haxe.Timer.stamp() > resetArmedUntil)
 	{
-		resetHold();
-		if (panelWaitingForAllUp) panelWaitingForAllUp = false; // all fingers lifted, ready for new input
-		return;
+		resetArmed = false;
+		if (lblReset != null) lblReset.text = resetLabel();
+		if (resetBtnSpr != null)
+		{
+			var idleBmp = roundedRect(Std.int(resetBtnSpr.width), Std.int(resetBtnSpr.height), COL_DANGER, 10);
+			resetBtnSpr.pixels = idleBmp;
+		}
 	}
 
-	// If panel is open, check for button taps on release
-	if (panelOpen)
+	var touches = FlxG.touches.list;
+	if (touches != null)
 	{
-		if (panelCooldown > 0) { panelCooldown--; return; }
-
-		// Don't process taps until hold-gesture fingers have fully lifted
-		if (panelWaitingForAllUp) return;
-
 		for (touch in touches)
 		{
 			if (!touch.justReleased) continue;
@@ -286,42 +520,8 @@ function onUpdate()
 					break;
 				}
 			}
-			if (!tapped) closePanel(); // tap outside panel → dismiss
+			if (!tapped) closePanel();
 			break;
 		}
-		return;
 	}
-
-	// Count how many fingers are currently held down
-	var fingers:Int = 0;
-	for (t in touches) if (t.pressed) fingers++;
-
-	if (fingers >= 2)
-	{
-		holdTime += FlxG.elapsed;
-
-		if (holdBar  != null) holdBar.visible  = true;
-		if (holdFill != null)
-		{
-			holdFill.visible = true;
-			holdFill.scale.x = Math.min(holdTime / HOLD_TRIGGER, 1.0);
-		}
-
-		if (holdTime >= HOLD_TRIGGER)
-		{
-			resetHold();
-			openPanel();
-		}
-	}
-	else
-	{
-		resetHold();
-	}
-}
-
-function resetHold()
-{
-	holdTime = 0;
-	if (holdBar  != null) holdBar.visible  = false;
-	if (holdFill != null) { holdFill.visible = false; holdFill.scale.x = 0; }
 }
