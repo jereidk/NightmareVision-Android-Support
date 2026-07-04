@@ -92,7 +92,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		var option:Option = new Option(Lang.str('opt_drs', 'Dynamic Resolution (DRS)'),
 			Lang.str('opt_drs_desc',
 				'Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.'),
-			'drsEnabled', 'bool', true);
+			'drsEnabled', 'bool', false);
 		option.onChange = markCustomPreset;
 		addOption(option);
 		#end
@@ -115,7 +115,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = true;
-				#if android ClientPrefs.drsEnabled = true; #end
+				#if android ClientPrefs.drsEnabled = false; #end
 			case 'High':
 				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;

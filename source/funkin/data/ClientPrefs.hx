@@ -178,7 +178,7 @@ class ClientPrefs
 	@saveVar public static var customPadPositionsJson:String = "";
 
 	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
-	@saveVar public static var drsEnabled:Bool = true;
+	@saveVar public static var drsEnabled:Bool = false;
 
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
