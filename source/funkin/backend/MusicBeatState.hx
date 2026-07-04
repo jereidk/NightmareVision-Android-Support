@@ -163,6 +163,7 @@ class MusicBeatState extends FlxUIState
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
 
 	final _updateArgs:Array<Dynamic> = [0.0];
+	static final _emptyArgs:Array<Dynamic> = [];
 	
 	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
@@ -198,7 +199,8 @@ class MusicBeatState extends FlxUIState
 			scripted = true;
 		}
 		
-		if (callOnLoad) scriptGroup.call('onLoad', []);
+		if (callOnLoad) scriptGroup.call('onLoad', _emptyArgs);
+
 
 		return scripted;
 	}
@@ -407,21 +409,21 @@ class MusicBeatState extends FlxUIState
 	
 	public function stepHit():Void
 	{
-		scriptGroup.call('onStepHit', []);
+		scriptGroup.call('onStepHit', _emptyArgs);
 		PluginsManager.callOnScripts('onStepHit');
-		
+
 		if (curStep % 4 == 0) beatHit();
 	}
-	
+
 	public function beatHit():Void
 	{
-		scriptGroup.call('onBeatHit', []);
+		scriptGroup.call('onBeatHit', _emptyArgs);
 		PluginsManager.callOnScripts('onBeatHit');
 	}
-	
+
 	public function sectionHit():Void
 	{
-		scriptGroup.call('onSectionHit', []);
+		scriptGroup.call('onSectionHit', _emptyArgs);
 		PluginsManager.callOnScripts('onSectionHit');
 	}
 	
@@ -471,7 +473,7 @@ class MusicBeatState extends FlxUIState
 	
 	override function closeSubState()
 	{
-		scriptGroup.call('onCloseSubState', []);
+		scriptGroup.call('onCloseSubState', _emptyArgs);
 		super.closeSubState();
 	}
 }

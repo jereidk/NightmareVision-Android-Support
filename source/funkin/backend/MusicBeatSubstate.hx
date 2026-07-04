@@ -141,6 +141,8 @@ class MusicBeatSubstate extends FlxSubState
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
 
 	final _updateArgs:Array<Dynamic> = [0.0];
+	final _beatStepArgs:Array<Dynamic> = [0];
+	static final _emptyArgs:Array<Dynamic> = [];
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
 	{
@@ -174,7 +176,7 @@ class MusicBeatSubstate extends FlxSubState
 			scripted = true;
 		}
 		
-		if (callOnLoad) scriptGroup.call('onLoad', []);
+		if (callOnLoad) scriptGroup.call('onLoad', _emptyArgs);
 		
 		if (GlobalScriptManager.instance != null)
 			GlobalScriptManager.instance.onStateCreate(this);
@@ -270,22 +272,25 @@ class MusicBeatSubstate extends FlxSubState
 	public function stepHit():Void
 	{
 		if (curStep % 4 == 0) beatHit();
-		scriptGroup.call('onStepHit', [curStep]);
+		_beatStepArgs[0] = curStep;
+		scriptGroup.call('onStepHit', _beatStepArgs);
 	}
-	
+
 	public function beatHit():Void
 	{
-		scriptGroup.call('onBeatHit', [curBeat]);
+		_beatStepArgs[0] = curBeat;
+		scriptGroup.call('onBeatHit', _beatStepArgs);
 	}
-	
+
 	public function sectionHit()
 	{
-		scriptGroup.call('onSectionHit');
+		scriptGroup.call('onSectionHit', _emptyArgs);
 	}
 	
 	override function destroy()
 	{
-		scriptGroup.call('onDestroy', []);
+		scriptGroup.call('onDestroy', _emptyArgs);
+
 		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
 
 		#if mobile

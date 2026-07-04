@@ -326,7 +326,12 @@ class PsychHUD extends BaseHUD
 		if (showRating)
 		{
 			ratingGraphic.alpha = 1;
-			ratingGraphic.loadGraphic(Paths.image(ratingPrefix + ratingImage + ratingSuffix));
+			final cachedRating = _ratingGraphicsCache[ratingImage] ?? Paths.image(ratingPrefix + ratingImage + ratingSuffix);
+			if (ratingGraphic.graphic != cachedRating)
+			{
+				ratingGraphic.loadGraphic(cachedRating);
+				ratingGraphic.updateHitbox();
+			}
 			ratingGraphic.screenCenter();
 			ratingGraphic.x = posX - 40;
 			ratingGraphic.y -= 60;
@@ -361,22 +366,35 @@ class PsychHUD extends BaseHUD
 
 			ratingNumGroup.killMembers();
 
-			var separatedScore:Array<Int> = [], n:Int = combo;
-			while (n > 0)
+			// Fill _scoreDigits in reverse (least-significant first), then reverse in-place.
+			var digitCount:Int = 0;
+			var n:Int = combo;
+			while (n > 0) { _scoreDigits[digitCount++] = n % 10; n = Math.floor(n / 10); }
+			if (digitCount == 0) { _scoreDigits[digitCount++] = 0; }
+			// Reverse the filled portion.
+			var lo:Int = 0, hi:Int = digitCount - 1;
+			while (lo < hi) { final t = _scoreDigits[lo]; _scoreDigits[lo++] = _scoreDigits[hi]; _scoreDigits[hi--] = t; }
+			// Left-pad with zeros up to minCombos using a shift approach (small array, no alloc).
+			while (digitCount < minCombos)
 			{
-				separatedScore.unshift(n % 10);
-				n = Math.floor(n / 10);
+				for (j in 0...digitCount) _scoreDigits[digitCount - j] = _scoreDigits[digitCount - j - 1];
+				_scoreDigits[0] = 0;
+				digitCount++;
 			}
-			while (separatedScore.length < minCombos)
-				separatedScore.unshift(0);
 
-			_numAlphaTweens.resize(separatedScore.length);
-			_numScaleTweens.resize(separatedScore.length);
+			_numAlphaTweens.resize(digitCount);
+			_numScaleTweens.resize(digitCount);
 
-			for (i => d in separatedScore)
+			for (i in 0...digitCount)
 			{
+				final d = _scoreDigits[i];
 				var numScore:FlxSprite = ratingNumGroup.recycle(FlxSprite);
-				numScore.loadGraphic(Paths.image(ratingPrefix + 'num' + d + ratingSuffix));
+				final cachedNum = (_numGraphicsCache.length > d ? _numGraphicsCache[d] : null) ?? Paths.image(ratingPrefix + 'num' + d + ratingSuffix);
+				if (numScore.graphic != cachedNum)
+				{
+					numScore.loadGraphic(cachedNum);
+					numScore.updateHitbox();
+				}
 				numScore.alpha = 1;
 				numScore.screenCenter();
 				numScore.x = posX + (43 * i) - 90;
@@ -408,15 +426,22 @@ class PsychHUD extends BaseHUD
 	{
 		var ratings = ["sick", "good", "bad", "shit"];
 		if (ClientPrefs.useEpicRankings) ratings.push('epic');
-		
+
+		_ratingGraphicsCache.clear();
 		for (rating in ratings)
 		{
-			ratingGraphic.loadGraphic(Paths.image('$ratingPrefix$rating$ratingSuffix'));
+			final g = Paths.image('$ratingPrefix$rating$ratingSuffix');
+			_ratingGraphicsCache[rating] = g;
 		}
-		
+
+		_numGraphicsCache = [];
 		for (i in 0...10)
 		{
-			Paths.image('${ratingPrefix}num$i$ratingSuffix');
+			_numGraphicsCache.push(Paths.image('${ratingPrefix}num$i$ratingSuffix'));
 		}
+
+		// Warm up ratingGraphic frames so dimensions are set before the first hit.
+		if (ratings.length > 0 && _ratingGraphicsCache.exists(ratings[0]))
+			ratingGraphic.loadGraphic(_ratingGraphicsCache[ratings[0]]);
 	}
 }
