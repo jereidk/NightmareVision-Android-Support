@@ -4,6 +4,7 @@ import funkin.data.CosmicubeData;
 import funkin.data.GameFlags;
 import funkin.utils.ProgressionUtil;
 import funkin.states.TitleState;
+import funkin.FunkinAssets;
 import flixel.text.FlxText;
 import flixel.FlxSprite;
 import flixel.FlxCamera;
@@ -12,10 +13,15 @@ import openfl.geom.Rectangle;
 import openfl.sensors.Accelerometer;
 import openfl.events.AccelerometerEvent;
 import openfl.text.TextField;
-import openfl.text.TextFieldType;
 import openfl.text.TextFormat;
-import openfl.text.TextFormatAlign;
 import openfl.events.KeyboardEvent;
+
+// NOTE: openfl.text.TextFieldType and openfl.text.TextFormatAlign are NOT
+// imported here on purpose — hscript's import mechanism can't resolve these
+// two (logged as "Import ... could not be added" and, on use, "Unknown
+// variable"). Both are enum abstracts over String with an `@:from String`
+// conversion, so plain string literals ("input", "center") are used below
+// instead and convert implicitly — same runtime result, no import needed.
 
 // ── Secret gesture: shake the device to open the panel ───────────────────────
 // Deliberately NOT a tap/hold/touch gesture and NOT a typed code — the panel
@@ -101,7 +107,7 @@ function onLoad()
 	// Understated but findable on purpose; the icon itself reads as a tiny
 	// stylized keyboard so it doesn't need a text label to explain itself.
 	codeTriggerBg = new FlxSprite(FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN, CODE_TRIGGER_MARGIN);
-	codeTriggerBg.pixels = keyboardIcon(CODE_TRIGGER_SIZE, COL_BG_TOP, COL_ACCENT);
+	codeTriggerBg.loadGraphic(cachedShape('devpanel_keyboardicon', () -> keyboardIcon(CODE_TRIGGER_SIZE, COL_BG_TOP, COL_ACCENT)));
 	codeTriggerBg.alpha = 0.75;
 	codeTriggerBg.scrollFactor.set();
 	add(codeTriggerBg);
@@ -139,10 +145,10 @@ function openCodeBox()
 	pulseCodeTrigger(true);
 
 	var format = new TextFormat(null, 20, 0xFFECE8FF);
-	format.align = TextFormatAlign.CENTER;
+	format.align = "center";
 
 	codeField = new TextField();
-	codeField.type = TextFieldType.INPUT;
+	codeField.type = "input";
 	codeField.width = 260;
 	codeField.height = 40;
 	codeField.background = true;
@@ -367,6 +373,29 @@ function keyboardIcon(size:Int, bgColor:Int, keyColor:Int):BitmapData
 	return bmp;
 }
 
+/**
+ * Every rounded-rect/keyboard bitmap above is drawn pixel-by-pixel through
+ * the hscript interpreter, which is orders of magnitude slower than compiled
+ * Haxe — building the full panel this way measured over 2 SECONDS on-device
+ * (see game.log: "MainMenuState::onCreatePost 2167.7ms"), and it repeated on
+ * every single visit to the main menu since nothing was cached.
+ *
+ * This wraps each shape in Flixel's own persistent bitmap cache (the same
+ * mechanism FunkinCache/MobileVirtualPad use for button textures) under a
+ * fixed key and marks it permanent, so the expensive per-pixel loop only
+ * ever runs ONCE for the lifetime of the app — every later call (including
+ * every subsequent MainMenuState visit) just reuses the cached graphic.
+ */
+function cachedShape(key:String, builder:Void->BitmapData):Dynamic
+{
+	var existing = FunkinAssets.cache.currentTrackedGraphics.get(key);
+	if (existing != null) return existing;
+
+	var graphic = FunkinAssets.cache.cacheBitmap(key, builder());
+	FunkinAssets.cache.currentTrackedGraphics.addPermanentKey(key);
+	return graphic;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 function buildPanel()
 {
@@ -386,16 +415,14 @@ function buildPanel()
 	reg(overlay);
 
 	// Panel body — proper rounded corners instead of a flat rectangle.
-	var bgBmp = roundedRect(PW, PH, COL_BG, 22);
 	var bg = new FlxSprite(px, py);
-	bg.pixels = bgBmp;
+	bg.loadGraphic(cachedShape('devpanel_bg', () -> roundedRect(PW, PH, COL_BG, 22)));
 	reg(bg);
 
 	// Subtle top highlight band (fake gradient: a lighter strip along the top,
 	// flat-bottomed so it blends into the panel body beneath it).
-	var topBmp = roundedRectTop(PW, 90, COL_BG_TOP, 22);
 	var topBand = new FlxSprite(px, py);
-	topBand.pixels = topBmp;
+	topBand.loadGraphic(cachedShape('devpanel_topband', () -> roundedRectTop(PW, 90, COL_BG_TOP, 22)));
 	topBand.alpha = 0.9;
 	reg(topBand);
 
@@ -423,11 +450,10 @@ function buildPanel()
 		rowY += 24;
 	}
 
-	function addRow(label:String, bgColor:Int, btnIdx:Int):FlxText
+	function addRow(label:String, bgColor:Int, btnIdx:Int, cacheKey:String):FlxText
 	{
-		var sprBmp = roundedRect(BW, BH, bgColor, 10);
 		var spr = new FlxSprite(BX, rowY);
-		spr.pixels = sprBmp;
+		spr.loadGraphic(cachedShape(cacheKey, () -> roundedRect(BW, BH, bgColor, 10)));
 		reg(spr);
 
 		var lbl = new FlxText(BX, rowY + 14, BW, label, 16);
@@ -441,24 +467,26 @@ function buildPanel()
 	}
 
 	sectionLabel('PROGRESSION');
-	lblUnlock    = addRow(unlockLabel(),    ClientPrefs.forceUnlock    ? COL_TOGGLE_ON : COL_TOGGLE, 0);
-	lblUnlockReq = addRow(unlockReqLabel(), ClientPrefs.forceUnlockReq ? COL_TOGGLE_ON : COL_TOGGLE, 1);
-	                addRow('◆  Unlock All Cosmetics',   COL_LOOT,  2);
-	                addRow('★  Grant All Achievements', COL_LOOT,  3);
+	lblUnlock    = addRow(unlockLabel(),    ClientPrefs.forceUnlock    ? COL_TOGGLE_ON : COL_TOGGLE, 0,
+		ClientPrefs.forceUnlock ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
+	lblUnlockReq = addRow(unlockReqLabel(), ClientPrefs.forceUnlockReq ? COL_TOGGLE_ON : COL_TOGGLE, 1,
+		ClientPrefs.forceUnlockReq ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
+	                addRow('◆  Unlock All Cosmetics',   COL_LOOT,  2, 'devpanel_loot');
+	                addRow('★  Grant All Achievements', COL_LOOT,  3, 'devpanel_loot');
 
 	rowY += 6;
 	sectionLabel('ECONOMY');
-	                addRow('Grant 1,000,000 Beans', COL_MONEY, 4);
+	                addRow('Grant 1,000,000 Beans', COL_MONEY, 4, 'devpanel_money');
 
 	rowY += 6;
 	sectionLabel('DANGER ZONE');
 	resetBtnSpr = null;
-	lblReset = addRow('⚠  Reset Money & Cosmetics', COL_DANGER, 5);
+	lblReset = addRow('⚠  Reset Money & Cosmetics', COL_DANGER, 5, 'devpanel_danger');
 	// grab the sprite behind the label we just added (last-1 in panelAll before the label)
 	resetBtnSpr = panelAll[panelAll.length - 2];
 
 	rowY += 8;
-	addRow('✕  Close', COL_CLOSE, 6);
+	addRow('✕  Close', COL_CLOSE, 6, 'devpanel_close');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -561,8 +589,8 @@ function handleBtnTap(idx:Int)
 				if (lblReset != null) lblReset.text = resetLabel();
 				if (resetBtnSpr != null)
 				{
-					var armedBmp = roundedRect(Std.int(resetBtnSpr.width), Std.int(resetBtnSpr.height), COL_DANGER_ARMED, 10);
-					resetBtnSpr.pixels = armedBmp;
+					var bw = Std.int(resetBtnSpr.width), bh = Std.int(resetBtnSpr.height);
+					resetBtnSpr.loadGraphic(cachedShape('devpanel_danger_armed', () -> roundedRect(bw, bh, COL_DANGER_ARMED, 10)));
 				}
 				FlxG.sound.play(Paths.sound('warn'), 0.7);
 			}
@@ -680,8 +708,8 @@ function onUpdate()
 		if (lblReset != null) lblReset.text = resetLabel();
 		if (resetBtnSpr != null)
 		{
-			var idleBmp = roundedRect(Std.int(resetBtnSpr.width), Std.int(resetBtnSpr.height), COL_DANGER, 10);
-			resetBtnSpr.pixels = idleBmp;
+			var bw = Std.int(resetBtnSpr.width), bh = Std.int(resetBtnSpr.height);
+			resetBtnSpr.loadGraphic(cachedShape('devpanel_danger', () -> roundedRect(bw, bh, COL_DANGER, 10)));
 		}
 	}
 
