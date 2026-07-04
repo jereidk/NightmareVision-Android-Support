@@ -92,6 +92,13 @@ class SystemMonitor
 	static var _lastGcUsage:Float = 0.0;
 	#end
 
+	// Per-frame evidence capture for "[cause unknown]" spikes: texture/sound
+	// loads and sudden member-count jumps that happen to land in the same
+	// frame as a spike are much stronger evidence than nothing at all.
+	static var _lastBitmapCount:Int = -1;
+	static var _lastBitmapKeys:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
+	static var _lastFrameMemberCount:Int = -1;
+
 	/**
 	 * Initialize system monitoring
 	 * Only activates if ClientPrefs.inDevMode is true.
@@ -316,6 +323,17 @@ class SystemMonitor
 		_lastGcUsage = gcNow;
 		#end
 
+		// Evidence for otherwise-"unknown" spikes: did the texture cache or the
+		// member list change size during this exact frame? Cheap to track every
+		// frame (just a count); only pay for the full key diff when a spike
+		// actually fires (rare, gated by SPIKE_COOLDOWN).
+		#if flixel
+		var curBitmapCount = _getRawBitmapCount();
+		var curFrameMemberCount = FlxG.state != null ? FlxG.state.members.length : -1;
+		var texDelta = (_lastBitmapCount >= 0) ? (curBitmapCount - _lastBitmapCount) : 0;
+		var memberDelta = (_lastFrameMemberCount >= 0 && curFrameMemberCount >= 0) ? (curFrameMemberCount - _lastFrameMemberCount) : 0;
+		#end
+
 		if (realElapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
 		{
 			_lastSpikeTime = now;
@@ -323,16 +341,47 @@ class SystemMonitor
 			var normalMs = Std.int(_smoothElapsed * 1000);
 			#if flixel
 			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
-			// Attribute the cause: GC > slow script > unknown
-			var cause =
-				#if cpp (gcFreed > 1024 * 1024) ? '  [GC freed ${Std.int(gcFreed / 1024)}KB]' : #end
-				(_lastScriptNote.length > 0 ? '  [script: $_lastScriptNote]' : '  [cause unknown]');
+			// Attribute the cause: texture/sound load > GC > slow script > member churn > unknown (with mem delta as a last resort)
+			var cause:String;
+			if (texDelta > 0)
+			{
+				var newKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!_lastBitmapKeys.exists(k)) newKeys.push(k);
+				newKeys.sort((a, b) -> Reflect.compare(a, b));
+				var shown = newKeys.slice(0, 6).map(_keyTail);
+				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
+			}
+			#if cpp
+			else if (gcFreed > 1024 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB]';
+			#end
+			else if (_lastScriptNote.length > 0) cause = '  [script: $_lastScriptNote]';
+			else if (memberDelta > 5) cause = '  [+$memberDelta objects added to state]';
+			else
+			{
+				#if cpp
+				var memDeltaKB = Std.int(-gcFreed / 1024); // positive = heap grew, negative = freed (below the 1MB GC threshold above)
+				cause = '  [cause unknown, mem ${memDeltaKB >= 0 ? "+" : ""}${memDeltaKB}KB]';
+				#else
+				cause = '  [cause unknown]';
+				#end
+			}
 			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$cause');
 			#else
 			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
 			#end
 			_lastScriptNote = '';
 		}
+
+		#if flixel
+		_lastBitmapCount = curBitmapCount;
+		_lastFrameMemberCount = curFrameMemberCount;
+		if (texDelta > 0 || _lastBitmapKeys.keys().hasNext() == false)
+		{
+			_lastBitmapKeys = new haxe.ds.StringMap();
+			@:privateAccess for (k in FlxG.bitmap._cache.keys()) _lastBitmapKeys.set(k, true);
+		}
+		#end
 
 		#if flixel
 		if (++_memberCheckTimer >= MEMBER_CHECK_INTERVAL)
