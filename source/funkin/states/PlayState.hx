@@ -2044,9 +2044,9 @@ class PlayState extends MusicBeatState
 		var _drsSum:Float = 0;
 		for (t in _drsRing) _drsSum += t;
 		final _drsAvg:Float = _drsSum / 10;
-		if (!_drsActive && _drsAvg > 1 / 30)
+		if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / 30)
 			{ _drsActive = true;  mobile.backend.DynamicResolution.setActive(true); }
-		else if (_drsActive && _drsAvg < 1 / 50)
+		else if (_drsActive && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
 			{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
 		#end
 

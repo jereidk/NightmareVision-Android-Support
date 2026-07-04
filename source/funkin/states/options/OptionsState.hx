@@ -17,7 +17,6 @@ class OptionsState extends MusicBeatState
 	public static var onPlayState:Bool = false;
 	
 	var options:Array<String> = [
-		'controls',
 		'adjustdelay',
 		'language',
 		'gameplay',
@@ -85,9 +84,6 @@ class OptionsState extends MusicBeatState
 		
 		switch (label)
 		{
-			case 'controls':
-				final gamepad = FlxG.gamepads.getFirstActiveGamepad();
-				openSubState(new funkin.states.options.ControlsSubState(gamepad != null ? Gamepad(gamepad.id) : Keys));
 			case 'graphics':
 				openSubState(new funkin.states.options.GraphicsSettingsSubState());
 			case 'visualsui':

@@ -151,8 +151,6 @@ class MobileVirtualPad extends TouchInputManager
 				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
 				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
 			case FREEPLAY:
-			    buttonX = add(createButton(actionX - 258, baseY - 255, 'x', 0x99062D, [X]));
-			    buttonS = add(createButton(actionX - 132, baseY - 255, 's', 0xFDD6AB, [NONE]));
 			    buttonR = add(createButton(actionX - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
 				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
 				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));

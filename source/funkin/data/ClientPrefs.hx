@@ -160,7 +160,7 @@ class ClientPrefs
 	
 	// mobile ------------------------------------------------------------------------//
 	#if mobile
-	@saveVar public static var navInputMode:String = 'Touch';
+	@saveVar public static var navInputMode:String = 'Virtual Pad';
 	@saveVar public static var gameInputMode:String = 'Hitbox';
 	@saveVar public static var noteLayout:String = 'Normal';
 
@@ -168,7 +168,7 @@ class ClientPrefs
 
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
-	@saveVar public static var hapticFeedback:Bool = true;
+	@saveVar public static var hapticFeedback:Bool = false;
 
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
@@ -176,6 +176,9 @@ class ClientPrefs
 	@saveVar public static var customPadPositions:Array<Array<Float>> = [[-1,-1],[-1,-1],[-1,-1],[-1,-1]];
 	/** JSON map of all custom button positions (name -> [x, y]) for VirtualPadCustomizer. */
 	@saveVar public static var customPadPositionsJson:String = "";
+
+	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
+	@saveVar public static var drsEnabled:Bool = true;
 
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive

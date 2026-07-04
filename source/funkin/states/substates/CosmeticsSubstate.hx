@@ -318,7 +318,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, STORYMENU);
 		addVirtualPadCamera();
 		#end
 	}
@@ -1149,7 +1149,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					if (randomButton.visible) randomizeLoadout();
 				}
 			}
-			
+
+			#if mobile
+			if (virtualPad?.buttonR?.justPressed == true && randomButton.visible) randomizeLoadout();
+			if (virtualPad?.buttonC?.justPressed == true && resetButton.visible) resetToDefaults();
+			#end
+
 			if (inGrid)
 			{
 				#if !mobile

@@ -59,10 +59,6 @@ class VisualsUISubState extends BaseOptionsMenu
 			'jumpGhosts', 'bool', true);
 		addOption(option);
 
-		var option:Option = new Option(Lang.str('opt_discord', 'Discord'), Lang.str('opt_discord_desc'), 'discordRPC', 'bool', true);
-			
-		addOption(option);
-		
 		spacerBeforeIdx = optionsArray.length;
 		addSpacerRows(notesGapBeforeRows);
 		

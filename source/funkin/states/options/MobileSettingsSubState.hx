@@ -344,20 +344,21 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			return;
 		}
 
-		// Calculate how many rows are visible above the current selection
-		var visibleAbove = Std.int(_scrollOffset / OPT_H);
-		var visibleBelow = MAX_OPT - 1 - visibleAbove;
+		final maxScroll:Float = (_opts.length - MAX_OPT) * OPT_H;
 
-		// If selection is above visible area, scroll up
-		if (_sel < visibleAbove)
-		{
-			_scrollOffset = _sel * OPT_H;
-		}
-		// If selection is below visible area, scroll down
-		else if (_sel > visibleAbove + MAX_OPT - 1)
-		{
-			_scrollOffset = (_sel - MAX_OPT + 1) * OPT_H;
-		}
+		// Scroll down enough to show the selected item at the bottom
+		final minForSel:Float = (_sel - MAX_OPT + 1) * OPT_H;
+		// Scroll up enough to show the selected item at the top
+		final maxForSel:Float = _sel * OPT_H;
+
+		if (_scrollOffset < minForSel)
+			_scrollOffset = minForSel;
+		else if (_scrollOffset > maxForSel)
+			_scrollOffset = maxForSel;
+
+		// Clamp to valid scroll range
+		if (_scrollOffset < 0) _scrollOffset = 0;
+		if (_scrollOffset > maxScroll) _scrollOffset = maxScroll;
 	}
 
 	#if mobile
@@ -558,12 +559,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	function _rebuildOptions():Void
 	{
 		_opts = [];
-
-		_opts.push({
-			id: 'haptic', kind: 'bool',
-			label: '▶ ' + Lang.str('opt_haptic', 'Haptic Feedback'),
-			desc:  Lang.str('opt_haptic_desc', 'Vibrates briefly on each note hit.\nOnly fires when you are in control (not bot play).')
-		});
 
 		_opts.push({
 			id: 'nav', kind: 'string',

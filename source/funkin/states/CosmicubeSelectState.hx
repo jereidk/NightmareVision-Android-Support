@@ -111,7 +111,7 @@ class CosmicubeSelectState extends AmongUIState
 			if (controls.UI_RIGHT_P) selectLooksie(false);
 			if (controlUP.PRESSED) select(-1);
 			if (controlDOWN.PRESSED) select(1);
-			if (FlxG.mouse.wheel != 0) select(-FlxG.mouse.wheel);
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.wheel != 0) select(-FlxG.mouse.wheel);
 			if (controls.ACCEPT) accept();
 		}
 		
