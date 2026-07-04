@@ -425,6 +425,8 @@ class PlayState extends MusicBeatState
 	var _drsActive:Bool = false;
 	#end
 
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	/**
 	 * Default camera zoom the game will attempt to return to.
 	 *
@@ -644,6 +646,8 @@ class PlayState extends MusicBeatState
 	{
 		trace('[PlayState] ===== CREATE START =====');
 		FlxG.sound.music?.stop();
+
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
 
 		FunkinAssets.cache.clearStoredMemory();
 		
@@ -3518,8 +3522,13 @@ class PlayState extends MusicBeatState
 		FlxDestroyUtil.destroyArray(NoteUtil.noteskins);
 		NoteUtil.noteskins.resize(0);
 
-
 		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	override function stepHit()

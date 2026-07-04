@@ -109,6 +109,7 @@ class FreeplayState extends AmongUIState
 	var intendedScore:Float;
 	var intendedRating:Float;
 	var localWeeks:Array<String> = [''];
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 	
 	public var cachedCards:FlxTypedGroup<FreeplayCard>;
 	
@@ -155,6 +156,8 @@ class FreeplayState extends AmongUIState
 	
 	override function create()
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		FunkinAssets.cache.clearStoredMemory();
 		FunkinAssets.cache.clearUnusedMemory();
 
@@ -791,9 +794,15 @@ class FreeplayState extends AmongUIState
 	override function destroy()
 	{
 		super.destroy();
-		
+
 		ClientPrefs.unlockedSongs = localWeeks;
 		ClientPrefs.flush();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	function addWeeks():Void

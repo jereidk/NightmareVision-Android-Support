@@ -157,15 +157,67 @@ class FunkinCache
 	
 	/**
 	 * Disposes of a flxgraphic
-	 * 
+	 *
 	 * frees its gpu texture as well.
-	 * @param graphic 
+	 * @param graphic
 	 */
 	public function disposeGraphic(graphic:Null<FlxGraphic>)
 	{
 		if (graphic == null) return;
 		if (graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
 		FlxG.bitmap.remove(graphic);
+	}
+
+	/**
+	 * Snapshot of every key currently in `FlxG.bitmap._cache`, for later diffing
+	 * via `disposeNewSince()`. Call at the very start of a state's `create()`.
+	 */
+	public function snapshotBitmapKeys():haxe.ds.StringMap<Bool>
+	{
+		var snap = new haxe.ds.StringMap<Bool>();
+		@:privateAccess for (k in FlxG.bitmap._cache.keys()) snap.set(k, true);
+		return snap;
+	}
+
+	/**
+	 * Force-disposes any `FlxG.bitmap._cache` entry that didn't exist in `snapshot`
+	 * and isn't tracked/permanent. Call from a state's `destroy()` (after
+	 * `super.destroy()`) with the snapshot taken at that state's `create()`.
+	 *
+	 * `clearUnusedMemory()`'s untracked-graphics sweep only evicts entries whose
+	 * `useCount` has dropped to 0, which misses graphics still referenced by a
+	 * stray static/closure outside the normal FlxGroup destroy chain (e.g. a
+	 * `makeGraphic()` rect with a slightly different computed color each call,
+	 * so it never reuses a cache key and keeps a live reference forever). Since
+	 * this state is being destroyed, nothing it created ephemerally should
+	 * legitimately outlive it, so this sweep ignores useCount entirely.
+	 */
+	public function disposeNewSince(snapshot:haxe.ds.StringMap<Bool>):Int
+	{
+		var disposed = 0;
+		@:privateAccess
+		{
+			final bitmapKeys:Array<String> = [for (k in FlxG.bitmap._cache.keys()) k];
+			for (key in bitmapKeys)
+			{
+				if (snapshot.exists(key)) continue;
+				if (currentTrackedGraphics.exists(key) || currentTrackedGraphics.permanentKeys.contains(key)) continue;
+				if (key.indexOf('flixel') >= 0) continue;
+
+				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
+				if (g != null)
+				{
+					disposeGraphic(g);
+					disposed++;
+				}
+			}
+		}
+
+		#if android
+		if (disposed > 0) SystemMonitor.logMemoryEvent('disposeNewSince', 'force-disposed $disposed ephemeral graphic(s) still alive after destroy()');
+		#end
+
+		return disposed;
 	}
 	
 	/**
