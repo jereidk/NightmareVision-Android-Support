@@ -630,7 +630,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'aspectRatio', kind: 'string',
 			label: '▭ ' + Lang.str('opt_aspectratio', 'Screen Fit'),
-			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort).'),
+			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort). Expand: shows more of the background on wide screens, no distortion.'),
                         choices: [Lang.str('choice_aspect_fit', 'Fit (16:9)'), Lang.str('choice_aspect_stretch', 'Stretch'), Lang.str('choice_aspect_expand', 'Expand')],
                         stored:  ['fit', 'stretch', 'expand']
 		});
