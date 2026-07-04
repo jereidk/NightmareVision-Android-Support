@@ -82,6 +82,27 @@ class FunkinCache
 			}
 		}
 
+		// Second pass: sweep FlxG.bitmap._cache for textures created outside FunkinCache
+		// (makeGraphic, flixel-animate, HaxeUI, scripts).  These are never registered in
+		// currentTrackedGraphics so the loop above never touches them, causing them to
+		// accumulate across state transitions and grow GPU memory each visit.
+		// Guard with useCount <= 0 so we never evict textures still held by live sprites
+		// (e.g. health bar created before clearUnusedMemory runs mid-PlayState.create).
+		@:privateAccess
+		{
+			final bitmapKeys:Array<String> = [for (k in FlxG.bitmap._cache.keys()) k];
+			for (key in bitmapKeys)
+			{
+				if (currentTrackedGraphics.exists(key) || currentTrackedGraphics.permanentKeys.contains(key))
+					continue;
+				if (key.indexOf('flixel') >= 0)
+					continue;
+				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
+				if (g != null && g.useCount <= 0)
+					disposeGraphic(g);
+			}
+		}
+
 		openfl.system.System.gc();
 		#if cpp
 		cpp.vm.Gc.compact();
