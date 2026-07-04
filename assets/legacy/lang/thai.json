@@ -44,7 +44,7 @@
 
         // credits
         "victory":"ชนะ",
-        "credits_thanks":"ขอบคุณที่เล่นนะคร้าบบบ!"
+        "credits_thanks":"ขอบคุณที่เล่นนะคร้าบบบ!",
 
         // @ is the song name
         "reset_score_question": "รีเซ็ตคะแนนสูงสุดของ @ ไหม?",

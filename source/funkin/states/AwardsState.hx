@@ -203,7 +203,7 @@ class AwardsState extends AmongUIState
 		if (selected.hidden && !unlocked)
 		{
 			nameText.text = '???';
-			infoText.text = Lang.str('AWARDS_SECRET');
+			infoText.text = Lang.str('AWARDS_SECRET', 'Keep playing to unlock this secret!');
 		}
 		else
 		{

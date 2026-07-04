@@ -681,6 +681,74 @@
 		"weirdroute4": "Time to do what I do best.",
 		"weirdroute5": "Red. I always knew somethin' was fishy about that guy, but I didn't stop him in time... He's rottin' in that lava pit now.",
 		"weirdroute6": "The Captain...",
-		"weirdroute7": "ENTER CODE"
+		"weirdroute7": "ENTER CODE",
+
+		// awards
+		"AWARDS_SECRET": "Keep playing to unlock this secret!",
+
+		// mobile settings — performance preset
+		"opt_perfpreset": "Performance Preset",
+		"opt_perfpreset_desc": "Quickly apply a quality profile.\nLow boosts performance, High enables everything.\nCustom lets you configure each setting individually.",
+		"choice_preset_low": "Low",
+		"choice_preset_medium": "Medium",
+		"choice_preset_high": "High",
+		"choice_generic_custom": "Custom",
+		"opt_gpucaching_desc_android": "[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nWARNING: If the app is minimized or a call comes in,\nthe OpenGL context is lost and textures may appear\nblank until the game is restarted.\nDisabled by default. Enable only if you know the risk.",
+		"opt_drs": "Dynamic Resolution (DRS)",
+		"opt_drs_desc": "Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.",
+		"opt_fpsrgb": "Animate FPS Color (RGB)",
+		"opt_fpsrgb_desc": "Cycles the FPS counter color through the rainbow.\nWorks with both Simple and Advanced display modes.",
+		"choice_debug_memory": "Memory",
+
+		// mobile settings — input & layout
+		"opt_navinput": "Navigation Input",
+		"opt_navinput_desc": "How you interact with menus and UI.\nTouch uses native screen taps. Virtual Pad shows on-screen buttons.",
+		"choice_navinput_touch": "Touch",
+		"choice_navinput_pad": "Virtual Pad",
+
+		"opt_gameinput": "Gameplay Input",
+		"opt_gameinput_desc": "How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. VSlice controls: static arrow receptors.",
+		"choice_gameinput_hitbox": "Hitbox",
+		"choice_gameinput_pad": "Virtual Pad",
+		"choice_gameinput_vslice": "VSlice controls",
+
+		"opt_notelayout": "Note Layout",
+		"opt_notelayout_desc": "Visual arrangement of notes.\nNormal: standard FNF layout.\nVSlice: centered, wider spacing, bigger arrows.",
+		"choice_notelayout_normal": "Normal",
+		"choice_notelayout_vslice": "VSlice",
+
+		"opt_hitboxlayout": "Hitbox Layout",
+		"opt_hitboxlayout_desc": "Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.",
+		"choice_hitboxlayout_4l": "Four Lanes",
+		"choice_hitboxlayout_2t": "Two Thumb",
+		"choice_hitboxlayout_dpad": "DPad",
+		"choice_hitboxlayout_arrows": "Arrows",
+		"choice_hitboxlayout_triangle": "Triangle",
+		"opt_hitboxalpha": "Hitbox Opacity",
+		"opt_hitboxalpha_desc": "How visible the hitbox zones appear when pressed.",
+
+		"opt_padopacity": "Pad Opacity",
+		"opt_padopacity_desc": "How visible the virtual pad buttons appear.",
+		"opt_vpadlayout": "Pad Layout",
+		"opt_vpadlayout_desc": "Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.",
+		"choice_vpad_leftfull": "Left Side",
+		"choice_vpad_rightfull": "Right Side",
+		"choice_vpad_custom": "Custom",
+		"opt_vpadcustomize": "Customize Pad",
+		"opt_vpadcustomize_desc": "Open the pad customizer to drag buttons to new positions.",
+
+		"opt_aspectratio": "Screen Fit",
+		"opt_aspectratio_desc": "How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort).",
+		"choice_aspect_fit": "Fit (16:9)",
+		"choice_aspect_stretch": "Stretch",
+		"choice_aspect_expand": "Expand",
+
+		"opt_opendatafolder": "Open Data Folder",
+		"opt_opendatafolder_desc": "Opens the game data folder in your file manager.\nUse this to install mods or access save files.",
+
+		"preview_mode_vpad": "Virtual Pad",
+		"preview_mode_vslice": "VSlice controls",
+		"mobile_controls_help": "◄ ►  change   ·   tap a zone to test it   ·   B  back",
+		"mobile_controls_help_touch": "tap a zone to test it   ·   BACK to exit"
 	}
 }

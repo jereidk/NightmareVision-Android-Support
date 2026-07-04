@@ -504,8 +504,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_backBtn.visible      = touchMode;
 		_backBtnLabel.visible = touchMode;
 		_helpText.text = touchMode
-			? Lang.str('mobile_controls_help_touch', 'toca una zona para probar   ·   BACK para salir')
-			: Lang.str('mobile_controls_help', '◄ ►  cambiar   ·   toca una zona para probar   ·   B  atrás');
+			? Lang.str('mobile_controls_help_touch', 'tap a zone to test it   ·   BACK to exit')
+			: Lang.str('mobile_controls_help', '◄ ►  change   ·   tap a zone to test it   ·   B  back');
 	}
 
 	// ── ClientPrefs accessors ──────────────────────────────────────────────────
