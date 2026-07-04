@@ -10,6 +10,7 @@ import flixel.addons.display.FlxBackdrop;
 
 import funkin.data.WeekData;
 import funkin.objects.Alphabet;
+import funkin.FunkinAssets;
 
 @:nullSafety
 class TitleState extends MusicBeatState
@@ -43,7 +44,8 @@ class TitleState extends MusicBeatState
 	var ngSpr:Null<FlxSprite> = null;
 	var logo:Null<FlxSprite> = null;
 	var titleText:Null<FlxSprite> = null;
-	
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	public static function init():Void
 	{
 		FunkinAssets.cache.clearStoredMemory();
@@ -57,6 +59,8 @@ class TitleState extends MusicBeatState
 	
 	override public function create():Void
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		if (FlxG.save.data.photosensitive == null && !FlashingState.leftState)
 		{
 			CoolUtil.setTransSkip();
@@ -345,6 +349,17 @@ class TitleState extends MusicBeatState
 			FlxG.camera.flash(FlxColor.WHITE, 4);
 			
 			skippedIntro = true;
+		}
+	}
+
+	override function destroy():Void
+	{
+		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
 		}
 	}
 }
