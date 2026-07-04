@@ -2894,7 +2894,9 @@ class PlayState extends MusicBeatState
 		
 		if (gf != null && SONG.notes[curSection].gfSection)
 		{
-			camFollow.setPosition(gf.getMidpoint().x, gf.getMidpoint().y);
+			final gfMid = gf.getMidpoint();
+			camFollow.setPosition(gfMid.x, gfMid.y);
+			gfMid.put();
 			camFollow.x += gf.cameraPosition[0] + girlfriendCameraOffset[0];
 			camFollow.y += gf.cameraPosition[1] + girlfriendCameraOffset[1];
 			
@@ -3303,19 +3305,15 @@ class PlayState extends MusicBeatState
 				
 				anyInput = true;
 				
-				var topNote:Note = null; // we only need the top most note !
-				
-				for (note in field.getNotes(key))
+				final topNote:Null<Note> = field.getBestTapNote(key);
+				// If no tap note but a sustain note is present, suppress ghost tap penalty.
+				if (topNote == null)
 				{
-					if (note.isSustainNote)
+					for (note in field.notes)
 					{
-						ghostTapped = false;
-						
-						continue;
+						if (note.alive && note.isSustainNote && note.noteData == key && note.canBeHit && !note.tooLate)
+						{ ghostTapped = false; break; }
 					}
-					
-					final higherPriority:Bool = (topNote == null || note.hitPriority > topNote.hitPriority);
-					if (higherPriority || (!higherPriority && note.strumTime < topNote.strumTime)) topNote = note;
 				}
 				
 				if (topNote != null)

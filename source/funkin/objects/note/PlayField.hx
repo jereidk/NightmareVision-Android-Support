@@ -228,8 +228,28 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		}
 		return collected;
 	}
-	
+
 	public function getTapNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> !note.isSustainNote);
+
+	/**
+	 * Zero-allocation version of getTapNotes: returns the highest-priority tap note
+	 * for the given direction without allocating any intermediate Array.
+	 */
+	public function getBestTapNote(dir:Int):Null<Note>
+	{
+		var best:Null<Note> = null;
+		for (note in notes)
+		{
+			if (!note.alive || note.isSustainNote || note.noteData != dir
+				|| note.wasGoodHit || note.tooLate || !note.canBeHit) continue;
+
+			if (best == null
+				|| note.hitPriority > best.hitPriority
+				|| (note.hitPriority == best.hitPriority && note.strumTime < best.strumTime))
+				best = note;
+		}
+		return best;
+	}
 	
 	public function getHoldNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> note.isSustainNote);
 	
@@ -419,10 +439,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			{
 				if (char.animTimer <= 0)
 				{
-					var daAlt = '';
-					if (note.noteType == 'Alt Animation') daAlt = '-alt';
-					
-					var animToPlay:String = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss' + daAlt;
+					final baseMiss = _skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss';
+					final animToPlay:String = (note.noteType == 'Alt Animation') ? baseMiss + '-alt' : baseMiss;
 					char.playAnim(animToPlay, true);
 					char.holdTimer = 0;
 				}
@@ -474,7 +492,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	{
 		if (note.noAnimation) return;
 		
-		final animToPlay = note.skin.singAnimations[Std.int(Math.abs(note.noteData))] + note.animSuffix;
+		final baseAnim = note.skin.singAnimations[Std.int(Math.abs(note.noteData))];
+		final animToPlay = note.animSuffix.length > 0 ? baseAnim + note.animSuffix : baseAnim;
 		
 		char.holdTimer = 0;
 		
