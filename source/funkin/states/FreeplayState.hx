@@ -129,7 +129,7 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_PADDING:Float = 24; // spacing between circle icons
+	var CIRCLE_PADDING:Float = 32; // spacing between circle icons
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
 	var circlesMinY:Float = 0;
@@ -875,7 +875,7 @@ class FreeplayState extends AmongUIState
 			Mods.currentModDirectory = weeks[i].mod;
 
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
-			circ.setGraphicSize(-1, 44);
+			circ.setGraphicSize(-1, 34);
 			circ.updateHitbox();
 			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (circ.width + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
