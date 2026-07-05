@@ -49,7 +49,16 @@ class MobileDLCSubState extends MusicBeatSubstate
 {
     // ── Layout ─────────────────────────────────────────────────────────────
     static final LIST_X:Float  = 60;
-    static final LIST_W:Float  = 1160;
+    // List spans LIST_X..LIST_X+LIST_W, i.e. 60..1220 on the 1280 canvas —
+    // symmetric 60px margins on both sides. Was `static final`, but that's
+    // wrong for a value that needs 'expand' mode's cutout: hxcpp runs static
+    // initializers at program startup, before the scale mode has measured
+    // the real screen, so gameCutoutSize.x would freeze at 0 forever. Made
+    // this a plain instance field (computed fresh each time this substate is
+    // constructed) growing by the full cutout, so the right margin stays
+    // exactly 60px instead of turning into a growing dead gap. LIST_X itself
+    // doesn't need to move — the same left margin is still correct.
+    var LIST_W:Float  = 1160 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
     static final LIST_Y0:Float = 118;
     static final ITEM_H:Float  = 54;
     static final MAX_VIS:Int   = 9;    // 9 × 54px = 486px fits between y=118 and the bottom panel at y=640

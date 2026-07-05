@@ -59,7 +59,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	static final CANVAS_H:Int   = 280;
 
 	// ── Options column ───────────────────────────────────────────────────────
-	static final OPT_X:Float  = 600;
+	// Was `static final` like its siblings, but that's exactly wrong for a
+	// value that needs to react to 'expand' mode: static field initializers
+	// in hxcpp run once at program startup, before the scale mode has ever
+	// measured the real screen, so gameCutoutSize.x would freeze at 0 forever
+	// instead of tracking it. A plain instance field, computed fresh each
+	// time this substate is constructed (long after the scale mode has
+	// resolved), avoids that. Shifts by the full cutout since this column
+	// already sits well clear of the preview canvas on the left.
+	var OPT_X:Float  = 600 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 	static final OPT_Y0:Float = 120;
 	static final OPT_H:Float  = 54;
 	static final OPT_W:Int    = 580;
