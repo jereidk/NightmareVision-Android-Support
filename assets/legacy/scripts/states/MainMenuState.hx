@@ -15,6 +15,7 @@ import openfl.events.AccelerometerEvent;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
 import openfl.events.KeyboardEvent;
+import openfl.events.Event;
 
 // NOTE: openfl.text.TextFieldType and openfl.text.TextFormatAlign are NOT
 // imported here on purpose — hscript's import mechanism can't resolve these
@@ -48,7 +49,9 @@ var chargeGlow:FlxSprite = null;
 // pops up automatically once it gets focus). Change DEV_CODE to whatever you want.
 var DEV_CODE:String = 'jereidk';
 
-var CODE_TRIGGER_SIZE:Int   = 28;
+// Matches the code-entry field's own height (40px) so the trigger icon and
+// the box it opens feel like one consistent-sized control.
+var CODE_TRIGGER_SIZE:Int   = 40;
 var CODE_TRIGGER_MARGIN:Int = 12;
 
 var codeTriggerBg:FlxSprite  = null;
@@ -158,7 +161,11 @@ function openCodeBox()
 	codeField.embedFonts = false;
 	codeField.defaultTextFormat = format;
 	codeField.multiline = false;
-	codeField.maxChars = 32;
+	// Single line, short code only: 10 chars max, and explicitly disallow
+	// newline/return characters (multiline=false alone didn't stop Enter from
+	// growing the field on some Android/OpenFL combos).
+	codeField.maxChars = 10;
+	codeField.restrict = "^\n\r";
 	codeField.text = '';
 	// Belt-and-suspenders on top of defaultTextFormat: on some Android/OpenFL
 	// combos, characters typed through the native soft keyboard render but
@@ -189,6 +196,7 @@ function openCodeBox()
 	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
 
 	codeField.addEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
+	codeField.addEventListener(Event.CHANGE, onCodeFieldChange);
 }
 
 function pulseCodeTrigger(active:Bool)
@@ -202,7 +210,34 @@ function pulseCodeTrigger(active:Bool)
 
 function onCodeFieldKey(e:Dynamic)
 {
-	if (e.keyCode == 13) submitCode(); // Enter / Done on the soft keyboard
+	if (e.keyCode == 13)
+	{
+		// Stop Enter/Done from inserting a newline before we can strip it —
+		// this field is meant to stay a single short line.
+		try { e.preventDefault(); } catch (ex:Dynamic) {}
+		submitCode();
+	}
+}
+
+function onCodeFieldChange(e:Dynamic)
+{
+	if (codeField == null) return;
+
+	// Belt-and-suspenders alongside multiline=false + restrict: if a newline
+	// still sneaks in (seen on some Android/OpenFL builds via the soft
+	// keyboard's Enter/Done key), strip it immediately instead of letting the
+	// field grow.
+	if (codeField.text.indexOf("\n") >= 0 || codeField.text.indexOf("\r") >= 0)
+	{
+		var cleaned = StringTools.replace(StringTools.replace(codeField.text, "\r", ""), "\n", "");
+		codeField.text = cleaned;
+		codeField.setSelection(cleaned.length, cleaned.length);
+		return;
+	}
+
+	// Auto-submit the moment the typed text matches — no need to press Enter.
+	var typed = StringTools.trim(codeField.text).toLowerCase();
+	if (typed == DEV_CODE) submitCode();
 }
 
 function submitCode()
@@ -234,6 +269,7 @@ function closeCodeBox(success:Bool)
 	if (codeField == null) return;
 
 	codeField.removeEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
+	codeField.removeEventListener(Event.CHANGE, onCodeFieldChange);
 	if (FlxG.stage.focus == codeField) FlxG.stage.focus = null;
 	try { if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = false; }
 	catch (e:Dynamic) {}

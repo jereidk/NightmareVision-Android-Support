@@ -547,8 +547,24 @@ class ClientPrefs
 		
 		if (DebugDisplay.instance != null) DebugDisplay.instance.visible = showFPS;
 		
-		if (FlxG.save.data.framerate == null) framerate = Std.int(FlxMath.bound(FlxG.stage.application.window.displayMode.refreshRate, 60, 240));
-		
+		#if android
+		// Android defaults every window to 60Hz regardless of the panel's real
+		// capability until the app explicitly opts into a faster supported
+		// mode — this doesn't persist itself, so it has to be requested again
+		// on every launch, not just the first one where we pick a default.
+		mobile.backend.AndroidUtils.requestHighRefreshRate();
+		#end
+
+		if (FlxG.save.data.framerate == null)
+		{
+			var detectedRate:Float = FlxG.stage.application.window.displayMode.refreshRate;
+			#if android
+			var androidRate = mobile.backend.AndroidUtils.getMaxRefreshRate();
+			if (androidRate > detectedRate) detectedRate = androidRate;
+			#end
+			framerate = Std.int(FlxMath.bound(detectedRate, 60, 240));
+		}
+
 		changeFps(framerate);
 		
 		if (FlxG.save.data.beans != null)

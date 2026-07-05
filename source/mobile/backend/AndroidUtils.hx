@@ -11,6 +11,8 @@ class AndroidUtils
 	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
 	static var _openDataFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
 	static var _setGameplayState = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setGameplayState", "(Z)V");
+	static var _getMaxRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getMaxRefreshRate", "()F");
+	static var _requestHighRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "requestHighRefreshRate", "()V");
 
 	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
 
@@ -92,6 +94,30 @@ class AndroidUtils
 	public static inline function setGameplayState(inGameplay:Bool):Void
 	{
 		try { _setGameplayState([inGameplay]); }
+		catch (e:Dynamic) {}
+	}
+
+	/**
+	 * The highest refresh rate (Hz) any display mode the screen supports offers.
+	 * Android always reports 60 here unless requestHighRefreshRate() has been
+	 * called (the OS defaults to 60Hz even on 90/120Hz-capable panels until an
+	 * app explicitly opts in), so call that first if you want this to reflect
+	 * what the hardware can actually do.
+	 */
+	public static function getMaxRefreshRate():Float
+	{
+		try { return _getMaxRefreshRate([]); }
+		catch (e:Dynamic) { return 60.0; }
+	}
+
+	/**
+	 * Opts the window into its highest supported display refresh rate mode.
+	 * Android defaults every app to 60Hz regardless of the panel's real
+	 * capability until this is requested — call once, early at startup.
+	 */
+	public static function requestHighRefreshRate():Void
+	{
+		try { _requestHighRefreshRate([]); }
 		catch (e:Dynamic) {}
 	}
 }

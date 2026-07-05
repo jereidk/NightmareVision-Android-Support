@@ -273,4 +273,69 @@ public class AndroidUtils extends Extension {
             }
         });
     }
+
+    private static android.view.Display getDisplay(Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return activity.getDisplay();
+        }
+        return activity.getWindowManager().getDefaultDisplay();
+    }
+
+    /**
+     * Highest refresh rate (Hz) among the display's supported modes. Reflects
+     * what the screen can actually do only after requestHighRefreshRate() has
+     * been called — otherwise Android reports whatever mode is currently
+     * active, which defaults to 60Hz even on faster panels.
+     */
+    public static float getMaxRefreshRate() {
+        final Activity activity = mainActivity;
+        if (activity == null) return 60f;
+
+        try {
+            android.view.Display display = getDisplay(activity);
+            if (display == null) return 60f;
+
+            float maxRate = display.getRefreshRate();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                for (android.view.Display.Mode mode : display.getSupportedModes()) {
+                    if (mode.getRefreshRate() > maxRate) maxRate = mode.getRefreshRate();
+                }
+            }
+            return maxRate;
+        } catch (Exception e) {
+            android.util.Log.e("AndroidUtils", "getMaxRefreshRate failed: " + e);
+            return 60f;
+        }
+    }
+
+    /**
+     * Opts the window into its highest supported display refresh rate mode.
+     * Android defaults every app to 60Hz regardless of the panel's real
+     * capability until an app explicitly requests a faster mode.
+     */
+    public static void requestHighRefreshRate() {
+        final Activity activity = mainActivity;
+        if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    android.view.Display display = getDisplay(activity);
+                    if (display == null) return;
+
+                    android.view.Display.Mode best = display.getMode();
+                    for (android.view.Display.Mode mode : display.getSupportedModes()) {
+                        if (mode.getRefreshRate() > best.getRefreshRate()) best = mode;
+                    }
+
+                    android.view.WindowManager.LayoutParams params = activity.getWindow().getAttributes();
+                    params.preferredDisplayModeId = best.getModeId();
+                    activity.getWindow().setAttributes(params);
+                } catch (Exception e) {
+                    android.util.Log.e("AndroidUtils", "requestHighRefreshRate failed: " + e);
+                }
+            }
+        });
+    }
 }
