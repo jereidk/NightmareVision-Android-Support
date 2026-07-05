@@ -201,9 +201,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 
 		// Temporary diagnostic: the grid still reportedly renders bunched to
 		// the right on-device despite this being derived from the panel's own
-		// bounds. Log the actual runtime numbers so a fresh game.log can show
-		// exactly what's being computed instead of guessing blind again.
+		// bounds. The origin math above checks out on paper, so the previous
+		// log wasn't enough to tell whether the bug is in this math, in the
+		// per-card placement in setupGridCards(), or in gridCamera's own
+		// scale/transform not matching the rest of the scene. Log all three.
 		funkin.backend.Logger.log('[CosmeticsGridDebug] FlxG.width=${FlxG.width} skinThingBg.x=${skinThingBg.x} skinThingBg.width=${skinThingBg.width} gridInnerX0=$gridInnerX0 gridInnerWidth=$gridInnerWidth gridOriginX=$gridOriginX GRID_SPACING_X=$GRID_SPACING_X GRID_COLS=$GRID_COLS');
+		funkin.backend.Logger.log('[CosmeticsGridCamDebug] cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll.x},${gridCamera.scroll.y} cam.zoom=${gridCamera.zoom} cam.scaleX=${gridCamera.scaleX} cam.scaleY=${gridCamera.scaleY} cam.totalScaleX=${gridCamera.totalScaleX} cam.totalScaleY=${gridCamera.totalScaleY} FlxG.scaleMode.scale=${FlxG.scaleMode.scale.x},${FlxG.scaleMode.scale.y}');
 
 		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
@@ -586,8 +589,10 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	function setupGridCards():Void
 	{
 		clearGridCards();
-		
+
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
+
+		funkin.backend.Logger.log('[CosmeticsGridDebug] setupGridCards: gridItemIds.length=${gridItemIds.length} GRID_COLS=$GRID_COLS gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
 
 		for (i in 0...gridItemIds.length)
 		{
@@ -595,7 +600,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			var row:Int = Std.int(i / GRID_COLS);
 			var cx:Float = gridOriginX + col * GRID_SPACING_X;
 			var cy:Float = gridOriginY + row * GRID_SPACING_Y;
-			
+
 			var bgSpr = new FlxSprite();
 			bgSpr.frames = nodeAtlas;
 			bgSpr.animation.addByPrefix('main', 'back');
@@ -608,6 +613,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			bgSpr.cameras = gridCameras;
 			add(bgSpr);
 			gridNodes.push(bgSpr);
+
+			funkin.backend.Logger.log('[CosmeticsGridDebug] card i=$i col=$col row=$row cx=$cx cy=$cy bgSpr.x=${bgSpr.x} bgSpr.y=${bgSpr.y} bgSpr.width=${bgSpr.width}');
 			
 			var whiteSpr = new FlxSprite();
 			whiteSpr.frames = nodeAtlas;
