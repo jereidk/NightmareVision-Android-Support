@@ -880,6 +880,12 @@ class FreeplayState extends AmongUIState
 			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (circ.width + CIRCLE_PADDING), 1110)) - circ.width * .5);
 			circ.ID = i;
 
+			// Temporary diagnostic: these are still reportedly rendering big and
+			// overlapping on-device despite circ.height being forced to 34px —
+			// log the actual runtime size/position of each one instead of
+			// guessing at the math again.
+			funkin.backend.Logger.log('[FreeplayCircleDebug] i=$i w=$w circ.width=${circ.width} circ.height=${circ.height} circ.x=${circ.x} CIRCLE_PADDING=$CIRCLE_PADDING tempweeks=$tempweeks FlxG.width=${FlxG.width}');
+
 			circles.add(circ);
 		}
 

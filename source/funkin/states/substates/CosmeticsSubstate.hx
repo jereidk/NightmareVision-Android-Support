@@ -199,6 +199,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
 		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
 
+		// Temporary diagnostic: the grid still reportedly renders bunched to
+		// the right on-device despite this being derived from the panel's own
+		// bounds. Log the actual runtime numbers so a fresh game.log can show
+		// exactly what's being computed instead of guessing blind again.
+		funkin.backend.Logger.log('[CosmeticsGridDebug] FlxG.width=${FlxG.width} skinThingBg.x=${skinThingBg.x} skinThingBg.width=${skinThingBg.width} gridInnerX0=$gridInnerX0 gridInnerWidth=$gridInnerWidth gridOriginX=$gridOriginX GRID_SPACING_X=$GRID_SPACING_X GRID_COLS=$GRID_COLS');
+
 		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 		menuBackButton.cameras = overlayCameras;
