@@ -877,14 +877,25 @@ class FreeplayState extends AmongUIState
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
 			circ.setGraphicSize(-1, 34);
 			circ.updateHitbox();
-			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (circ.width + CIRCLE_PADDING), 1110)) - circ.width * .5);
+
+			// Spread icons evenly across the full 1110px band instead of a fixed
+			// width+padding pitch. The debug log confirmed the old formula was
+			// self-consistent (34px icons, exact width+padding gaps) but for
+			// realistic week counts it never got anywhere near the 1110 cap —
+			// 9 weeks only used 528px, bunching everything into the middle of
+			// the screen instead of spanning it, which read as "big and
+			// crowded" even though nothing actually overlapped. Falls back to
+			// the fixed minimum pitch only once there are enough weeks that
+			// spreading evenly would pack them tighter than width+padding.
+			final evenPitch:Float = (tempweeks > 1) ? (1110 / (tempweeks - 1)) : 0;
+			final minPitch:Float = circ.width + CIRCLE_PADDING;
+			final pitch:Float = Math.max(evenPitch, minPitch);
+			final span:Float = (tempweeks - 1) * pitch;
+
+			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, span) - circ.width * .5);
 			circ.ID = i;
 
-			// Temporary diagnostic: these are still reportedly rendering big and
-			// overlapping on-device despite circ.height being forced to 34px —
-			// log the actual runtime size/position of each one instead of
-			// guessing at the math again.
-			funkin.backend.Logger.log('[FreeplayCircleDebug] i=$i w=$w circ.width=${circ.width} circ.height=${circ.height} circ.x=${circ.x} CIRCLE_PADDING=$CIRCLE_PADDING tempweeks=$tempweeks FlxG.width=${FlxG.width}');
+			funkin.backend.Logger.log('[FreeplayCircleDebug] i=$i w=$w circ.width=${circ.width} circ.x=${circ.x} pitch=$pitch span=$span tempweeks=$tempweeks FlxG.width=${FlxG.width}');
 
 			circles.add(circ);
 		}
