@@ -93,7 +93,13 @@ class FreeplayCard extends FlxSpriteGroup
 		card.color = icon.color = name.color = lock.color = FlxColor.WHITE;
 		
 		bean.loadGraphic(Paths.image('currency/${song.currency}'));
-		card.loadGraphic(Paths.image('menu/freeplay/card'));
+		// STRICT: a mod flagged 'global' (e.g. most DLCs, so their own songs show
+		// up in the base game's freeplay list) would otherwise have its own
+		// menu/freeplay/card.png override EVERY card regardless of which song
+		// is actually selected, since NORMAL mode checks global mods
+		// unconditionally. STRICT only checks content/ and the current song's
+		// own mod, so a DLC's card art only shows on its own cards.
+		card.loadGraphic(Paths.image('menu/freeplay/card', null, true, STRICT));
 		
 		bean.setGraphicSize(0, 40);
 		bean.updateHitbox();
@@ -116,7 +122,7 @@ class FreeplayCard extends FlxSpriteGroup
 			#end
 			
 			final lockFile = song.lock != 'special' ? 'lock' : 'lockGold';
-			lock.frames = Paths.getSparrowAtlas(ext + lockFile);
+			lock.frames = Paths.getSparrowAtlas(ext + lockFile, null, true, STRICT);
 			
 			lock.animation.addByPrefix('lock', 'lock0', 24, true);
 			lock.animation.addByPrefix('unlock', 'lock open', 24, false);
@@ -157,7 +163,7 @@ class FreeplayCard extends FlxSpriteGroup
 		lock.visible = locked;
 		
 		note.setPosition(card.x + 110, card.y + 75);
-		note.loadGraphic(Paths.image(ext + 'musicNote'));
+		note.loadGraphic(Paths.image(ext + 'musicNote', null, true, STRICT));
 		
 		note.visible = !locked;
 		

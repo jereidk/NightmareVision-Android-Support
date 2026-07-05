@@ -495,20 +495,28 @@ class Paths
 		
 		for (mod in Mods.enabled)
 		{
-			if (Mods.globalMods.contains(mod))
+			// STRICT means "content/ and current mod only" (see the enum docs) —
+			// that has to win even when the mod is also flagged global, otherwise
+			// a global mod could never match its own STRICT lookup. Only
+			// NORMAL/LOOSE let a global mod's file apply regardless of which mod
+			// is actually selected.
+			if (mode == STRICT)
 			{
-				if (mode == STRICT) continue;
+				if (mod != Mods.currentModDirectory) continue;
+			}
+			else if (Mods.globalMods.contains(mod))
+			{
+				// checked unconditionally in NORMAL/LOOSE
 			}
 			else if (mode != LOOSE && mod != Mods.currentModDirectory)
 			{
 				continue;
 			}
-			
-			
+
 			final fileToCheck:String = mods('$mod/$key');
 			if (FunkinAssets.exists(fileToCheck)) return fileToCheck;
 		}
-		
+
 		return mods(key);
 	}
 	#end

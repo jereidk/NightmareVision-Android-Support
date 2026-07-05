@@ -222,11 +222,11 @@ class FreeplayState extends AmongUIState
 		addVirtualPadCamera();
 		#end
 		
-		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow'));
+		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow', null, true, STRICT));
 		porGlow.color = FlxColor.RED;
 		add(porGlow);
 
-		portrait = new FlxSprite(304, -100).loadGraphic(Paths.image(ext + 'portraits/red')); // loadAtlasFrames(Paths.getAtlasFrames(ext + 'portraits'));
+		portrait = new FlxSprite(304, -100).loadGraphic(Paths.image(ext + 'portraits/red', null, true, STRICT)); // loadAtlasFrames(Paths.getAtlasFrames(ext + 'portraits'));
 		add(portrait);
 
 		// porGlow/portrait sit toward the right side of the 1280 base canvas —
@@ -511,22 +511,23 @@ class FreeplayState extends AmongUIState
 		scriptGroup.call('onPortraitChange', [porty, prevPort]);
 		if (prevPort != porty)
 		{
-			portrait.loadGraphic(Paths.image(ext + 'portraits/' + porty)); // animation.play(week_songs[curSelect][2]);
+			// STRICT so a mod flagged 'global' (most DLCs, so their songs show up
+			// in the base game's freeplay list) can't have its portrait/backGlow
+			// override bleed into every other week's cards — only content/ and
+			// the current song's own mod (already scoped by changeSong() setting
+			// Mods.currentModDirectory right before this call) are checked.
+			portrait.loadGraphic(Paths.image(ext + 'portraits/' + porty, null, true, STRICT)); // animation.play(week_songs[curSelect][2]);
 			// thank you ashley
 			portrait.updateHitbox();
 			portrait.offset.x += (portrait.frameWidth - 1215) * .5 * portrait.scale.x;
 			portrait.offset.y += (portrait.frameHeight - 1097) * .5 * portrait.scale.y;
 
-			// Mods/DLCs can ship their own menu/freeplay/backGlow.png at the same
-			// path inside their own mod folder. Mods.currentModDirectory is
-			// already scoped to this song (set by changeSong() right before this
-			// call), so reloading here — the same way portrait itself reloads
-			// above — means a mod's override only ever shows while one of ITS
-			// OWN songs is selected, and switching back to a non-modded/default
-			// week correctly restores the base game's backGlow, instead of the
-			// glow getting stuck on whichever mod happened to be active the one
-			// time it was originally loaded in create().
-			porGlow.loadGraphic(Paths.image(ext + 'backGlow'));
+			// backGlow only ever loaded once in create() and never refreshed —
+			// reloading it here the same way portrait reloads above means a
+			// mod's override only shows while one of ITS OWN songs is selected,
+			// and switching back to a default/non-modded week correctly restores
+			// the base game's backGlow instead of it getting stuck.
+			porGlow.loadGraphic(Paths.image(ext + 'backGlow', null, true, STRICT));
 			porGlow.updateHitbox();
 		}
 		
@@ -950,7 +951,7 @@ class FreeplayState extends AmongUIState
 			if (seenPorts.exists(porty)) continue;
 			seenPorts.set(porty, true);
 			Mods.currentModDirectory = si.mod;
-			Paths.image(ext + 'portraits/' + porty);
+			Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
 		}
 		Mods.currentModDirectory = null;
 	}
