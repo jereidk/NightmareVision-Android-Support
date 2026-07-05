@@ -419,6 +419,12 @@ class PlayState extends MusicBeatState
 	
 	public var defaultCamZoomAdd:Float = 0;
 
+	#if android
+	var _drsRing:Array<Float> = [for (_ in 0...10) 1 / 60];
+	var _drsRingIdx:Int = 0;
+	var _drsActive:Bool = false;
+	#end
+
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
 	/**
@@ -2036,6 +2042,18 @@ class PlayState extends MusicBeatState
 	{
 		canPlayAwardSound = true;
 
+		#if android
+		_drsRing[_drsRingIdx % 10] = elapsed;
+		_drsRingIdx++;
+		var _drsSum:Float = 0;
+		for (t in _drsRing) _drsSum += t;
+		final _drsAvg:Float = _drsSum / 10;
+		if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / 30)
+			{ _drsActive = true;  mobile.backend.DynamicResolution.setActive(true); }
+		else if (_drsActive && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
+			{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
+		#end
+
 		if (cameraLerping && !inCutscene)
 		{
 			final lerpRate = 0.04 * cameraSpeed;
@@ -3495,6 +3513,7 @@ class PlayState extends MusicBeatState
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
 		mobile.backend.AndroidUtils.setGameplayState(false);
+		mobile.backend.DynamicResolution.setActive(false);
 		#end
 
 		scripts.call('onDestroy', _scriptEmptyArgs, true);

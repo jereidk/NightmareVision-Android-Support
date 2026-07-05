@@ -88,6 +88,15 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = () -> ClientPrefs.updateVsyncMode();
 
+		#if android
+		var option:Option = new Option(Lang.str('opt_drs', 'Dynamic Resolution (DRS)'),
+			Lang.str('opt_drs_desc',
+				'Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.'),
+			'drsEnabled', 'bool', false);
+		option.onChange = markCustomPreset;
+		addOption(option);
+		#end
+
 		super();
 	}
 
@@ -100,16 +109,19 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.lowQuality = true;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = false;
+				#if android ClientPrefs.drsEnabled = true; #end
 			case 'Medium':
 				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = true;
+				#if android ClientPrefs.drsEnabled = false; #end
 			case 'High':
 				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = true;
 				ClientPrefs.globalAntialiasing = true;
+				#if android ClientPrefs.drsEnabled = false; #end
 			default: // Custom — leave individual settings unchanged
 		}
 		onChangeAntiAliasing();
