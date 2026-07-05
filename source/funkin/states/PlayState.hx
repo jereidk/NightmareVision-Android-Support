@@ -2042,7 +2042,20 @@ class PlayState extends MusicBeatState
 	
 	var startedCountdown:Bool = false;
 	var canPause:Bool = true;
-	
+
+	// Falling notes, receptors, splashes and the score/health HUD all render
+	// through camHUD (see notes.cameras/playFields.cameras/playHUD.cameras
+	// assignments in create()) — so if the actual bottleneck is draw-side
+	// (sprite/shader draw calls) rather than update-side game logic, it'll
+	// show up here and scale with exactly what's on screen, independent of
+	// everything profiled inside update().
+	override public function draw():Void
+	{
+		#if android SystemMonitor.profBegin('draw'); #end
+		super.draw();
+		#if android SystemMonitor.profEnd(); #end
+	}
+
 	override public function update(elapsed:Float):Void
 	{
 		canPlayAwardSound = true;
