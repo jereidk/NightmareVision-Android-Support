@@ -70,6 +70,14 @@ class StoryMenuState extends AmongUIState
 		highscore_string = Lang.str('highscore');
 		
 		frame = new FlxSprite().loadGraphic(Paths.image('menu/story/border'));
+		// Full-screen frame graphic sized for the 1280 base canvas — same
+		// "leaves a gap on wide 'expand'-mode screens" issue as OptionsState's
+		// panel and AmongUIState's upperBar.
+		if (FlxG.width > frame.width)
+		{
+			frame.setGraphicSize(Std.int(FlxG.width), Std.int(frame.height));
+			frame.updateHitbox();
+		}
 		add(frame);
 		
 		backButton.setPosition(85, 65);

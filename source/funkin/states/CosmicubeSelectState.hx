@@ -48,7 +48,13 @@ class CosmicubeSelectState extends AmongUIState
 		add(backButton).revive();
 		
 		add(cards);
-		cards.setPosition(40, upperBar.height + 40);
+		// Cards had ~40px margins on both sides of the 1280 base canvas
+		// (roughly centered, not hugging an edge) — shift by half the
+		// 'expand'-mode cutout so that same centered look holds on wider
+		// screens instead of leaving all the extra space bunched on the
+		// right. Same pattern FunkinCrew/Funkin uses (CUTOUT_WIDTH * multiplier
+		// per element) in their own freeplay/story menus.
+		cards.setPosition(40 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, upperBar.height + 40);
 		
 		for (id in CosmicubeData.cosmicubeList)
 		{

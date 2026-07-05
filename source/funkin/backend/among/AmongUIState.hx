@@ -45,6 +45,15 @@ class AmongUIState extends MusicBeatState
 		add(starsFG);
 		
 		upperBar = new FlxSprite(-2, -1.4, Paths.image('$ext/topBar'));
+		// Fixed-width bar (1283px) sized for the 1280 base canvas — shared by
+		// every AmongUIState screen (Freeplay, StoryMenu, CosmicubeSelect), so
+		// on a wide 'expand'-mode screen it left a bare gap on the right in
+		// all three at once. Same fix as OptionsState's panel background.
+		if (FlxG.width > upperBar.width)
+		{
+			upperBar.setGraphicSize(Std.int(FlxG.width + 4), Std.int(upperBar.height));
+			upperBar.updateHitbox();
+		}
 		backButton = new FlxSprite(12, 8).loadGraphic(Paths.image('$ext/menuBack'));
 		backButton.kill();
 		
