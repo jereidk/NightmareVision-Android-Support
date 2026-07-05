@@ -70,12 +70,13 @@ class StoryMenuState extends AmongUIState
 		highscore_string = Lang.str('highscore');
 		
 		frame = new FlxSprite().loadGraphic(Paths.image('menu/story/border'));
-		// Full-screen frame graphic sized for the 1280 base canvas — same
-		// "leaves a gap on wide 'expand'-mode screens" issue as OptionsState's
-		// panel and AmongUIState's upperBar.
-		if (FlxG.width > frame.width)
+		// Full 1280x720 frame graphic — same "leaves a gap on wide 'expand'-
+		// mode screens" issue as OptionsState's panel and AmongUIState's
+		// upperBar. Gated on gameCutoutSize.x (zero outside 'expand' mode)
+		// rather than comparing FlxG.width to the asset's own size.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 		{
-			frame.setGraphicSize(Std.int(FlxG.width), Std.int(frame.height));
+			frame.setGraphicSize(Std.int(frame.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(frame.height));
 			frame.updateHitbox();
 		}
 		add(frame);

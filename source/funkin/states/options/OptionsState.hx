@@ -140,14 +140,17 @@ class OptionsState extends MusicBeatState
 			
 			var thingy:FlxSprite = new FlxSprite(50, 30).loadGraphic(Paths.image(ext + 'thingy'));
 			thingy.antialiasing = ClientPrefs.globalAntialiasing;
-			// Panel background is a fixed-width image sized for the 1280 base
-			// canvas — on a wide 'expand'-mode screen (extra width only ever
-			// opens up to the right, see FunkinRatioScaleMode.gameCutoutSize)
-			// it left the whole right side of the screen as bare black instead
-			// of covering it, same issue as MainMenuState's vignette/glow.
-			if (FlxG.width - 50 > thingy.width)
+			// Panel background is a fixed-width image (1126px) sized for the
+			// 1280 base canvas — on a wide 'expand'-mode screen it left the
+			// whole right side of the screen as bare black instead of covering
+			// it. Gated strictly on gameCutoutSize.x > 0 (zero in 'fit'/
+			// 'stretch' mode, i.e. every other user) rather than comparing
+			// against thingy's native size, so this can never fire outside
+			// 'expand' mode regardless of how the asset's own dimensions
+			// happen to compare to the design width.
+			if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 			{
-				thingy.setGraphicSize(Std.int(FlxG.width - 50), Std.int(thingy.height));
+				thingy.setGraphicSize(Std.int(thingy.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(thingy.height));
 				thingy.updateHitbox();
 			}
 			add(thingy);

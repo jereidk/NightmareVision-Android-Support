@@ -48,10 +48,12 @@ class AmongUIState extends MusicBeatState
 		// Fixed-width bar (1283px) sized for the 1280 base canvas — shared by
 		// every AmongUIState screen (Freeplay, StoryMenu, CosmicubeSelect), so
 		// on a wide 'expand'-mode screen it left a bare gap on the right in
-		// all three at once. Same fix as OptionsState's panel background.
-		if (FlxG.width > upperBar.width)
+		// all three at once. Gated on gameCutoutSize.x (zero outside 'expand'
+		// mode) rather than comparing FlxG.width to the asset's own size, so
+		// this can't accidentally fire in 'fit'/'stretch' mode.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 		{
-			upperBar.setGraphicSize(Std.int(FlxG.width + 4), Std.int(upperBar.height));
+			upperBar.setGraphicSize(Std.int(upperBar.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(upperBar.height));
 			upperBar.updateHitbox();
 		}
 		backButton = new FlxSprite(12, 8).loadGraphic(Paths.image('$ext/menuBack'));
