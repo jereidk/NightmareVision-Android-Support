@@ -21,11 +21,20 @@ class AmongUIState extends MusicBeatState
 	public var lockMovement:Bool = false;
 	
 	public var returnState:Class<flixel.FlxState> = MainMenuState;
-	
+
+	// Shared leak fix for every AmongUIState screen (Freeplay, StoryMenu,
+	// CosmicubeSelect, Awards): without this, the dynamically-rendered
+	// bitmaps each subclass creates (labels, icons, etc.) outlive the state
+	// and accumulate on every visit, same as the fix already applied to
+	// TitleState/FreeplayState/PlayState/MainMenuState/OptionsState.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	public override function create():Void
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		super.create();
-		
+
 		var ext:String = 'menu/common';
 		
 		camUpper = new FlxCamera();
@@ -97,10 +106,16 @@ class AmongUIState extends MusicBeatState
 		beanIcon = FlxDestroyUtil.destroy(beanIcon);
 		
 		CosmicubeData.setMoney(localCurrency, localBeans);
-		
+
 		ClientPrefs.flush();
-		
+
 		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	function set_localBeans(v:Int):Int

@@ -61,9 +61,17 @@ class MainMenuState extends MusicBeatState
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
 	var portCreditText:FlxText;
-	
+
+	// Same leak fix as TitleState/FreeplayState/PlayState: without this, every
+	// dynamically-rendered bitmap this state creates (menu labels, the YouTube
+	// credit text, etc.) outlives the state and accumulates on every single
+	// MainMenuState visit, since this is the hub state revisited constantly.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	override function create()
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		Mods.currentModDirectory = null;
 
 		#if DISCORD_ALLOWED
@@ -629,7 +637,18 @@ class MainMenuState extends MusicBeatState
 		}
 
 		super.update(elapsed);
-		
+
 		scriptGroup.call('onUpdatePost', [elapsed]);
+	}
+
+	override function destroy()
+	{
+		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 }

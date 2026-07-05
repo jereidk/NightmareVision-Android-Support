@@ -109,8 +109,8 @@ class FreeplayState extends AmongUIState
 	var intendedScore:Float;
 	var intendedRating:Float;
 	var localWeeks:Array<String> = [''];
-	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
-	
+	// _bitmapSnapshotAtCreate now lives on AmongUIState (this class's parent) — shared by every AmongUIState screen.
+
 	public var cachedCards:FlxTypedGroup<FreeplayCard>;
 	
 	public var cards:FlxTypedGroup<FreeplayCard>;
@@ -156,11 +156,10 @@ class FreeplayState extends AmongUIState
 	
 	override function create()
 	{
-		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
-
 		FunkinAssets.cache.clearStoredMemory();
 		FunkinAssets.cache.clearUnusedMemory();
 
+		// _bitmapSnapshotAtCreate is captured by super.create() (AmongUIState).
 		super.create();
 
 		Mods.currentModDirectory = null;
@@ -793,16 +792,11 @@ class FreeplayState extends AmongUIState
 	
 	override function destroy()
 	{
+		// super.destroy() (AmongUIState) handles disposeNewSince(_bitmapSnapshotAtCreate).
 		super.destroy();
 
 		ClientPrefs.unlockedSongs = localWeeks;
 		ClientPrefs.flush();
-
-		if (_bitmapSnapshotAtCreate != null)
-		{
-			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
-			_bitmapSnapshotAtCreate = null;
-		}
 	}
 	
 	function addWeeks():Void

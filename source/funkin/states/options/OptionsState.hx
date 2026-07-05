@@ -49,7 +49,12 @@ class OptionsState extends MusicBeatState
 	var menuBackButton:FlxSprite;
 	var mouseControlActive:Bool = true;
 	var hoveredOption:Int = -1;
-	
+
+	// Leak fix mirrored from TitleState/FreeplayState/PlayState/MainMenuState:
+	// dynamically-rendered bitmaps this state creates (option labels, the DLC
+	// list, etc.) otherwise outlive the state and accumulate on every visit.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	static final OPTION_LABEL_BASE_SIZE:Int = 26;
 	static final OPTION_LABEL_MIN_SIZE:Int = 14;
 	static final OPTION_LABEL_MAX_LINES:Int = 2;
@@ -113,6 +118,8 @@ class OptionsState extends MusicBeatState
 
 	override function create()
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		FunkinAssets.cache.clearStoredMemory();
 		FunkinAssets.cache.clearUnusedMemory();
 
@@ -252,6 +259,12 @@ class OptionsState extends MusicBeatState
 		ClientPrefs.flush();
 		ClientPrefs.reloadControls(); // lets just reload the controls here
 		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	/**
