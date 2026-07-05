@@ -111,12 +111,18 @@ class AwardsState extends AmongUIState
 		achArray = [];
 		var xAdd = 0;
 		var yAdd = 0;
+		// 7 columns * 165px pitch - the 45px column/icon-width difference = a
+		// 1110px-wide grid with symmetric 85px margins on the 1280 base canvas
+		// (centered, not edge-anchored). Shift by half the 'expand'-mode cutout
+		// to keep that same centered look on wider screens, same reasoning as
+		// CosmicubeSelectState's card list.
+		final gridX:Float = 85 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		for (i in 0...achievements.length)
 		{
 			final unlocked = ownAchievement(i);
 			var iconName:String = achievements[i].icon ?? GameFlags.getAchievementIcon(achievements[i].name);
 			if (!unlocked || !Paths.fileExists('images/awards/$iconName.png')) iconName = 'blank';
-			var img:FlxSprite = new FlxSprite(85 + (xAdd * 165), 30 + (yAdd * 130)).loadGraphic(Paths.image('awards/$iconName'));
+			var img:FlxSprite = new FlxSprite(gridX + (xAdd * 165), 30 + (yAdd * 130)).loadGraphic(Paths.image('awards/$iconName'));
 			img.setGraphicSize(120, 120);
 			img.updateHitbox();
 			img.ID = i;

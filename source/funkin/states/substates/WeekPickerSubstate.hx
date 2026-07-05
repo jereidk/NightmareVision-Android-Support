@@ -57,7 +57,13 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		(cubeCamera = new FlxCamera(bgThing.x + 6, bgThing.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
 		FlxG.cameras.add(cubeCamera, false);
 		
-		otherTitleText = new FlxText(340, 205, 0, Lang.str('freeplay'), 50);
+		// Was a hardcoded x=340 assuming bgThing.screenCenter() lands at its
+		// default-canvas position (~324) — on a wide 'expand'-mode screen
+		// bgThing recenters further right (screenCenter() reads live
+		// FlxG.width) while this stayed put, drifting off the panel. Anchor
+		// it to bgThing's actual position instead, same as menuBackButton
+		// below already does.
+		otherTitleText = new FlxText(bgThing.x + 16, 205, 0, Lang.str('freeplay'), 50);
 		otherTitleText.setFormat(Paths.font('AmaticSC-Bold.ttf', false), 50, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);
