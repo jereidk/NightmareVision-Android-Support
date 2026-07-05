@@ -125,6 +125,12 @@ class FreeplayState extends AmongUIState
 	var score_rating:Array<String>;
 	
 	var CARD_X:Float = 70;
+	// Cards hug the left edge by design — in 'expand' mode nudge them toward
+	// the center of the widened screen instead of leaving them pinned to the
+	// left with a big empty gap on the right. A fraction of the revealed
+	// width, not a full recenter (that would fight the portrait/glow docked
+	// on the right side of the same screen).
+	var CARD_EXPAND_CENTER_FACTOR:Float = 0.25;
 	var CARD_Y:Float = (FlxG.height * .45);
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
@@ -431,10 +437,14 @@ class FreeplayState extends AmongUIState
 	inline function moveCard(c:FreeplayCard, selection:Float, instant:Bool = false):Void
 	{
 		if (c == null) return;
-		
+
 		final dist:Float = (c.ID - selection);
-		
-		final targetX = (Math.abs(dist) * CARD_X_SHIFT + Math.round(CARD_X));
+
+		final centerShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * CARD_EXPAND_CENTER_FACTOR
+			: 0;
+
+		final targetX = (Math.abs(dist) * CARD_X_SHIFT + Math.round(CARD_X) + centerShift);
 		final targetY = (dist * CARD_DISTANCE + Math.round(CARD_Y));
 		final targetAlpha = (1 - Math.abs(dist) * CARD_FADE);
 		
@@ -506,6 +516,18 @@ class FreeplayState extends AmongUIState
 			portrait.updateHitbox();
 			portrait.offset.x += (portrait.frameWidth - 1215) * .5 * portrait.scale.x;
 			portrait.offset.y += (portrait.frameHeight - 1097) * .5 * portrait.scale.y;
+
+			// Mods/DLCs can ship their own menu/freeplay/backGlow.png at the same
+			// path inside their own mod folder. Mods.currentModDirectory is
+			// already scoped to this song (set by changeSong() right before this
+			// call), so reloading here — the same way portrait itself reloads
+			// above — means a mod's override only ever shows while one of ITS
+			// OWN songs is selected, and switching back to a non-modded/default
+			// week correctly restores the base game's backGlow, instead of the
+			// glow getting stuck on whichever mod happened to be active the one
+			// time it was originally loaded in create().
+			porGlow.loadGraphic(Paths.image(ext + 'backGlow'));
+			porGlow.updateHitbox();
 		}
 		
 		if (ws_lock[curSelect])
@@ -526,10 +548,18 @@ class FreeplayState extends AmongUIState
 			portraitTween?.cancel();
 			portraitAlphaTween?.cancel();
 			colorTween?.cancel();
-			portrait.x = 504.65;
+
+			// This slide-in was hardcoded to the 1280 base canvas's positions
+			// (matching where portrait/porGlow are anchored in create()), which
+			// silently undid the 'expand'-mode shift applied there every single
+			// time the song/portrait changed. Same full-cutout shift as create().
+			final portraitShiftX:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x
+				: 0;
+			portrait.x = 504.65 + portraitShiftX;
 			portrait.alpha = 0;
 			colorTween = FlxTween.color(porGlow, 0.2, porGlow.color, color);
-			portraitTween = FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.expoOut});
+			portraitTween = FlxTween.tween(portrait, {x: 304.65 + portraitShiftX}, 0.3, {ease: FlxEase.expoOut});
 			portraitAlphaTween = FlxTween.tween(portrait, {alpha: 1}, 0.3, {ease: FlxEase.expoOut});
 		}
 		
