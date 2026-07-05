@@ -28,6 +28,7 @@ import funkin.input.InputSystem;
 import funkin.input.InputEvent;
 import funkin.objects.Character;
 import funkin.backend.Difficulty;
+import funkin.backend.SystemMonitor;
 import funkin.game.RatingInfo;
 import funkin.objects.note.*;
 import funkin.objects.note.Note;
@@ -1487,7 +1488,11 @@ class PlayState extends MusicBeatState
 	function startSong():Void
 	{
 		startingSong = false;
-		
+
+		#if android
+		SystemMonitor.resetGameplayTimer();
+		#end
+
 		audio.inst.onComplete = finishSong.bind(false);
 		
 		#if FLX_PITCH
@@ -2172,6 +2177,10 @@ class PlayState extends MusicBeatState
 		
 		if (generatedMusic)
 		{
+			#if android
+			SystemMonitor.reportGameplayFrame(elapsed, SONG.song, Conductor.songPosition, notes.length, playFields != null ? playFields.length : 0);
+			#end
+
 			if (!inCutscene)
 			{
 				if (!cpuControlled) keyShit();

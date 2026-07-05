@@ -422,6 +422,50 @@ class SystemMonitor
 		_write('[OVERSIZED] $key  ${w}x${h}  — compress or convert to ASTC');
 	}
 
+	// ==================== GAMEPLAY PROFILING ====================
+
+	// checkFrame()'s spike detector compares each frame against a rolling
+	// average that adapts to whatever's currently happening — so a song
+	// section that settles into a sustained 35fps plateau (heavy note
+	// density, not a one-off hitch) just becomes the new "normal" and never
+	// fires a [SPIKE]. This instead samples on a fixed cadence regardless of
+	// whether the frame looked anomalous, with the gameplay context (song
+	// time, live note/sustain count) needed to tell which section of which
+	// song is actually the expensive one.
+	static var _gameplayLogTimer:Float = 0.0;
+	static inline final GAMEPLAY_LOG_INTERVAL:Float = 1.0; // seconds between samples
+	static inline final GAMEPLAY_FPS_WARN:Int = 50;        // below this, flag the line
+
+	/**
+	 * Call once per frame from PlayState.update() during an active song.
+	 * Writes a one-line FPS + note-density snapshot roughly once a second —
+	 * cheap enough to run unconditionally, frequent enough to correlate a
+	 * drop with a specific song section afterward.
+	 */
+	public static function reportGameplayFrame(elapsed:Float, songName:String, songTimeMs:Float, noteCount:Int, playFieldCount:Int):Void
+	{
+		if (!enabled) return;
+
+		_gameplayLogTimer += elapsed;
+		if (_gameplayLogTimer < GAMEPLAY_LOG_INTERVAL) return;
+		_gameplayLogTimer = 0.0;
+
+		#if flixel
+		var fps = DebugDisplay.instance != null ? DebugDisplay.instance.currentFPS : 0;
+		#else
+		var fps = 0;
+		#end
+		var mark = fps < GAMEPLAY_FPS_WARN ? '!' : ' ';
+		var t = songTimeMs / 1000;
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps');
+	}
+
+	/** Reset the sampling cadence — call when a song starts so the first sample lands ~1s in, not mid-timer from the previous song. */
+	public static function resetGameplayTimer():Void
+	{
+		_gameplayLogTimer = 0.0;
+	}
+
 	#if flixel
 	static function _onPreStateSwitch():Void
 	{
