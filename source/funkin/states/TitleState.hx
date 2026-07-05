@@ -134,6 +134,11 @@ class TitleState extends MusicBeatState
 			titleText.animation.addByPrefix('press', "EnterStart", 24, false);
 			titleText.animation.play('idle');
 			titleText.y -= 55;
+			// x=300 was a hardcoded approximation of screenCenter() for this
+			// sprite's ~650px frame width on the 1280 base canvas — same
+			// screenCenter(X) convention logo/ngSpr already use below, so this
+			// tracks live FlxG.width instead of staying fixed on a wide screen.
+			titleText.screenCenter(X);
 			
 			logo.scale.set(0.84, 0.84);
 			logo.updateHitbox();

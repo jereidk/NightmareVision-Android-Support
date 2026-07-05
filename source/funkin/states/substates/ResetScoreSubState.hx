@@ -70,7 +70,10 @@ class ResetScoreSubState extends MusicBeatSubstate
 		bgThing.alpha = 1;
 		add(bgThing);
 		
-		otherTitleText = new FlxText(340, 205, 0, Lang.str('reset_score', 'Reset Highscore'), 50);
+		// Same bug as WeekPickerSubstate's otherTitleText: hardcoded to align
+		// with bgThing's default-canvas position instead of bgThing.x (which
+		// menuBackButton/titleText below already correctly use).
+		otherTitleText = new FlxText(bgThing.x + 16, 205, 0, Lang.str('reset_score', 'Reset Highscore'), 50);
 		otherTitleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);

@@ -47,7 +47,13 @@ class ControlsSubState extends MusicBeatSubstate
 	var titleText:FlxText;
 	var languageTextYOffset:Float = 0;
 	
-	var panelX:Float = 480;
+	// Same 676px-wide, asymmetrically-placed panel as BaseOptionsMenu (480
+	// left margin / 124 right margin on the 1280 canvas) — this substate
+	// doesn't extend BaseOptionsMenu so it needed the same fix independently.
+	// Shifted by the FULL 'expand'-mode cutout to keep that 124px right
+	// margin exact instead of leaving a gap between this panel/camera and
+	// the wider background behind it.
+	var panelX:Float = 480 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 	var optionEndY:Float = 0;
 	
 	final topBound:Float = 150;
