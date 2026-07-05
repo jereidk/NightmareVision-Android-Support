@@ -219,10 +219,24 @@ class FreeplayState extends AmongUIState
 		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow'));
 		porGlow.color = FlxColor.RED;
 		add(porGlow);
-		
+
 		portrait = new FlxSprite(304, -100).loadGraphic(Paths.image(ext + 'portraits/red')); // loadAtlasFrames(Paths.getAtlasFrames(ext + 'portraits'));
 		add(portrait);
-		
+
+		// porGlow/portrait sit toward the right side of the 1280 base canvas —
+		// porGlow (808px wide) is already positioned to bleed a few px past its
+		// own right edge, confirming it's meant to hug the screen edge, not sit
+		// centered. In 'expand' mode shift both by the full revealed width so
+		// the glow and the portrait it sits behind keep tracking the new right
+		// edge together instead of drifting toward the center as the canvas
+		// widens. RimLight below has no position of its own (it just reads
+		// portrait's frame UVs via a shader), so it needs no separate fix.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			porGlow.x += funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+			portrait.x += funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+		}
+
 		add(rimlight = new RimLight(315, 10, portrait));
 		
 		infoText = new FlxText(0, 91, FlxG.width - 6, 'If you can read this I fucked something up terribly', 48);
