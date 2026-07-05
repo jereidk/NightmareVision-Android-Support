@@ -232,7 +232,7 @@ function onCreatePost()
 	add(lightoverlay2);
 	
 	// black screen sprite
-	black = new FlxSprite(0, 0).makeGraphic(1280, 720, 0xff000000);
+	black = new FlxSprite(0, 0).makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xff000000); // live screen size so expand mode's wider canvas is fully covered
 	black.camera = camOther;
 	add(black);
 	black.visible = true;
