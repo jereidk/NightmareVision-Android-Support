@@ -177,9 +177,6 @@ class ClientPrefs
 	/** JSON map of all custom button positions (name -> [x, y]) for VirtualPadCustomizer. */
 	@saveVar public static var customPadPositionsJson:String = "";
 
-	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
-	@saveVar public static var drsEnabled:Bool = false;
-
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
 	 */
