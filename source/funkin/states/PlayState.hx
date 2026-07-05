@@ -2065,7 +2065,12 @@ class PlayState extends MusicBeatState
 			FlxG.camera.followLerp = lerpRate;
 		}
 		
-		if (generatedMusic && !endingSong && !isCameraOnForcedPos) moveCameraSection();
+		if (generatedMusic && !endingSong && !isCameraOnForcedPos)
+		{
+			#if android SystemMonitor.profBegin('camera'); #end
+			moveCameraSection();
+			#if android SystemMonitor.profEnd(); #end
+		}
 		
 		if (controls.PAUSE && startedCountdown && canPause)
 		{
@@ -2167,14 +2172,16 @@ class PlayState extends MusicBeatState
 		
 		if (canUpdateModchart)
 		{
+			#if android SystemMonitor.profBegin('modchart'); #end
 			for (playField in playFields)
 			{
 				final id = playField.ID, skin = playField._skin;
-				
+
 				playField.forEachAlive(function(strum) modchart(strum, id, skin.receptorOffsets));
 			}
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		if (generatedMusic)
 		{
 			#if android
@@ -2183,7 +2190,12 @@ class PlayState extends MusicBeatState
 
 			if (!inCutscene)
 			{
-				if (!cpuControlled) keyShit();
+				if (!cpuControlled)
+				{
+					#if android SystemMonitor.profBegin('keyShit'); #end
+					keyShit();
+					#if android SystemMonitor.profEnd(); #end
+				}
 				else
 				{
 					final _bfAnim = boyfriend.getAnimName();
@@ -2193,6 +2205,7 @@ class PlayState extends MusicBeatState
 				}
 			}
 			
+			#if android SystemMonitor.profBegin('notesLoop'); #end
 			var i:Int = 0;
 			while (i < notes.length)
 			{
@@ -2286,27 +2299,34 @@ class PlayState extends MusicBeatState
 					nextPos.put();
 				}
 			}
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		if (canUpdateModchart)
 		{
+			#if android SystemMonitor.profBegin('modchart'); #end
 			for (playField in playFields)
 			{
 				final id = playField.ID, skin = playField._skin;
-				
+
 				playField.grpSusSplashes.forEachAlive(function(splash) modchart(splash, id, skin.sustainSplashOffsets));
-				
+
 				if (playField.trackNoteSplashes) playField.grpNoteSplashes.forEachAlive(function(splash) modchart(splash, id, skin.splashOffsets));
 			}
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		tempVector.put();
-		
+
 		_scriptUpdateArgs[0] = elapsed;
+		#if android SystemMonitor.profBegin('script'); #end
 		scripts.call('onUpdate', _scriptUpdateArgs);
+		#if android SystemMonitor.profEnd(); #end
 
 		super.update(elapsed);
+		#if android SystemMonitor.profBegin('inputUpdate'); #end
 		input.update();
+		#if android SystemMonitor.profEnd(); #end
 
 		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
 		{

@@ -457,13 +457,68 @@ class SystemMonitor
 		#end
 		var mark = fps < GAMEPLAY_FPS_WARN ? '!' : ' ';
 		var t = songTimeMs / 1000;
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps');
+		var breakdown = _profBreakdown();
+		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix');
+		profReset();
 	}
 
 	/** Reset the sampling cadence — call when a song starts so the first sample lands ~1s in, not mid-timer from the previous song. */
 	public static function resetGameplayTimer():Void
 	{
 		_gameplayLogTimer = 0.0;
+	}
+
+	// ==================== PHASE PROFILING ====================
+
+	// Answers "what specifically is slow" instead of just "it's slow": wrap
+	// the handful of expensive phases in PlayState.update() (input/hit
+	// detection, the falling-notes loop, modchart, camera, scripts) with
+	// profBegin/profEnd, and the accumulated per-tag time since the last
+	// report gets folded straight into the next [GAMEPLAY] line — so a slow
+	// window shows e.g. "notesLoop=612ms keyShit=140ms script=88ms" instead
+	// of just "fps=36".
+	static var _profTags:Array<String> = [];
+	static var _profMs:Map<String, Float> = new Map();
+	static var _profStack:Array<{tag:String, t:Float}> = [];
+
+	/** Marks the start of a named phase. Must be paired with profEnd(). Cheap no-op when monitoring is off. */
+	public static inline function profBegin(tag:String):Void
+	{
+		if (enabled) _profStack.push({tag: tag, t: haxe.Timer.stamp()});
+	}
+
+	/** Marks the end of the most recently opened phase, accumulating its elapsed time under its tag. */
+	public static function profEnd():Void
+	{
+		if (!enabled || _profStack.length == 0) return;
+		var entry = _profStack.pop();
+		var ms = (haxe.Timer.stamp() - entry.t) * 1000;
+		if (!_profMs.exists(entry.tag))
+		{
+			_profMs.set(entry.tag, 0);
+			_profTags.push(entry.tag);
+		}
+		_profMs.set(entry.tag, _profMs.get(entry.tag) + ms);
+	}
+
+	// Biggest-first "tag=Xms tag2=Yms" summary of everything accumulated
+	// since the last profReset(). Entries under half a millisecond are
+	// dropped as noise.
+	static function _profBreakdown():String
+	{
+		var entries = [for (t in _profTags) {tag: t, ms: _profMs.get(t)}];
+		entries.sort((a, b) -> a.ms < b.ms ? 1 : (a.ms > b.ms ? -1 : 0));
+		var parts = [for (e in entries) if (e.ms >= 0.5) '${e.tag}=${Std.int(e.ms)}ms'];
+		return parts.join(' ');
+	}
+
+	/** Clears accumulated phase timings — call after folding them into a report. */
+	public static function profReset():Void
+	{
+		_profTags = [];
+		_profMs = new Map();
+		_profStack = [];
 	}
 
 	#if flixel
