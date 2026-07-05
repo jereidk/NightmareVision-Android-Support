@@ -87,7 +87,12 @@ class CosmicubeSubState extends MusicBeatSubstate
 		(overlayCamera = new FlxCamera()).bgColor = 0;
 		FlxG.cameras.add(overlayCamera, false);
 		
-		(cubeCamera = new FlxCamera(50, 110, 860, 560)).bgColor = FlxColor.BLACK;
+		// Created before bg exists (below), so it can't reference bg.x directly —
+		// but bg.x's own centering formula (Math.round(FlxG.width-1245)*.5) shifts
+		// by half of whatever extra width 'expand' mode reveals, so applying that
+		// same half-cutout offset here keeps this viewport aligned with the panel
+		// once it's created.
+		(cubeCamera = new FlxCamera(50 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 110, 860, 560)).bgColor = FlxColor.BLACK;
 		FlxG.cameras.add(cubeCamera, false);
 		
 		(awardCamera = new FlxCamera()).bgColor = 0;
@@ -122,16 +127,23 @@ class CosmicubeSubState extends MusicBeatSubstate
 		bg = new FlxSprite(Paths.image('menu/cosmicube/pane'));
 		bg.setPosition(Math.round(FlxG.width - bg.width) * .5, Math.round(FlxG.height - bg.height) * .5);
 		pane.add(bg);
-		
+
 		pane.add(menuBackButton = new FlxSprite(bg.x + bg.width - 6, bg.y + 3).loadGraphic(Paths.image('menu/common/menuBack')));
 		menuBackButton.x -= menuBackButton.width;
-		
-		pane.add(currencyIcon = new FlxSprite(45, bg.y + 32, Paths.image('currency/${meta.currency}')));
+
+		// currencyIcon/currencyText/equipButton/charTitle/charKind/charDesc/charHint
+		// below were all hardcoded assuming bg.x lands at its default-canvas value
+		// (~18, since bg is 1245px wide centered on the 1280 base canvas). bg.x
+		// already recomputes correctly for a wider 'expand'-mode screen (it shifts
+		// to ~178 at FlxG.width=1600) but everything inside the panel stayed at
+		// its old absolute position, drifting out from under the now-shifted
+		// panel. Anchored everything to bg.x instead.
+		pane.add(currencyIcon = new FlxSprite(bg.x + 27, bg.y + 32, Paths.image('currency/${meta.currency}')));
 		currencyIcon.setGraphicSize(0, 35);
 		currencyIcon.updateHitbox();
 		currencyIcon.y -= Math.round(currencyIcon.height * .5);
-		
-		pane.add(currencyText = new FlxText(95, bg.y + 32, 150, '1234'));
+
+		pane.add(currencyText = new FlxText(bg.x + 77, bg.y + 32, 150, '1234'));
 		currencyText.setFormat(Paths.font('liberbold.ttf'), 22, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 		currencyText.borderSize = 1;
 		currencyText.y -= Math.round(currencyText.height * .5);
@@ -142,7 +154,7 @@ class CosmicubeSubState extends MusicBeatSubstate
 		cosmicubeTitle.screenCenter(X);
 		cosmicubeTitle.y -= Math.round(cosmicubeTitle.height * .5);
 		
-		pane.add(equipButton = new FlxSprite(970 + 270 * .5, 570));
+		pane.add(equipButton = new FlxSprite(bg.x + 1087, 570));
 		equipButton.frames = Paths.getSparrowAtlas('menu/cosmicube/button');
 		equipButton.antialiasing = ClientPrefs.globalAntialiasing;
 		equipButton.animation.addByPrefix('locked', 'locked');
@@ -161,19 +173,19 @@ class CosmicubeSubState extends MusicBeatSubstate
 		equipText.setPosition(equipButton.x, equipButton.y + (equipButton.height - equipText.height) * .5);
 		equipText.borderSize = 2;
 		
-		pane.add(charTitle = new FlxText(970, 120, 270, 'this is a test'));
+		pane.add(charTitle = new FlxText(bg.x + 952, 120, 270, 'this is a test'));
 		charTitle.setFormat(Paths.font('liberbold.ttf'), 34, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		charTitle.borderSize = 2;
 		@:privateAccess charTitle._defaultFormat.leading = -10;
 		
-		pane.add(charKind = new FlxText(970, 120, 270, 'this is a test'));
+		pane.add(charKind = new FlxText(bg.x + 952, 120, 270, 'this is a test'));
 		charKind.setFormat(Paths.font('liberbold.ttf'), 18, FlxColor.BLACK, CENTER);
 		
-		pane.add(charDesc = new FlxText(970, 306, 270, 'this is a test'));
+		pane.add(charDesc = new FlxText(bg.x + 952, 306, 270, 'this is a test'));
 		charDesc.setFormat(Paths.font('liberbold.ttf'), 20, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		charDesc.borderSize = 1.2;
 		
-		pane.add(charHint = new FlxText(970, 470, 270, 'this is a test'));
+		pane.add(charHint = new FlxText(bg.x + 952, 470, 270, 'this is a test'));
 		charHint.setFormat(Paths.font('liber.ttf'), 20, 0xff333333, CENTER);
 		
 		add(pane);

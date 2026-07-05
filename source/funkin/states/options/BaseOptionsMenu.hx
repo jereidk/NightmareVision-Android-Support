@@ -34,7 +34,15 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public var rpcTitle:String;
 	public var titleObject:FlxText;
 	
-	var panelX:Float = 480;
+	// Panel sits at x=480 with a 676px-wide underlay, ending at 1156 — a
+	// deliberately asymmetric layout (480 left margin, 124 right margin) on
+	// the 1280 base canvas, distinct from OptionsState's now-stretched
+	// background (see OptionsState.hx's "thingy"). Shifting by the FULL
+	// 'expand'-mode cutout (not half, unlike the centered cases such as
+	// CosmicubeSelectState's cards) keeps that same 124px right margin
+	// exactly, instead of leaving a growing dead gap between this panel and
+	// the now-wider background behind it.
+	var panelX:Float = 480 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 	var optionStartY:Float = 155;
 	var optionSpacing:Float = 30;
 	
@@ -112,7 +120,10 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		titleObject.antialiasing = ClientPrefs.globalAntialiasing;
 		add(titleObject);
 		
-		descText = new FlxText(468, 580, 710, 'hello');
+		// Aligned with panelX (12px left of it, same as the original 480/468
+		// relationship) — needs the same cutout shift or it drifts out from
+		// under the rest of the panel content.
+		descText = new FlxText(468 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x, 580, 710, 'hello');
 		descText.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descText.offset.y = Math.round((descText.height - descText.size) * .5);
 		descText.scrollFactor.set();
