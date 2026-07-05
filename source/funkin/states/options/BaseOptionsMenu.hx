@@ -144,7 +144,10 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			
 			if (optionsArray[i].type == 'bool')
 			{
-				var checkbox:CheckboxThingie = new CheckboxThingie(1118, optionY, optionsArray[i].getValue() == true);
+				// Hardcoded x=1118 = panelX(480) + 638 — missed when panelX
+				// itself was fixed to shift with the cutout. Anchored to
+				// panelX like optionText/valueText already are.
+				var checkbox:CheckboxThingie = new CheckboxThingie(panelX + 638, optionY, optionsArray[i].getValue() == true);
 				checkbox.sprTracker = optionText;
 				checkbox.ID = i;
 				checkboxGroup.add(checkbox);

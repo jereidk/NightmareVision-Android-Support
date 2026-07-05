@@ -535,7 +535,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.visible = false;
 		randomLabel.active = false;
 		gridItemLabel.visible = true;
-		menuBackButton.x = 850;
+		// menuBackButton is hardcoded to align with skinThingBg's default-canvas
+		// position, but skinThingBg.x = (FlxG.width-width)*.5 recenters
+		// dynamically — same half-cutout shift as any element following a
+		// centered sibling (see DialogueBox.hx for the same trick).
+		menuBackButton.x = 850 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		menuBackButton.y = 60;
 		titleText.text = catName;
 		titleText.x = Math.round((FlxG.width - titleText.width) * 0.5);
@@ -565,10 +569,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.active = true;
 		gridItemLabel.visible = false;
 		gridScrollBar.visible = false;
-		menuBackButton.x = 950;
+		// Both hardcoded to align with selectSprite's default-canvas position
+		// (selectSprite.x = (FlxG.width-750)*.5) — same half-cutout shift.
+		menuBackButton.x = 950 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		menuBackButton.y = 90;
 		titleText.text = Lang.str('locker', 'LOCKER');
-		titleText.x = 280;
+		titleText.x = 280 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		titleText.y = 88;
 		
 		setCategoryStuffVisible(true);
