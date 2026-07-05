@@ -281,7 +281,11 @@ function onFirstEventPush(event:EventNote) // I had to add this callback to all 
 	switch (event.event)
 	{
 		case 'Reactor Beep':
-			flashSprite = new FlxSprite(0, 0).makeScaledGraphic(1280, 720, 0xFFb30000);
+			// Was hardcoded to the 1280x720 base canvas — on a wide 'expand'-
+			// mode screen the flash only covered the original design area,
+			// leaving the extra revealed width on the sides untouched during
+			// the fade. Use the live screen size instead.
+			flashSprite = new FlxSprite(0, 0).makeScaledGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xFFb30000);
 			flashSprite.alpha = 0.001;
 			
 			if (ClientPrefs.photosensitive)
