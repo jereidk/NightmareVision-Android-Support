@@ -140,6 +140,16 @@ class OptionsState extends MusicBeatState
 			
 			var thingy:FlxSprite = new FlxSprite(50, 30).loadGraphic(Paths.image(ext + 'thingy'));
 			thingy.antialiasing = ClientPrefs.globalAntialiasing;
+			// Panel background is a fixed-width image sized for the 1280 base
+			// canvas — on a wide 'expand'-mode screen (extra width only ever
+			// opens up to the right, see FunkinRatioScaleMode.gameCutoutSize)
+			// it left the whole right side of the screen as bare black instead
+			// of covering it, same issue as MainMenuState's vignette/glow.
+			if (FlxG.width - 50 > thingy.width)
+			{
+				thingy.setGraphicSize(Std.int(FlxG.width - 50), Std.int(thingy.height));
+				thingy.updateHitbox();
+			}
 			add(thingy);
 			
 			var optionsHeaderY:Float = 30 + (ClientPrefs.language == 'arabic' ? -20 : 0);
@@ -149,7 +159,9 @@ class OptionsState extends MusicBeatState
 			optionsHeader.antialiasing = ClientPrefs.globalAntialiasing;
 			add(optionsHeader);
 			
-			menuBackButton = new FlxSprite(1100, 30).loadGraphic(Paths.image('menu/common/menuBack'));
+			// Close button hugs the panel's right edge — shift it along with the
+			// panel stretch above so it doesn't end up stranded mid-screen.
+			menuBackButton = new FlxSprite(1100 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x, 30).loadGraphic(Paths.image('menu/common/menuBack'));
 			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 			add(menuBackButton);
 			

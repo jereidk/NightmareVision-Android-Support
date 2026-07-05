@@ -103,7 +103,14 @@ class MainMenuState extends MusicBeatState
 
 		buildPanel();
 
-		var redTargetX:Float = 630;
+		// Designed for the 1280-wide base canvas, hanging off the right edge.
+		// 'expand' mode's extra width (see FunkinRatioScaleMode.gameCutoutSize)
+		// only ever opens up to the right of that design (origin stays at 0,0),
+		// so without this offset red stays pinned at its base-resolution X while
+		// the screen grows around it, sliding it from "off the right edge" to
+		// "in the middle". greenMenu sits off-screen to the LEFT, where expand
+		// never reveals extra space, so it needs no such adjustment.
+		var redTargetX:Float = 630 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 		var greenTargetX:Float = -225;
 
 		redMenu = new FlxSprite(redTargetX, 70);
