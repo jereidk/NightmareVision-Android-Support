@@ -129,7 +129,8 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_PADDING:Float = 32; // spacing between circle icons
+	var CIRCLE_HEIGHT:Float = 24; // icon size — keep these small, they're a row of month markers, not a focal element
+	var CIRCLE_PADDING:Float = 12; // spacing between circle icons — tight, they should read as one connected row
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
 	var circlesMinY:Float = 0;
@@ -869,27 +870,19 @@ class FreeplayState extends AmongUIState
 			Mods.currentModDirectory = weeks[i].mod;
 
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
-			circ.setGraphicSize(-1, 34);
+			circ.setGraphicSize(-1, CIRCLE_HEIGHT);
 			circ.updateHitbox();
 
-			// Spread icons evenly across the full 1110px band instead of a fixed
-			// width+padding pitch. The debug log confirmed the old formula was
-			// self-consistent (34px icons, exact width+padding gaps) but for
-			// realistic week counts it never got anywhere near the 1110 cap —
-			// 9 weeks only used 528px, bunching everything into the middle of
-			// the screen instead of spanning it, which read as "big and
-			// crowded" even though nothing actually overlapped. Falls back to
-			// the fixed minimum pitch only once there are enough weeks that
-			// spreading evenly would pack them tighter than width+padding.
-			final evenPitch:Float = (tempweeks > 1) ? (1110 / (tempweeks - 1)) : 0;
-			final minPitch:Float = circ.width + CIRCLE_PADDING;
-			final pitch:Float = Math.max(evenPitch, minPitch);
+			// Small icons packed tight against each other (width+padding pitch) —
+			// they're a row of month markers, not something meant to span the
+			// screen. A previous pass here stretched this into an even spread
+			// across a fixed 1110px band regardless of week count, which made
+			// them huge and disconnected from the rest of the freeplay UI.
+			final pitch:Float = circ.width + CIRCLE_PADDING;
 			final span:Float = (tempweeks - 1) * pitch;
 
 			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, span) - circ.width * .5);
 			circ.ID = i;
-
-			funkin.backend.Logger.log('[FreeplayCircleDebug] i=$i w=$w circ.width=${circ.width} circ.x=${circ.x} pitch=$pitch span=$span tempweeks=$tempweeks FlxG.width=${FlxG.width}');
 
 			circles.add(circ);
 		}
