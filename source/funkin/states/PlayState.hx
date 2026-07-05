@@ -1217,21 +1217,31 @@ class PlayState extends MusicBeatState
 			underlays.add(strums.underlay);
 			
 			strums.onNoteHit.add((note, field) -> {
+				#if android SystemMonitor.profBegin('hitFocus'); #end
 				setFocusPlayerFromNote(note);
+				#if android SystemMonitor.profEnd(); #end
 
 				if (field.ID == 1) camZooming = true;
 
+				#if android SystemMonitor.profBegin('hitAudioSfx'); #end
 				if (field.playerControls || (!audio.splitVocals && !audio.trackSwap)) audio.hit();
+				#if android SystemMonitor.profEnd(); #end
 
 				if (field.playerControls && field.showRatings && !note.isSustainNote)
 				{
 					combo++;
+					#if android SystemMonitor.profBegin('hitPopUp'); #end
 					popUpScore(note);
+					#if android SystemMonitor.profEnd(); #end
 				}
 
 				#if android
 				if (field.playerControls && !note.isSustainNote && !cpuControlled && ClientPrefs.hapticFeedback)
+				{
+					SystemMonitor.profBegin('hitVibrate');
 					mobile.backend.AndroidUtils.vibrate(12);
+					SystemMonitor.profEnd();
+				}
 				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
@@ -3312,13 +3322,14 @@ class PlayState extends MusicBeatState
 	function popUpScore(note:Note = null):Void
 	{
 		if (note.hitCausesMiss || note.canMiss) return;
-		
+
 		audio.playerVolume = 1 * volumeMult;
-		
+
 		final rating:Rating = note.ratingData;
-		
+
 		var field:PlayField = note.playField;
-		
+
+		#if android SystemMonitor.profBegin('popUpRating'); #end
 		if (!practiceMode && !cpuControlled && !(field?.autoPlayed ?? false))
 		{
 			if (defaultScoreAddition) songScore += rating.score;
@@ -3331,11 +3342,23 @@ class PlayState extends MusicBeatState
 				rating.increase();
 			}
 		}
-		
+		#if android SystemMonitor.profEnd(); #end
+
 		_scriptRatingArgs[0] = note; _scriptRatingArgs[1] = rating;
+
+		// Split so we can see which of these three is actually slow — onPopUpScorePost
+		// in particular runs interpreted hscript (utils.hx defines it) on every hit.
+		#if android SystemMonitor.profBegin('popUpScriptPre'); #end
 		scripts.call('onPopUpScore', _scriptRatingArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('popUpHud'); #end
 		callHUDFunc(hud -> hud.popUpScore(rating.image, combo)); // only pushing the image bc is anyone ever gonna need anything else???
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('popUpScriptPost'); #end
 		scripts.call('onPopUpScorePost', _scriptRatingArgs);
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	public inline function getSongTime():Float
