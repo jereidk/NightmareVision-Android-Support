@@ -252,7 +252,11 @@ public class AndroidUtils extends Extension {
                     // app — this silently failed on every real device every time.
                     android.net.Uri docUri = android.provider.DocumentsContract.buildDocumentUri(
                         "com.motorfrog.impostor.documents", canonicalPath);
-                    android.content.Intent intent = new android.content.Intent(android.provider.DocumentsContract.ACTION_BROWSE);
+                    // DocumentsContract.ACTION_BROWSE ("android.provider.action.BROWSE") is
+                    // @hide in AOSP — it's a real, stable platform action used by the system
+                    // Files app, but it's never exposed as a public field in the SDK stub
+                    // jar, so it has to be referenced by its literal string instead.
+                    android.content.Intent intent = new android.content.Intent("android.provider.action.BROWSE");
                     intent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
                     intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
                     intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
