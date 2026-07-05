@@ -2336,7 +2336,15 @@ class PlayState extends MusicBeatState
 		scripts.call('onUpdate', _scriptUpdateArgs);
 		#if android SystemMonitor.profEnd(); #end
 
+		// super.update() ticks every member of this state (characters, notes,
+		// receptors, HUD, particles) via their own FlxBasic.update() — none of
+		// the phases profiled above cover this, and it's the single biggest
+		// unaccounted chunk in every sample so far (profiled phases summed to
+		// a small fraction of the real per-second frame budget).
+		#if android SystemMonitor.profBegin('superUpdate'); #end
 		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+
 		#if android SystemMonitor.profBegin('inputUpdate'); #end
 		input.update();
 		#if android SystemMonitor.profEnd(); #end
@@ -3345,9 +3353,11 @@ class PlayState extends MusicBeatState
 	function onInputPress(event:InputEvent):Void
 	{
 		if (cpuControlled || paused || !startedCountdown) return;
-		
+
+		#if android SystemMonitor.profBegin('hitProcess'); #end
+
 		final key:Int = event.noteData;
-		
+
 		var prevTime:Float = getSongTime();
 		Conductor.songPosition -= (lime.system.System.getTimer() - event.timer);
 		
@@ -3375,8 +3385,10 @@ class PlayState extends MusicBeatState
 				
 				if (topNote != null)
 				{
+					#if android SystemMonitor.profBegin('noteHitDispatch'); #end
 					field.onNoteHit.dispatch(topNote, field);
-					
+					#if android SystemMonitor.profEnd(); #end
+
 					ghostTapped = false;
 				}
 				else if (field.playAnims)
@@ -3415,8 +3427,12 @@ class PlayState extends MusicBeatState
 		Conductor.songPosition = prevTime;
 
 		_scriptKeyArgs[0] = key;
+		#if android SystemMonitor.profBegin('inputScripts'); #end
 		scripts.call('onKeyPress', _scriptKeyArgs);
 		scripts.call('onInputPress', _scriptKeyArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profEnd(); #end
 	}
 
 	function onInputRelease(event:InputEvent):Void
@@ -3424,6 +3440,8 @@ class PlayState extends MusicBeatState
 		final key:Int = event.noteData;
 
 		if (!startedCountdown || paused) return;
+
+		#if android SystemMonitor.profBegin('releaseProcess'); #end
 
 		for (field in playFields.members)
 		{
@@ -3435,7 +3453,7 @@ class PlayState extends MusicBeatState
 					spr.playAnim('static');
 					spr.resetAnim = 0;
 				}
-				
+
 				for (splash in field.grpSusSplashes)
 				{
 					if (splash.alive && splash.noteData == key && !splash.completed) splash.kill();
@@ -3445,6 +3463,8 @@ class PlayState extends MusicBeatState
 		_scriptKeyArgs[0] = key;
 		scripts.call('onKeyRelease', _scriptKeyArgs);
 		scripts.call('onInputRelease', _scriptKeyArgs);
+
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	public function setFocusPlayerFromNote(note:Note)
