@@ -6,6 +6,7 @@ import flixel.FlxG;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import funkin.objects.note.Note;
 import mobile.backend.flixel.input.FlxMobileInputID;
+import mobile.backend.flixel.input.RawTouchClock;
 
 /**
  * Tap-notes input: the player taps directly on falling note sprites to hit them.
@@ -13,8 +14,8 @@ import mobile.backend.flixel.input.FlxMobileInputID;
  * as that lane's input.
  *
  * Implements the same duck-type interface as TouchInputManager
- * (isAnyPressed / isAnyJustPressed / isAnyJustReleased) so Controls.gameplayRequest
- * works without any changes to the getter chain.
+ * (isAnyPressed / isAnyJustPressed / isAnyJustReleased / getPressTimestampMs) so
+ * Controls.gameplayRequest works without any changes to the getter chain.
  */
 class NoteTapInput extends FlxBasic
 {
@@ -40,6 +41,7 @@ class NoteTapInput extends FlxBasic
 	{
 		super();
 		this.notes = notes;
+		RawTouchClock.init();
 	}
 
 	override public function update(elapsed:Float):Void
@@ -68,7 +70,11 @@ class NoteTapInput extends FlxBasic
 					_heldTouches.set(touch.touchPointID, lane);
 					laneHeld[lane]        = true;
 					laneJustPressed[lane] = true;
-					_lanePressTimestamps[lane] = haxe.Timer.stamp() * 1000.0;
+					// Prefer the true OS touch-event timestamp (captured async at
+					// TOUCH_BEGIN) over this frame's poll time, so the songPosition
+					// correction downstream isn't a same-frame no-op.
+					final rawTs = RawTouchClock.getPressTime(touch.touchPointID);
+					_lanePressTimestamps[lane] = rawTs >= 0 ? rawTs : (haxe.Timer.stamp() * 1000.0);
 				}
 			}
 			else if (touch.justReleased)
@@ -122,6 +128,18 @@ class NoteTapInput extends FlxBasic
 			if (l >= 0 && laneJustReleased[l]) return true;
 		}
 		return false;
+	}
+
+	public function getPressTimestampMs(id:FlxMobileInputID):Float
+	{
+		final l = _laneForId(id);
+		return l >= 0 ? _lanePressTimestamps[l] : 0.0;
+	}
+
+	public function getReleaseTimestampMs(id:FlxMobileInputID):Float
+	{
+		final l = _laneForId(id);
+		return l >= 0 ? _laneReleaseTimestamps[l] : 0.0;
 	}
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────

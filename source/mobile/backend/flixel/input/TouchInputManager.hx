@@ -19,6 +19,7 @@ class TouchInputManager extends FlxTypedSpriteGroup<FlxButton>
 	public function new()
 	{
 		super();
+		RawTouchClock.init();
 		refreshMappedButtons();
 	}
 

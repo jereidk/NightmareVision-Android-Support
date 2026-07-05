@@ -831,6 +831,27 @@ class Controls extends FlxActionSet
 		return false;
 	}
 
+	/**
+	 * True OS-touch-event press timestamp (ms) for a note direction, checking
+	 * both the active hitbox and virtual pad (whichever actually fired).
+	 * Returns 0 if neither has a recorded press for this ID.
+	 */
+	public function noteTouchPressTimestampMs(id:FlxMobileInputID):Float
+	{
+		var best:Float = 0.0;
+		if (gameplayRequest != null)
+		{
+			var t:Float = gameplayRequest.getPressTimestampMs(id);
+			if (t > best) best = t;
+		}
+		if (requested != null && requested.virtualPad != null)
+		{
+			var t:Float = requested.virtualPad.getPressTimestampMs(id);
+			if (t > best) best = t;
+		}
+		return best;
+	}
+
 	@:noCompletion
 	private function get_requested():Dynamic
 	{
