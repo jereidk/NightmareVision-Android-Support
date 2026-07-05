@@ -109,19 +109,16 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.lowQuality = true;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = false;
-				#if android ClientPrefs.drsEnabled = true; #end
 			case 'Medium':
 				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = false;
 				ClientPrefs.globalAntialiasing = true;
-				#if android ClientPrefs.drsEnabled = false; #end
 			case 'High':
 				#if !android ClientPrefs.gpuCaching = true; #end
 				ClientPrefs.lowQuality = false;
 				ClientPrefs.shaders = true;
 				ClientPrefs.globalAntialiasing = true;
-				#if android ClientPrefs.drsEnabled = false; #end
 			default: // Custom — leave individual settings unchanged
 		}
 		onChangeAntiAliasing();
