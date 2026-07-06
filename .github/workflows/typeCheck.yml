@@ -60,23 +60,9 @@ jobs:
           path: .haxelib/lime
           key: lime-android-v4-${{ steps.lime-pin.outputs.commit }}-${{ runner.os }}
 
-      # A reported cache-hit doesn't guarantee the ndll is actually present
-      # (seen in practice: cache restored, lime.ndll missing, "lime setup
-      # android" fails to even load the CLI tool). Check the real file
-      # instead of trusting cache-hit alone before skipping the rebuild.
-      - name: Check Lime ndll actually present
-        id: lime-ndll-check
-        run: |
-          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ] || [ -f .haxelib/lime/git/ndll/Linux/lime.ndll ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
       # Only needed to build lime's own CLI-tool ndll (Linux64) below -
       # nothing here is Android/NDK-specific.
       - name: Install Linux system deps
-        if: steps.lime-ndll-check.outputs.present != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -112,11 +98,9 @@ jobs:
         run: haxelib dev lime .haxelib/lime/git
 
       - name: Ensure hxcpp for Lime rebuild
-        if: steps.lime-ndll-check.outputs.present != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
       - name: Wrap g++-13 to force C++23
-        if: steps.lime-ndll-check.outputs.present != 'true'
         run: |
           mkdir -p /tmp/cxx-wrap
           printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
@@ -127,8 +111,14 @@ jobs:
       # on this runner. NOT the Android runtime .so - that step (and the NDK/
       # SDL/OpenAL patches that only matter for compiling it) is intentionally
       # skipped below since nothing here invokes the NDK.
+      #
+      # Deliberately unconditional (not gated on cache-hit): a prior run showed
+      # the Lime cache can report a hit while lime.ndll is missing or unusable,
+      # which then makes "lime setup android" fail to even load the CLI tool.
+      # Rebuilding this every run costs a couple of minutes but is reliable;
+      # it's still far cheaper than the full NDK/Gradle build this job exists
+      # to avoid.
       - name: Rebuild Linux Lime ndll
-        if: steps.lime-ndll-check.outputs.present != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
