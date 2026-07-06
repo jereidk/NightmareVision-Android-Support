@@ -34,12 +34,20 @@ jobs:
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
+      - name: Read Lime pin from .hxpkg
+        id: lime-pin
+        run: |
+          LIME_LINK=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .link' .hxpkg)
+          LIME_COMMIT=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .branch' .hxpkg)
+          echo "link=$LIME_LINK" >> "$GITHUB_OUTPUT"
+          echo "commit=$LIME_COMMIT" >> "$GITHUB_OUTPUT"
+
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-fe5c45d24f28931dac0ab5b738ced106e58c06bb-${{ runner.os }}
+          key: lime-android-v4-${{ steps.lime-pin.outputs.commit }}-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -70,8 +78,8 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/jereidk/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout fe5c45d24f28931dac0ab5b738ced106e58c06bb
+          git clone ${{ steps.lime-pin.outputs.link }} .haxelib/lime/git
+          git -C .haxelib/lime/git checkout ${{ steps.lime-pin.outputs.commit }}
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
@@ -280,12 +288,20 @@ jobs:
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
+      - name: Read Lime pin from .hxpkg
+        id: lime-pin
+        run: |
+          LIME_LINK=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .link' .hxpkg)
+          LIME_COMMIT=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .branch' .hxpkg)
+          echo "link=$LIME_LINK" >> "$GITHUB_OUTPUT"
+          echo "commit=$LIME_COMMIT" >> "$GITHUB_OUTPUT"
+
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-fe5c45d24f28931dac0ab5b738ced106e58c06bb-${{ runner.os }}
+          key: lime-android-v4-${{ steps.lime-pin.outputs.commit }}-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -316,8 +332,8 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/jereidk/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout fe5c45d24f28931dac0ab5b738ced106e58c06bb
+          git clone ${{ steps.lime-pin.outputs.link }} .haxelib/lime/git
+          git -C .haxelib/lime/git checkout ${{ steps.lime-pin.outputs.commit }}
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
@@ -526,12 +542,20 @@ jobs:
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
+      - name: Read Lime pin from .hxpkg
+        id: lime-pin
+        run: |
+          LIME_LINK=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .link' .hxpkg)
+          LIME_COMMIT=$(jq -r '.[0].pkgs[] | select(.name=="lime") | .branch' .hxpkg)
+          echo "link=$LIME_LINK" >> "$GITHUB_OUTPUT"
+          echo "commit=$LIME_COMMIT" >> "$GITHUB_OUTPUT"
+
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-fe5c45d24f28931dac0ab5b738ced106e58c06bb-${{ runner.os }}
+          key: lime-android-v4-${{ steps.lime-pin.outputs.commit }}-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -562,8 +586,8 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/jereidk/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout fe5c45d24f28931dac0ab5b738ced106e58c06bb
+          git clone ${{ steps.lime-pin.outputs.link }} .haxelib/lime/git
+          git -C .haxelib/lime/git checkout ${{ steps.lime-pin.outputs.commit }}
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
