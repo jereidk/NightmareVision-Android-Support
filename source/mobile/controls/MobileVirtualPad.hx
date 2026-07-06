@@ -1,7 +1,7 @@
 package mobile.controls;
 
 import flixel.FlxG;
-import flixel.input.FlxInputState;
+import flixel.input.FlxInput.FlxInputState;
 import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.math.FlxPoint;
