@@ -34,10 +34,6 @@ class GameOverSubstate extends MusicBeatSubstate
 	 */
 	public static var deathSoundName:Null<String> = null;
 
-	// Reused for scripts.call('onUpdate'/'onUpdatePost', ...) below instead of
-	// allocating a fresh [elapsed] array every frame.
-	final _updateArgs:Array<Dynamic> = [0.0];
-	
 	/**
 	 * The music to be played in the game over.
 	 */
