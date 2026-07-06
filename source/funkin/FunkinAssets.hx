@@ -229,8 +229,11 @@ class FunkinAssets
 				Logger.log('getBitmapData: Assets.getBitmapData failed for "$path": $e', WARN);
 			}
 			#else
-			// For non-Android platforms without MODS_ALLOWED
-			bitmap = Assets.getBitmapData(path, useCache);
+			// For non-Android platforms without MODS_ALLOWED. allowCompressedTextures=false
+			// for the same reason as the android branch above: our .astc files are
+			// premultiplied at compress time, which conflicts with the assumption baked
+			// into openfl's own ASTCTexture.
+			bitmap = Assets.getBitmapData(path, useCache, false);
 			#end
 		}
 

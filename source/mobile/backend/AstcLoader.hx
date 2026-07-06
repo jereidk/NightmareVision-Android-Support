@@ -472,7 +472,11 @@ class AstcLoader
 			if (sys.FileSystem.exists(pngPath))
 				pngBitmap = BitmapData.fromFile(pngPath);
 			else if (OflAssets.exists(pngPath))
-				pngBitmap = OflAssets.getBitmapData(pngPath, false); // useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
+				// useCache=false: always decode fresh — the cached copy may have had disposeImage()
+				// called on it. allowCompressedTextures=false: this function's entire purpose is
+				// to force the PNG path, so it must never silently pick up an .astc sibling
+				// instead (which would also carry the wrong __premultiplyAlpha assumption).
+				pngBitmap = OflAssets.getBitmapData(pngPath, false, false);
 		}
 		catch (e:Dynamic) {}
 

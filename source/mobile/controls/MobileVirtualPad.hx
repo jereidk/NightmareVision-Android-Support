@@ -331,7 +331,10 @@ class MobileVirtualPad extends TouchInputManager
 
 			graphic = FunkinAssets.cache.currentTrackedGraphics.get(cacheKey);
 			if (graphic == null)
-				graphic = FunkinAssets.cache.cacheBitmap(cacheKey, Assets.getBitmapData(path));
+				// allowCompressedTextures=false: this path bypasses FunkinAssets/AstcLoader,
+				// so it must not let openfl's own ASTC auto-detection pick up a stray .astc
+				// (see FunkinAssets.getBitmapData's fallback for why that's unsafe).
+				graphic = FunkinAssets.cache.cacheBitmap(cacheKey, Assets.getBitmapData(path, true, false));
 		}
 		FunkinAssets.cache.currentTrackedGraphics.addPermanentKey(cacheKey);
 		
