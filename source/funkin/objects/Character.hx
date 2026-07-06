@@ -38,6 +38,12 @@ class Character extends Bopper implements IFlags
 	
 	public var animTimer:Float = 0;
 	public var specialAnim:Bool = false;
+
+	// Cache for the '-loop' name check in update() below: a finished non-looping animation stays
+	// "finished" every frame until something else plays, so without this the same string got
+	// reallocated (getAnimName() + '-loop') on every single frame a character sat idle on it.
+	var _loopAnimCacheKey:String;
+	var _loopAnimCacheVal:String;
 	public var holding(default, set):Bool = false;
 	public var stunned:Bool = false;
 
@@ -331,7 +337,16 @@ class Character extends Bopper implements IFlags
 			holdTimer = 0;
 		}
 		
-		if (isAnimFinished()) { final _ln = getAnimName() + '-loop'; if (hasAnim(_ln)) playAnim(_ln); }
+		if (isAnimFinished())
+		{
+			final _an = getAnimName();
+			if (_loopAnimCacheKey != _an)
+			{
+				_loopAnimCacheKey = _an;
+				_loopAnimCacheVal = _an + '-loop';
+			}
+			if (hasAnim(_loopAnimCacheVal)) playAnim(_loopAnimCacheVal);
+		}
 		
 		if (ghostsEnabled)
 		{
