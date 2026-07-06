@@ -2196,7 +2196,12 @@ class PlayState extends MusicBeatState
 			{
 				final id = playField.ID, skin = playField._skin;
 
-				playField.forEachAlive(function(strum) modchart(strum, id, skin.receptorOffsets));
+				// Plain loop instead of forEachAlive(function(strum) ...) — that
+				// allocated a fresh closure (capturing id/skin) every frame, per
+				// playField.
+				for (strum in playField.members)
+					if (strum != null && strum.exists && strum.alive)
+						modchart(strum, id, skin.receptorOffsets);
 			}
 			#if android SystemMonitor.profEnd(); #end
 		}
@@ -2328,9 +2333,16 @@ class PlayState extends MusicBeatState
 			{
 				final id = playField.ID, skin = playField._skin;
 
-				playField.grpSusSplashes.forEachAlive(function(splash) modchart(splash, id, skin.sustainSplashOffsets));
+				// Plain loops instead of forEachAlive(function(splash) ...) — same
+				// per-frame closure-allocation reasoning as the receptor loop above.
+				for (splash in playField.grpSusSplashes.members)
+					if (splash != null && splash.exists && splash.alive)
+						modchart(splash, id, skin.sustainSplashOffsets);
 
-				if (playField.trackNoteSplashes) playField.grpNoteSplashes.forEachAlive(function(splash) modchart(splash, id, skin.splashOffsets));
+				if (playField.trackNoteSplashes)
+					for (splash in playField.grpNoteSplashes.members)
+						if (splash != null && splash.exists && splash.alive)
+							modchart(splash, id, skin.splashOffsets);
 			}
 			#if android SystemMonitor.profEnd(); #end
 		}
