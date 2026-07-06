@@ -216,7 +216,12 @@ class FunkinAssets
 			try
 			{
 				if (Assets.exists(path, IMAGE)) {
-					bitmap = Assets.getBitmapData(path, useCache);
+					// AstcLoader above is the sole authority on ASTC loading (it matches
+					// this project's -pp-premultiply convert_astc.py convention); disable
+					// openfl's own independent ASTC auto-detection here so it can't load
+					// the same .astc through a different path with the wrong premultiply
+					// assumption baked into its ASTCTexture.
+					bitmap = Assets.getBitmapData(path, useCache, false);
 				}
 			}
 			catch (e:Dynamic)
