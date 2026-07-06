@@ -137,7 +137,7 @@ class FunkinAssets
 	 *
 	 * Will return null in the case it cannot be found.
 	 */
-	public static function getBitmapData(path:String, useCache:Bool = true):Null<BitmapData>
+	public static function getBitmapData(path:String, useCache:Bool = true, skipAstc:Bool = false):Null<BitmapData>
 	{
 		// Validate path
 		if (path == null || path.length == 0)
@@ -149,15 +149,23 @@ class FunkinAssets
 		// On Android, try loading a GPU-compressed ASTC override first.
 		// Checks external storage then bundled APK assets. Falls through to PNG
 		// if ASTC is unsupported, no .astc mirror exists, or loading fails.
+		//
+		// skipAstc forces the PNG-only path below instead — needed by anything
+		// that reads pixel data back off the result (ASTC textures load
+		// straight to the GPU via BitmapData.fromTexture(), which has no CPU
+		// pixels at all; see AstcLoader's own doc comment).
 		#if (android && cpp)
-		try
+		if (!skipAstc)
 		{
-			var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
-			if (astcBitmap != null) return astcBitmap;
-		}
-		catch (e:Dynamic)
-		{
-			Logger.log('getBitmapData: ASTC load failed for "$path": $e', WARN);
+			try
+			{
+				var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
+				if (astcBitmap != null) return astcBitmap;
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('getBitmapData: ASTC load failed for "$path": $e', WARN);
+			}
 		}
 		#end
 

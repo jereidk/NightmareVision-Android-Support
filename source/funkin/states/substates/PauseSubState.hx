@@ -75,11 +75,20 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		pauseBG.alpha = 0;
 		pauseGroup.add(pauseBG);
 		
-		var glow:FlxSprite = new FlxSprite(500, -12.65).loadGraphic(Paths.image('menu/freeplay/backGlow'));
+		// glow/portrait are anchored toward the right side of the 1280 base
+		// canvas (same backGlow/portrait pair and same magic numbers as
+		// FreeplayState) — shift both by the full revealed width in 'expand'
+		// mode so they keep hugging the right edge instead of drifting toward
+		// the center as the canvas widens.
+		final portraitShiftX:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x
+			: 0;
+
+		var glow:FlxSprite = new FlxSprite(500 + portraitShiftX, -12.65).loadGraphic(Paths.image('menu/freeplay/backGlow'));
 		glow.flipX = false;
 		glow.color = PlayState.instance.dad.healthColorArray != null ? PlayState.instance.dad.healthColour : FlxColor.WHITE;
 		pauseGroup.add(glow);
-		
+
 		var dwp:String = getDadPortrait();
 		var p:String = portraitExists(dwp) ? dwp : 'placeholder';
 		var portrait:FlxSprite = new FlxSprite(0, -125).loadGraphic(Paths.image('menu/freeplay/portraits/' + p));
@@ -87,8 +96,8 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		portrait.offset.y += (portrait.frameHeight - 1097) * 0.5 * portrait.scale.y;
 		portrait.x = FlxG.width;
 		pauseGroup.add(portrait);
-		
-		FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.circOut});
+
+		FlxTween.tween(portrait, {x: 304.65 + portraitShiftX}, 0.3, {ease: FlxEase.circOut});
 		
 		var pad:Int = 15;
 		
@@ -256,7 +265,13 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 				}
 			}
 			
-			item.x = FlxMath.lerp(item.x, curSelect == item.ID ? 75 : 55, FlxMath.bound(elapsed * 15.6, 0, 1));
+			// Menu options hug the left edge by design — in 'expand' mode nudge
+			// them toward center by a fraction of the revealed width, same
+			// treatment (and same factor) as FreeplayState's card row.
+			final menuCenterShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.25
+				: 0;
+			item.x = FlxMath.lerp(item.x, (curSelect == item.ID ? 75 : 55) + menuCenterShift, FlxMath.bound(elapsed * 15.6, 0, 1));
 			item.alpha = FlxMath.lerp(item.alpha, curSelect == item.ID ? 1 : 0.3, FlxMath.bound(elapsed * 15.6, 0, 1)) * pauseGroup.alpha;
 		}
 	}

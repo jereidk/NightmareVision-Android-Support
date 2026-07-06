@@ -410,7 +410,10 @@ public function readDialogue()
 	}
 	
 	icon = new HealthIcon('red', false);
-	icon.setPosition(rightLeft ? 920 : 220, (bubble.getMidpoint().y - 75));
+	// Speaker face icon — same half-cutout shift as port0/port2/textX above,
+	// it never had one so it drifted away from the box (which does shift,
+	// via box.screenCenter()) on wide 'expand'-mode screens.
+	icon.setPosition((rightLeft ? 920 : 220) + FunkinRatioScaleMode.gameCutoutSize.x * 0.5, (bubble.getMidpoint().y - 75));
 	icon.setGraphicSize(Std.int(icon.width * 0.7));
 	icon.updateHitbox();
 	boxGroup.add(icon);

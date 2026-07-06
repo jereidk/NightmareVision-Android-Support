@@ -733,10 +733,15 @@ class PlayState extends MusicBeatState
 		if (stage.runScript(scripts))
 		{
 			scripts.addScript(stage.script);
-			
+
 			Logger.log('script: ' + stage.script.name + ' intialized');
 		}
-		
+
+		// Stage's own background layers all exist by now (added during
+		// buildStage()/the script's onLoad() above) — safe to sample one for
+		// the 'expand'-mode edge-of-camera fill color. No-op outside 'expand'.
+		stage.fillExpandModeBackdrop(camGame);
+
 		if (isPixelStage) introSoundsSuffix = '-pixel';
 		
 		if (!ScriptConstants.stopping(scripts.call("onAddSpriteGroups")))
