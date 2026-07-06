@@ -477,7 +477,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	 */
 	function _resolveRowTap(mx:Float, my:Float):Void
 	{
-		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
+		// Must match _updateRows()'s topIndex exactly (the stable target, not
+		// the smoothed visual) — this is a hit-test against whatever rows are
+		// actually populated right now, not wherever the scroll animation
+		// visually happens to be mid-transition.
+		final topIndex = Std.int(_scrollOffset / OPT_H);
 		for (i in 0...MAX_OPT)
 		{
 			final optIndex = topIndex + i;
@@ -758,19 +762,24 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _updateRows():Void
 	{
-		// Calculate which option index is at the top of the visible area (use visual for smooth scroll)
-		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
+		// Which option index is at the top of the visible window — deliberately
+		// the STABLE target (_scrollOffset), not the smoothed _scrollOffsetVisual.
+		// _scrollOffsetVisual only ever asymptotically approaches its target
+		// (FlxMath.lerp never exactly reaches it), so truncating it via Std.int()
+		// could sit one row short of the real target for a while after every
+		// scroll — and since the rows below map option data onto slots using
+		// this same topIndex, that meant the option actually at the bottom of
+		// the list (typically whatever _sel just moved to, e.g. scrolling down
+		// to the last item) could fail to appear in any slot at all until the
+		// lerp fully caught up. Content has to be correct immediately; only the
+		// highlight/scrollbar sliding needs to be smooth, not this.
+		final topIndex = Std.int(_scrollOffset / OPT_H);
 
-		// Position highlight smoothly (accounting for scroll). Used to also
-		// require _rowHi[i].visible before moving it — but that flag is only
-		// ever updated by the second loop below, i.e. it still holds LAST
-		// frame's value here. Whenever scrolling changed which row index the
-		// selected option maps to, the new slot's stale (false) visibility
-		// blocked the position update for a frame, and continuous scrolling
-		// kept re-triggering that same gap — reading as the highlight
-		// permanently trailing behind the selection. visualIndex == _sel is
-		// already the correct, current-frame check on its own.
-		final highlightY = OPT_Y0 + (_selVisual - topIndex) * OPT_H - 2;
+		// Highlight position is fully continuous (no topIndex/rounding in the
+		// formula at all), so it still slides smoothly between rows even
+		// though which slot it's assigned to (via visualIndex below) now
+		// jumps immediately along with the content.
+		final highlightY = OPT_Y0 + _selVisual * OPT_H - _scrollOffsetVisual - 2;
 		for (i in 0...MAX_OPT)
 		{
 			final visualIndex = topIndex + i;
