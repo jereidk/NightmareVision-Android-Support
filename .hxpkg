@@ -4,8 +4,8 @@
         "pkgs": [
             {
                 "name": "flixel",
-                "link": "https://github.com/FunkinCrew/flixel",
-                "branch": "622bb65e7f49f0e1a03826b6593369d3ad5e54fa"
+                "link": "https://github.com/jereidk/flixel",
+                "branch": "a05db74b890a711d877384b4bb87b54fa519a4c6"
             },
             {
                 "name": "flixel-addons",
@@ -45,13 +45,13 @@
             },
             {
                 "name": "lime",
-                "link": "https://github.com/FunkinCrew/lime",
-                "branch": "6421de16b9dfa4fb55c19f12db65d392a57585c8"
+                "link": "https://github.com/jereidk/lime",
+                "branch": "14bc4e233726fd3b3686e1a8fd977615c82b3c1e"
             },
             {
                 "name": "openfl",
-                "link": "https://github.com/FunkinCrew/openfl",
-                "branch": "a85b45f21c7e1a4c19663a193bf4ea961faf0dfa"
+                "link": "https://github.com/jereidk/openfl",
+                "branch": "4499eed6fa4024f716c731995802526b45c42778"
             },
             {
                 "name": "hxdiscord_rpc",
