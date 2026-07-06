@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+          key: lime-android-v3-14bc4e233726fd3b3686e1a8fd977615c82b3c1e-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -63,15 +63,15 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git clone https://github.com/jereidk/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 14bc4e233726fd3b3686e1a8fd977615c82b3c1e
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
@@ -285,7 +285,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+          key: lime-android-v3-14bc4e233726fd3b3686e1a8fd977615c82b3c1e-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -309,15 +309,15 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git clone https://github.com/jereidk/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 14bc4e233726fd3b3686e1a8fd977615c82b3c1e
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
@@ -531,7 +531,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v2-6421de16b9dfa4fb55c19f12db65d392a57585c8-${{ runner.os }}
+          key: lime-android-v3-14bc4e233726fd3b3686e1a8fd977615c82b3c1e-${{ runner.os }}
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -555,15 +555,15 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           rm -rf .haxelib/lime
-          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git clone https://github.com/jereidk/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 14bc4e233726fd3b3686e1a8fd977615c82b3c1e
           git -C .haxelib/lime/git submodule update --init --recursive --force
 
       - name: Register Lime dev lib
