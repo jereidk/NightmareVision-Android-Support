@@ -139,19 +139,26 @@ class ABotVis extends FlxTypedSpriteGroup<FlxSprite>
 		}
 	}
 	
+	// drawFFT() runs every draw() call and falls back to this whenever no analyzer is attached;
+	// the values are always the same (all zero), so build it once instead of every frame.
+	static var _defaultLevels:Array<Bar>;
+
 	/**
 	 * Explicitly define the default levels to draw when the analyzer is not available.
 	 * @return Array<Bar>
 	 */
 	static function getDefaultLevels():Array<Bar>
 	{
-		var result:Array<Bar> = [];
-		
-		for (i in 0...BAR_COUNT)
+		if (_defaultLevels == null)
 		{
-			result.push({value: 0, peak: 0.0});
+			_defaultLevels = [];
+
+			for (i in 0...BAR_COUNT)
+			{
+				_defaultLevels.push({value: 0, peak: 0.0});
+			}
 		}
-		
-		return result;
+
+		return _defaultLevels;
 	}
 }
