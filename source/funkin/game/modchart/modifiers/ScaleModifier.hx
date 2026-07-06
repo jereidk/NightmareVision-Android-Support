@@ -16,10 +16,10 @@ class ScaleModifier extends NoteModifier
 	inline function getScale(prefix:String, sprite:Dynamic, scale:FlxPoint, data:Int, player:Int):FlxPoint
 	{
 		final isSus:Bool = ((sprite is Note) && sprite.isSustainNote && !sprite.isSustainEnd);
-		
-		final squish = lerp(1, 2, getSubmodValue("squish", player) + getSubmodValue('squish${data}', player));
-		final stretch = lerp(1, .5, getSubmodValue("stretch", player) + getSubmodValue('stretch${data}', player));
-		
+
+		final squish = lerp(1, 2, getSubmodValue("squish", player) + getSubmodValue(catKey('squish', data), player));
+		final stretch = lerp(1, .5, getSubmodValue("stretch", player) + getSubmodValue(catKey('stretch', data), player));
+
 		if (isSus)
 		{
 			scale.y = sprite.baseScale.y;
@@ -28,36 +28,37 @@ class ScaleModifier extends NoteModifier
 		{
 			scale.y *= (1 - getValue(player));
 			scale.y *= (1 - getSubmodValue('miniY', player));
-			scale.y *= (1 - getSubmodValue('mini${data}Y', player));
-			scale.y *= (1 - getSubmodValue('$prefix${data}ScaleY', player));
-			
+			scale.y *= (1 - getSubmodValue(catKey('mini', data, 'Y'), player));
+			scale.y *= (1 - getSubmodValue(catKey(prefix, data, 'ScaleY'), player));
+
 			scale.y /= squish;
 			scale.y /= stretch;
 		}
-		
+
 		scale.x *= (1 - getValue(player));
 		scale.x *= (1 - getSubmodValue('miniX', player));
-		scale.x *= (1 - getSubmodValue('mini${data}X', player));
-		scale.x *= (1 - getSubmodValue('$prefix${data}ScaleX', player));
-		
+		scale.x *= (1 - getSubmodValue(catKey('mini', data, 'X'), player));
+		scale.x *= (1 - getSubmodValue(catKey(prefix, data, 'ScaleX'), player));
+
 		scale.x *= squish;
 		scale.x *= stretch;
-		
+
 		return scale;
 	}
-	
+
 	function getObjectScale(obj:IModNote, prefix:String, player:Int):FlxPoint
 	{
-		if (getSubmodValue('${prefix}ScaleX', player) > 0 || getSubmodValue('${prefix}ScaleY', player) > 0)
+		var scaleX = getSubmodValue(catKey2(prefix, 'ScaleX'), player);
+		var scaleY = getSubmodValue(catKey2(prefix, 'ScaleY'), player);
+
+		if (scaleX > 0 || scaleY > 0)
 		{
-			var scaleX = getSubmodValue('${prefix}ScaleX', player);
-			var scaleY = getSubmodValue('${prefix}ScaleY', player);
 			if (scaleX == 0) scaleX = obj.baseScale.x;
 			if (scaleY == 0) scaleY = obj.baseScale.y;
-			
+
 			return getScale(prefix, obj, FlxPoint.weak(scaleX, scaleY), obj.noteData, player);
 		}
-		
+
 		return getScale(prefix, obj, FlxPoint.weak(obj.baseScale.x, obj.baseScale.y), obj.noteData, player);
 	}
 	
