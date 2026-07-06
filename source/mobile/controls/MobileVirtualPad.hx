@@ -396,7 +396,18 @@ class MobileVirtualPad extends TouchInputManager
 		}
 
 		// Normal behavior for non-gameplay pads or when Virtual Pad navigation is enabled
-		if (FlxG.touches.justStarted().length > 0)
+		// (FlxG.touches.justStarted() would allocate a fresh Array every frame just to check
+		// its length and immediately discard it - scan the existing touch list instead)
+		var anyTouchJustStarted = false;
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.justPressed)
+			{
+				anyTouchJustStarted = true;
+				break;
+			}
+		}
+		if (anyTouchJustStarted)
 		{
 			if (!this.visible)
 			{
