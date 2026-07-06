@@ -110,6 +110,18 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _scrollOffset:Float = 0.0; // Target scroll offset
 	var _scrollOffsetVisual:Float = 0.0; // Smoothly follows _scrollOffset
 
+	// Drag-to-scroll: this list never supported a swipe/drag gesture at all —
+	// the only way to reach an option past the bottom edge on a touch device
+	// was to keep tapping the last visible row one step at a time. Resolve
+	// tap vs. scroll on release: if the finger moved past DRAG_THRESHOLD_Y
+	// before lifting, it was a scroll, not a tap on whatever row is now
+	// under the finger.
+	static inline final DRAG_THRESHOLD_Y:Float = 12;
+	var _touchDragging:Bool = false;
+	var _touchIsScroll:Bool = false;
+	var _touchStartY:Float = 0;
+	var _touchStartScrollOffset:Float = 0;
+
 	var _demoTimer:Float = 0.0;
 	var _demoIdx:Int = 0;
 	var _touchingZone:Bool = false;
@@ -291,9 +303,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			}
 		}
 
-		// Smooth selection animation
+		// Smooth selection animation. While actively drag-scrolling, snap
+		// straight to the target instead of lerping — the list has to track
+		// the finger 1:1 or a drag reads as unresponsive; the lerp is only
+		// for keyboard/gamepad-driven jumps (and settling once the drag ends).
 		_selVisual = FlxMath.lerp(_selVisual, _sel, elapsed * 8);
-		_scrollOffsetVisual = FlxMath.lerp(_scrollOffsetVisual, _scrollOffset, elapsed * 10);
+		if (_touchIsScroll)
+			_scrollOffsetVisual = _scrollOffset;
+		else
+			_scrollOffsetVisual = FlxMath.lerp(_scrollOffsetVisual, _scrollOffset, elapsed * 10);
 
 		_updatePreview(elapsed);
 
@@ -381,6 +399,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	#if mobile
 	function _handleTouch():Void
 	{
+		// Dragging takes priority over — and can cancel — a pending tap, so it
+		// has to be tracked every frame, not just on justPressed.
+		_updateTouchDrag();
+
 		if (!FlxG.mouse.justPressed) return;
 
 		final mx = FlxG.mouse.x;
@@ -409,9 +431,52 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Option rows — Virtual Pad navigates via controls.*, not raw touch.
 		if (ClientPrefs.navInputMode == 'Virtual Pad') return;
 
-		// Use the full row as a touch target.
-		// Left half of the row → ◄ (change left); right half → ► (change right).
-		// Bool options toggle on any tap. The ◄ ► sprites are visual only.
+		final withinList = (mx >= OPT_X && mx <= OPT_X + OPT_W && my >= OPT_Y0 && my < OPT_Y0 + MAX_OPT * OPT_H);
+		if (withinList && _opts.length > MAX_OPT)
+		{
+			// Might be the start of a scroll drag — the tap itself (row
+			// select / value change) is resolved on release, once we know
+			// whether the finger actually moved past the drag threshold.
+			_touchDragging = true;
+			_touchIsScroll = false;
+			_touchStartY = my;
+			_touchStartScrollOffset = _scrollOffset;
+			return;
+		}
+
+		_resolveRowTap(mx, my);
+	}
+
+	/** Continues an in-progress drag, and resolves a pending tap on release. */
+	function _updateTouchDrag():Void
+	{
+		if (!_touchDragging) return;
+
+		if (FlxG.mouse.pressed)
+		{
+			final dy = FlxG.mouse.y - _touchStartY;
+			if (!_touchIsScroll && Math.abs(dy) > DRAG_THRESHOLD_Y) _touchIsScroll = true;
+
+			if (_touchIsScroll)
+			{
+				final maxScroll:Float = (_opts.length - MAX_OPT) * OPT_H;
+				_scrollOffset = FlxMath.bound(_touchStartScrollOffset - dy, 0, maxScroll);
+			}
+			return;
+		}
+
+		// Released.
+		_touchDragging = false;
+		if (!_touchIsScroll) _resolveRowTap(FlxG.mouse.x, FlxG.mouse.y);
+	}
+
+	/**
+	 * Use the full row as a touch target.
+	 * Left half of the row → ◄ (change left); right half → ► (change right).
+	 * Bool options toggle on any tap. The ◄ ► sprites are visual only.
+	 */
+	function _resolveRowTap(mx:Float, my:Float):Void
+	{
 		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
 		for (i in 0...MAX_OPT)
 		{
@@ -696,13 +761,20 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Calculate which option index is at the top of the visible area (use visual for smooth scroll)
 		final topIndex = Std.int(_scrollOffsetVisual / OPT_H);
 
-		// Position highlight smoothly (accounting for scroll)
+		// Position highlight smoothly (accounting for scroll). Used to also
+		// require _rowHi[i].visible before moving it — but that flag is only
+		// ever updated by the second loop below, i.e. it still holds LAST
+		// frame's value here. Whenever scrolling changed which row index the
+		// selected option maps to, the new slot's stale (false) visibility
+		// blocked the position update for a frame, and continuous scrolling
+		// kept re-triggering that same gap — reading as the highlight
+		// permanently trailing behind the selection. visualIndex == _sel is
+		// already the correct, current-frame check on its own.
 		final highlightY = OPT_Y0 + (_selVisual - topIndex) * OPT_H - 2;
 		for (i in 0...MAX_OPT)
 		{
-			// Check if this visual row corresponds to the selected option
 			final visualIndex = topIndex + i;
-			if (visualIndex == _sel && _rowHi[i].visible)
+			if (visualIndex == _sel)
 				_rowHi[i].y = highlightY;
 		}
 
