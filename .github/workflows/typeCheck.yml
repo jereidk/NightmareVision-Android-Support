@@ -14,12 +14,6 @@ on:
       buildFlags:
         required: false
         type: string
-  # TEMPORARY: workflow_dispatch can't be triggered via API/UI until this file
-  # lands on the default branch. Using push to validate it on this feature
-  # branch first; remove this trigger once confirmed working.
-  push:
-    branches:
-      - claude/impostor-legacy-android-79u6sz
 
 jobs:
   TypeCheck:
