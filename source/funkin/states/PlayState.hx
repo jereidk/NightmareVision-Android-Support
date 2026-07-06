@@ -3555,10 +3555,16 @@ class PlayState extends MusicBeatState
 			if (!left && !down && !up && !right && !taunting)
 			{
 				// holding=false triggers Character.set_holding() -> dance(), i.e. a
-				// full playAnim() switch back to idle — untagged until now, and
-				// suspected (per user report) to be exactly where the sustain-note-
-				// end freeze happens, outside every tag noteHit() already profiles.
-				#if android SystemMonitor.profBegin('holdRelease'); #end
+				// full playAnim() switch back to idle — suspected (per user report)
+				// to be exactly where the sustain-note-end freeze happens, outside
+				// every tag noteHit() already profiles. dance() itself was found to
+				// rebuild its anim name strings on every call and has since been
+				// fixed (Bopper.hx); gcUsageSnapshot/holdReleaseGcCollision here
+				// confirm whether a GC collision still lands in this specific span.
+				#if android
+				SystemMonitor.profBegin('holdRelease');
+				final _gcBeforeHoldRelease = SystemMonitor.gcUsageSnapshot();
+				#end
 				for (field in playFields)
 				{
 					if (field.playerControls && field.owner?.holding) field.owner.holding = false;
@@ -3571,7 +3577,10 @@ class PlayState extends MusicBeatState
 
 					holders.resize(0);
 				}
-				#if android SystemMonitor.profEnd(); #end
+				#if android
+				SystemMonitor.profEnd();
+				SystemMonitor.holdReleaseGcCollision(_gcBeforeHoldRelease);
+				#end
 			}
 		}
 	}
