@@ -1,6 +1,7 @@
 package mobile.controls;
 
 import flixel.FlxG;
+import flixel.input.FlxInputState;
 import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.math.FlxPoint;
@@ -372,17 +373,9 @@ class MobileVirtualPad extends TouchInputManager
 			// Only show pad when keyboard or gamepad is pressed during gameplay
 			keyboardPressed = FlxG.keys.justPressed.ANY;
 			gamepadPressed = false;
-			if (FlxG.gamepads.numActiveGamepads > 0)
-			{
-				for (gamepad in FlxG.gamepads.getActiveGamepads())
-				{
-					if (gamepad.justPressed.ANY)
-					{
-						gamepadPressed = true;
-						break;
-					}
-				}
-			}
+			// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
+			// scan it for a justPressed button; anyButton() checks the same state with no allocation.
+			if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
 			if (keyboardPressed || gamepadPressed)
 			{
 				this.visible = true;
@@ -424,17 +417,9 @@ class MobileVirtualPad extends TouchInputManager
 
 		keyboardPressed = FlxG.keys.justPressed.ANY;
 
-		if (FlxG.gamepads.numActiveGamepads > 0)
-		{
-			for (gamepad in FlxG.gamepads.getActiveGamepads())
-			{
-				if (gamepad.justPressed.ANY)
-				{
-					gamepadPressed = true;
-					break;
-				}
-			}
-		}
+		// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
+		// scan it for a justPressed button; anyButton() checks the same state with no allocation.
+		if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
 
 		if (keyboardPressed || gamepadPressed)
 		{
