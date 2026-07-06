@@ -114,7 +114,11 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public var lane:Int = 0;
 	
 	public var noteScript:Null<FunkinScript> = null;
-	
+
+	// Reused for noteScript.executeFunc("update", ...) below instead of allocating
+	// a fresh [this, elapsed] array every frame for every scripted note type.
+	final _scriptUpdateArgs:Array<Dynamic> = [null, 0];
+
 	public var visualTime:Float = 0;
 	public var visualLength:Float = 0;
 	public var typeOffsetX:Float = 0; // used to offset notes, mainly for note types. use in place of offset.x and offset.y when offsetting notetypes
@@ -560,9 +564,11 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		super.update(elapsed);
 		
-		if (!inEditor)
+		if (!inEditor && noteScript != null)
 		{
-			noteScript?.executeFunc("update", [this, elapsed], this);
+			_scriptUpdateArgs[0] = this;
+			_scriptUpdateArgs[1] = elapsed;
+			noteScript.executeFunc("update", _scriptUpdateArgs, this);
 		}
 		
 		if (rgbShader != null)
