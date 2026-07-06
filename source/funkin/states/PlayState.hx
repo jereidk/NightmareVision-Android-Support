@@ -3413,9 +3413,15 @@ class PlayState extends MusicBeatState
 				
 				if (topNote != null)
 				{
-					#if android SystemMonitor.profBegin('noteHitDispatch'); #end
+					#if android
+					final _gcBefore = SystemMonitor.gcUsageSnapshot();
+					SystemMonitor.profBegin('noteHitDispatch');
+					#end
 					field.onNoteHit.dispatch(topNote, field);
-					#if android SystemMonitor.profEnd(); #end
+					#if android
+					SystemMonitor.profEnd();
+					SystemMonitor.noteGcCollision(_gcBefore);
+					#end
 
 					ghostTapped = false;
 				}

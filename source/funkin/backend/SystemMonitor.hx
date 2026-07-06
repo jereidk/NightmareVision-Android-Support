@@ -458,8 +458,9 @@ class SystemMonitor
 		var mark = fps < GAMEPLAY_FPS_WARN ? '!' : ' ';
 		var t = songTimeMs / 1000;
 		var breakdown = _profBreakdown();
+		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix');
 		profReset();
 	}
 
@@ -519,6 +520,42 @@ class SystemMonitor
 		_profTags = [];
 		_profMs = new Map();
 		_profStack = [];
+		_gcCollisions = 0;
+		_gcBytesFreed = 0;
+	}
+
+	// ==================== GC COLLISION DETECTION ====================
+
+	// noteHitDispatch (and its own nested sub-tags, all profiled above) kept
+	// reporting 60-140ms per accumulation window while every single sub-tag
+	// inside it summed to a small fraction of that — the code path itself
+	// isn't slow, something is pausing WHILE it runs. A GC collection landing
+	// inside a wall-clock-timed span looks exactly like this: the paused
+	// thread's elapsed time balloons but no line of Haxe code actually took
+	// that long, so it can't show up under any specific sub-tag. Confirm (or
+	// rule out) that by sampling heap usage immediately before/after the
+	// dispatch call — a many-KB drop within one call means a collection ran
+	// during it, not just sometime in the same frame.
+	static var _gcCollisions:Int = 0;
+	static var _gcBytesFreed:Int = 0;
+
+	/** Snapshot heap usage right before a span you want to check for a GC collision. */
+	public static inline function gcUsageSnapshot():Float
+	{
+		return enabled ? cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE) : 0;
+	}
+
+	/** Compares against a gcUsageSnapshot() taken before the span; records a collision if the heap shrank enough to imply one ran during it. */
+	public static function noteGcCollision(before:Float):Void
+	{
+		if (!enabled) return;
+		final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		final freed = before - after;
+		if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+		{
+			_gcCollisions++;
+			_gcBytesFreed += Std.int(freed);
+		}
 	}
 
 	#if flixel
