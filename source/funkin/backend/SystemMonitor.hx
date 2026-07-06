@@ -92,6 +92,15 @@ class SystemMonitor
 	static var _lastGcUsage:Float = 0.0;
 	#end
 
+	// Every-frame GC accumulation across a whole [GAMEPLAY] reporting window
+	// (distinct from noteGcCollision(), which only watches the noteHitDispatch
+	// span specifically). Folds into the next gameplay line regardless of
+	// which tag the pause happened to land in — noteHitDispatch, notesLoop,
+	// draw, script, whatever was being timed when the collection ran.
+	static var _frameGcCollisions:Int = 0;
+	static var _frameGcBytesFreed:Int = 0;
+	static inline final FRAME_GC_THRESHOLD_BYTES:Int = 100 * 1024;
+
 	// Per-frame evidence capture for "[cause unknown]" spikes: texture/sound
 	// loads and sudden member-count jumps that happen to land in the same
 	// frame as a spike are much stronger evidence than nothing at all.
@@ -321,6 +330,11 @@ class SystemMonitor
 		var gcNow = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
 		var gcFreed = _lastGcUsage - gcNow;
 		_lastGcUsage = gcNow;
+		if (gcFreed > FRAME_GC_THRESHOLD_BYTES)
+		{
+			_frameGcCollisions++;
+			_frameGcBytesFreed += Std.int(gcFreed);
+		}
 		#end
 
 		// Evidence for otherwise-"unknown" spikes: did the texture cache or the
@@ -353,7 +367,10 @@ class SystemMonitor
 				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
 			}
 			#if cpp
-			else if (gcFreed > 1024 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB]';
+			// 100KB, not 1MB: matches noteGcCollision()'s threshold below — smaller
+			// partial collections (e.g. NativeAlloc-triggered ones) still fully
+			// explain a frame hitch and shouldn't fall through to "cause unknown".
+			else if (gcFreed > 100 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB]';
 			#end
 			else if (_lastScriptNote.length > 0) cause = '  [script: $_lastScriptNote]';
 			else if (memberDelta > 5) cause = '  [+$memberDelta objects added to state]';
@@ -459,8 +476,13 @@ class SystemMonitor
 		var t = songTimeMs / 1000;
 		var breakdown = _profBreakdown();
 		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
+		#if cpp
+		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
+		#else
+		var gcAnySuffix = '';
+		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcAnySuffix');
 		profReset();
 	}
 
@@ -522,6 +544,8 @@ class SystemMonitor
 		_profStack = [];
 		_gcCollisions = 0;
 		_gcBytesFreed = 0;
+		_frameGcCollisions = 0;
+		_frameGcBytesFreed = 0;
 	}
 
 	// ==================== GC COLLISION DETECTION ====================
