@@ -153,13 +153,21 @@ class ModManager implements IFlxDestroyable
 			// so what I need to do is like, check other submods before removing the parent
 			
 			if (activeMods[player] == null) activeMods[player] = [];
-			
+
 			register.get(modName).setValue(val, player);
-			
+
+			// Membership in activeMods only changes on push/remove below; the relative order of
+			// mods that DIDN'T change stays valid from the last sort, so skip re-sorting (a fresh
+			// closure + full Array.sort every single call) when nothing actually changed. This
+			// matters a lot in practice: setValue() is called every frame for the duration of any
+			// active EaseEvent (queueEase), and by every scripted setPercent/setValue call.
+			var changed = false;
+
 			if (!activeMods[player].contains(name) && mod.shouldExecute(player, val))
 			{
 				if (daMod.getName() != name) activeMods[player].push(daMod.getName());
 				activeMods[player].push(name);
+				changed = true;
 			}
 			else if (!mod.shouldExecute(player, val))
 			{
@@ -174,28 +182,28 @@ class ModManager implements IFlxDestroyable
 						break;
 					}
 				}
-				if (daMod != modParent) activeMods[player].remove(daMod.getName());
+				if (daMod != modParent) changed = activeMods[player].remove(daMod.getName()) || changed;
 				if (modParent != null)
 				{
 					if (modParent.shouldExecute(player, modParent.getValue(player)))
 					{
-						activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+						if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 						return;
 					}
 					for (subname => submod in modParent.submods)
 					{
 						if (submod.shouldExecute(player, submod.getValue(player)))
 						{
-							activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+							if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 							return;
 						}
 					}
-					activeMods[player].remove(modParent.getName());
+					changed = activeMods[player].remove(modParent.getName()) || changed;
 				}
-				else activeMods[player].remove(daMod.getName());
+				else changed = activeMods[player].remove(daMod.getName()) || changed;
 			}
-			
-			activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+
+			if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 		}
 	}
 	
