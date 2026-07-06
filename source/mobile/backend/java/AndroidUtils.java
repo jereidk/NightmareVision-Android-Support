@@ -8,9 +8,6 @@ import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.os.VibratorManager;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowInsetsController;
@@ -112,43 +109,6 @@ public class AndroidUtils extends Extension {
             setFullscreen(0);
         } else {
             setFullscreen(2); // Default to full immersive
-        }
-    }
-
-    private static Vibrator _vibrator;
-    private static boolean _vibratorLookedUp = false;
-    private static int _cachedEffectMs = -1;
-    private static VibrationEffect _cachedEffect;
-
-    // Called on every note hit during gameplay, so both the Vibrator lookup and the
-    // VibrationEffect are cached — allocating either one per call generates enough
-    // garbage during dense songs to trigger an ART "Background concurrent copying GC"
-    // pause (confirmed via Perfetto: ~37ms HeapTaskDaemon GC + ~21ms CopyingPhase).
-    @SuppressWarnings("deprecation")
-    public static void vibrate(int ms) {
-        final Activity activity = mainActivity;
-        if (activity == null) return;
-
-        if (!_vibratorLookedUp) {
-            _vibratorLookedUp = true;
-            if (Build.VERSION.SDK_INT >= 31) {
-                VibratorManager vm = (VibratorManager) activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                _vibrator = (vm != null) ? vm.getDefaultVibrator() : null;
-            } else {
-                _vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
-            }
-        }
-
-        if (_vibrator == null || !_vibrator.hasVibrator()) return;
-
-        if (Build.VERSION.SDK_INT >= 26) {
-            if (_cachedEffect == null || _cachedEffectMs != ms) {
-                _cachedEffect = VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE);
-                _cachedEffectMs = ms;
-            }
-            _vibrator.vibrate(_cachedEffect);
-        } else {
-            _vibrator.vibrate(ms);
         }
     }
 

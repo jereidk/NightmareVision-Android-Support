@@ -168,8 +168,6 @@ class ClientPrefs
 
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
-	@saveVar public static var hapticFeedback:Bool = false;
-
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	@saveVar public static var virtualPadLayout:String = 'LeftFull';

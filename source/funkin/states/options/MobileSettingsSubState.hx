@@ -14,8 +14,8 @@ import openfl.display.BitmapData;
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
 {
-	id:String,        // 'haptic' | 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha' | 'openDataFolder'
-	kind:String,      // 'bool' | 'string' | 'percent' | 'button'
+	id:String,        // 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha' | 'openDataFolder'
+	kind:String,      // 'string' | 'percent' | 'button'
 	label:String,
 	desc:String,
 	?choices:Array<String>, // display strings (string kind)
@@ -48,7 +48,7 @@ typedef PreviewZone =
  * Touch:
  *   tap a row        — select it
  *   tap ◄ / ►        — change the selected value
- *   tap a preview zone — "test" it (lights up, fires haptic feedback)
+ *   tap a preview zone — "test" it (lights up)
  */
 class MobileSettingsSubState extends MusicBeatSubstate
 {
@@ -422,7 +422,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (FlxG.mouse.overlaps(_zones[i].spr))
 			{
 				_zones[i].pressed = true;
-				if (ClientPrefs.hapticFeedback) mobile.backend.AndroidUtils.vibrate(12);
 				FunkinSound.play(Paths.sound('hover'), 0.4);
 				return;
 			}
@@ -473,7 +472,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	/**
 	 * Use the full row as a touch target.
 	 * Left half of the row → ◄ (change left); right half → ► (change right).
-	 * Bool options toggle on any tap. The ◄ ► sprites are visual only.
+	 * The ◄ ► sprites are visual only.
 	 */
 	function _resolveRowTap(mx:Float, my:Float):Void
 	{
@@ -498,10 +497,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_updateScrollOffset();
 			}
 
-			final opt = _opts[optIndex];
-			if (opt.kind == 'bool')
-				_changeSelected(1);
-			else if (mx < OPT_X + OPT_W * 0.5)
+			if (mx < OPT_X + OPT_W * 0.5)
 				_changeSelected(-1);
 			else
 				_changeSelected(1);
@@ -519,9 +515,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		switch (opt.kind)
 		{
-			case 'bool':
-				_setBool(opt.id, !_getBool(opt.id));
-
 			case 'string':
 				if (opt.stored != null)
 				{
@@ -635,10 +628,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'padAlpha':    ClientPrefs.virtualPadAlpha = v;
 		}
 
-	inline function _getBool(id:String):Bool return ClientPrefs.hapticFeedback;
-
-	inline function _setBool(id:String, v:Bool):Void ClientPrefs.hapticFeedback = v;
-
 	// ── Options model ──────────────────────────────────────────────────────────
 
 	function _rebuildOptions():Void
@@ -737,8 +726,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	{
 		return switch (opt.kind)
 		{
-			case 'bool':
-				_getBool(opt.id) ? '[✓ ON]' : '[  OFF  ]';
 			case 'percent':
 				var pct = Std.int(Math.round(_getFloat(opt.id) * 100));
 				var filled = Std.int(pct / 10);

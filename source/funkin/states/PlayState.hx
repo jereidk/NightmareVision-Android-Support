@@ -1239,15 +1239,6 @@ class PlayState extends MusicBeatState
 					popUpScore(note);
 					#if android SystemMonitor.profEnd(); #end
 				}
-
-				#if android
-				if (field.playerControls && !note.isSustainNote && !cpuControlled && ClientPrefs.hapticFeedback)
-				{
-					SystemMonitor.profBegin('hitVibrate');
-					mobile.backend.AndroidUtils.vibrate(12);
-					SystemMonitor.profEnd();
-				}
-				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
 				setFocusPlayerFromNote(note);
