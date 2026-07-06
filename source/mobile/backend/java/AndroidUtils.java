@@ -285,7 +285,12 @@ public class AndroidUtils extends Extension {
                     if (!opened) {
                         android.content.Intent fallback = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
                         fallback.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                        fallback.putExtra(android.content.Intent.EXTRA_INITIAL_URI, docUri);
+                        // Intent.EXTRA_INITIAL_URI is API 26+ and isn't exposed by this
+                        // project's compileSdk stub jar ("cannot find symbol" — same
+                        // situation as ACTION_BROWSE above), so it's referenced by its
+                        // literal Bundle key instead. The key itself works on any OS
+                        // version; older ones that don't understand it just ignore it.
+                        fallback.putExtra("android.provider.extra.INITIAL_URI", docUri);
                         activity.startActivity(fallback);
                     }
                 } catch (Exception e) {
