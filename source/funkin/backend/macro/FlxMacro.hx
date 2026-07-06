@@ -121,24 +121,6 @@ class FlxMacro
 		return fields;
 	}
 	
-	/**
-	 * Adds zIndex to `FlxBasic`'
-	 */
-	public static macro function buildFlxBasic():Array<Field>
-	{
-		var fields:Array<Field> = Context.getBuildFields();
-		
-		fields.push(
-			{
-				name: "zIndex",
-				access: [APublic],
-				kind: FVar(macro :Int, macro $v{0}),
-				pos: Context.currentPos(),
-			});
-			
-		return fields;
-	}
-	
 	public static macro function buildFlxCamera():Array<Field>
 	{
 		var fields:Array<Field> = Context.getBuildFields();

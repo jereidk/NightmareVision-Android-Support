@@ -398,7 +398,10 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	function get_currentGroup():Null<ControlsGroup>
 	{
-		return cast currentOption.container.container;
+		// currentOption.container is typed as IFlxGroupable<FlxBasic> (an interface with
+		// no .container of its own) — cast through FlxBasic to reach its own .container.
+		final parent:Null<flixel.FlxBasic> = cast currentOption.container;
+		return cast parent?.container;
 	}
 	
 	function set_currentGroup(currentGroup:ControlsGroup):ControlsGroup
