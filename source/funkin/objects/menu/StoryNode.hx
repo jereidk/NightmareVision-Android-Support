@@ -19,7 +19,11 @@ class StoryNode extends BaseNode {
 	var wasHovering:Bool = false;
 	
 	public var onClick:StoryNode -> Void = null;
-	
+
+	// Reused for curScript.executeFunc('onUpdate'/'onUpdatePost', ...) below
+	// instead of allocating a fresh [elapsed] array every frame.
+	final _updateArgs:Array<Dynamic> = [0.0];
+
 	public function new(x:Float = 0, y:Float = 0, id:String = '', ?meta:WeekData) {
 		super(x, y, id);
 		this.meta = meta;
@@ -64,12 +68,20 @@ class StoryNode extends BaseNode {
 	
 	public override function update(elapsed:Float):Void {
 		super.update(elapsed);
-		
-		curScript?.executeFunc('onUpdate', [elapsed], this);
-		
+
+		if (curScript != null)
+		{
+			_updateArgs[0] = elapsed;
+			curScript.executeFunc('onUpdate', _updateArgs, this);
+		}
+
 		updateHover(elapsed);
-		
-		curScript?.executeFunc('onUpdatePost', [elapsed], this);
+
+		if (curScript != null)
+		{
+			_updateArgs[0] = elapsed;
+			curScript.executeFunc('onUpdatePost', _updateArgs, this);
+		}
 	}
 	
 	public function updateHover(elapsed:Float):Void {
