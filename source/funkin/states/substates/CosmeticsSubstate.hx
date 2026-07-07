@@ -627,7 +627,19 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			gridNodes.push(bgSpr);
 
 			funkin.backend.Logger.log('[CosmeticsGridDebug] card i=$i col=$col row=$row cx=$cx cy=$cy bgSpr.x=${bgSpr.x} bgSpr.y=${bgSpr.y} bgSpr.width=${bgSpr.width}');
-			
+
+			// Position/atlas math both check out on paper (see comment above)
+			// yet cards still don't render on-device. Log the things a naive
+			// "coordinates look right" check can't catch: whether the sprite
+			// itself thinks it's drawable, and whether gridCamera is actually
+			// registered/visible at the moment we draw to it.
+			if (i == 0)
+			{
+				final camIdx = FlxG.cameras.list.indexOf(gridCamera);
+				funkin.backend.Logger.log('[CosmeticsGridSprDebug] bgSpr.visible=${bgSpr.visible} bgSpr.alpha=${bgSpr.alpha} bgSpr.exists=${bgSpr.exists} bgSpr.color=${bgSpr.color} bgSpr.cameras.length=${bgSpr.cameras.length} bgSpr.animation.name=${bgSpr.animation.name} bgSpr.numFrames=${bgSpr.frames != null ? bgSpr.frames.numFrames : -1}');
+				funkin.backend.Logger.log('[CosmeticsGridCamDebug2] gridCamera.visible=${gridCamera.visible} gridCamera.alpha=${gridCamera.alpha} gridCamera.exists=${gridCamera.exists} camIndexInList=$camIdx camerasListLength=${FlxG.cameras.list.length} substate.alpha=$alpha substate.visible=$visible substate.cameras.length=${cameras != null ? cameras.length : -1}');
+			}
+
 			var whiteSpr = new FlxSprite();
 			whiteSpr.frames = nodeAtlas;
 			whiteSpr.animation.addByPrefix('main', 'emptysquare');
