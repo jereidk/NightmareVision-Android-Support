@@ -504,26 +504,40 @@ class SystemMonitor
 	// of just "fps=36".
 	static var _profTags:Array<String> = [];
 	static var _profMs:Map<String, Float> = new Map();
-	static var _profStack:Array<{tag:String, t:Float}> = [];
+
+	// A single note hit pushes/pops this stack ~10-12 times (noteHitDispatch, hitPreScript,
+	// hitStrum, hitsoundPlay/hitHealth, hitCharSing, hitSplash, hitNoteScript, hitDispose,
+	// hitFocus, hitAudioSfx, hitPopUp). It used to be Array<{tag:String, t:Float}> — an
+	// anonymous-object literal allocated fresh on every single profBegin() call, meaning the
+	// very act of measuring noteHitDispatch was itself feeding the GC pressure it was built to
+	// diagnose. Two parallel arrays (hxcpp keeps Array<String>/Array<Float> unboxed) give the
+	// same LIFO push/pop behavior with no per-call allocation.
+	static var _profStackTags:Array<String> = [];
+	static var _profStackTimes:Array<Float> = [];
 
 	/** Marks the start of a named phase. Must be paired with profEnd(). Cheap no-op when monitoring is off. */
 	public static inline function profBegin(tag:String):Void
 	{
-		if (enabled) _profStack.push({tag: tag, t: haxe.Timer.stamp()});
+		if (enabled)
+		{
+			_profStackTags.push(tag);
+			_profStackTimes.push(haxe.Timer.stamp());
+		}
 	}
 
 	/** Marks the end of the most recently opened phase, accumulating its elapsed time under its tag. */
 	public static function profEnd():Void
 	{
-		if (!enabled || _profStack.length == 0) return;
-		var entry = _profStack.pop();
-		var ms = (haxe.Timer.stamp() - entry.t) * 1000;
-		if (!_profMs.exists(entry.tag))
+		if (!enabled || _profStackTags.length == 0) return;
+		var tag = _profStackTags.pop();
+		var startT = _profStackTimes.pop();
+		var ms = (haxe.Timer.stamp() - startT) * 1000;
+		if (!_profMs.exists(tag))
 		{
-			_profMs.set(entry.tag, 0);
-			_profTags.push(entry.tag);
+			_profMs.set(tag, 0);
+			_profTags.push(tag);
 		}
-		_profMs.set(entry.tag, _profMs.get(entry.tag) + ms);
+		_profMs.set(tag, _profMs.get(tag) + ms);
 	}
 
 	// Biggest-first "tag=Xms tag2=Yms" summary of everything accumulated
@@ -541,8 +555,9 @@ class SystemMonitor
 	public static function profReset():Void
 	{
 		_profTags = [];
-		_profMs = new Map();
-		_profStack = [];
+		_profMs.clear();
+		_profStackTags.resize(0);
+		_profStackTimes.resize(0);
 		_gcCollisions = 0;
 		_gcBytesFreed = 0;
 		_gcCollisionsHoldRelease = 0;
