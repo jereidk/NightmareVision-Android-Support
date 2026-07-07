@@ -1,4 +1,17 @@
 {
   "schemaVersion": 1,
-  "dlcs": []
+  "dlcs": [
+    {
+      "id": "securitydlc",
+      "name": "Security DLC",
+      "description": "",
+      "author": "",
+      "version": "",
+      "sizeMb": 0,
+      "downloadUrl": "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/dlc-v1/securitydlc.zip",
+      "sha256": "c53d7014868050cc3708bf2433335358751a47ae0a2299aee9ad9f46e302ab26",
+      "releaseTag": "dlc-v1",
+      "tags": ["content", "songs", "characters"]
+    }
+  ]
 }

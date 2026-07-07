@@ -459,9 +459,27 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	function onDownHandler():Void
 	{
 		status = FlxButton.PRESSED;
-		pressTimestampMs = haxe.Timer.stamp() * 1000.0;
+		pressTimestampMs = getRawPressTimestampMs();
 		input.press();
 		onDown.fire(); // Order matters here, because onDown.fire() could cause a state change and destroy this object.
+	}
+
+	/**
+	 * Looks up the true OS-event timestamp of the touch that triggered this
+	 * press (captured by `RawTouchClock` at the moment the OS delivered
+	 * `TOUCH_BEGIN`, not when this frame happened to poll for it). Falls back
+	 * to the old frame-poll-time read for mouse input or if no raw timestamp
+	 * was recorded, so behaviour is unchanged outside real touch presses.
+	 */
+	function getRawPressTimestampMs():Float
+	{
+		var touch = Std.downcast(currentInput, flixel.input.touch.FlxTouch);
+		if (touch != null)
+		{
+			var raw = mobile.backend.flixel.input.RawTouchClock.getPressTime(touch.touchPointID);
+			if (raw >= 0) return raw;
+		}
+		return haxe.Timer.stamp() * 1000.0;
 	}
 
 	/**

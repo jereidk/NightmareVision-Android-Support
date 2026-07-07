@@ -155,186 +155,202 @@ class Controls extends FlxActionSet
 	
 	public var gamepadsAdded:Array<Int> = [];
 	public var keyboardScheme = KeyboardScheme.None;
-	
+
+	// Every UI_*/NOTE_* getter below is polled every frame during gameplay (often more than
+	// once), and on mobile each used to build a fresh single-element Array for every
+	// hitboxPressed/mobilePadPressed-family call just to check membership. Cache them once.
+	#if mobile
+	static final _keyUP:Array<FlxMobileInputID> = [UP];
+	static final _keyLEFT:Array<FlxMobileInputID> = [LEFT];
+	static final _keyRIGHT:Array<FlxMobileInputID> = [RIGHT];
+	static final _keyDOWN:Array<FlxMobileInputID> = [DOWN];
+	static final _keyNoteUP:Array<FlxMobileInputID> = [noteUP];
+	static final _keyNoteLEFT:Array<FlxMobileInputID> = [noteLEFT];
+	static final _keyNoteRIGHT:Array<FlxMobileInputID> = [noteRIGHT];
+	static final _keyNoteDOWN:Array<FlxMobileInputID> = [noteDOWN];
+	static final _keyA:Array<FlxMobileInputID> = [A];
+	static final _keyB:Array<FlxMobileInputID> = [B];
+	#end
+
 	public var UI_UP(get, never):Bool;
 	inline function get_UI_UP() {
 		var check = _ui_up.check();
-		#if mobile check = check || mobilePadPressed([UP]); #end
+		#if mobile check = check || mobilePadPressed(_keyUP); #end
 		return check;
 	}
 
 	public var UI_LEFT(get, never):Bool;
 	inline function get_UI_LEFT() {
 		var check = _ui_left.check();
-		#if mobile check = check || mobilePadPressed([LEFT]); #end
+		#if mobile check = check || mobilePadPressed(_keyLEFT); #end
 		return check;
 	}
 
 	public var UI_RIGHT(get, never):Bool;
 	inline function get_UI_RIGHT() {
 		var check = _ui_right.check();
-		#if mobile check = check || mobilePadPressed([RIGHT]); #end
+		#if mobile check = check || mobilePadPressed(_keyRIGHT); #end
 		return check;
 	}
 
 	public var UI_DOWN(get, never):Bool;
 	inline function get_UI_DOWN() {
 		var check = _ui_down.check();
-		#if mobile check = check || mobilePadPressed([DOWN]); #end
+		#if mobile check = check || mobilePadPressed(_keyDOWN); #end
 		return check;
 	}
 
 	public var UI_UP_P(get, never):Bool;
 	inline function get_UI_UP_P() {
 		var check = _ui_upP.check();
-		#if mobile check = check || mobilePadJustPressed([UP]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyUP); #end
 		return check;
 	}
 
 	public var UI_LEFT_P(get, never):Bool;
 	inline function get_UI_LEFT_P() {
 		var check = _ui_leftP.check();
-		#if mobile check = check || mobilePadJustPressed([LEFT]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyLEFT); #end
 		return check;
 	}
 
 	public var UI_RIGHT_P(get, never):Bool;
 	inline function get_UI_RIGHT_P() {
 		var check = _ui_rightP.check();
-		#if mobile check = check || mobilePadJustPressed([RIGHT]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyRIGHT); #end
 		return check;
 	}
 
 	public var UI_DOWN_P(get, never):Bool;
 	inline function get_UI_DOWN_P() {
 		var check = _ui_downP.check();
-		#if mobile check = check || mobilePadJustPressed([DOWN]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyDOWN); #end
 		return check;
 	}
 
 	public var UI_UP_R(get, never):Bool;
 	inline function get_UI_UP_R() {
 		var check = _ui_upR.check();
-		#if mobile check = check || mobilePadJustReleased([UP]); #end
+		#if mobile check = check || mobilePadJustReleased(_keyUP); #end
 		return check;
 	}
 
 	public var UI_LEFT_R(get, never):Bool;
 	inline function get_UI_LEFT_R() {
 		var check = _ui_leftR.check();
-		#if mobile check = check || mobilePadJustReleased([LEFT]); #end
+		#if mobile check = check || mobilePadJustReleased(_keyLEFT); #end
 		return check;
 	}
 
 	public var UI_RIGHT_R(get, never):Bool;
 	inline function get_UI_RIGHT_R() {
 		var check = _ui_rightR.check();
-		#if mobile check = check || mobilePadJustReleased([RIGHT]); #end
+		#if mobile check = check || mobilePadJustReleased(_keyRIGHT); #end
 		return check;
 	}
 
 	public var UI_DOWN_R(get, never):Bool;
 	inline function get_UI_DOWN_R() {
 		var check = _ui_downR.check();
-		#if mobile check = check || mobilePadJustReleased([DOWN]); #end
+		#if mobile check = check || mobilePadJustReleased(_keyDOWN); #end
 		return check;
 	}
 
 	public var NOTE_UP(get, never):Bool;
 	inline function get_NOTE_UP() {
 		var check = _note_up.check();
-		#if mobile check = check || hitboxPressed([noteUP]) || mobilePadPressed([noteUP]); #end
+		#if mobile check = check || hitboxPressed(_keyNoteUP) || mobilePadPressed(_keyNoteUP); #end
 		return check;
 	}
 
 	public var NOTE_LEFT(get, never):Bool;
 	inline function get_NOTE_LEFT() {
 		var check = _note_left.check();
-		#if mobile check = check || hitboxPressed([noteLEFT]) || mobilePadPressed([noteLEFT]); #end
+		#if mobile check = check || hitboxPressed(_keyNoteLEFT) || mobilePadPressed(_keyNoteLEFT); #end
 		return check;
 	}
 
 	public var NOTE_RIGHT(get, never):Bool;
 	inline function get_NOTE_RIGHT() {
 		var check = _note_right.check();
-		#if mobile check = check || hitboxPressed([noteRIGHT]) || mobilePadPressed([noteRIGHT]); #end
+		#if mobile check = check || hitboxPressed(_keyNoteRIGHT) || mobilePadPressed(_keyNoteRIGHT); #end
 		return check;
 	}
 
 	public var NOTE_DOWN(get, never):Bool;
 	inline function get_NOTE_DOWN() {
 		var check = _note_down.check();
-		#if mobile check = check || hitboxPressed([noteDOWN]) || mobilePadPressed([noteDOWN]); #end
+		#if mobile check = check || hitboxPressed(_keyNoteDOWN) || mobilePadPressed(_keyNoteDOWN); #end
 		return check;
 	}
 
 	public var NOTE_UP_P(get, never):Bool;
 	inline function get_NOTE_UP_P() {
 		var check = _note_upP.check();
-		#if mobile check = check || hitboxJustPressed([noteUP]) || mobilePadJustPressed([noteUP]); #end
+		#if mobile check = check || hitboxJustPressed(_keyNoteUP) || mobilePadJustPressed(_keyNoteUP); #end
 		return check;
 	}
 
 	public var NOTE_LEFT_P(get, never):Bool;
 	inline function get_NOTE_LEFT_P() {
 		var check = _note_leftP.check();
-		#if mobile check = check || hitboxJustPressed([noteLEFT]) || mobilePadJustPressed([noteLEFT]); #end
+		#if mobile check = check || hitboxJustPressed(_keyNoteLEFT) || mobilePadJustPressed(_keyNoteLEFT); #end
 		return check;
 	}
 
 	public var NOTE_RIGHT_P(get, never):Bool;
 	inline function get_NOTE_RIGHT_P() {
 		var check = _note_rightP.check();
-		#if mobile check = check || hitboxJustPressed([noteRIGHT]) || mobilePadJustPressed([noteRIGHT]); #end
+		#if mobile check = check || hitboxJustPressed(_keyNoteRIGHT) || mobilePadJustPressed(_keyNoteRIGHT); #end
 		return check;
 	}
 
 	public var NOTE_DOWN_P(get, never):Bool;
 	inline function get_NOTE_DOWN_P() {
 		var check = _note_downP.check();
-		#if mobile check = check || hitboxJustPressed([noteDOWN]) || mobilePadJustPressed([noteDOWN]); #end
+		#if mobile check = check || hitboxJustPressed(_keyNoteDOWN) || mobilePadJustPressed(_keyNoteDOWN); #end
 		return check;
 	}
 
 	public var NOTE_UP_R(get, never):Bool;
 	inline function get_NOTE_UP_R() {
 		var check = _note_upR.check();
-		#if mobile check = check || hitboxJustReleased([noteUP]) || mobilePadJustReleased([noteUP]); #end
+		#if mobile check = check || hitboxJustReleased(_keyNoteUP) || mobilePadJustReleased(_keyNoteUP); #end
 		return check;
 	}
 
 	public var NOTE_LEFT_R(get, never):Bool;
 	inline function get_NOTE_LEFT_R() {
 		var check = _note_leftR.check();
-		#if mobile check = check || hitboxJustReleased([noteLEFT]) || mobilePadJustReleased([noteLEFT]); #end
+		#if mobile check = check || hitboxJustReleased(_keyNoteLEFT) || mobilePadJustReleased(_keyNoteLEFT); #end
 		return check;
 	}
 
 	public var NOTE_RIGHT_R(get, never):Bool;
 	inline function get_NOTE_RIGHT_R() {
 		var check = _note_rightR.check();
-		#if mobile check = check || hitboxJustReleased([noteRIGHT]) || mobilePadJustReleased([noteRIGHT]); #end
+		#if mobile check = check || hitboxJustReleased(_keyNoteRIGHT) || mobilePadJustReleased(_keyNoteRIGHT); #end
 		return check;
 	}
 
 	public var NOTE_DOWN_R(get, never):Bool;
 	inline function get_NOTE_DOWN_R() {
 		var check = _note_downR.check();
-		#if mobile check = check || hitboxJustReleased([noteDOWN]) || mobilePadJustReleased([noteDOWN]); #end
+		#if mobile check = check || hitboxJustReleased(_keyNoteDOWN) || mobilePadJustReleased(_keyNoteDOWN); #end
 		return check;
 	}
 
 	public var ACCEPT(get, never):Bool;
 	inline function get_ACCEPT() {
 		var check = _accept.check();
-		#if mobile check = check || mobilePadJustPressed([A]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyA); #end
 		return check;
 	}
 
 	public var BACK(get, never):Bool;
 	inline function get_BACK() {
 		var check = _back.check();
-		#if mobile check = check || mobilePadJustPressed([B]); #end
+		#if mobile check = check || mobilePadJustPressed(_keyB); #end
 		#if android check = check || FlxG.android.justReleased.BACK; #end
 		return check;
 	}
@@ -829,6 +845,27 @@ class Controls extends FlxActionSet
 			if (gameplayRequest.isAnyJustReleased(keys)) return true;
 		}
 		return false;
+	}
+
+	/**
+	 * True OS-touch-event press timestamp (ms) for a note direction, checking
+	 * both the active hitbox and virtual pad (whichever actually fired).
+	 * Returns 0 if neither has a recorded press for this ID.
+	 */
+	public function noteTouchPressTimestampMs(id:FlxMobileInputID):Float
+	{
+		var best:Float = 0.0;
+		if (gameplayRequest != null)
+		{
+			var t:Float = gameplayRequest.getPressTimestampMs(id);
+			if (t > best) best = t;
+		}
+		if (requested != null && requested.virtualPad != null)
+		{
+			var t:Float = requested.virtualPad.getPressTimestampMs(id);
+			if (t > best) best = t;
+		}
+		return best;
 	}
 
 	@:noCompletion

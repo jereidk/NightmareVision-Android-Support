@@ -6,7 +6,7 @@
 	"songs": [
 		["Sussus Moogus", "red", [255, 0, 0], "red", "EthanTheDoodler"],
 		["Sabotage", "red", [255, 0, 0], "red", "EthanTheDoodler"],
-		["Meltdown", "red", [255, 0, 0], "red", "punkett"]
+		["Meltdown", "red-meltdown", [255, 0, 0], "red", "punkett"]
 	],
 	
 	"section": "story",

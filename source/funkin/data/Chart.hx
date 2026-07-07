@@ -28,7 +28,6 @@ class Chart
 	 */
 	public static function fromPath(path:String):Song
 	{
-		path = Paths.sanitize(path);
 		if (!FunkinAssets.exists(path))
 		{
 			throw 'couldnt find chart at ($path)';

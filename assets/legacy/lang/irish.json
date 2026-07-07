@@ -430,6 +430,10 @@
     "opt_category_language": "Teanga",
     "opt_category_misc": "Eile",
     "opt_category_notes": "Nótaí",
+    "opt_category_editors": "Editors",
+    "opt_category_mobile": "Mobile",
+    "opt_category_dlc": "DLC Manager",
+        "opt_category_credits": "Credits",
 
     "opt_controllermode": "Mód Rialaitheora",
     "opt_controllermode_desc": "Cumasaíonn sé tacaíocht rialaitheora.",

@@ -22,13 +22,13 @@ class PluginsManager
 	public static function populate():Void
 	{
 		clear();
-		for (file in Paths.listAllFilesInDirectory('scripts/plugins/'))
+		for (file in Paths.listAllFilesInDirectory('scripts/plugins/', LOOSE))
 		{
 			if (FunkinScript.isHxFile(file))
 			{
 				final scriptName = file.withoutDirectory().withoutExtension();
 				
-				var script = FunkinScript.fromFile(file, scriptName);
+				var script = FunkinScript.fromFile(file, scriptName, null, loadedScripts.scriptShareables);
 				if (script.__garbage)
 				{
 					script = FlxDestroyUtil.destroy(script);
@@ -56,6 +56,7 @@ class PluginsManager
 	public static function clear():Void
 	{
 		loadedScripts.clear(true);
+		loadedScripts.scriptShareables.clear();
 	}
 	
 	/**
@@ -77,7 +78,7 @@ class PluginsManager
 		
 		if (script == null) return null;
 		
-		return script.call(func, args).returnValue;
+		return script.call(func, args)?.returnValue;
 	}
 	
 	static function onStateSwitchPost():Void

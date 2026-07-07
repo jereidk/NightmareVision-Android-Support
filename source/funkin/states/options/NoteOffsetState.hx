@@ -18,6 +18,7 @@ import funkin.states.*;
 import funkin.objects.*;
 import funkin.objects.Character;
 import funkin.objects.menu.AmongControls;
+import mobile.utils.MobileNavUtil;
 
 using StringTools;
 
@@ -88,12 +89,14 @@ class NoteOffsetState extends MusicBeatState
 		timeTxt.visible = true;
 		timeTxt.cameras = [camHUD];
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'opt_category_adjustdelay'], // select
 			['esc', 'back'] // back
 		], true);
 		bottomControls.camera = camHUD;
 		add(bottomControls);
+		#end
 		
 		barPercent = ClientPrefs.noteOffset;
 		updateNoteDelay();
@@ -116,12 +119,16 @@ class NoteOffsetState extends MusicBeatState
 		add(timeTxt);
 		
 		Conductor.bpm = 100.0;
+		Conductor.bpmChangeMap.resize(0);
 		FunkinSound.playMusic(Paths.music('offsetSong'), 1, true);
 		
 		super.create();
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		// Only left/right adjust the offset here — up/down have no function
+		// on this screen, so don't show a full diamond D-pad.
+		addVirtualPad(LEFT_RIGHT, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -158,7 +165,38 @@ class NoteOffsetState extends MusicBeatState
 			updateNoteDelay();
 		}
 		
-		if (controls.RESET)
+		#if mobile
+		// Touch/screen tap support for offset adjustment
+		if (MobileNavUtil.allowPointerNav())
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					if (touch.x < FlxG.width * 0.3)
+					{
+						// Left side: decrease offset
+						barPercent = Math.max(delayMin, Math.min(ClientPrefs.noteOffset - 1, delayMax));
+						updateNoteDelay();
+						holdTime = 0;
+					}
+					else if (touch.x > FlxG.width * 0.7)
+					{
+						// Right side: increase offset
+						barPercent = Math.max(delayMin, Math.min(ClientPrefs.noteOffset + 1, delayMax));
+						updateNoteDelay();
+						holdTime = 0;
+					}
+				}
+				else if (touch.justReleased)
+				{
+					holdTime = 0;
+				}
+			}
+		}
+		#end
+		
+		if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 		{
 			holdTime = 0;
 			barPercent = 0;

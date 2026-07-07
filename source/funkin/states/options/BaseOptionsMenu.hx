@@ -12,6 +12,7 @@ import flixel.math.FlxRect;
 import funkin.objects.*;
 import funkin.objects.menu.ScrollBar;
 import funkin.backend.MusicBeatSubstate;
+import mobile.utils.MobileNavUtil;
 
 class BaseOptionsMenu extends MusicBeatSubstate
 {
@@ -33,7 +34,15 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public var rpcTitle:String;
 	public var titleObject:FlxText;
 	
-	var panelX:Float = 480;
+	// Panel sits at x=480 with a 676px-wide underlay, ending at 1156 — a
+	// deliberately asymmetric layout (480 left margin, 124 right margin) on
+	// the 1280 base canvas, distinct from OptionsState's now-stretched
+	// background (see OptionsState.hx's "thingy"). Shifting by the FULL
+	// 'expand'-mode cutout (not half, unlike the centered cases such as
+	// CosmicubeSelectState's cards) keeps that same 124px right margin
+	// exactly, instead of leaving a growing dead gap between this panel and
+	// the now-wider background behind it.
+	var panelX:Float = 480 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 	var optionStartY:Float = 155;
 	var optionSpacing:Float = 30;
 	
@@ -111,7 +120,10 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		titleObject.antialiasing = ClientPrefs.globalAntialiasing;
 		add(titleObject);
 		
-		descText = new FlxText(468, 580, 710, 'hello');
+		// Aligned with panelX (12px left of it, same as the original 480/468
+		// relationship) — needs the same cutout shift or it drifts out from
+		// under the rest of the panel content.
+		descText = new FlxText(468 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x, 580, 710, 'hello');
 		descText.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descText.offset.y = Math.round((descText.height - descText.size) * .5);
 		descText.scrollFactor.set();
@@ -132,7 +144,10 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			
 			if (optionsArray[i].type == 'bool')
 			{
-				var checkbox:CheckboxThingie = new CheckboxThingie(1118, optionY, optionsArray[i].getValue() == true);
+				// Hardcoded x=1118 = panelX(480) + 638 — missed when panelX
+				// itself was fixed to shift with the cutout. Anchored to
+				// panelX like optionText/valueText already are.
+				var checkbox:CheckboxThingie = new CheckboxThingie(panelX + 638, optionY, optionsArray[i].getValue() == true);
 				checkbox.sprTracker = optionText;
 				checkbox.ID = i;
 				checkboxGroup.add(checkbox);
@@ -179,7 +194,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -388,7 +404,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		var mouseDirectionPressed:Int = 0;
 		var mouseDirectionReleased:Int = 0;
 		
-		if (FlxG.mouse.justPressed)
+		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		var allowMouseInput:Bool = true;
+		#if mobile
+		allowMouseInput = MobileNavUtil.allowPointerNav();
+		#end
+		
+		// Force mouseControlActive to false when mouse input is not allowed
+		if (!allowMouseInput) mouseControlActive = false;
+		
+		if (allowMouseInput && FlxG.mouse.justPressed)
 		{
 			var hoveredBox = getHoveredAddbox();
 			if (hoveredBox != null)
@@ -398,16 +423,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				selectOption(hoveredBox.ID);
 			}
 		}
-		if (!FlxG.mouse.pressed && mouseHeldDirection != 0)
+		if (allowMouseInput && !FlxG.mouse.pressed && mouseHeldDirection != 0)
 		{
 			mouseDirectionReleased = mouseHeldDirection;
 			mouseHeldDirection = 0;
 		}
-		if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+		if (allowMouseInput && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
 		{
 			mouseControlActive = true;
 		}
-		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK || controls.RESET)
+		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK || controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 		{
 			mouseControlActive = false;
 			mouseHeldDirection = 0;
@@ -565,7 +590,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				}
 			}
 			
-			if (controls.RESET)
+			if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				for (i in 0...optionsArray.length)
 				{

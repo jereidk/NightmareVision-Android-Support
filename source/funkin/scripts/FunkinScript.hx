@@ -8,6 +8,8 @@ import crowplexus.iris.ErrorSeverity;
 
 import extensions.hscript.InterpEx;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
 import funkin.backend.plugins.DebugTextPlugin;
 import funkin.objects.*;
 import funkin.objects.note.*;
@@ -34,7 +36,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		{
 			final file = '$path.$extension';
 			
-			final targetPath = Paths.getPath(file, null, true, mode);
+			final targetPath = Paths.getPath(file, mode);
 			if (FunkinAssets.exists(targetPath)) return targetPath;
 		}
 		return path;
@@ -56,7 +58,8 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		var prefix = '[$prefix$fileName:$lineNumber]';
 		
 		final modPath:String = Paths.mods(Mods.currentModDirectory + '/');
-		if (fileName.contains(modPath)) prefix = prefix.replace(modPath, '');
+		if (fileName.startsWith(modPath)) prefix = prefix.replace(modPath, '');
+		#if ASSET_REDIRECT else if (fileName.startsWith(Paths.trail)) prefix = prefix.replace(Paths.trail, ''); #end
 		
 		return '$prefix - $x';
 	}
@@ -86,10 +89,10 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		function log(x:String, ?pos:haxe.PosInfos, level:ErrorSeverity)
 		{
 			final prefix:String = ErrorSeverityTools.getPrefix(level);
-			
-			DebugTextPlugin.addText(formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:'), Logger.getHexColourFromSeverity(Severity.fromIris(level)));
-			
-			Iris.logLevel(level, x, pos);
+			final formatted:String = formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:');
+
+			DebugTextPlugin.addText(formatted, Logger.getHexColourFromSeverity(Severity.fromIris(level)));
+			Logger.log(formatted, Severity.fromIris(level));
 		}
 		
 		Iris.warn = log.bind(_, _, WARN);
@@ -107,9 +110,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
-		return new FunkinScript(script, name, additionalVars, shareables);
+		return new FunkinScript(script, name, additionalVars, shareables, modFolder);
 	}
 	
 	/**
@@ -119,11 +122,13 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
 		name ??= file;
 		
-		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables);
+		modFolder ??= Paths.getModFolder(file, "scripts");
+		
+		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables, modFolder);
 	}
 	
 	/**
@@ -131,19 +136,23 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 */
 	@:noCompletion public var __garbage:Bool = false;
 	
-	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+	public var modFolder:Null<String>;
+
+	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
 		super(script, {name: name, autoRun: false, autoPreset: false}, shareables);
-		
+
 		(cast interp : InterpEx).parent = FlxG.state;
 		// interp = new InterpEx(FlxG.state);
+
+		this.modFolder = modFolder;
 		
 		preset();
 		
 		if (additionalVars != null)
 		{
 			for (key => obj in additionalVars)
-				set(key, additionalVars.get(obj));
+				set(key, obj);
 		}
 		
 		tryExecute();
@@ -162,7 +171,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		catch (e)
 		{
 			__garbage = true;
-			Logger.log('[${name}]: PARSING ERROR: $e', ERROR, true);
+			Iris.error('[${name}]: PARSING ERROR: $e');
 		}
 		return ret;
 	}
@@ -170,44 +179,77 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	// kept for notescript stuff
 	public function executeFunc(func:String, ?parameters:Array<Dynamic>, ?theObject:Any, ?extraVars:Map<String, Dynamic>):Dynamic
 	{
-		extraVars ??= [];
-		
-		if (exists(func))
+		if (!exists(func)) return null;
+
+		var daFunc = get(func);
+		if (!Reflect.isFunction(daFunc)) return null;
+
+		var returnVal:Dynamic = null;
+
+		// Fast path: by far the common case across the codebase is "bind `this`,
+		// call, restore `this`" with no other extraVars — every per-frame hook
+		// (Note/ScriptedModifier/StoryNode/GameOverSubstate updates) goes through
+		// here. Save/restore via two locals instead of allocating two Maps
+		// (extraVars, defaultShit) on every single call; nesting/reentrancy is
+		// still safe since each call gets its own locals, same as the Map path.
+		if (extraVars == null)
 		{
-			var daFunc = get(func);
-			if (Reflect.isFunction(daFunc))
+			if (theObject != null)
 			{
-				var returnVal:Dynamic = null;
-				var defaultShit:Map<String, Dynamic> = [];
-				
-				if (theObject != null) extraVars.set("this", theObject);
-				
-				for (key in extraVars.keys())
-				{
-					defaultShit.set(key, get(key));
-					set(key, extraVars.get(key));
-				}
-				
+				var oldThis = get("this");
+				set("this", theObject);
+
 				try
 				{
 					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
 				}
 				catch (e:haxe.Exception)
 				{
-					#if sys
-					Sys.println(e.message);
-					#end
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
 				}
-				
-				for (key in defaultShit.keys())
-				{
-					set(key, defaultShit.get(key));
-				}
-				
-				return returnVal;
+
+				set("this", oldThis);
 			}
+			else
+			{
+				try
+				{
+					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+				}
+				catch (e:haxe.Exception)
+				{
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+				}
+			}
+
+			return returnVal;
 		}
-		return null;
+
+		var defaultShit:Map<String, Dynamic> = [];
+
+		if (theObject != null) extraVars.set("this", theObject);
+
+		for (key in extraVars.keys())
+		{
+			defaultShit.set(key, get(key));
+			set(key, extraVars.get(key));
+		}
+
+		try
+		{
+			returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+		}
+		catch (e:haxe.Exception)
+		{
+			Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+		}
+
+		for (key in defaultShit.keys())
+		{
+			set(key, defaultShit.get(key));
+		}
+
+		return returnVal;
 	}
 	
 	@:inheritDoc
@@ -223,7 +265,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 			Iris.print(formatPosInfos(pos.fileName, pos.lineNumber, x), pos);
 		}));
 		#end
-		
+
+		for (k => v in funkin.data.Defines.defines) parser.preprocesorValues.set(k, v);
+
 		set("StringTools", StringTools);
 		set("Date", Date);
 		set("Sys", Sys);
@@ -231,6 +275,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("Type", Type);
 		set("script", this);
 		set("Dynamic", Dynamic);
+		set('modFolder', modFolder);
 		
 		set('StringMap', haxe.ds.StringMap);
 		set('IntMap', haxe.ds.IntMap);
@@ -256,7 +301,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("FunkinSprite", funkin.objects.FunkinSprite);
 		set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
 		set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
-		set("FlxCamera", extensions.flixel.FlxCameraEx);
+		set("FlxCamera", flixel.FlxCamera);
 		set("FlxMath", flixel.math.FlxMath);
 		set("FlxTimer", flixel.util.FlxTimer);
 		set("FlxTween", flixel.tweens.FlxTween);
@@ -376,7 +421,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 			set('seenCutscene', PlayState.seenCutscene);
 			set('week', funkin.data.WeekData.weeksList[PlayState.storyMeta.curWeek]);
 			set('difficultyName', funkin.backend.Difficulty.difficulties[PlayState.storyMeta.difficulty]);
-			set('songLength', FlxG.sound.music.length);
+			set('songLength', FlxG.sound.music?.length ?? 0);
 			set('healthGainMult', PlayState.instance.healthGain);
 			set('healthLossMult', PlayState.instance.healthLoss);
 			set('instakillOnMiss', PlayState.instance.instakillOnMiss);

@@ -1,5 +1,5 @@
 {
-	"name": "Swedisg",
+	"name": "Swedish",
 	"translation_credits": "PurpleDerple185, Axel K.",
 	"lang": {
 		"score": "Poäng",
@@ -484,6 +484,9 @@
         	"opt_category_misc": "Annat",
 		"opt_category_credits": "Medverkande",
 		"opt_category_notes": "Noter",
+		"opt_category_editors": "Editors",
+		"opt_category_mobile": "Mobile",
+		"opt_category_dlc": "DLC Manager",
        		"opt_controllermode": "Kontroll Läge",
         	"opt_controllermode_desc": "Aktiverar kontrollstöd.",
         	"opt_downscroll": "Nerscroll",

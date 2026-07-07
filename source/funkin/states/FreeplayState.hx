@@ -1,5 +1,8 @@
 package funkin.states;
 
+import mobile.utils.MobileNavUtil;
+import mobile.backend.flixel.input.FlxMobileInputID;
+
 import funkin.input.TurboControl;
 
 import flixel.group.FlxGroup;
@@ -13,6 +16,7 @@ import funkin.states.editors.ChartEditorState;
 import funkin.states.*;
 import funkin.states.substates.*;
 import funkin.utils.MathUtil;
+import funkin.utils.SortUtil;
 import funkin.game.shaders.ColorSwap;
 import funkin.game.shaders.RimLight;
 // import sys.io.File;
@@ -28,6 +32,7 @@ typedef FreeplayWeek =
 	var section:String;
 	var ?mod:String;
 	var title:String;
+	var ?graphic:String;
 }
 
 abstract SongInformation(Array<Dynamic>) to Array<Dynamic>
@@ -78,13 +83,21 @@ enum UnlockAnimPhase
 class FreeplayState extends AmongUIState
 {
 	public var weeks:Array<FreeplayWeek> = []; // Freeplay Weeks, put your shit in here
-	
+
 	public static var curMonth:Int = 0;
 	public static var curSelect:Int = 0;
+
+	// Reused by mobilePadJustReleased() calls in update() instead of allocating a fresh
+	// single-element Array every frame.
+	#if mobile
+	static final _leftKey:Array<FlxMobileInputID> = [LEFT];
+	static final _rightKey:Array<FlxMobileInputID> = [RIGHT];
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
 	
+	var smoothMonth:Float = 0;
 	var smoothSelect:Float = 0;
-	
-	var reload_timer:Float = 0;
 	
 	// Tween bullshit
 	var portraitTween:FlxTween;
@@ -105,7 +118,8 @@ class FreeplayState extends AmongUIState
 	var intendedScore:Float;
 	var intendedRating:Float;
 	var localWeeks:Array<String> = [''];
-	
+	// _bitmapSnapshotAtCreate now lives on AmongUIState (this class's parent) — shared by every AmongUIState screen.
+
 	public var cachedCards:FlxTypedGroup<FreeplayCard>;
 	
 	public var cards:FlxTypedGroup<FreeplayCard>;
@@ -120,9 +134,23 @@ class FreeplayState extends AmongUIState
 	var score_rating:Array<String>;
 	
 	var CARD_X:Float = 70;
+	// Cards hug the left edge by design — in 'expand' mode nudge them toward
+	// the center of the widened screen instead of leaving them pinned to the
+	// left with a big empty gap on the right. A fraction of the revealed
+	// width, not a full recenter (that would fight the portrait/glow docked
+	// on the right side of the same screen).
+	var CARD_EXPAND_CENTER_FACTOR:Float = 0.25;
 	var CARD_Y:Float = (FlxG.height * .45);
-	var CIRCLE_PADDING:Float = 12;
-	
+	var TAB_DISTANCE:Float = 320;
+	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
+
+	var CIRCLE_HEIGHT:Float = 24; // icon size — keep these small, they're a row of month markers, not a focal element
+	var CIRCLE_PADDING:Float = 12; // spacing between circle icons — tight, they should read as one connected row
+	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
+
+	var circlesMinY:Float = 0;
+	var circlesMaxY:Float = 0;
+
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
 	var CARD_FADE:Float = .25;
@@ -144,33 +172,30 @@ class FreeplayState extends AmongUIState
 	
 	override function create()
 	{
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
+		// _bitmapSnapshotAtCreate is captured by super.create() (AmongUIState).
 		super.create();
-		
+
 		Mods.currentModDirectory = null;
-		
-		add(turboGroup = new TurboControlGroup());
-		turboGroup.add(controlDOWN);
-		turboGroup.add(controlUP);
-		turboGroup.add(controlLEFT);
-		turboGroup.add(controlRIGHT);
-		
+
+		smoothMonth = curMonth;
+
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
 		circles.zIndex = 22;
 		add(circles);
-		
+
 		// 1.1 feature
 		menuWeekSelect = new FlxSprite(12, 8).loadGraphic(Paths.image('menu/common/menuOther'));
 		menuWeekSelect.x = FlxG.width - (menuWeekSelect.width + 12); // im
 		menuWeekSelect.camera = camUpper;
 		menuWeekSelect.zIndex = 25;
 		add(menuWeekSelect);
-		
+
 		PlayState.isStoryMode = false;
 		PlayState.chartingMode = false;
-		
-		FunkinAssets.cache.clearStoredMemory();
-		// FunkinAssets.cache.clearUnusedMemory();
 		
 		DiscordClient.changePresence("Freeplay Menu");
 		
@@ -179,7 +204,7 @@ class FreeplayState extends AmongUIState
 		PlayState.missLimit = false;
 		
 		persistentUpdate = true;
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		initStateScript(); // unnecessary
 		
@@ -194,14 +219,39 @@ class FreeplayState extends AmongUIState
 		score_rating = [Lang.str('score'), Lang.str('accuracy')];
 		
 		addWeeks();
+
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlDOWN);
+		turboGroup.add(controlUP);
+		turboGroup.add(controlLEFT);
+		turboGroup.add(controlRIGHT);
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, FREEPLAY);
+		addVirtualPadCamera();
+		#end
 		
-		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow'));
+		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow', null, true, STRICT));
 		porGlow.color = FlxColor.RED;
 		add(porGlow);
-		
-		portrait = new FlxSprite(304, -100).loadGraphic(Paths.image(ext + 'portraits/red')); // loadAtlasFrames(Paths.getAtlasFrames(ext + 'portraits'));
+
+		portrait = new FlxSprite(304, -100).loadGraphic(Paths.image(ext + 'portraits/red', null, true, STRICT)); // loadAtlasFrames(Paths.getAtlasFrames(ext + 'portraits'));
 		add(portrait);
-		
+
+		// porGlow/portrait sit toward the right side of the 1280 base canvas —
+		// porGlow (808px wide) is already positioned to bleed a few px past its
+		// own right edge, confirming it's meant to hug the screen edge, not sit
+		// centered. In 'expand' mode shift both by the full revealed width so
+		// the glow and the portrait it sits behind keep tracking the new right
+		// edge together instead of drifting toward the center as the canvas
+		// widens. RimLight below has no position of its own (it just reads
+		// portrait's frame UVs via a shader), so it needs no separate fix.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			porGlow.x += funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+			portrait.x += funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+		}
+
 		add(rimlight = new RimLight(315, 10, portrait));
 		
 		infoText = new FlxText(0, 91, FlxG.width - 6, 'If you can read this I fucked something up terribly', 48);
@@ -210,6 +260,7 @@ class FreeplayState extends AmongUIState
 		add(infoText);
 		
 		// look mom! new controls system!
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -220,6 +271,7 @@ class FreeplayState extends AmongUIState
 		bottomControls.camera = camUpper;
 		bottomControls.zIndex = 12;
 		add(bottomControls);
+		#end
 		
 		sectionText = new FlxText(0, 80, FlxG.width, '---', 35);
 		sectionText.setFormat(Paths.font("AmaticSC-Bold.ttf", false), 70, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -230,13 +282,8 @@ class FreeplayState extends AmongUIState
 		
 		scriptGroup.call('onCreatePost', []);
 		changeSection(0, false);
-
-		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		addVirtualPadCamera();
-		#end
 	}
-
+	
 	function refreshCards()
 	{
 		if (cards == null)
@@ -245,8 +292,6 @@ class FreeplayState extends AmongUIState
 			add(cards);
 			
 			cachedCards = new FlxTypedGroup();
-			add(cachedCards);
-			cachedCards.kill();
 		}
 		
 		scriptGroup.call('onSectionChange', [curMonth]);
@@ -334,7 +379,7 @@ class FreeplayState extends AmongUIState
 	
 	function getSongInfo(songID:String):Array<String>
 	{
-		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', null, true);
+		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', NORMAL);
 		var info:Array<String> = CoolUtil.coolTextFile(txt);
 		if (info != null && info.length > 0) return info;
 		return ['UNKNOWN', 'NO SONG INFO FOUND'];
@@ -373,11 +418,19 @@ class FreeplayState extends AmongUIState
 	{
 		curMonth += by;
 		
-		if (curMonth > weeks.length - 1) curMonth = 0;
-		if (curMonth < 0) curMonth = weeks.length - 1;
+		if (curMonth >= weeks.length)
+		{
+			smoothMonth -= weeks.length;
+			curMonth = 0;
+		}
+		else if (curMonth < 0)
+		{
+			smoothMonth += weeks.length;
+			curMonth = weeks.length - 1;
+		}
 		
-		for (c in circles)
-			c.alpha = c.ID == curMonth ? 1 : 0.3;
+		FlxTween.cancelTweensOf(this, ['smoothMonth']);
+		FlxTween.tween(this, {smoothMonth: curMonth}, .3, {ease: FlxEase.quartOut});
 			
 		sectionText.text = weeks[curMonth].title;
 		if (backToTop) smoothSelect = curSelect = 0;
@@ -385,17 +438,22 @@ class FreeplayState extends AmongUIState
 		
 		refreshCards();
 		changeSong(0, true);
-		
+		preloadSectionPortraits(curMonth);
+
 		if (by != 0) FlxG.sound.play(Paths.sound(by > 0 ? 'panelAppear' : 'panelDisappear'), 0.5);
 	}
 	
 	inline function moveCard(c:FreeplayCard, selection:Float, instant:Bool = false):Void
 	{
 		if (c == null) return;
-		
+
 		final dist:Float = (c.ID - selection);
-		
-		final targetX = (Math.abs(dist) * CARD_X_SHIFT + Math.round(CARD_X));
+
+		final centerShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * CARD_EXPAND_CENTER_FACTOR
+			: 0;
+
+		final targetX = (Math.abs(dist) * CARD_X_SHIFT + Math.round(CARD_X) + centerShift);
 		final targetY = (dist * CARD_DISTANCE + Math.round(CARD_Y));
 		final targetAlpha = (1 - Math.abs(dist) * CARD_FADE);
 		
@@ -421,8 +479,10 @@ class FreeplayState extends AmongUIState
 	
 	function changeSong(by:Int = 0, change = false)
 	{
+		if (week_songs.length == 0) return;
+
 		prevSel = curSelect;
-		
+
 		curSelect += by;
 		
 		if (curSelect < 0) snapCards(week_songs.length);
@@ -460,11 +520,24 @@ class FreeplayState extends AmongUIState
 		scriptGroup.call('onPortraitChange', [porty, prevPort]);
 		if (prevPort != porty)
 		{
-			portrait.loadGraphic(Paths.image(ext + 'portraits/' + porty)); // animation.play(week_songs[curSelect][2]);
+			// STRICT so a mod flagged 'global' (most DLCs, so their songs show up
+			// in the base game's freeplay list) can't have its portrait/backGlow
+			// override bleed into every other week's cards — only content/ and
+			// the current song's own mod (already scoped by changeSong() setting
+			// Mods.currentModDirectory right before this call) are checked.
+			portrait.loadGraphic(Paths.image(ext + 'portraits/' + porty, null, true, STRICT)); // animation.play(week_songs[curSelect][2]);
 			// thank you ashley
 			portrait.updateHitbox();
 			portrait.offset.x += (portrait.frameWidth - 1215) * .5 * portrait.scale.x;
 			portrait.offset.y += (portrait.frameHeight - 1097) * .5 * portrait.scale.y;
+
+			// backGlow only ever loaded once in create() and never refreshed —
+			// reloading it here the same way portrait reloads above means a
+			// mod's override only shows while one of ITS OWN songs is selected,
+			// and switching back to a default/non-modded week correctly restores
+			// the base game's backGlow instead of it getting stuck.
+			porGlow.loadGraphic(Paths.image(ext + 'backGlow', null, true, STRICT));
+			porGlow.updateHitbox();
 		}
 		
 		if (ws_lock[curSelect])
@@ -480,47 +553,23 @@ class FreeplayState extends AmongUIState
 			portrait.color = FlxColor.WHITE;
 		}
 		
-		if (!reset)
+		if (reset || prevPort != porty)
 		{
-			if (prevPort != porty)
-			{
-				if (portraitTween != null)
-				{
-					portraitTween.cancel();
-				}
-				if (portraitAlphaTween != null)
-				{
-					portraitAlphaTween.cancel();
-				}
-				if (colorTween != null)
-				{
-					colorTween.cancel();
-				}
-				portrait.x = 504.65;
-				portrait.alpha = 0;
-				colorTween = FlxTween.color(porGlow, 0.2, porGlow.color, color);
-				portraitTween = FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.expoOut});
-				portraitAlphaTween = FlxTween.tween(portrait, {alpha: 1}, 0.3, {ease: FlxEase.expoOut});
-			}
-		}
-		else
-		{
-			if (portraitTween != null)
-			{
-				portraitTween.cancel();
-			}
-			if (portraitAlphaTween != null)
-			{
-				portraitAlphaTween.cancel();
-			}
-			if (colorTween != null)
-			{
-				colorTween.cancel();
-			}
-			portrait.x = 504.65;
+			portraitTween?.cancel();
+			portraitAlphaTween?.cancel();
+			colorTween?.cancel();
+
+			// This slide-in was hardcoded to the 1280 base canvas's positions
+			// (matching where portrait/porGlow are anchored in create()), which
+			// silently undid the 'expand'-mode shift applied there every single
+			// time the song/portrait changed. Same full-cutout shift as create().
+			final portraitShiftX:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x
+				: 0;
+			portrait.x = 504.65 + portraitShiftX;
 			portrait.alpha = 0;
 			colorTween = FlxTween.color(porGlow, 0.2, porGlow.color, color);
-			portraitTween = FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.expoOut});
+			portraitTween = FlxTween.tween(portrait, {x: 304.65 + portraitShiftX}, 0.3, {ease: FlxEase.expoOut});
 			portraitAlphaTween = FlxTween.tween(portrait, {alpha: 1}, 0.3, {ease: FlxEase.expoOut});
 		}
 		
@@ -529,6 +578,7 @@ class FreeplayState extends AmongUIState
 	
 	function acceptSong()
 	{
+		if (week_songs.length == 0) return;
 		var s:SongInformation = week_songs[curSelect];
 		
 		if (ws_lock[curSelect])
@@ -591,65 +641,78 @@ class FreeplayState extends AmongUIState
 	{
 		if (!lockMovement && cutscenePhase == NONE)
 		{
-			if (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X))
+			if (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X) #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 				openSubState(new CosmeticsSubstate());
 			}
-			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
+			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 				openSubState(new WeekPickerSubstate(this, curMonth));
 			}
 			
-			if (controls.RESET) resetScorePrompt();
+			if (controls.RESET #if mobile || virtualPad?.buttonR?.justPressed == true #end) resetScorePrompt();
 			
 			if (FlxG.sound.music.volume < 0.7)
 			{
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controlLEFT.PRESSED) changeSection(-1);
-			else if (controlRIGHT.PRESSED) changeSection(1);
-			
-			if (controlUP.PRESSED || FlxG.mouse.wheel > 0) changeSong(-1, false);
-			else if (controlDOWN.PRESSED || FlxG.mouse.wheel < 0) changeSong(1, false);
-			
-			if (controls.ACCEPT) acceptSong();
+			if (controlLEFT.PRESSED #if mobile || controls.mobilePadJustReleased(_leftKey) #end) changeSection(-1);
+			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadJustReleased(_rightKey) #end) changeSection(1);
 
-			#if android
-			if (controls.BACK)
+			if (FlxG.mouse.wheel != 0)
 			{
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				FlxG.switchState(MainMenuState.new);
-			}
-			#end
-
-			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
-			
-			for (c in circles)
-			{
-				if (FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
+				if (FlxG.mouse.y >= circlesMinY && FlxG.mouse.y <= circlesMaxY)
 				{
-					goToSection(c.ID);
-					
-					break;
+					changeSection(FlxG.mouse.wheel > 0 ? 1 : -1);
+				}
+				else if (FlxG.mouse.y >= (upperBar.y + upperBar.height))
+				{
+					changeSong(FlxG.mouse.wheel < 0 ? 1 : -1, false);
 				}
 			}
+
+			if (controlUP.PRESSED #if mobile || controls.mobilePadJustReleased(_upKey) #end) changeSong(-1, false);
+			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadJustReleased(_downKey) #end) changeSong(1, false);
+			
+			if (controls.ACCEPT) acceptSong();
+			
+			if (ClientPrefs.inDevMode && FlxG.keys.justPressed.ONE) trace(getSongInfo(week_songs[curSelect][0]));
 		}
 		
-		if (cutscenePhase != NONE)
+		if (cutscenePhase != NONE && controls.ACCEPT) skipUnlockCutscene();
+
+		// Update circle appearance based on distance from center
+		for (c in circles)
 		{
-			if (controls.ACCEPT) skipUnlockCutscene();
+			final distFromCenter:Float = Math.abs(c.ID - curMonth);
+			final normalizedDist:Float = Math.min(distFromCenter / 3.0, 1.0);
+
+			// Fade circles that are far from current month
+			final targetAlpha:Float = FlxMath.lerp(1.0, CIRCLE_FADE, normalizedDist);
+			c.alpha = MathUtil.fpsLerp(c.alpha, targetAlpha, 0.12);
+
+			// Add subtle scale effect for focused circles
+			final targetScale:Float = FlxMath.lerp(1.1, 0.95, normalizedDist);
+			c.scale.x = MathUtil.fpsLerp(c.scale.x, targetScale, 0.12);
+			c.scale.y = c.scale.x;
+
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed)
+			{
+				goToSection(c.ID);
+				break;
+			}
 		}
 		
 		for (c in cards)
 		{
 			moveCard(c, smoothSelect);
 			
-			if (FlxG.mouse.y >= (upperBar.y + upperBar.height) && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed && !lockMovement && cutscenePhase == NONE)
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.y >= (upperBar.y + upperBar.height) && FlxG.mouse.overlaps(c) && FlxG.mouse.justPressed && !lockMovement && cutscenePhase == NONE)
 			{
 				if (curSelect != c.ID)
 				{
@@ -678,7 +741,7 @@ class FreeplayState extends AmongUIState
 	
 	function resetScorePrompt():Void
 	{
-		if (ws_lock[curSelect]) return;
+		if (week_songs.length == 0 || ws_lock[curSelect]) return;
 		
 		var song:SongInformation = week_songs[curSelect];
 		
@@ -696,9 +759,18 @@ class FreeplayState extends AmongUIState
 	
 	// Convert to public static for my menu support. I'm a fat gay boy.
 	// hello
-	public function goToSection(sect:Int)
+	public function goToSection(sect:Int, wrap:Bool = false)
 	{
-		if (sect != curMonth) changeSection(sect - curMonth);
+		if (sect == curMonth) return;
+		
+		if (wrap)
+		{
+			final diff:Int = (sect - curMonth);
+			if (diff < -weeks.length * .5) smoothMonth -= weeks.length;
+			if (diff > weeks.length * .5) smoothMonth += weeks.length;
+		}
+		
+		changeSection(sect - curMonth);
 	}
 	
 	function checkLock(song:SongInformation)
@@ -775,8 +847,9 @@ class FreeplayState extends AmongUIState
 	
 	override function destroy()
 	{
+		// super.destroy() (AmongUIState) handles disposeNewSince(_bitmapSnapshotAtCreate).
 		super.destroy();
-		
+
 		ClientPrefs.unlockedSongs = localWeeks;
 		ClientPrefs.flush();
 	}
@@ -790,11 +863,10 @@ class FreeplayState extends AmongUIState
 		
 		function fetchWeekSongs(weekData:WeekData):Array<Array<Dynamic>>
 		{
-			var cachedPortraits:Array<String> = [];
 			var songs:Array<Array<Dynamic>> = [];
-			
+
 			if (weekData == null) return songs;
-			
+
 			// maybe should just rewrite the way the song stuff is read instead of mangling it to match lol
 			for (song in weekData.songs)
 			{
@@ -806,19 +878,9 @@ class FreeplayState extends AmongUIState
 					(cost > 0 ? 'shop' : (song[7] == true ? 'special' : 'story')), song[5] ?? [Paths.sanitize(song[0])], cost,
 					song[4], weekData.currency, shouldHideUntilDoubleTrouble, weekData.folder
 				];
-				
-				// Lagspike prevention down below
-				// check the array to see if it contains the string of the portrait so we don't cache the same portrait if its already been cached
-				if (!cachedPortraits.contains(song[3]))
-				{
-					cachedPortraits.push(song[3]);
-					
-					final image:String = 'menu/freeplay/portraits/${song[3]}';
-					if (Paths.fileExists('images/$image.png', LOOSE)) Paths.image(image, LOOSE);
-				}
 				songs.push(data);
 			}
-			
+
 			return songs;
 		}
 		
@@ -842,31 +904,64 @@ class FreeplayState extends AmongUIState
 					freeplayWeek.songs.push(song);
 			}
 			
+			Mods.currentModDirectory = freeplayWeek.mod;
+			
+			freeplayWeek.graphic = Paths.image('${ext}sections/${freeplayWeek.section}')?.key; // yeaa go to HELL !!!
+			
 			weeks.push(freeplayWeek);
 		}
 		
-		for (circ in circles)
-			circ.destroy();
+		Mods.currentModDirectory = null;
+		
+		for (circ in circles) circ.destroy();
 		circles.clear();
-		
+
 		final tempweeks:Int = (weeks.length > 9 ? 9 : weeks.length);
-		
+
 		for (i in 0...tempweeks)
 		{
 			var w:String = weeks[i].section;
 			Mods.currentModDirectory = weeks[i].mod;
-			
+
 			var circ:FlxSprite = new FlxSprite(FlxG.width * .5).loadGraphic(Paths.image(ext + 'sections/$w'));
-			circ.setGraphicSize(-1, 71);
+			circ.setGraphicSize(-1, CIRCLE_HEIGHT);
 			circ.updateHitbox();
-			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, Math.min((tempweeks - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width * .5);
+
+			// Small icons packed tight against each other (width+padding pitch) —
+			// they're a row of month markers, not something meant to span the
+			// screen. A previous pass here stretched this into an even spread
+			// across a fixed 1110px band regardless of week count, which made
+			// them huge and disconnected from the rest of the freeplay UI.
+			final pitch:Float = circ.width + CIRCLE_PADDING;
+			final span:Float = (tempweeks - 1) * pitch;
+
+			circ.x = Std.int(FlxMath.remapToRange(i, 0, tempweeks - 1, 0, span) - circ.width * .5);
 			circ.ID = i;
-			
+
 			circles.add(circ);
 		}
-		
+
 		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
-		
+		circlesMinY = circles.findMinY();
+		circlesMaxY = circles.findMaxY();
+
+		preloadSectionPortraits(curMonth);
+	}
+
+	function preloadSectionPortraits(sectionIndex:Int):Void
+	{
+		if (sectionIndex < 0 || sectionIndex >= weeks.length) return;
+		final section = weeks[sectionIndex];
+		final seenPorts = new haxe.ds.StringMap<Bool>();
+		for (i in 0...section.songs.length)
+		{
+			final si:SongInformation = cast section.songs[i];
+			final porty:String = si.portrait;
+			if (seenPorts.exists(porty)) continue;
+			seenPorts.set(porty, true);
+			Mods.currentModDirectory = si.mod;
+			Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
+		}
 		Mods.currentModDirectory = null;
 	}
 }

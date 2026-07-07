@@ -107,16 +107,19 @@ except ImportError:
 
 DEFAULT_CONFIG = {
     # Default ASTC block size for images that don't match any override.
-    # 8x8 is a good all-around choice for mobile game assets.
-    "blocksize": "8x8",
+    # 12x12 gives best quality/size ratio for most game assets on Android.
+    "blocksize": "12x12",
 
     # astcenc quality preset. Options: fastest, fast, medium, thorough, verythorough, exhaustive
-    # "thorough" gives near-optimal quality with manageable encode times.
-    "quality": "thorough",
+    # "exhaustive" = best quality (quality=100), takes longer but ensures optimal compression.
+    "quality": "exhaustive",
 
-    # Color profile. "cl" = linear (correct for most game textures).
-    # Use "cs" for sRGB-encoded images (rare in games built with OpenFL).
-    "colorprofile": "cl",
+    # Color profile. "cs" = sRGB (standard for game sprites).
+    "colorprofile": "cs",
+
+    # Minimum sprite size. Sprites smaller than this (in either dimension) are skipped.
+    # 500px is a good threshold — smaller sprites don't benefit from ASTC compression.
+    "min_size": 500,
 
     # Exclusion patterns. Any PNG whose path contains one of these strings
     # (or matches a glob pattern) is skipped entirely.
@@ -144,20 +147,20 @@ DEFAULT_CONFIG = {
     # More specific patterns should come first (dict order is preserved in Python 3.7+).
     "overrides": {
         # Note skins — hard edges between arrow shapes; use smallest blocks
-        "NOTE_assets":       {"blocksize": "4x4"},
-        "sustainHold":       {"blocksize": "4x4"},
-        "noteSplashes":      {"blocksize": "4x4"},
+        "NOTE_assets":       {"blocksize": "6x6"},
+        "sustainHold":      {"blocksize": "6x6"},
+        "noteSplashes":      {"blocksize": "6x6"},
         # Health icons — icon strips with many small distinct sprites
         "icon-":             {"blocksize": "4x4"},
         # Large smooth gradients and lighting effects — can afford big blocks
-        "greenmenu":         {"blocksize": "10x10"},
-        "hguiofuhjpsod":     {"blocksize": "10x10"},  # pause gradient
-        "finale/light":      {"blocksize": "10x10"},
-        "finalframe":        {"blocksize": "8x8"},
+        "greenmenu":         {"blocksize": "12x12"},
+        "hguiofuhjpsod":     {"blocksize": "12x12"},  # pause gradient
+        "finale/light":      {"blocksize": "12x12"},
+        "finalframe":        {"blocksize": "12x12"},
         # Character spritesheets — balance quality vs size
-        "GF_assets":         {"blocksize": "6x6"},
-        "boppers_meltdown":  {"blocksize": "8x8"},
-        "finale/props":      {"blocksize": "8x8"},
+        "GF_assets":         {"blocksize": "12x12"},
+        "boppers_meltdown":  {"blocksize": "12x12"},
+        "finale/props":      {"blocksize": "12x12"},
     },
 }
 
@@ -200,8 +203,12 @@ def blocksize_from_energy(energy: float) -> str:
 
 def pick_blocksize(png_path: Path, config: dict) -> str:
     """
-    Priority: per-asset JSON override → adaptive edge_energy → config default.
+    Priority: force_blocksize (--blocksize CLI) → per-asset JSON override → adaptive edge_energy → config default.
     """
+    # 0. Forced global override from --blocksize CLI flag
+    if "force_blocksize" in config:
+        return config["force_blocksize"]
+
     path_str = str(png_path).replace("\\", "/")
 
     # 1. Per-asset overrides (substring match against full path)
@@ -250,7 +257,16 @@ def should_exclude(png_path: Path, exclusions: list) -> bool:
 # astcenc detection
 # ---------------------------------------------------------------------------
 
+# Search tools/bin/ relative to script location, then PATH
+_SCRIPT_DIR = Path(__file__).parent.resolve()
+_LOCAL_BIN = _SCRIPT_DIR / "bin"
+
 ASTCENC_CANDIDATES = [
+    # Local tools/bin/ first (bundled with repo)
+    str(_LOCAL_BIN / "astcenc-avx2"),
+    str(_LOCAL_BIN / "astcenc-sse4.1"),
+    str(_LOCAL_BIN / "astcenc-sse2"),
+    # PATH fallbacks
     "astcenc",
     "astcenc-avx2",
     "astcenc-sse4.1",
@@ -261,6 +277,10 @@ ASTCENC_CANDIDATES = [
 
 def find_astcenc() -> str | None:
     for name in ASTCENC_CANDIDATES:
+        # Direct path (local tools/bin/)
+        if os.path.isfile(name) and os.access(name, os.X_OK):
+            return name
+        # Or search in PATH
         path = shutil.which(name)
         if path:
             return path
@@ -373,6 +393,9 @@ def main() -> None:
     parser.add_argument("--blocksize", "-b",
                         help="Override block size for ALL files (disables adaptive "
                              "selection). E.g. --blocksize 8x8")
+    parser.add_argument("--quality", "-q",
+                        help="astcenc quality preset: fastest, fast, medium, thorough, "
+                             "verythorough, exhaustive. Overrides config value.")
     args = parser.parse_args()
 
     # -----------------------------------------------------------------------
@@ -402,8 +425,10 @@ def main() -> None:
 
     # CLI overrides
     if args.blocksize:
-        config["blocksize"] = args.blocksize
+        config["force_blocksize"] = args.blocksize
         config["overrides"] = {}   # discard per-asset overrides when globally forced
+    if args.quality:
+        config["quality"] = args.quality
 
     delete_png = args.delete_png or config.get("delete_png", False)
 
@@ -449,23 +474,26 @@ def main() -> None:
     else:
         png_files = sorted(input_path.rglob("*.png"))
 
-    # Filter oversized only
-    if args.only_oversized:
+    # Filter by size (requires Pillow)
+    min_size = config.get("min_size", 500)  # Default: exclude sprites < 500x500
+    if min_size > 0:
         if not HAS_PIL:
-            print("ERROR: --only-oversized requires Pillow. pip install Pillow",
-                  file=sys.stderr)
-            sys.exit(1)
-        filtered = []
-        for f in png_files:
-            try:
-                with Image.open(f) as img:
-                    w, h = img.size
-                if w > 4096 or h > 4096:
-                    filtered.append(f)
-            except Exception:
-                pass
-        print(f"Oversized filter: {len(png_files)} total → {len(filtered)} oversized")
-        png_files = filtered
+            print("WARNING: Pillow not installed — min_size filter disabled. "
+                  "pip install Pillow to exclude small sprites.")
+        else:
+            filtered = []
+            for f in png_files:
+                try:
+                    with Image.open(f) as img:
+                        w, h = img.size
+                    if w >= min_size or h >= min_size:
+                        filtered.append(f)
+                except Exception:
+                    filtered.append(f)  # Include on error
+            excluded = len(png_files) - len(filtered)
+            if excluded > 0:
+                print(f"Size filter (>{min_size}px): {len(png_files)} total → {len(filtered)} ({excluded} excluded)")
+            png_files = filtered
 
     if not png_files:
         print("No PNG files to process.")

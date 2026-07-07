@@ -46,10 +46,64 @@ enum abstract Severity(Int) to Int
 class Logger
 {
 	/**
-	 * Primary `trace` function
+	 * Enable detailed prefix with timestamp and state info
+	 */
+	public static var detailedPrefix:Bool = true;
+
+	/**
+	 * Current game state name for logging (cached)
+	 */
+	static var _cachedStateName:String = "Unknown";
+
+	/**
+	 * Get a formatted timestamp string
+	 */
+	static function getTimestamp():String
+	{
+		var now = Date.now();
+		return StringTools.lpad(Std.string(now.getHours()), "0", 2) + ":" +
+			   StringTools.lpad(Std.string(now.getMinutes()), "0", 2) + ":" +
+			   StringTools.lpad(Std.string(now.getSeconds()), "0", 2) + "." +
+			   StringTools.lpad(Std.string(now.getFullYear() % 100), "0", 2) +
+			   StringTools.lpad(Std.string(now.getMonth() + 1), "0", 2) +
+			   StringTools.lpad(Std.string(now.getDate()), "0", 2);
+	}
+
+	/**
+	 * Get current state and substate names for context
+	 */
+	static function getStateContext():String
+	{
+		#if flixel
+		var stateName = "NoState";
+		var subStateName = "";
+
+		if (FlxG.state != null)
+		{
+			stateName = Type.getClassName(Type.getClass(FlxG.state));
+			// Get just the class name without package
+			var dotIdx = stateName.lastIndexOf(".");
+			if (dotIdx >= 0) stateName = stateName.substring(dotIdx + 1);
+
+			// Check for substates
+                        if (Std.isOfType(FlxG.state, flixel.FlxSubState))
+                        {
+                                stateName = "SubState>" + stateName;
+                        }
+                }
+		_cachedStateName = stateName;
+		return stateName;
+		#else
+		return "NoFlixel";
+		#end
+	}
+
+	/**
+	 * Primary `trace` function with enhanced prefix
 	 * @param data The value to trace
 	 * @param severity provides ansi colour coding to better highlight specific messages
 	 * @param showInGame whether to have it display in game
+	 * @param pos Haxe position info (file:line:column)
 	 */
 	public static function log(data:Dynamic, severity:Severity = PRINT, showInGame:Bool = false, ?pos:PosInfos)
 	{
@@ -72,8 +126,35 @@ class Logger
 		{
 			DebugTextPlugin.addText(Std.string(data), getHexColourFromSeverity(severity));
 		}
-		
-		var output:String = severity.toString() + haxe.Log.formatOutput(data, pos);
+
+		// Build enhanced prefix
+		var prefix:String = "";
+		if (detailedPrefix)
+		{
+			var timestamp = getTimestamp();
+			var stateInfo = getStateContext();
+
+			// Format: [HH:MM:SS.YYMMDD] [STATE] [SEVERITY]
+			prefix = '[$timestamp] [$stateInfo] ${severity.toString()}';
+		}
+		else
+		{
+			prefix = severity.toString();
+		}
+
+		// Build full output
+		var output:String = prefix + haxe.Log.formatOutput(data, pos);
+
+		// Add file:line info if available and not already included
+		if (pos != null && detailedPrefix)
+		{
+			// Check if file info is already in the output
+			if (output.indexOf(pos.fileName) < 0 && output.indexOf(Std.string(pos.customParams)) < 0)
+			{
+				// Add file:line at the end
+				output += ' @ ${pos.fileName}:${pos.lineNumber}';
+			}
+		}
 		
 		output = output.fg(getAnsiColourFromSeverity(severity)).reset();
 		

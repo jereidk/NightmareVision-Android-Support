@@ -1,24 +1,26 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
-			"loop": false,
 			"offsets": [
 				0,
 				0
 			],
-			"fps": 24,
+			"loop": false,
 			"anim": "cheer",
-			"indices": [],
-			"name": "GF Cheer"
+			"fps": 24,
+			"name": "GF Cheer",
+			"indices": []
 		},
 		{
-			"loop": false,
 			"offsets": [
-				-2,
-				-21
+				0,
+				0
 			],
-			"fps": 24,
+			"loop": false,
 			"anim": "sad",
+			"fps": 24,
+			"name": "gf sad",
 			"indices": [
 				0,
 				1,
@@ -33,17 +35,37 @@
 				10,
 				11,
 				12
-			],
-			"name": "gf sad"
+			]
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
-				-9
+				0
 			],
+			"loop": true,
+			"anim": "sad-loop",
 			"fps": 24,
+			"name": "gf sad",
+			"indices": [
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12
+			]
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"loop": false,
 			"anim": "danceLeft",
+			"fps": 24,
+			"name": "GF Dancing Beat",
 			"indices": [
 				30,
 				0,
@@ -61,17 +83,17 @@
 				12,
 				13,
 				14
-			],
-			"name": "GF Dancing Beat"
+			]
 		},
 		{
-			"loop": false,
 			"offsets": [
 				0,
-				-9
+				0
 			],
-			"fps": 24,
+			"loop": false,
 			"anim": "danceRight",
+			"fps": 24,
+			"name": "GF Dancing Beat",
 			"indices": [
 				15,
 				16,
@@ -88,21 +110,37 @@
 				27,
 				28,
 				29
+			]
+		},
+		{
+			"offsets": [
+				0,
+				0
 			],
-			"name": "GF Dancing Beat"
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "scared",
+			"loop": false,
+			"name": "GF FEAR"
 		}
 	],
 	"no_antialiasing": false,
 	"image": "characters/GF_assets",
 	"position": [
-		0,
-		0
+		-1,
+		-16
 	],
 	"dance_every": 1,
 	"gameover_intial_sound": null,
+	"flags": {
+		"lightsDownSpeaker": true
+	},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "gf",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
@@ -112,10 +150,7 @@
 		0
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
-	"_editor_isPlayer": false,
-	"flags": {
-		"lightsDownSpeaker": true
-	}
+	"_editor_isPlayer": false
 }

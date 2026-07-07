@@ -11,6 +11,8 @@ import funkin.backend.MusicBeatSubstate;
 import funkin.states.PlayState;
 import funkin.objects.Character;
 import funkin.objects.menu.AmongControls;
+import mobile.utils.MobileNavUtil;
+import flixel.input.touch.FlxTouch;
 
 /**
  * The substate that goes over the game whenever the player dies.
@@ -31,7 +33,7 @@ class GameOverSubstate extends MusicBeatSubstate
 	 * The sound effect to be played on death.
 	 */
 	public static var deathSoundName:Null<String> = null;
-	
+
 	/**
 	 * The music to be played in the game over.
 	 */
@@ -93,7 +95,7 @@ class GameOverSubstate extends MusicBeatSubstate
 			camFollow = new FlxObject(boyfriend.getMidpoint()
 				.x - boyfriend.cameraPosition[0] - 100, boyfriend.getMidpoint().y + boyfriend.cameraPosition[1] - 100);
 				
-			if (deathSoundName != null) FlxG.sound.play(Paths.sound(deathSoundName));
+			if (deathSoundName != null) FlxG.sound.play(Paths.sound(deathSoundName, LOOSE));
 			FlxG.camera.scroll.set();
 			FlxG.camera.target = null;
 			
@@ -108,16 +110,18 @@ class GameOverSubstate extends MusicBeatSubstate
 			FlxG.camera.follow(camFollow, LOCKON, 0);
 		}
 		
-		camCTRL = new FlxCameraEx();
+		camCTRL = new FlxCamera();
 		camCTRL.bgColor = 0x0;
 		FlxG.cameras.add(camCTRL, false);
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['enter', 'restartsong'], // conf
 			['esc', 'backtomenu'] // back
 		], false);
 		bottomControls.camera = camCTRL;
 		add(bottomControls);
+		#end
 		
 		super.create();
 		
@@ -154,7 +158,8 @@ class GameOverSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
-		PlayState.instance?.scripts.call('onUpdate', [elapsed]);
+		_updateArgs[0] = elapsed;
+		PlayState.instance?.scripts.call('onUpdate', _updateArgs);
 		super.update(elapsed);
 		
 		if (controls.ACCEPT && !isEnding)
@@ -177,6 +182,20 @@ class GameOverSubstate extends MusicBeatSubstate
 			}
 		}
 		
+		#if mobile
+		// Tap boyfriend during deathLoop to restart (Touch mode)
+		if (MobileNavUtil.allowPointerNav())
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					_handleTouch(touch);
+				}
+			}
+		}
+		#end
+
 		if (boyfriend.getAnimName() == 'firstDeath' && boyfriend.isAnimFinished() && startedDeath)
 		{
 			boyfriend.playAnim('deathLoop');
@@ -201,9 +220,25 @@ class GameOverSubstate extends MusicBeatSubstate
 			Conductor.songPosition = FlxG.sound.music.time;
 		}
 		
-		PlayState.instance?.scripts.call('onUpdatePost', [elapsed]);
+		_updateArgs[0] = elapsed;
+		PlayState.instance?.scripts.call('onUpdatePost', _updateArgs);
 	}
 	
+	#if mobile
+	function _handleTouch(touch:FlxTouch):Void
+	{
+		// Only accept during deathLoop animation
+		if (boyfriend != null && boyfriend.getAnimName() == "deathLoop")
+		{
+			if (touch.overlaps(boyfriend) && !isEnding)
+			{
+				if (PlayState.instance?.scripts.call('onGameOverConfirm', []) != ScriptConstants.STOP_FUNC)
+					endBullshit();
+			}
+		}
+	}
+	#end
+
 	/**
 	 *	Triggers the game over music after the intro.
 	 * @param volume 

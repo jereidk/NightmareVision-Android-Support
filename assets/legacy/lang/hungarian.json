@@ -476,6 +476,9 @@
         "opt_language": "Nyelv",
         "opt_language_desc": "Válassza ki a nyelvet! Megjegyzés: Az angol (Egyesült Államok) nyelven kívül minden nyelv közösségi fordításon alapul!",
         "opt_category_credits": "Stáblista",
+        "opt_category_editors": "Editors",
+        "opt_category_mobile": "Mobile",
+        "opt_category_dlc": "DLC Manager",
         // some new misc menu stuff
         "rand": "Véletlenszerű",
         "reset":"Visszaállítás",

@@ -17,6 +17,7 @@
 	
 	"flags": {
 		"running": true,
-		"airship": true
+		"airship": true,
+		"windy": true
 	}
 }

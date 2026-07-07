@@ -31,7 +31,7 @@ function onCreatePost()
 	saxguy.frames = Paths.getSparrowAtlas('stages/mira/cafeteria/cyan_toogus');
 	saxguy.animation.addByPrefix('bop', 'Cyan Dancy', 24, true);
 	saxguy.scrollFactor.set(1.2, 1.2);
-	saxguy.scale.set(1.1, 1.1);
+	saxguy.scale.set(2.2, 2.2); // cyan_toogus resized 50%, compensate with 2x scale
 	saxguy.alpha = 0.001;
 	add(saxguy);
 }

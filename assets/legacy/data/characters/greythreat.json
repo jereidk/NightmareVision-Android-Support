@@ -1,8 +1,9 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"offsets": [
-				1502,
+				102,
 				83
 			],
 			"loop": false,
@@ -13,7 +14,7 @@
 		},
 		{
 			"offsets": [
-				1516,
+				106,
 				84
 			],
 			"loop": false,
@@ -24,7 +25,7 @@
 		},
 		{
 			"offsets": [
-				1515,
+				105,
 				88
 			],
 			"loop": false,
@@ -35,7 +36,7 @@
 		},
 		{
 			"offsets": [
-				1512,
+				102,
 				84
 			],
 			"loop": false,
@@ -48,7 +49,7 @@
 			"loop": false,
 			"flipY": false,
 			"offsets": [
-				1514,
+				104,
 				115
 			],
 			"anim": "idle",
@@ -61,7 +62,7 @@
 	"no_antialiasing": false,
 	"image": "characters/triple/greythreat",
 	"position": [
-		1410,
+		0,
 		220
 	],
 	"dance_every": 2,
@@ -74,10 +75,10 @@
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
-	"healthbar_colour": -9082999,
+	"healthbar_colour": -10332301,
 	"camera_position": [
-		500,
-		0
+		38,
+		-62
 	],
 	"gameover_loop_sound": null,
 	"sing_duration": 6,

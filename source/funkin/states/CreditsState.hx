@@ -129,6 +129,16 @@ class CreditsState extends MusicBeatState
 		initStateScript();
 		
 		bg = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
+		// Fixed-size (1286x730) background — screenCenter() alone just leaves
+		// it centered with black bars on both sides on a wide 'expand'-mode
+		// screen instead of covering it. Stretch first (gated on
+		// gameCutoutSize.x so 'fit'/'stretch' mode is untouched), then
+		// screenCenter() re-centers the now-wider sprite with zero gap.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		add(bg);
 		bg.screenCenter();
 		

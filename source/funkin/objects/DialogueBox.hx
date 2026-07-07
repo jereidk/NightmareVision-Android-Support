@@ -12,6 +12,11 @@ import flixel.util.FlxTimer;
 
 import funkin.states.*;
 
+#if mobile
+import mobile.utils.MobileNavUtil;
+import funkin.backend.MusicBeatSubstate;
+#end
+
 // rewrite this later
 class DialogueBox extends FlxSpriteGroup
 {
@@ -87,7 +92,8 @@ class DialogueBox extends FlxSpriteGroup
 				box.animation.addByPrefix('normalOpen', 'Spirit Textbox spawn', 24, false);
 				box.animation.addByIndices('normal', 'Spirit Textbox spawn instance 1', [11], "", 24);
 				
-				var face:FlxSprite = new FlxSprite(320, 170).loadGraphic(Paths.image('pixelUI/spiritFaceForward'));
+				// Same half-cutout alignment as handSelect/dropText/swagDialogue below.
+				var face:FlxSprite = new FlxSprite(320 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 170).loadGraphic(Paths.image('pixelUI/spiritFaceForward'));
 				face.setGraphicSize(Std.int(face.width * 6));
 				add(face);
 		}
@@ -122,7 +128,15 @@ class DialogueBox extends FlxSpriteGroup
 		box.screenCenter(X);
 		portraitLeft.screenCenter(X);
 		
-		handSelect = new FlxSprite(1042, 590).loadGraphic(Paths.image('pixelUI/hand_textbox'));
+		// handSelect/dropText/swagDialogue below are hardcoded to align with
+		// box's default-canvas position, but box.screenCenter(X) recomputes
+		// dynamically from live FlxG.width. A centered element's x always
+		// shifts by exactly half of whatever extra width 'expand' mode
+		// reveals (center of a wider span = old center + cutout/2, regardless
+		// of the element's own width) — so adding that same half-cutout here
+		// keeps these in step with box without needing to know its exact
+		// default position.
+		handSelect = new FlxSprite(1042 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 590).loadGraphic(Paths.image('pixelUI/hand_textbox'));
 		handSelect.setGraphicSize(Std.int(handSelect.width * pixelZoom * 0.9));
 		handSelect.updateHitbox();
 		handSelect.visible = false;
@@ -133,12 +147,12 @@ class DialogueBox extends FlxSpriteGroup
 			// box.flipX = true;
 		}
 		
-		dropText = new FlxText(242, 502, Std.int(FlxG.width * 0.6), "", 32);
+		dropText = new FlxText(242 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 502, Std.int(FlxG.width * 0.6), "", 32);
 		dropText.font = 'Pixel Arial 11 Bold';
 		dropText.color = 0xFFD89494;
 		add(dropText);
 		
-		swagDialogue = new FlxTypeText(240, 500, Std.int(FlxG.width * 0.6), "", 32);
+		swagDialogue = new FlxTypeText(240 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 500, Std.int(FlxG.width * 0.6), "", 32);
 		swagDialogue.font = 'Pixel Arial 11 Bold';
 		swagDialogue.color = 0xFF3F2021;
 		swagDialogue.sounds = [FlxG.sound.load(Paths.sound('pixelText'), 0.6)];
@@ -149,6 +163,21 @@ class DialogueBox extends FlxSpriteGroup
 		dialogue = new Alphabet(0, 80, "", false, true); // excuse me?????
 		// dialogue.x = 90;
 		// add(dialogue);
+		
+		// Add VirtualPad for mobile when navInputMode is 'Virtual Pad'
+		#if mobile
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			// Try to get parent state to add VirtualPad
+			var parentState = FlxG.state;
+			if (parentState != null && Std.is(parentState, MusicBeatSubstate))
+			{
+				var musicBeatState = cast(parentState, MusicBeatSubstate);
+				musicBeatState.addVirtualPad(LEFT_FULL, A_B);
+				musicBeatState.addVirtualPadCamera();
+			}
+		}
+		#end
 	}
 	
 	var dialogueOpened:Bool = false;

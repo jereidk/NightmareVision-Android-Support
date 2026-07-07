@@ -6,6 +6,7 @@ import flixel.FlxG;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import funkin.objects.note.Note;
 import mobile.backend.flixel.input.FlxMobileInputID;
+import mobile.backend.flixel.input.RawTouchClock;
 
 /**
  * Tap-notes input: the player taps directly on falling note sprites to hit them.
@@ -13,8 +14,8 @@ import mobile.backend.flixel.input.FlxMobileInputID;
  * as that lane's input.
  *
  * Implements the same duck-type interface as TouchInputManager
- * (isAnyPressed / isAnyJustPressed / isAnyJustReleased) so Controls.gameplayRequest
- * works without any changes to the getter chain.
+ * (isAnyPressed / isAnyJustPressed / isAnyJustReleased / getPressTimestampMs) so
+ * Controls.gameplayRequest works without any changes to the getter chain.
  */
 class NoteTapInput extends FlxBasic
 {
@@ -29,13 +30,22 @@ class NoteTapInput extends FlxBasic
 	// touchPointID → lane currently held by that touch
 	var _heldTouches:Map<Int, Int> = new Map();
 
+	// Per-lane timestamps for precise timing (milliseconds)
+	var _lanePressTimestamps:Array<Float>    = [0.0, 0.0, 0.0, 0.0];
+	var _laneReleaseTimestamps:Array<Float>  = [0.0, 0.0, 0.0, 0.0];
+
 	/** Extra hit padding around each note sprite (px, in game-logical space). */
-	static inline final HIT_PAD:Float = 22;
+	static inline final HIT_PAD:Float = 45;
+
+	// Reused below instead of letting FlxTouch.getScreenPosition() pull a fresh FlxPoint from
+	// the pool (and never return it) on every touch-down.
+	var _touchPosPoint:FlxPoint = FlxPoint.get();
 
 	public function new(notes:FlxTypedGroup<Note>):Void
 	{
 		super();
 		this.notes = notes;
+		RawTouchClock.init();
 	}
 
 	override public function update(elapsed:Float):Void
@@ -48,16 +58,27 @@ class NoteTapInput extends FlxBasic
 			laneJustReleased[i] = false;
 		}
 
+		// Get camGame for coordinate conversion (notes are in camGame logical space)
+		var camGame = FlxG.camera;
+
 		for (touch in FlxG.touches.list)
 		{
 			if (touch.justPressed)
 			{
-				final lane = _findNoteLane(touch.x, touch.y);
+				// Convert screen coordinates to camGame logical space
+				// This handles camera zoom, scroll, and offset correctly
+				var touchPos = touch.getScreenPosition(camGame, _touchPosPoint);
+				final lane = _findNoteLane(touchPos.x, touchPos.y);
 				if (lane >= 0)
 				{
 					_heldTouches.set(touch.touchPointID, lane);
 					laneHeld[lane]        = true;
 					laneJustPressed[lane] = true;
+					// Prefer the true OS touch-event timestamp (captured async at
+					// TOUCH_BEGIN) over this frame's poll time, so the songPosition
+					// correction downstream isn't a same-frame no-op.
+					final rawTs = RawTouchClock.getPressTime(touch.touchPointID);
+					_lanePressTimestamps[lane] = rawTs >= 0 ? rawTs : (haxe.Timer.stamp() * 1000.0);
 				}
 			}
 			else if (touch.justReleased)
@@ -74,6 +95,7 @@ class NoteTapInput extends FlxBasic
 					{
 						laneHeld[lane]         = false;
 						laneJustReleased[lane] = true;
+						_laneReleaseTimestamps[lane] = haxe.Timer.stamp() * 1000.0;
 					}
 				}
 			}
@@ -110,6 +132,18 @@ class NoteTapInput extends FlxBasic
 			if (l >= 0 && laneJustReleased[l]) return true;
 		}
 		return false;
+	}
+
+	public function getPressTimestampMs(id:FlxMobileInputID):Float
+	{
+		final l = _laneForId(id);
+		return l >= 0 ? _lanePressTimestamps[l] : 0.0;
+	}
+
+	public function getReleaseTimestampMs(id:FlxMobileInputID):Float
+	{
+		final l = _laneForId(id);
+		return l >= 0 ? _laneReleaseTimestamps[l] : 0.0;
 	}
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────
@@ -167,6 +201,7 @@ class NoteTapInput extends FlxBasic
 	{
 		super.destroy();
 		_heldTouches.clear();
+		_touchPosPoint.put();
 	}
 }
 #end

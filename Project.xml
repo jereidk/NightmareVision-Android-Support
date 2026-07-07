@@ -28,9 +28,7 @@
     <set name="BUILD_DIR" value="${BUILD_DIR}-tracy" if="FEATURE_DEBUG_TRACY"/>
 
     <assets path='assets/embeds' rename='assets' embed="false" />
-    <assets path="assets/legacy" rename="assets"/>
-
-    <assets path="assets" include="*.ttf|*.otf" type="binary" nocompress="true"/>
+    <assets path="assets/legacy" rename="assets" embed="false" />
 
     <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
     <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
@@ -138,7 +136,6 @@
 		<config:android permission="android.permission.READ_MEDIA_DOCUMENTS" />
 		<config:android permission="android.permission.ACCESS_WIFI_STATE"/>
 		<config:android permission="android.permission.CAPTURE_AUDIO_OUTPUT" />
-		<config:android permission="android.permission.VIBRATE"/>
 
 		<android extension="mobile.backend.java.FileUtils" />
 		<android extension="mobile.backend.java.AndroidUtils" />
@@ -154,6 +151,8 @@
     </section>
 
     <java path="source" if="android"/>
+
+    <template path="templates/android" if="android"/>
 
     <icon path="projFiles/icon/icon16.png" size='16'/>
     <icon path="projFiles/icon/icon32.png" size='32'/>

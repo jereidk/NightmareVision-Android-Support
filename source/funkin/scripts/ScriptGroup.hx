@@ -8,12 +8,19 @@ import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
 /**
  * Container of `FunkinScript` instances
- * 
+ *
  * idea from friens static fyr thanks
  */
 @:nullSafety(Strict)
 class ScriptGroup implements IFlxDestroyable
 {
+	/** Set true to log script calls slower than slowThresholdMs to trace/logcat */
+	public static var timingEnabled:Bool = false;
+	/** Minimum milliseconds before a script call is logged (when timingEnabled) */
+	public static var slowThresholdMs:Float = 1.0;
+
+	static final _emptyExclusions:Array<String> = [];
+
 	public var scriptShareables:Sharables = new Sharables();
 	
 	/**
@@ -73,29 +80,41 @@ class ScriptGroup implements IFlxDestroyable
 	@:inheritDoc(funkin.scripts.FunkinScript.set)
 	public function set(varName:String, arg:Dynamic)
 	{
+		if (members.length == 0) return;
 		for (i in members)
 		{
 			i.set(varName, arg);
 		}
 	}
-	
+
 	@:inheritDoc(funkin.scripts.FunkinScript.call)
 	public function call(event:String, ?args:Array<Dynamic>, ignoreStops:Bool = false, ?exclusions:Array<String>):Dynamic
 	{
-		exclusions ??= [];
+		// Fast path: skip all allocations when no scripts are loaded (common during vanilla gameplay).
+		if (members.length == 0) return ScriptConstants.CONTINUE_FUNC;
+		exclusions ??= _emptyExclusions;
 		
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
 		
 		for (i in members)
 		{
 			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
-			
+
+			final _t = timingEnabled ? haxe.Timer.stamp() : 0.0;
+
 			var ret:Dynamic = i.call(event, args)?.returnValue;
-			
+
+			if (timingEnabled)
+			{
+				final _ms = (haxe.Timer.stamp() - _t) * 1000.0;
+				if (_ms >= slowThresholdMs)
+					trace('[ScriptPerf] ${i.name}::$event ${Math.round(_ms * 10) / 10}ms');
+			}
+
 			if (ret != null)
 			{
 				if (ScriptConstants.halting(ret) && !ignoreStops) return ret;
-				
+
 				if (ret != ScriptConstants.CONTINUE_FUNC) returnVal = ret;
 			}
 		}
@@ -139,11 +158,9 @@ class ScriptGroup implements IFlxDestroyable
 	public function clear(callOnDestroy:Bool = true)
 	{
 		if (callOnDestroy) call('onDestroy', null, true);
-		for (i in 0...members.length)
-		{
-			var script = members[0];
-			members.remove(script);
+		var toDestroy = members.copy();
+		members = [];
+		for (script in toDestroy)
 			script.destroy();
-		}
 	}
 }

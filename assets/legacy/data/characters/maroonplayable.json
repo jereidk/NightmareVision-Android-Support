@@ -275,7 +275,10 @@
 			"0xFF6B2B3C",
 			"0xFFCC5849",
 			"0xFF440D37"
-		]
+		],
+		"variants":{
+			"boiling": "maroonplayablelava"
+		}
 	},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,

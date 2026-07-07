@@ -2,6 +2,7 @@ package funkin.game.huds;
 
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.FlxObject;
+import flixel.graphics.FlxGraphic;
 import flixel.util.FlxStringUtil;
 
 import funkin.objects.Bar;
@@ -13,15 +14,25 @@ class PsychHUD extends BaseHUD
 {
 	var ratingGraphic:FlxSprite;
 	var ratingNumGroup:FlxTypedGroup<FlxSprite>;
-	
+
 	var healthBar:Bar;
 	var healthLerp:Float = 1;
 	var iconP1:HealthIcon;
 	var iconP2:HealthIcon;
 	var scoreTxt:FlxText;
-	
+
 	var timeTxt:FlxText;
 	var timeBar:Bar;
+
+	// Stored tween references — avoids FlxTween.cancelTweensOf() scanning all active tweens.
+	var _ratingAlphaTween:FlxTween = null;
+	var _ratingScaleTween:FlxTween = null;
+	var _scoreBopTween:FlxTween = null;
+	var _numAlphaTweens:Array<FlxTween> = [];
+	var _numScaleTweens:Array<FlxTween> = [];
+
+	// Dirty-check for timeTxt — only redraw when the displayed second actually changes.
+	var _lastSecond:Int = -1;
 	
 	var ratingPrefix:String = "";
 	var ratingSuffix:String = '';
@@ -176,14 +187,22 @@ class PsychHUD extends BaseHUD
 	{
 		return Highscore.getLetterRank(acc, misses);
 	}
+
+	// Pre-cached graphic references to avoid rebuilding frame data on every note hit.
+	var _ratingGraphicsCache:Map<String, FlxGraphic> = new Map();
+	var _numGraphicsCache:Array<Null<FlxGraphic>> = [];
+	// Pre-allocated digit array to avoid per-hit Array<Int> allocation.
+	final _scoreDigits:Array<Int> = [0, 0, 0, 0];
 	
 	public function doScoreBop():Void
 	{
 		if (!ClientPrefs.scoreZoom) return;
-		
-		FlxTween.cancelTweensOf(scoreTxt.scale);
+
+		if (_scoreBopTween != null) { _scoreBopTween.cancel(); _scoreBopTween = null; }
 		scoreTxt.scale.set(1.075, 1.075);
-		FlxTween.tween(scoreTxt.scale, {x: 1, y: 1}, 0.2);
+		_scoreBopTween = FlxTween.tween(scoreTxt.scale, {x: 1, y: 1}, 0.2, {
+			onComplete: function(_) { _scoreBopTween = null; }
+		});
 	}
 	
 	public function updateIconsPosition()
@@ -255,16 +274,20 @@ class PsychHUD extends BaseHUD
 		
 		if (!parent.startingSong && !parent.paused && parent.updateTime && !parent.endingSong)
 		{
-			var curTime:Float = Math.max(0, Conductor.songPosition - ClientPrefs.noteOffset);
+			var curTime:Float = FlxMath.bound(parent.getSongTime() - ClientPrefs.noteOffset, 0, parent.songLength);
 			parent.songPercent = (curTime / parent.songLength);
-			
-			var songCalc:Float = (parent.songLength - curTime);
+
+			var songCalc:Float = (ClientPrefs.timeBarType == 'Time Left' ? (parent.songLength - curTime) : curTime);
 			if (ClientPrefs.timeBarType == 'Time Elapsed') songCalc = curTime;
-			
+
 			var secondsTotal:Int = Math.floor(songCalc / 1000);
 			if (secondsTotal < 0) secondsTotal = 0;
-			
-			if (ClientPrefs.timeBarType != 'Song Name') timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
+
+			if (ClientPrefs.timeBarType != 'Song Name' && secondsTotal != _lastSecond)
+			{
+				_lastSecond = secondsTotal;
+				timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
+			}
 		}
 		
 		healthLerp = FlxMath.lerp(healthLerp, parent.health, 0.15);
@@ -304,55 +327,97 @@ class PsychHUD extends BaseHUD
 		if (showRating)
 		{
 			ratingGraphic.alpha = 1;
-			ratingGraphic.loadGraphic(Paths.image(ratingPrefix + ratingImage + ratingSuffix));
+			final cachedRating = _ratingGraphicsCache[ratingImage] ?? Paths.image(ratingPrefix + ratingImage + ratingSuffix);
+			if (ratingGraphic.graphic != cachedRating)
+			{
+				ratingGraphic.loadGraphic(cachedRating);
+				ratingGraphic.updateHitbox();
+			}
 			ratingGraphic.screenCenter();
 			ratingGraphic.x = posX - 40;
 			ratingGraphic.y -= 60;
-			
+
 			if (PlayState.isPixelStage) ratingGraphic.antialiasing = false;
-			
+
 			ratingGraphic.scale.set(ratingScale * ratingPop, ratingScale * ratingPop);
 			ratingGraphic.updateHitbox();
-			
-			FlxTween.cancelTweensOf(ratingGraphic, ['alpha']);
-			FlxTween.cancelTweensOf(ratingGraphic.scale);
-			FlxTween.tween(ratingGraphic.scale, {x: ratingScale, y: ratingScale}, 0.5, {ease: FlxEase.expoOut});
-			FlxTween.tween(ratingGraphic, {alpha: 0}, 0.5, {startDelay: Conductor.stepCrotchet * 0.01, ease: FlxEase.expoOut});
+
+			if (_ratingScaleTween != null) { _ratingScaleTween.cancel(); _ratingScaleTween = null; }
+			if (_ratingAlphaTween != null) { _ratingAlphaTween.cancel(); _ratingAlphaTween = null; }
+			_ratingScaleTween = FlxTween.tween(ratingGraphic.scale, {x: ratingScale, y: ratingScale}, 0.5, {
+				ease: FlxEase.expoOut,
+				onComplete: function(_) { _ratingScaleTween = null; }
+			});
+			_ratingAlphaTween = FlxTween.tween(ratingGraphic, {alpha: 0}, 0.5, {
+				startDelay: Conductor.stepCrotchet * 0.01,
+				ease: FlxEase.expoOut,
+				onComplete: function(_) { _ratingAlphaTween = null; }
+			});
 		}
 		
 		if (showRatingNum)
 		{
-			ratingNumGroup.killMembers();
-			
-			var separatedScore:Array<Int> = [], n:Int = combo;
-			while (n > 0)
+			// Cancel all digit tweens from the previous popup before recycling.
+			// O(digit_count) direct cancels instead of O(all_active_tweens) scans.
+			for (j in 0..._numAlphaTweens.length)
 			{
-				separatedScore.unshift(n % 10);
-				n = Math.floor(n / 10);
+				if (_numAlphaTweens[j] != null) { _numAlphaTweens[j].cancel(); _numAlphaTweens[j] = null; }
+				if (_numScaleTweens[j] != null) { _numScaleTweens[j].cancel(); _numScaleTweens[j] = null; }
 			}
-			while (separatedScore.length < minCombos)
-				separatedScore.unshift(0);
-				
-			for (i => d in separatedScore)
+
+			ratingNumGroup.killMembers();
+
+			// Fill _scoreDigits in reverse (least-significant first), then reverse in-place.
+			var digitCount:Int = 0;
+			var n:Int = combo;
+			while (n > 0) { _scoreDigits[digitCount++] = n % 10; n = Math.floor(n / 10); }
+			if (digitCount == 0) { _scoreDigits[digitCount++] = 0; }
+			// Reverse the filled portion.
+			var lo:Int = 0, hi:Int = digitCount - 1;
+			while (lo < hi) { final t = _scoreDigits[lo]; _scoreDigits[lo++] = _scoreDigits[hi]; _scoreDigits[hi--] = t; }
+			// Left-pad with zeros up to minCombos using a shift approach (small array, no alloc).
+			while (digitCount < minCombos)
 			{
+				for (j in 0...digitCount) _scoreDigits[digitCount - j] = _scoreDigits[digitCount - j - 1];
+				_scoreDigits[0] = 0;
+				digitCount++;
+			}
+
+			_numAlphaTweens.resize(digitCount);
+			_numScaleTweens.resize(digitCount);
+
+			for (i in 0...digitCount)
+			{
+				final d = _scoreDigits[i];
 				var numScore:FlxSprite = ratingNumGroup.recycle(FlxSprite);
-				numScore.loadGraphic(Paths.image(ratingPrefix + 'num' + d + ratingSuffix));
+				final cachedNum = (_numGraphicsCache.length > d ? _numGraphicsCache[d] : null) ?? Paths.image(ratingPrefix + 'num' + d + ratingSuffix);
+				if (numScore.graphic != cachedNum)
+				{
+					numScore.loadGraphic(cachedNum);
+					numScore.updateHitbox();
+				}
 				numScore.alpha = 1;
 				numScore.screenCenter();
 				numScore.x = posX + (43 * i) - 90;
 				numScore.y += 80;
 				numScore.revive();
-				
+
 				if (PlayState.isPixelStage) numScore.antialiasing = false;
-				
+
 				numScore.scale.set(combosScale * combosPop, combosScale * combosPop);
 				numScore.updateHitbox();
-				
-				FlxTween.cancelTweensOf(numScore, ['alpha']);
-				FlxTween.cancelTweensOf(numScore.scale);
-				FlxTween.tween(numScore.scale, {x: combosScale, y: combosScale}, 0.5, {ease: FlxEase.expoOut});
-				FlxTween.tween(numScore, {alpha: 0}, 0.5, {startDelay: Conductor.stepCrotchet * 0.01, ease: FlxEase.expoOut});
-				
+
+				final idx = i;
+				_numScaleTweens[i] = FlxTween.tween(numScore.scale, {x: combosScale, y: combosScale}, 0.5, {
+					ease: FlxEase.expoOut,
+					onComplete: function(_) { _numScaleTweens[idx] = null; }
+				});
+				_numAlphaTweens[i] = FlxTween.tween(numScore, {alpha: 0}, 0.5, {
+					startDelay: Conductor.stepCrotchet * 0.01,
+					ease: FlxEase.expoOut,
+					onComplete: function(_) { _numAlphaTweens[idx] = null; }
+				});
+
 				ratingNumGroup.add(numScore);
 			}
 		}
@@ -362,15 +427,22 @@ class PsychHUD extends BaseHUD
 	{
 		var ratings = ["sick", "good", "bad", "shit"];
 		if (ClientPrefs.useEpicRankings) ratings.push('epic');
-		
+
+		_ratingGraphicsCache.clear();
 		for (rating in ratings)
 		{
-			ratingGraphic.loadGraphic(Paths.image('$ratingPrefix$rating$ratingSuffix'));
+			final g = Paths.image('$ratingPrefix$rating$ratingSuffix');
+			_ratingGraphicsCache[rating] = g;
 		}
-		
+
+		_numGraphicsCache = [];
 		for (i in 0...10)
 		{
-			Paths.image('${ratingPrefix}num$i$ratingSuffix');
+			_numGraphicsCache.push(Paths.image('${ratingPrefix}num$i$ratingSuffix'));
 		}
+
+		// Warm up ratingGraphic frames so dimensions are set before the first hit.
+		if (ratings.length > 0 && _ratingGraphicsCache.exists(ratings[0]))
+			ratingGraphic.loadGraphic(_ratingGraphicsCache[ratings[0]]);
 	}
 }

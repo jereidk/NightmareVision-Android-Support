@@ -12,11 +12,19 @@ class LocalRotateModifier extends NoteModifier
 	}
 	
 	var prefix:String;
-	
+	// prefix never changes after construction, so these lookup keys are built once here instead
+	// of every getPos() call (i.e. once per active note/receptor, per frame).
+	var _rotateYKey:String;
+	var _rotateZKey:String;
+	var _rotatePrefix:String;
+
 	public function new(modMgr:ModManager, ?prefix:String = '', ?parent:Modifier)
 	{
 		this.prefix = prefix;
 		super(modMgr, parent);
+		_rotateYKey = '${prefix}rotateY';
+		_rotateZKey = '${prefix}rotateZ';
+		_rotatePrefix = '${prefix}rotate';
 	}
 	
 	// thanks schmoovin'
@@ -58,11 +66,11 @@ class LocalRotateModifier extends NoteModifier
 		var scale = FlxG.height;
 		diff.z *= scale;
 		
-		final vals = Vector3.get(getValue(player), getSubmodValue('${prefix}rotateY', player), getSubmodValue('${prefix}rotateZ', player));
-		
-		vals.x += getSubmodValue('${prefix}rotate${data}X', player);
-		vals.y += getSubmodValue('${prefix}rotate${data}Y', player);
-		vals.z += getSubmodValue('${prefix}rotate${data}Z', player);
+		final vals = Vector3.get(getValue(player), getSubmodValue(_rotateYKey, player), getSubmodValue(_rotateZKey, player));
+
+		vals.x += getSubmodValue(catKey(_rotatePrefix, data, 'X'), player);
+		vals.y += getSubmodValue(catKey(_rotatePrefix, data, 'Y'), player);
+		vals.z += getSubmodValue(catKey(_rotatePrefix, data, 'Z'), player);
 		
 		var out = rotateV3(diff, vals.x, vals.y, vals.z);
 		out.z /= scale;

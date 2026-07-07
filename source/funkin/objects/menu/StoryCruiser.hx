@@ -1,10 +1,11 @@
 package funkin.objects.menu;
 
 import funkin.objects.menu.BaseNode;
+import funkin.utils.MathUtil;
 
 class StoryCruiser extends FlxSprite {
 	public var followingNode:BaseNode = null;
-	public var speed:Float = 9;
+	public var speed:Float = .15;
 	
 	public function new() {
 		super();
@@ -22,10 +23,10 @@ class StoryCruiser extends FlxSprite {
 	
 	public override function update(elapsed:Float):Void {
 		if (followingNode != null) {
-			x = FlxMath.lerp(x + width * .5, followingNode.x, Math.min(elapsed * speed, 1)) - width * .5;
-			y = FlxMath.lerp(y + height * .5, followingNode.y, Math.min(elapsed * speed, 1)) - height * .5;
+			x = MathUtil.fpsLerp(x + width * .5, followingNode.x, speed) - width * .5;
+			y = MathUtil.fpsLerp(y + height * .5, followingNode.y, speed) - height * .5;
 		}
-		
+
 		super.update(elapsed);
 	}
 	

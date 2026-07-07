@@ -15,8 +15,11 @@ import haxe.zip.Reader;
 
 using StringTools;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
+
 /**
- * Metadata for a downloadable DLC entry (from registry JSON).
+ * Metadata for a downloadable DLC entry (from registry JSON, enriched by GitHub release API).
  */
 typedef DLCEntry = {
     var id:String;
@@ -28,6 +31,8 @@ typedef DLCEntry = {
     var downloadUrl:String;
     var sha256:String;
     var ?tags:Array<String>;
+    /** Optional GitHub release tag (e.g. "dlc-v1") to enrich name/description/author from the API. */
+    var ?releaseTag:String;
 }
 
 /**
@@ -57,6 +62,10 @@ class DLCManager {
     /** URL of the community DLC registry JSON. */
     public static final REGISTRY_URL =
         "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-registry.json";
+
+    /** GitHub API base for release tag lookups. */
+    static final RELEASES_API_BASE =
+        "https://api.github.com/repos/jereidk/NightmareVision-Android-Support/releases/tags/";
 
     #if sys
     static var _mutex:Mutex = new Mutex();
@@ -103,7 +112,7 @@ class DLCManager {
                         name:   meta.name != null ? Std.string(meta.name) : dir,
                         folder: full
                     });
-            } catch (_:Dynamic) {}
+            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to parse meta.json for $dir: $e', WARN); }
         }
         #end
         return result;
@@ -119,10 +128,81 @@ class DLCManager {
         for (d in getInstalledDLCs()) {
             if (d.id != id) continue;
             #if sys
-            try { _deleteDir(d.folder); return true; } catch (_:Dynamic) {}
+            try { _deleteDir(d.folder); return true; } catch (e:Dynamic) { Logger.log('DLCManager: Failed to uninstall DLC $id: $e', WARN); }
             #end
         }
         return false;
+    }
+
+    // ── Release-API enrichment ─────────────────────────────────────────────
+
+    /**
+     * For each DLC entry that has a `releaseTag`, fetch the GitHub release API
+     * and overwrite name/description/author/version/sizeMb/downloadUrl/sha256
+     * with the live release data. Registry fields serve as fallback when the
+     * API call fails (rate limit, no network, etc.).
+     *
+     * Runs inside the background thread created by fetchRegistryAsync() —
+     * no mutex needed for `reg.dlcs` because only this thread touches it.
+     */
+    static function _enrichFromGitHubReleases(reg:DLCRegistry):Void {
+        for (entry in reg.dlcs) {
+            if (entry.releaseTag == null || entry.releaseTag == "") continue;
+            try {
+                var url = RELEASES_API_BASE + StringTools.urlEncode(entry.releaseTag);
+                var http = new Http(url);
+                var data  = "";
+                var error = "";
+                http.onData  = (d) -> data  = d;
+                http.onError = (e) -> error = e;
+                http.addHeader("Accept", "application/vnd.github+json");
+                http.addHeader("User-Agent", "ImpostorLegacy-DLCManager");
+                http.request(false);
+
+                if (error != "" || data == "") continue;
+
+                var release:Dynamic = Json.parse(data);
+
+                // Use GitHub release name as the DLC title
+                if (release.name != null && Std.string(release.name) != "")
+                    entry.name = Std.string(release.name);
+
+                // Use release body as description, stripping HTML comments
+                // (GitHub releases sometimes include <!-- sha256:... --> or similar).
+                if (release.body != null && Std.string(release.body) != "") {
+                    var rawDescription = Std.string(release.body);
+                    // Strip <!-- ... --> HTML comments
+                    rawDescription = ~/<!--[\s\S]*?-->/g.replace(rawDescription, "");
+                    entry.description = StringTools.trim(rawDescription);
+                }
+
+                // Author from the release publisher
+                if (release.author != null && release.author.login != null)
+                    entry.author = Std.string(release.author.login);
+
+                // Version from tag_name — strip a leading "v" if present
+                if (release.tag_name != null) {
+                    var tag = Std.string(release.tag_name);
+                    entry.version = tag.startsWith("v") ? tag.substring(1) : tag;
+                }
+
+                // Pick the first downloadable asset
+                if (release.assets != null) {
+                    var assets:Array<Dynamic> = cast release.assets;
+                    if (assets.length > 0) {
+                        var asset = assets[0];
+                        if (asset.size != null)
+                            entry.sizeMb = Std.parseFloat(Std.string(asset.size)) / (1024.0 * 1024.0);
+                        if (asset.browser_download_url != null)
+                            entry.downloadUrl = Std.string(asset.browser_download_url);
+                    }
+                }
+
+                Logger.log('DLCManager: Enriched "${entry.id}" from release ${entry.releaseTag}', NOTICE);
+            } catch (e:Dynamic) {
+                Logger.log('DLCManager: Failed to fetch release ${entry.releaseTag}: $e', WARN);
+            }
+        }
     }
 
     // ── Async operations ───────────────────────────────────────────────────
@@ -149,6 +229,9 @@ class DLCManager {
                 var reg:DLCRegistry = Json.parse(data);
                 if (reg.schemaVersion != 1)
                     throw "Unsupported registry version: " + reg.schemaVersion;
+
+                // Enrich entries with live release metadata from GitHub API
+                _enrichFromGitHubReleases(reg);
 
                 _mutex.acquire();
                 registryData   = reg;
@@ -205,7 +288,7 @@ class DLCManager {
                 try {
                     if (zipPath.indexOf(".temp") >= 0 || zipPath.indexOf("dlc-import") >= 0)
                         if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath);
-                } catch (_:Dynamic) {}
+                } catch (e:Dynamic) { Logger.log('DLCManager: Failed to cleanup temp file: $e', WARN); }
 
                 _mutex.acquire();
                 taskState    = SUCCESS;
@@ -242,45 +325,72 @@ class DLCManager {
 
                 // Stream the response body straight to disk through a counting Output so
                 // we can report real byte-level progress and keep peak memory low.
-                // haxe.Http.customRequest() is blocking but follows redirects (GitHub
-                // release URLs 302 to *.githubusercontent.com), exactly like request().
+                // sys.Http does NOT follow redirects (it silently accepts any 2xx/3xx
+                // status), and GitHub release URLs answer 302 with an empty body before
+                // redirecting to *.githubusercontent.com — so we follow Location headers
+                // ourselves, re-opening the output file for each hop.
                 // The download phase is mapped onto 5%–55% of the overall task.
-                var http:Http = new Http(entry.downloadUrl);
-                var error = "";
-                http.onError = (e) -> error = e;
-
+                var url       = entry.downloadUrl;
+                var redirects = 0;
                 var estTotal  = entry.sizeMb > 0 ? Std.int(entry.sizeMb * 1024 * 1024) : 0;
                 var startTime = haxe.Timer.stamp();
-                var lastPct   = -1;
 
-                var fileOut = File.write(zipPath, true);
-                var counter = new DownloadProgressOutput(fileOut, (written) -> {
-                    // Prefer the exact Content-Length from the (post-redirect) headers,
-                    // fall back to the registry's declared size if it isn't available.
-                    var total = estTotal;
-                    var cl = http.responseHeaders != null ? http.responseHeaders.get("Content-Length") : null;
-                    if (cl != null) { var p = Std.parseInt(cl); if (p != null && p > 0) total = p; }
+                while (true) {
+                    var http:Http = new Http(url);
+                    var error  = "";
+                    var status = 0;
+                    http.onError  = (e) -> error  = e;
+                    http.onStatus = (s) -> status = s;
 
-                    var pct = total > 0 ? 5 + Std.int(Math.min(50, (written / total) * 50)) : 5;
-                    if (pct != lastPct) {
-                        lastPct = pct;
-                        var mb    = written / (1024.0 * 1024.0);
-                        var totMb = total   / (1024.0 * 1024.0);
-                        var secs  = haxe.Timer.stamp() - startTime;
-                        var spd   = secs > 0 ? mb / secs : 0.0;
-                        _setProgress(pct, 'Downloading: ${_fmtMB(mb)} / ${total > 0 ? _fmtMB(totMb) : "?"} MB  •  ${_fmtMB(spd)} MB/s');
+                    var lastPct = -1;
+                    var fileOut = File.write(zipPath, true);
+                    var counter = new DownloadProgressOutput(fileOut, (written) -> {
+                        // Prefer the exact Content-Length from the (post-redirect) headers,
+                        // fall back to the registry's declared size if it isn't available.
+                        var total = estTotal;
+                        var cl = http.responseHeaders != null ? http.responseHeaders.get("Content-Length") : null;
+                        if (cl == null && http.responseHeaders != null) cl = http.responseHeaders.get("content-length");
+                        if (cl != null) { var p = Std.parseInt(cl); if (p != null && p > 0) total = p; }
+
+                        var pct = total > 0 ? 5 + Std.int(Math.min(50, (written / total) * 50)) : 5;
+                        if (pct != lastPct) {
+                            lastPct = pct;
+                            var mb    = written / (1024.0 * 1024.0);
+                            var totMb = total   / (1024.0 * 1024.0);
+                            var secs  = haxe.Timer.stamp() - startTime;
+                            var spd   = secs > 0 ? mb / secs : 0.0;
+                            _setProgress(pct, 'Downloading: ${_fmtMB(mb)} / ${total > 0 ? _fmtMB(totMb) : "?"} MB  •  ${_fmtMB(spd)} MB/s');
+                        }
+                    });
+
+                    try {
+                        http.customRequest(false, counter);
+                    } catch (e:Dynamic) {
+                        try { counter.close(); } catch (_:Dynamic) {}
+                        throw "Download failed: " + Std.string(e);
                     }
-                });
+                    try { counter.close(); } catch (_:Dynamic) {}
 
-                try {
-                    http.customRequest(false, counter);
-                } catch (e:Dynamic) {
-                    try counter.close() catch (_:Dynamic) {}
-                    throw "Download failed: " + Std.string(e);
+                    if (error != "") throw "Download failed: " + error;
+
+                    if (status >= 300 && status < 400) {
+                        var loc = http.responseHeaders != null
+                            ? (http.responseHeaders.get("Location") ?? http.responseHeaders.get("location"))
+                            : null;
+                        if (loc == null) throw "Redirect (HTTP " + status + ") without a Location header";
+                        if (++redirects > 5) throw "Too many redirects";
+                        // Resolve relative redirects against the current URL's origin
+                        if (loc.startsWith("/")) {
+                            var schemeEnd = url.indexOf("://") + 3;
+                            var hostEnd   = url.indexOf("/", schemeEnd);
+                            loc = (hostEnd == -1 ? url : url.substring(0, hostEnd)) + loc;
+                        }
+                        url = loc;
+                        continue;
+                    }
+
+                    break;
                 }
-                try counter.close() catch (_:Dynamic) {}
-
-                if (error != "") throw "Download failed: " + error;
                 if (!FileSystem.exists(zipPath) || FileSystem.stat(zipPath).size == 0)
                     throw "Download returned an empty file";
 
@@ -308,7 +418,7 @@ class DLCManager {
                 activeTaskId = "";
                 _mutex.release();
             } catch (e:Dynamic) {
-                try { if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath); } catch (_:Dynamic) {}
+                try { if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath); } catch (de:Dynamic) { Logger.log('DLCManager: Failed to cleanup zip after error: $de', WARN); }
                 _mutex.acquire();
                 taskState    = FAILED;
                 taskProgress = 0;
@@ -322,7 +432,34 @@ class DLCManager {
 
     // ── Private helpers ────────────────────────────────────────────────────
 
+    /**
+     * Write/update meta.json for an installed DLC folder.
+     * This is THE authoritative metadata — the game reads it to list installed DLCs.
+     */
     #if sys
+    static function _writeMetaJson(destPath:String, entry:DLCEntry):Void {
+        var metaPath = destPath + "meta.json";
+        var meta:Dynamic = {};
+        if (FileSystem.exists(metaPath)) {
+            try {
+                meta = Json.parse(File.getContent(metaPath));
+            } catch (e:Dynamic) {}
+        }
+
+        // Always overwrite the id, name, and global flag from the entry
+        // (the registry / release API is the source of truth).
+        meta.dlcId  = entry.id;
+        meta.name   = entry.name;
+        meta.global = true;
+
+        // Fill in optional fields only if the entry has non‑empty values
+        if (entry.description != "") meta.description = entry.description;
+        if (entry.author != "")      meta.author      = entry.author;
+        if (entry.version != "")     meta.version     = entry.version;
+
+        File.saveContent(metaPath, Json.stringify(meta, null, "  "));
+    }
+
     static function _extractZip(zipPath:String, destPath:String, entry:DLCEntry):Void {
         var input   = File.read(zipPath, true);
         var entries = Reader.readZip(input);
@@ -375,25 +512,8 @@ class DLCManager {
             _setProgress(70 + (total > 0 ? Std.int(25 * i / total) : 25), "Installing (" + i + "/" + total + ")...");
         }
 
-        // Ensure meta.json carries our dlcId marker and global:true
-        var metaPath = destPath + "meta.json";
-        if (FileSystem.exists(metaPath)) {
-            try {
-                var meta:Dynamic = Json.parse(File.getContent(metaPath));
-                var changed = false;
-                if (meta.dlcId  == null)  { meta.dlcId  = entry.id; changed = true; }
-                if (meta.global != true)  { meta.global = true;      changed = true; }
-                if (changed) File.saveContent(metaPath, Json.stringify(meta));
-            } catch (_:Dynamic) {}
-        } else {
-            var meta = {
-                name:        entry.name,
-                global:      true,   // load alongside the active mod, not only when selected
-                description: entry.description,
-                dlcId:       entry.id
-            };
-            File.saveContent(metaPath, Json.stringify(meta));
-        }
+        // Ensure meta.json carries our dlcId marker, name, and global:true
+        _writeMetaJson(destPath, entry);
     }
 
     static function _setStatus(state:DLCTaskState, progress:Int, msg:String):Void {
@@ -438,7 +558,7 @@ class DLCManager {
             if (part == "") continue;
             current = (current == "/" ? "/" : (current == "" ? "" : current + "/")) + part;
             if (!FileSystem.exists(current))
-                try { FileSystem.createDirectory(current); } catch (_:Dynamic) {}
+                try { FileSystem.createDirectory(current); } catch (e:Dynamic) { Logger.log('DLCManager: Failed to create directory $current: $e', WARN); }
         }
     }
     #end
@@ -455,6 +575,7 @@ private class DownloadProgressOutput extends haxe.io.Output {
     final dest:haxe.io.Output;
     final onWritten:Int->Void;
     var total:Int = 0;
+    var isClosed:Bool = false;
 
     public function new(dest:haxe.io.Output, onWritten:Int->Void) {
         this.dest      = dest;
@@ -462,19 +583,29 @@ private class DownloadProgressOutput extends haxe.io.Output {
     }
 
     override public function writeByte(c:Int):Void {
+        if (isClosed) return;
         dest.writeByte(c);
         total++;
         onWritten(total);
     }
 
     override public function writeBytes(s:haxe.io.Bytes, pos:Int, len:Int):Int {
+        if (isClosed) return 0;
         var n = dest.writeBytes(s, pos, len);
         total += n;
         onWritten(total);
         return n;
     }
 
-    override public function flush():Void dest.flush();
-    override public function close():Void dest.close();
+    override public function flush():Void {
+        if (!isClosed) dest.flush();
+    }
+
+    override public function close():Void {
+        if (!isClosed) {
+            isClosed = true;
+            try { dest.close(); } catch (_:Dynamic) {}
+        }
+    }
 }
 #end

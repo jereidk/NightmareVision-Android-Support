@@ -6,6 +6,9 @@ import funkin.data.CosmicubeData;
 import funkin.objects.menu.ScrollBar;
 import funkin.objects.menu.AmongControls;
 import funkin.input.TurboControl;
+#if mobile
+import mobile.backend.flixel.input.FlxMobileInputID;
+#end
 
 import flixel.graphics.frames.FlxAtlasFrames;
 
@@ -14,6 +17,15 @@ using StringTools;
 class CosmeticsSubstate extends MusicBeatSubstate
 {
 	static var hasPreloadedForSession:Bool = false;
+
+	// Reused by mobilePadJustReleased() calls in update() instead of allocating a fresh
+	// single-element Array every frame.
+	#if mobile
+	static final _leftKey:Array<FlxMobileInputID> = [LEFT];
+	static final _rightKey:Array<FlxMobileInputID> = [RIGHT];
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
 	
 	public static function preloadForFreeplay():Void
 	{
@@ -49,7 +61,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var canMove:Bool = false;
 	var isClosing:Bool = false;
 	var inGrid:Bool = false; // False is the base Locker UI, true is the Grid containing all of your items of a certain type.
-	var mouseMode:Bool = false;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	var overlayCameras:Array<FlxCamera>;
 	var overlayCamera:FlxCamera;
 	var gridCamera:FlxCamera;
@@ -94,6 +106,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var gridScrollBar:ScrollBar;
 	var gridScrollY:Float = 0;
 	var gridTargetScrollY:Float = 0;
+	var gridOriginX:Float = 0;
 	var gridOriginY:Float = 200;
 	
 	public var autoScroll:Bool = true;
@@ -105,7 +118,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var cosmeticDataById:Map<String, ShopItemData> = [];
 	var cosmeticColorCache:Map<String, FlxColor> = [];
 	var _portraitCache:Map<String, Bool> = [];
-	var controlsDisplay:AmongControls;
+	var controlsDisplay:Null<AmongControls>;
 	
 	var initialBFSkin:String;
 	var initialGFSkin:String;
@@ -187,7 +200,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		FlxG.cameras.add(gridCamera, false);
 		gridCameras = [gridCamera];
 		gridOriginY = (skinThingBg.y + skinThingBg.height * 0.5) - GRID_SPACING_Y;
-		
+
+		// Derive column centering from the panel/camera's own inner region
+		// (same maskInset values used above) instead of FlxG.width. Both
+		// happened to agree in testing, but on some devices/aspect-ratio
+		// settings the grid columns rendered bunched at the panel's right
+		// edge with the rest empty — computing this straight from the
+		// camera's own bounds removes any chance of the two disagreeing.
+		final gridInnerX0:Float = skinThingBg.x + maskInsetLeft;
+		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
+		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
+
+		// Temporary diagnostic: the grid still reportedly renders bunched to
+		// the right on-device despite this being derived from the panel's own
+		// bounds. The origin math above checks out on paper, so the previous
+		// log wasn't enough to tell whether the bug is in this math, in the
+		// per-card placement in setupGridCards(), or in gridCamera's own
+		// scale/transform not matching the rest of the scene. Log all three.
+		funkin.backend.Logger.log('[CosmeticsGridDebug] FlxG.width=${FlxG.width} skinThingBg.x=${skinThingBg.x} skinThingBg.width=${skinThingBg.width} gridInnerX0=$gridInnerX0 gridInnerWidth=$gridInnerWidth gridOriginX=$gridOriginX GRID_SPACING_X=$GRID_SPACING_X GRID_COLS=$GRID_COLS');
+		funkin.backend.Logger.log('[CosmeticsGridCamDebug] cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll.x},${gridCamera.scroll.y} cam.zoom=${gridCamera.zoom} cam.scaleX=${gridCamera.scaleX} cam.scaleY=${gridCamera.scaleY} cam.totalScaleX=${gridCamera.totalScaleX} cam.totalScaleY=${gridCamera.totalScaleY} FlxG.scaleMode.scale=${FlxG.scaleMode.scale.x},${FlxG.scaleMode.scale.y}');
+
 		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 		menuBackButton.cameras = overlayCameras;
@@ -231,19 +263,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		add(titleText);
 		
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
-		for (i in 0...3)
+		// Row spacing: 140px. Centre the 3 rows vertically on screen.
+		final rowSpacing:Float = 140;
+		final rowCount:Int = 3;
+		final startY:Float = Math.round((FlxG.height - rowSpacing * (rowCount - 1)) * 0.5);
+		final cardCenterX:Float = 395;
+		final textX:Float = 510;
+		final textRowHeight:Float = 44; // fixed height of each row for predictable card alignment
+		final labels = ['BF', 'GF', 'PET'];
+		for (i in 0...rowCount)
 		{
-			var label = ['BF', 'GF', 'PET'][i];
-			var yPos:Float = 220 + (i * 140);
-			
-			var optText = new FlxText(510, yPos, 500, '', 30);
+			final yPos:Float = startY + i * rowSpacing;
+
+			var optText = new FlxText(textX, yPos + (textRowHeight - 32) * 0.5, 500, '', 32);
 			optText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 			optText.borderSize = 2;
 			optText.antialiasing = false;
 			optText.cameras = overlayCameras;
 			categoryTexts.push(optText);
-			
-			createCategoryPreviewCard(nodeAtlas, 395, yPos + (optText.height * 0.5), label);
+
+			createCategoryPreviewCard(nodeAtlas, cardCenterX, yPos + textRowHeight * 0.5, labels[i]);
 		}
 		
 		for (t in categoryTexts)
@@ -271,6 +310,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		gridScrollBar.visible = false;
 		add(gridScrollBar);
 		
+		#if !mobile
 		controlsDisplay = new AmongControls([
 			['arrow', 'select'],
 			['enter', 'conf'],
@@ -278,6 +318,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		], false);
 		controlsDisplay.cameras = overlayCameras;
 		add(controlsDisplay);
+		#end
 		
 		updateCategoryDisplay();
 		
@@ -316,7 +357,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(UP_DOWN, A_B);
+		addVirtualPad(LEFT_FULL, STORYMENU);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -508,7 +550,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.visible = false;
 		randomLabel.active = false;
 		gridItemLabel.visible = true;
-		menuBackButton.x = 850;
+		// menuBackButton is hardcoded to align with skinThingBg's default-canvas
+		// position, but skinThingBg.x = (FlxG.width-width)*.5 recenters
+		// dynamically — same half-cutout shift as any element following a
+		// centered sibling (see DialogueBox.hx for the same trick).
+		menuBackButton.x = 850 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		menuBackButton.y = 60;
 		titleText.text = catName;
 		titleText.x = Math.round((FlxG.width - titleText.width) * 0.5);
@@ -538,10 +584,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.active = true;
 		gridItemLabel.visible = false;
 		gridScrollBar.visible = false;
-		menuBackButton.x = 950;
+		// Both hardcoded to align with selectSprite's default-canvas position
+		// (selectSprite.x = (FlxG.width-750)*.5) — same half-cutout shift.
+		menuBackButton.x = 950 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		menuBackButton.y = 90;
 		titleText.text = Lang.str('locker', 'LOCKER');
-		titleText.x = 280;
+		titleText.x = 280 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		titleText.y = 88;
 		
 		setCategoryStuffVisible(true);
@@ -553,17 +601,18 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	function setupGridCards():Void
 	{
 		clearGridCards();
-		
+
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
-		var gridOriginX:Float = (FlxG.width - (GRID_COLS * GRID_SPACING_X)) * 0.5 + GRID_SPACING_X * 0.5;
-		
+
+		funkin.backend.Logger.log('[CosmeticsGridDebug] setupGridCards: gridItemIds.length=${gridItemIds.length} GRID_COLS=$GRID_COLS gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
+
 		for (i in 0...gridItemIds.length)
 		{
 			var col:Int = i % GRID_COLS;
 			var row:Int = Std.int(i / GRID_COLS);
 			var cx:Float = gridOriginX + col * GRID_SPACING_X;
 			var cy:Float = gridOriginY + row * GRID_SPACING_Y;
-			
+
 			var bgSpr = new FlxSprite();
 			bgSpr.frames = nodeAtlas;
 			bgSpr.animation.addByPrefix('main', 'back');
@@ -576,6 +625,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			bgSpr.cameras = gridCameras;
 			add(bgSpr);
 			gridNodes.push(bgSpr);
+
+			funkin.backend.Logger.log('[CosmeticsGridDebug] card i=$i col=$col row=$row cx=$cx cy=$cy bgSpr.x=${bgSpr.x} bgSpr.y=${bgSpr.y} bgSpr.width=${bgSpr.width}');
 			
 			var whiteSpr = new FlxSprite();
 			whiteSpr.frames = nodeAtlas;
@@ -789,7 +840,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			gridScrollY = FlxMath.bound(gridScrollY, 0, getGridMaxScroll());
 		}
 		
-		var gridOriginX:Float = (FlxG.width - (GRID_COLS * GRID_SPACING_X)) * 0.5 + GRID_SPACING_X * 0.5;
 		for (i in 0...gridNodes.length)
 		{
 			var col:Int = i % GRID_COLS;
@@ -1124,9 +1174,13 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		
 		if (canMove && !isClosing)
 		{
+			#if !mobile
+			// Desktop: allow switching between keyboard and mouse
 			if (FlxG.mouse.justMoved || FlxG.mouse.wheel != 0) mouseMode = true;
+			if (controlLEFT.PRESSED || controlRIGHT.PRESSED || controlUP.PRESSED || controlDOWN.PRESSED) mouseMode = false;
+			#end
 			
-			if (FlxG.mouse.justReleased)
+			if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				if (FlxG.mouse.overlaps(menuBackButton, overlayCamera))
 				{
@@ -1142,40 +1196,59 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					if (randomButton.visible) randomizeLoadout();
 				}
 			}
-			
+
+			#if mobile
+			if (virtualPad?.buttonR?.justPressed == true && randomButton.visible) randomizeLoadout();
+			if (virtualPad?.buttonC?.justPressed == true && resetButton.visible) resetToDefaults();
+			#end
+
 			if (inGrid)
 			{
+				#if !mobile
 				if (controlLEFT.PRESSED || controlRIGHT.PRESSED || controlUP.PRESSED || controlDOWN.PRESSED) mouseMode = false;
+				#end
 				
 				if (!mouseMode)
 				{
+					#if mobile
+					if (controls.mobilePadJustReleased(_leftKey)) gridMove(-1, 0);
+					if (controls.mobilePadJustReleased(_rightKey)) gridMove(1, 0);
+					if (controls.mobilePadJustReleased(_upKey)) gridMove(0, -1);
+					if (controls.mobilePadJustReleased(_downKey)) gridMove(0, 1);
+					#else
 					if (controlLEFT.PRESSED) gridMove(-1, 0);
 					if (controlRIGHT.PRESSED) gridMove(1, 0);
 					if (controlUP.PRESSED) gridMove(0, -1);
 					if (controlDOWN.PRESSED) gridMove(0, 1);
+					#end
 				}
 				
 				if (controls.ACCEPT)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					gridEquipCurrent();
 				}
 				if (controls.BACK)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					closeGrid();
 				}
 				
+				#if !mobile
 				if (FlxG.mouse.wheel != 0)
 				{
 					autoScroll = true;
-					
+
 					gridTargetScrollY -= FlxG.mouse.wheel * GRID_SPACING_Y * 0.5;
 					var maxScroll:Float = getGridMaxScroll();
 					if (gridTargetScrollY > maxScroll) gridTargetScrollY = maxScroll;
 					if (gridTargetScrollY < 0) gridTargetScrollY = 0;
 				}
-				
+
 				if (mouseMode && !gridScrollBar.interacting)
 				{
 					var hovered:Int = -1;
@@ -1187,7 +1260,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 							break;
 						}
 					}
-					
+
 					if (hovered != gridCursorIndex)
 					{
 						gridCursorIndex = hovered;
@@ -1195,16 +1268,24 @@ class CosmeticsSubstate extends MusicBeatSubstate
 						updateGridHighlights();
 					}
 				}
-				
-				if (FlxG.mouse.justPressed)
+				#end
+
+				if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...gridNodes.length)
 					{
 						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], gridCamera))
 						{
-							gridCursorIndex = i;
-							updateGridHighlights();
-							gridEquipCurrent();
+							if (gridCursorIndex == i)
+							{
+								gridEquipCurrent();
+							}
+							else
+							{
+								gridCursorIndex = i;
+								FlxG.sound.play(Paths.sound('hover'), 0.4);
+								updateGridHighlights();
+							}
 							break;
 						}
 					}
@@ -1214,8 +1295,14 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			}
 			else
 			{
+				#if !mobile
 				if (controls.UI_UP_P || controls.UI_DOWN_P) mouseMode = false;
+				#end
 				
+				#if mobile
+				if (controls.mobilePadJustReleased(_downKey)) { selectedCategory = FlxMath.wrap(selectedCategory + 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				else if (controls.mobilePadJustReleased(_upKey)) { selectedCategory = FlxMath.wrap(selectedCategory - 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				#else
 				if (controls.UI_DOWN_P || controls.UI_UP_P || FlxG.mouse.wheel != 0)
 				{
 					var diff = FlxG.mouse.wheel != 0 ? -FlxG.mouse.wheel : controls.UI_DOWN ? 1 : -1;
@@ -1223,18 +1310,24 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
 					updateCategoryDisplay();
 				}
+				#end
 				
 				if (controls.ACCEPT)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					openGridForCategory(selectedCategory);
 				}
 				if (controls.BACK)
 				{
+					#if !mobile
 					mouseMode = false;
+					#end
 					confirmAndClose();
 				}
 				
+				#if !mobile
 				if (mouseMode && FlxG.mouse.justMoved)
 				{
 					for (i in 0...categoryTexts.length)
@@ -1252,18 +1345,26 @@ class CosmeticsSubstate extends MusicBeatSubstate
 						}
 					}
 				}
-				
-				if (FlxG.mouse.justPressed)
+				#end
+
+				if (FlxG.mouse.justReleased && ClientPrefs.navInputMode != 'Virtual Pad')
 				{
 					for (i in 0...categoryTexts.length)
 					{
 						final isOver = FlxG.mouse.overlaps(categoryTexts[i], overlayCamera) || (categoryPreviewBgs[i] != null && FlxG.mouse.overlaps(categoryPreviewBgs[i], overlayCamera));
-						
+
 						if (isOver)
 						{
-							selectedCategory = i;
-							updateCategoryDisplay();
-							openGridForCategory(i);
+							if (selectedCategory == i)
+							{
+								openGridForCategory(i);
+							}
+							else
+							{
+								selectedCategory = i;
+								FlxG.sound.play(Paths.sound('hover'), 0.5);
+								updateCategoryDisplay();
+							}
 							break;
 						}
 					}

@@ -17,13 +17,16 @@ class OptionsState extends MusicBeatState
 	public static var onPlayState:Bool = false;
 	
 	var options:Array<String> = [
-		'controls',
 		'adjustdelay',
 		'language',
 		'gameplay',
 		'graphics',
 		'visualsui',
 		'misc',
+		#if mobile
+		'mobile',
+		'dlc',
+		#end
 		'credits'
 	];
 	
@@ -46,7 +49,12 @@ class OptionsState extends MusicBeatState
 	var menuBackButton:FlxSprite;
 	var mouseControlActive:Bool = true;
 	var hoveredOption:Int = -1;
-	
+
+	// Leak fix mirrored from TitleState/FreeplayState/PlayState/MainMenuState:
+	// dynamically-rendered bitmaps this state creates (option labels, the DLC
+	// list, etc.) otherwise outlive the state and accumulate on every visit.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	static final OPTION_LABEL_BASE_SIZE:Int = 26;
 	static final OPTION_LABEL_MIN_SIZE:Int = 14;
 	static final OPTION_LABEL_MAX_LINES:Int = 2;
@@ -63,20 +71,8 @@ class OptionsState extends MusicBeatState
 	var buttonBaseY:Float = 112;
 	var buttonSpacing:Float = 65;
 	
-	var bottomControls:AmongControls;
+	var bottomControls:Null<AmongControls>;
 
-	var editorsButton:Null<FlxSprite> = null;
-	var editorsButtonLabel:Null<FlxText> = null;
-
-	#if mobile
-	var dlcButton:FlxSprite;
-	var dlcButtonLabel:FlxText;
-	var dlcPadHint:FlxText;
-
-	var mobileButton:FlxSprite;
-	var mobileButtonLabel:FlxText;
-	#end
-	
 	public function openSelectedSubstate(label:String)
 	{
 		if (label == 'adjustdelay')
@@ -92,9 +88,6 @@ class OptionsState extends MusicBeatState
 		
 		switch (label)
 		{
-			case 'controls':
-				final gamepad = FlxG.gamepads.getFirstActiveGamepad();
-				openSubState(new funkin.states.options.ControlsSubState(gamepad != null ? Gamepad(gamepad.id) : Keys));
 			case 'graphics':
 				openSubState(new funkin.states.options.GraphicsSettingsSubState());
 			case 'visualsui':
@@ -123,26 +116,15 @@ class OptionsState extends MusicBeatState
 		FunkinSound.playMusic(Paths.music('freakyMenu'));
 	}
 
-	#if mobile
-	/**
-	 * Picks how the DLC entry is presented based on the chosen navigation input.
-	 * Virtual Pad mode hides the on-screen button (the C pad button covers it) and
-	 * shows a bottom-left hint instead; Touch mode shows the tappable button.
-	 */
-	function updateDlcButtonMode():Void
-	{
-		if (dlcButton == null) return;
-		var padMode:Bool = (ClientPrefs.navInputMode == 'Virtual Pad');
-		dlcButton.visible = !padMode;
-		dlcButtonLabel.visible = !padMode;
-		if (dlcPadHint != null) dlcPadHint.visible = padMode;
-	}
-	#end
-	
 	override function create()
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
 		DiscordClient.changePresence("Options Menu");
-		
+
 		initStateScript();
 		persistentUpdate = true;
 		
@@ -165,6 +147,19 @@ class OptionsState extends MusicBeatState
 			
 			var thingy:FlxSprite = new FlxSprite(50, 30).loadGraphic(Paths.image(ext + 'thingy'));
 			thingy.antialiasing = ClientPrefs.globalAntialiasing;
+			// Panel background is a fixed-width image (1126px) sized for the
+			// 1280 base canvas — on a wide 'expand'-mode screen it left the
+			// whole right side of the screen as bare black instead of covering
+			// it. Gated strictly on gameCutoutSize.x > 0 (zero in 'fit'/
+			// 'stretch' mode, i.e. every other user) rather than comparing
+			// against thingy's native size, so this can never fire outside
+			// 'expand' mode regardless of how the asset's own dimensions
+			// happen to compare to the design width.
+			if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			{
+				thingy.setGraphicSize(Std.int(thingy.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(thingy.height));
+				thingy.updateHitbox();
+			}
 			add(thingy);
 			
 			var optionsHeaderY:Float = 30 + (ClientPrefs.language == 'arabic' ? -20 : 0);
@@ -174,14 +169,17 @@ class OptionsState extends MusicBeatState
 			optionsHeader.antialiasing = ClientPrefs.globalAntialiasing;
 			add(optionsHeader);
 			
-			menuBackButton = new FlxSprite(1100, 30).loadGraphic(Paths.image('menu/common/menuBack'));
+			// Close button hugs the panel's right edge — shift it along with the
+			// panel stretch above so it doesn't end up stranded mid-screen.
+			menuBackButton = new FlxSprite(1100 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x, 30).loadGraphic(Paths.image('menu/common/menuBack'));
 			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 			add(menuBackButton);
 			
 			// left panel options
+			buttonSpacing = Math.min(65, Math.floor((FlxG.height - buttonBaseY - 60) / options.length));
 			optionTexts = new FlxTypedGroup<FlxText>();
 			add(optionTexts);
-			
+
 			for (i in 0...options.length)
 			{
 				var txt:FlxText = new FlxText(buttonBaseX, buttonBaseY + (buttonSpacing * i), 320, Lang.str('opt_category_' + options[i]));
@@ -213,6 +211,7 @@ class OptionsState extends MusicBeatState
 			versionText.antialiasing = ClientPrefs.globalAntialiasing;
 			add(versionText);
 			
+			#if !mobile
 			bottomControls = new AmongControls([
 				['arrow', 'select'], // select
 				['enter', 'conf'], // conf
@@ -220,59 +219,8 @@ class OptionsState extends MusicBeatState
 			], true);
 			bottomControls.zIndex = 12;
 			add(bottomControls);
-
-			editorsButton = new FlxSprite(640, 618);
-			editorsButton.makeGraphic(292, 60, 0xFF162442);
-			editorsButton.antialiasing = ClientPrefs.globalAntialiasing;
-			add(editorsButton);
-
-			editorsButtonLabel = new FlxText(640, 618, 292, 'Editors');
-			editorsButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			editorsButtonLabel.borderSize = 2;
-			editorsButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
-			editorsButtonLabel.y += Math.round((60 - editorsButtonLabel.height) / 2);
-			add(editorsButtonLabel);
-
-			#if mobile
-			// Dedicated Mobile-controls button (independent of the category list,
-			// like the Editors / DLC buttons). Sits in the gap left clear by the
-			// on-screen pads (between the left D-pad and the Editors button).
-			mobileButton = new FlxSprite(340, 618);
-			mobileButton.makeGraphic(292, 60, 0xFF2A1640);
-			mobileButton.antialiasing = ClientPrefs.globalAntialiasing;
-			add(mobileButton);
-
-			mobileButtonLabel = new FlxText(340, 618, 292, Lang.str('opt_category_mobile'));
-			mobileButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			mobileButtonLabel.borderSize = 2;
-			mobileButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
-			mobileButtonLabel.y += Math.round((60 - mobileButtonLabel.height) / 2);
-			add(mobileButtonLabel);
-
-			dlcButton = new FlxSprite(952, 618);
-			dlcButton.makeGraphic(292, 60, 0xFF162C16);
-			dlcButton.antialiasing = ClientPrefs.globalAntialiasing;
-			add(dlcButton);
-
-			dlcButtonLabel = new FlxText(952, 618, 292, Lang.str('opt_category_dlc'));
-			dlcButtonLabel.setFormat(Paths.font("vcr.ttf"), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			dlcButtonLabel.borderSize = 2;
-			dlcButtonLabel.antialiasing = ClientPrefs.globalAntialiasing;
-			dlcButtonLabel.y += Math.round((60 - dlcButtonLabel.height) / 2);
-			add(dlcButtonLabel);
-
-			// Hint shown only when the on-screen button is hidden (Virtual Pad mode),
-			// telling the player the C pad button opens the DLC manager. Placed in the
-			// bottom-center gap between the left D-pad and the right A/B/C buttons.
-			dlcPadHint = new FlxText(440, FlxG.height - 64, 400, 'C  -  ' + Lang.str('opt_category_dlc'));
-			dlcPadHint.setFormat(Paths.font("vcr.ttf"), 18, 0xFF6CFF7A, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			dlcPadHint.borderSize = 1.5;
-			dlcPadHint.antialiasing = ClientPrefs.globalAntialiasing;
-			add(dlcPadHint);
-
-			updateDlcButtonMode();
 			#end
-			
+
 			changeSelection();
 			refreshOptionFonts();
 			byeByeHomePanel(true);
@@ -283,7 +231,8 @@ class OptionsState extends MusicBeatState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -300,10 +249,6 @@ class OptionsState extends MusicBeatState
 		blockInput = false;
 		refreshOptionFonts();
 
-		#if mobile
-		updateDlcButtonMode();
-		#end
-
 		if (pendingSubstate == null) byeByeHomePanel(true);
 		
 		super.closeSubState();
@@ -314,6 +259,12 @@ class OptionsState extends MusicBeatState
 		ClientPrefs.flush();
 		ClientPrefs.reloadControls(); // lets just reload the controls here
 		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	/**
@@ -325,7 +276,9 @@ class OptionsState extends MusicBeatState
 		optionsHeader.font = Paths.font('AmaticSC-Bold.ttf');
 		optionsHeader.y = (38 + Math.round((optionsHeader.size - optionsHeader.height) * .5));
 		
-		@:privateAccess bottomControls.refreshBar();
+		#if !mobile
+		@:privateAccess bottomControls?.refreshBar();
+		#end
 		
 		for (txt in optionTexts.members)
 		{
@@ -333,12 +286,6 @@ class OptionsState extends MusicBeatState
 			fitLeftOptionLabel(txt);
 		}
 		
-		#if mobile
-		if (dlcButtonLabel != null) dlcButtonLabel.text = Lang.str('opt_category_dlc');
-		if (dlcPadHint != null) dlcPadHint.text = 'C  -  ' + Lang.str('opt_category_dlc');
-		if (mobileButtonLabel != null) mobileButtonLabel.text = Lang.str('opt_category_mobile');
-		#end
-
 		scriptGroup.call('onRefreshLang', []);
 		refreshOptionVisuals();
 	}
@@ -403,7 +350,7 @@ class OptionsState extends MusicBeatState
 		{
 			hoveredOption = -1;
 			
-			if (FlxG.mouse.justMoved || FlxG.mouse.justPressed)
+			if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				mouseControlActive = true;
 			}
@@ -427,29 +374,7 @@ class OptionsState extends MusicBeatState
 				return;
 			}
 
-			if (editorsButton != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(editorsButton) && !blockAllInput && !blockInput)
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
-			}
-
-			#if mobile
-			if (mobileButton != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(mobileButton) && !blockAllInput && !blockInput)
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				openSelectedSubstate('mobile');
-			}
-
-			var dlcTouched:Bool = dlcButton.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(dlcButton);
-			var dlcPadPressed:Bool = (virtualPad != null && virtualPad.buttonC != null && virtualPad.buttonC.justPressed);
-			if ((dlcTouched || dlcPadPressed) && !blockAllInput && !blockInput)
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				openSelectedSubstate('dlc');
-			}
-			#end
-			
-			if (mouseControlActive && !blockAllInput)
+			if (mouseControlActive && !blockAllInput && !blockInput)
 			{
 				// left bar mouse
 				var themouseshit2 = FlxG.mouse;

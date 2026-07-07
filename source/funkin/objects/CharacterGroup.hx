@@ -1,6 +1,7 @@
 package funkin.objects;
 
 import flixel.group.FlxSpriteGroup;
+import flixel.util.FlxSignal;
 
 enum abstract CharacterType(Int) to Int
 {
@@ -15,6 +16,9 @@ class CharacterGroup extends FlxSpriteGroup
 	public var type:CharacterType;
 	public var gfCheck:Bool = false;
 	public var map:Map<String, Character> = new Map();
+
+	public var onAdd:FlxTypedSignal<Character -> Void> = new FlxTypedSignal();
+	public var onChange:FlxTypedSignal<Character -> Character -> Void> = new FlxTypedSignal();
 	
 	public function new(x:Float = 0, y:Float = 0, _type:CharacterType)
 	{
@@ -41,6 +45,8 @@ class CharacterGroup extends FlxSpriteGroup
 		var newChar = new Character(0, 0, newCharacter, type == BF);
 		newChar.alpha = 0.001;
 		addChar(newChar);
+
+		onAdd.dispatch(newChar);
 		
 		FlxG.signals.postDraw.addOnce(function() new FlxTimer().start(1, function(_) if (newChar.alpha == .001) newChar.visible = false));
 		// theres probably some cooler solution out there
@@ -59,6 +65,7 @@ class CharacterGroup extends FlxSpriteGroup
 				for (field in PlayState.instance.playFields.members)
 					checkFields.push(field.owner == parent);
 			}
+
 			
 			final old = parent;
 			if (!map.exists(name)) addToList(name);
@@ -74,6 +81,8 @@ class CharacterGroup extends FlxSpriteGroup
 			{
 				if (checkFields[field.ID]) field.owner = parent;
 			}
+
+			onChange.dispatch(parent, old);
 		}
 		
 		return parent;
@@ -92,5 +101,10 @@ class CharacterGroup extends FlxSpriteGroup
 		
 		char.x += char.positionArray[0];
 		char.y += char.positionArray[1];
+		
+		// Debug: log character state after positioning
+		#if debug
+		trace('[DEBUG] startPos: type=${type}, char=${char.curCharacter}, visible=${char.visible}, alpha=${char.alpha}');
+		#end
 	}
 }

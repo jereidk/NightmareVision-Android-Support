@@ -104,6 +104,7 @@ class FNAFState extends MusicBeatState
 	{
 		super.create();
 		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
 
 		if (ClientPrefs.fnafHintCode == '')
 		{

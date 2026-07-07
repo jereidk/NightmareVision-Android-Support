@@ -1,7 +1,5 @@
 package funkin.states;
 
-import funkin.backend.macro.GitMacro;
-
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxBackdrop;
@@ -11,11 +9,14 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 
+import openfl.display.BitmapData;
+
 import funkin.data.*;
 import funkin.data.CosmicubeData;
 import funkin.data.GameFlags;
 import funkin.objects.menu.AmongControls;
 import funkin.utils.ProgressionUtil;
+import funkin.utils.CoolUtil;
 import funkin.states.options.*;
 import funkin.states.*;
 import funkin.states.editors.MasterEditorMenu;
@@ -25,7 +26,7 @@ class MainMenuState extends MusicBeatState
 	public static var fromTitle:Bool = false;
 	
 	var lockMovement:Bool = false;
-	var mouseMode:Bool = false;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	
 	static var curMenuItem:Int = 0;
 	static var lastSmallBtn:Int = 3;
@@ -49,34 +50,54 @@ class MainMenuState extends MusicBeatState
 	var introTimer:Float = 0;
 	
 	var menuShinies:Array<FlxSprite> = [];
-	
+
 	static final BIG_LABEL_KEYS = ['storymode', 'freeplay', 'cosmi'];
 	static final SMALL_LABEL_KEYS = ['options', 'awards'];
 	static final ICON_PREFIXES = ['Red and Green instance 1', 'Cone instance 1', 'Polus instance 1', 'Gear instance 1', 'Trophy instance 1'];
 	static final MENU_LABEL_MIN_SIZE:Int = 12;
-	
+
+	static final YT_CHANNEL_URL:String = 'https://youtube.com/@jere-idk?si=zqgS9D-dDx8IWmJ_';
+
+	var ytRing:FlxSprite;
+	var ytIcon:FlxSprite;
+	var portCreditText:FlxText;
+
+	// Same leak fix as TitleState/FreeplayState/PlayState: without this, every
+	// dynamically-rendered bitmap this state creates (menu labels, the YouTube
+	// credit text, etc.) outlives the state and accumulates on every single
+	// MainMenuState visit, since this is the hub state revisited constantly.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	override function create()
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		Mods.currentModDirectory = null;
-		
+
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence("In the Menus");
 		#end
 		Lang.reloadLangFile();
-		
+
+		// Free previous state's assets before loading new ones. Must run before any
+		// Paths.image/getSparrowAtlas calls so that shared assets (starFG, starBG, logo)
+		// are revived from cache instead of reloaded, preventing double-allocation.
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
 		persistentUpdate = persistentDraw = true;
-		
+
 		if (ClientPrefs.finaleState == ACTIVE) FunkinSound.playMusic(Paths.music('finaleMenu'), 0);
 		else if (FlxG.sound.music == null) FunkinSound.playMusic(Paths.music('freakyMenu'), 0);
-		
+
 		initStateScript();
-		
+
 		starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
 		add(starFG);
-		
+
 		starBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
 		add(starBG);
-		
+
 		logo = new FlxSprite(0, -5);
 		logo.frames = Paths.getSparrowAtlas('logoBumpin');
 		logo.animation.addByPrefix('bump', 'logo bumpin', 24, false);
@@ -85,90 +106,99 @@ class MainMenuState extends MusicBeatState
 		logo.updateHitbox();
 		logo.screenCenter(X);
 		logo.x += 20;
-		
+
 		add(logo);
-		
+
 		buildPanel();
-		
-		var redTargetX:Float = 630;
+
+		// Designed for the 1280-wide base canvas, hanging off the right edge.
+		// 'expand' mode's extra width (see FunkinRatioScaleMode.gameCutoutSize)
+		// only ever opens up to the right of that design (origin stays at 0,0),
+		// so without this offset red stays pinned at its base-resolution X while
+		// the screen grows around it, sliding it from "off the right edge" to
+		// "in the middle". greenMenu sits off-screen to the LEFT, where expand
+		// never reveals extra space, so it needs no such adjustment.
+		var redTargetX:Float = 630 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 		var greenTargetX:Float = -225;
-		
+
 		redMenu = new FlxSprite(redTargetX, 70);
 		redMenu.frames = Paths.getSparrowAtlas('menu/main/redmenu');
 		redMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		redMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		redMenu.animation.play('idle');
-		
+
 		greenMenu = new FlxSprite(greenTargetX, 100);
 		greenMenu.frames = Paths.getSparrowAtlas('menu/main/greenmenu');
 		greenMenu.animation.addByPrefix('idle', 'idle', 24, false);
 		greenMenu.animation.addByPrefix('select', 'confirm', 24, false);
 		greenMenu.animation.play('idle');
-		
+
 		if (ClientPrefs.finaleState != ACTIVE)
 		{
 			add(redMenu);
 			add(greenMenu);
 		}
-		
+
 		var glow = new FlxSprite().loadGraphic(Paths.image(ClientPrefs.finaleState == ACTIVE ? 'menu/main/glowEVIL' : 'menu/main/glow'));
 		glow.scale.set(1.1, 1.1);
 		glow.updateHitbox();
+		// Source image is exactly 1280x720 — on a device wide enough that
+		// 'expand' screen fit grows FlxG.width past that, stretch to cover the
+		// extra width instead of leaving an uncovered gap on either side.
+		if (FlxG.width > glow.width)
+		{
+			glow.scale.x *= FlxG.width / glow.width;
+			glow.updateHitbox();
+		}
 		glow.screenCenter();
 		glow.blend = ADD;
 		add(glow);
-		
+
 		var vignette = new FlxSprite().loadGraphic(Paths.image('menu/main/vignette'));
 		vignette.scrollFactor.set();
 		vignette.active = false;
+		// Was never centered even at the base resolution (sat at (0,0) covering
+		// only the left 1280px) — stretch and center so wide 'expand' screens
+		// don't end up with the vignette darkening only one side of the screen.
+		if (FlxG.width > vignette.width)
+		{
+			vignette.setGraphicSize(FlxG.width, Std.int(vignette.height));
+			vignette.updateHitbox();
+		}
+		vignette.screenCenter();
 		add(vignette);
-		
+
 		if (ClientPrefs.finaleState == ACTIVE)
 		{
 			for (icon in menuIcons)
 				icon.visible = false;
-				
+
 			refreshMenuLabelLayout();
 			menuLabels[0].color = 0xFFFF0000;
-			
+
 			menuButtons[0].animation.addByPrefix('idle', 'Big_buttonEVIL instance 1', 24, true);
 			menuButtons[0].animation.play('idle');
 			menuButtons[0].updateHitbox();
 			menuButtons[0].screenCenter(X);
 			menuButtons[0].y -= 15;
 		}
-		
-		final rtl:Bool = Lang.hasSpecial('rightToLeft');
-		
-		#if mobile
-		var portCredit = new FlxText(rtl ? 12 : 0, FlxG.height - 42, 0, 'Android port by Jere', 14);
-		portCredit.scrollFactor.set();
-		portCredit.setFormat(Paths.font('vcr.ttf', false), 14, 0xFF6CFF7A, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		portCredit.borderSize = 1.5;
-		add(portCredit);
-		#end
 
-		var versionShit = new FlxText(rtl ? 12 : 0, FlxG.height - 24, 0, 'VS Impostor Legacy ${Main.LEGACY_VERSION}', 16);
-		#if debug
-		versionShit.text += ' (${GitMacro.getGitCommitHash()})';
-		#end
-		versionShit.scrollFactor.set();
-		versionShit.setFormat(Paths.font('vcr.ttf', false), 16, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		add(versionShit);
-		
+		buildPortCredit();
+
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'],
 			['enter', 'conf']
 		], false);
 		add(bottomControls);
-		
+		#end
+
 		Conductor.bpm = 102;
 		Conductor.bpmChangeMap.resize(0);
-		
+
 		FlxG.mouse.visible = true;
-		
+
 		super.create();
-		FunkinAssets.cache.clearStoredMemory();
 
 		if (fromTitle)
 		{
@@ -345,6 +375,91 @@ class MainMenuState extends MusicBeatState
 		}
 	}
 	
+	/**
+	 * Small YouTube-styled icon + "Android Port By Jere" credit, centered at
+	 * the bottom of the menu (replaces the old left-aligned port/version text).
+	 * Tapping the icon opens the channel in the browser.
+	 */
+	function buildPortCredit():Void
+	{
+		final iconSize:Int = 44;
+		final iconX:Float  = 18;
+		final iconY:Float  = 16;
+		final ringColor:Int = 0xFF6CFF7A;
+
+		// Ring sits a touch larger than the avatar and behind it, like a
+		// colored profile-picture border.
+		ytRing = new FlxSprite(iconX - 3, iconY - 3).loadGraphic(_ringBitmap(iconSize + 6, ringColor, 3));
+		ytRing.scrollFactor.set();
+		add(ytRing);
+
+		ytIcon = new FlxSprite(iconX, iconY).loadGraphic(_circleMask(Paths.image('menu/main/ytChannelIcon').bitmap, iconSize));
+		ytIcon.scrollFactor.set();
+		add(ytIcon);
+
+		portCreditText = new FlxText(iconX + iconSize + 12, iconY + (iconSize - 22) * 0.5, 300, 'Android Port By Jere', 18);
+		portCreditText.alignment = 'left';
+		portCreditText.setFormat(Paths.font('vcr.ttf', false), 18, ringColor, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		portCreditText.borderSize = 1.5;
+		portCreditText.scrollFactor.set();
+		add(portCreditText);
+
+		// Gentle breathing pulse so the corner credit feels a little alive.
+		FlxTween.tween(ytIcon, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
+			{ease: FlxEase.quadInOut, type: PINGPONG});
+		FlxTween.tween(ytRing, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
+			{ease: FlxEase.quadInOut, type: PINGPONG});
+	}
+
+	/**
+	 * Scales `source` to fit an size×size square and clips it to a circle
+	 * (per-pixel alpha cutoff outside the radius) — same procedural masking
+	 * approach used elsewhere this session, applied to a real image instead
+	 * of a solid fill.
+	 */
+	function _circleMask(source:BitmapData, size:Int):BitmapData
+	{
+		var scaled = new BitmapData(size, size, true, 0x00000000);
+		var matrix = new openfl.geom.Matrix();
+		matrix.scale(size / source.width, size / source.height);
+		scaled.draw(source, matrix, null, null, null, true);
+
+		final radius:Float = size * 0.5;
+		final cx:Float = radius, cy:Float = radius;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				final dx = px - cx, dy = py - cy;
+				if (dx * dx + dy * dy > radius * radius) scaled.setPixel32(px, py, 0x00000000);
+			}
+		}
+
+		return scaled;
+	}
+
+	/** Thin colored ring (annulus), used as a border behind the circular avatar. */
+	function _ringBitmap(size:Int, color:Int, thickness:Float):BitmapData
+	{
+		var bmp = new BitmapData(size, size, true, 0x00000000);
+		final outerR:Float = size * 0.5;
+		final innerR:Float = outerR - thickness;
+		final cx:Float = outerR, cy:Float = outerR;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				final dx = px - cx, dy = py - cy;
+				final dist = Math.sqrt(dx * dx + dy * dy);
+				if (dist <= outerR && dist >= innerR) bmp.setPixel32(px, py, color);
+			}
+		}
+
+		return bmp;
+	}
+
 	function updateMenuSelection()
 	{
 		var isFinale = ClientPrefs.finaleState == ACTIVE;
@@ -434,11 +549,20 @@ class MainMenuState extends MusicBeatState
 		
 		starBG.x -= 4.5 * elapsed;
 		starFG.x -= 9 * elapsed;
-		
+
+		if (ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+		{
+			FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
+			CoolUtil.browserLoad(YT_CHANNEL_URL);
+		}
+
 		if (FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
 		
+		#if !mobile
+		// Desktop: allow switching between keyboard and mouse
 		if (FlxG.keys.firstJustPressed() != FlxKey.NONE) mouseMode = false;
 		if (FlxG.mouse.justMoved) mouseMode = true;
+		#end
 		
 		if (!lockMovement && !introActive && mouseMode)
 		{
@@ -513,7 +637,18 @@ class MainMenuState extends MusicBeatState
 		}
 
 		super.update(elapsed);
-		
+
 		scriptGroup.call('onUpdatePost', [elapsed]);
+	}
+
+	override function destroy()
+	{
+		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 }

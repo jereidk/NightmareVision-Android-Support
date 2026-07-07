@@ -93,7 +93,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/freeplay/drippico",
+	"image": "characters/freeplay/drippico-0,characters/freeplay/drippico-1,characters/freeplay/drippico-2",
 	"position": [
 		5,
 		-170
@@ -112,7 +112,7 @@
 		0
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": false
 }

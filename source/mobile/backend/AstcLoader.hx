@@ -9,6 +9,7 @@ import openfl.display3D.Context3DTextureFormat;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.Assets as OflAssets;
+import openfl.Assets;
 import openfl.events.Event;
 import lime.utils.UInt8Array;
 #end
@@ -107,31 +108,42 @@ class AstcLoader
 	public static function tryLoad(pngPath:String):Null<BitmapData>
 	{
 		#if (android && cpp)
-		if (!AstcSupport.isSupported) return null;
+		if (!AstcSupport.isSupported) {
+			// Logger.log('[AstcLoader] ASTC not supported on this device', NOTICE);
+			return null;
+		}
 
 		var astcPath = deriveAstcPath(pngPath);
-		if (astcPath == null) return null;
+		if (astcPath == null) {
+			Logger.log('[AstcLoader] Cannot derive ASTC path from: ' + pngPath, WARN);
+			return null;
+		}
 
 		// External storage (extracted APK assets, DLC overrides) takes priority.
 		if (sys.FileSystem.exists(astcPath))
 		{
+
 			try
 			{
 				var bytes = sys.io.File.getBytes(astcPath);
+
 				return _loadAndTrack(pngPath, astcPath, bytes);
 			}
 			catch (e:Dynamic)
 			{
+
 				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
 				return null;
 			}
 		}
 
 		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
-		if (OflAssets.exists(astcPath))
+		if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
 		{
 			var bytes = OflAssets.getBytes(astcPath);
-			if (bytes != null) return _loadAndTrack(pngPath, astcPath, bytes);
+			if (bytes != null) {
+				return _loadAndTrack(pngPath, astcPath, bytes);
+			}
 		}
 
 		return null;
@@ -298,9 +310,10 @@ class AstcLoader
 	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
 	{
 		var imgLen:Int = bytes.length - HEADER_SIZE;
-		var imgData = new UInt8Array(imgLen);
-		for (i in 0...imgLen)
-			imgData[i] = bytes.get(HEADER_SIZE + i);
+		// Zero-copy view: UInt8Array.fromBytes wraps the existing haxe.io.Bytes (ArrayBuffer
+		// is an abstract over Bytes, so no allocation) and initBuffer assigns the reference
+		// directly — the payload starts at HEADER_SIZE so no offset math needed in GL.
+		var imgData = UInt8Array.fromBytes(bytes, HEADER_SIZE, imgLen);
 
 		var astcTex = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, astcTex);
@@ -459,7 +472,8 @@ class AstcLoader
 			if (sys.FileSystem.exists(pngPath))
 				pngBitmap = BitmapData.fromFile(pngPath);
 			else if (OflAssets.exists(pngPath))
-				pngBitmap = OflAssets.getBitmapData(pngPath, false); // useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
+				// useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
+				pngBitmap = OflAssets.getBitmapData(pngPath, false);
 		}
 		catch (e:Dynamic) {}
 

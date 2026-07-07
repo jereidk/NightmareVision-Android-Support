@@ -1,95 +1,99 @@
 {
-    "pausePortrait": "green",
+	"pausePortrait": "green",
 	"animations": [
 		{
-			"offsets": [
-				59,
-				-278
-			],
 			"loop": false,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "idle",
-			"indices": [],
-			"name": "impostor idle"
+			"fps": 24,
+			"name": "impostor idle",
+			"indices": []
 		},
 		{
-			"offsets": [
-				59,
-				-294
-			],
 			"loop": false,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singRIGHT",
-			"indices": [],
-			"name": "impostor right"
+			"fps": 24,
+			"name": "impostor right",
+			"indices": []
 		},
 		{
-			"offsets": [
-				106,
-				-303
-			],
 			"loop": false,
-			"fps": 24,
+			"offsets": [
+				0,
+				0
+			],
 			"anim": "singDOWN",
-			"indices": [],
-			"name": "impostor down"
+			"fps": 24,
+			"name": "impostor down",
+			"indices": []
 		},
 		{
-			"offsets": [
-				249,
-				-288
-			],
 			"loop": false,
-			"fps": 24,
-			"anim": "singLEFT",
-			"indices": [],
-			"name": "imposter left"
-		},
-		{
 			"offsets": [
-				161,
-				-161
+				0,
+				0
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singUP",
-			"indices": [],
-			"name": "impostor up2"
+			"fps": 24,
+			"name": "impostor up2",
+			"indices": []
 		},
 		{
-			"loop": false,
 			"offsets": [
-				61,
-				-278
+				0,
+				0
 			],
+			"loop": false,
+			"fps": 24,
 			"anim": "danceLeft",
-			"fps": 24,
-			"name": "impostor dance left",
-			"indices": []
+			"indices": [],
+			"name": "impostor dance left"
 		},
 		{
-			"loop": false,
 			"offsets": [
-				57,
-				-278
+				0,
+				0
 			],
-			"anim": "danceRight",
+			"loop": false,
 			"fps": 24,
-			"name": "impostor dance right",
-			"indices": []
+			"anim": "danceRight",
+			"indices": [],
+			"name": "impostor dance right"
+		},
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFT",
+			"loop": false,
+			"name": "impostor left"
 		}
 	],
 	"no_antialiasing": false,
 	"image": "characters/story/green/lights",
 	"position": [
-		0,
-		80
+		-296,
+		232
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "green",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": true,
 	"flip_x": false,
@@ -99,7 +103,7 @@
 		290
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": false
 }

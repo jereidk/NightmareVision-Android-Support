@@ -54,28 +54,32 @@ function onLoad()
 	
 	var bgScale = 1.3;
 	
-	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props', 'dead');
+	// The "props" atlas got split into two ASTC pages (props-0: bg/dark,
+	// props-1: dead/fore/lamp/splat) at some point, but this script still
+	// asked for all six frames from a single "props" atlas that no longer
+	// exists — every one of these sprites loaded blank as a result.
+	var bg1:FlxSprite = new FlxSprite(800, -270).loadFromSheet(ext + 'props-1', 'dead');
 	bg1.scrollFactor.set(0.8, 0.8);
 	bg1.scale.set(bgScale, bgScale);
-	
-	var bg2:FlxSprite = new FlxSprite(-790, -530).loadFromSheet(ext + 'props', 'bg');
+
+	var bg2:FlxSprite = new FlxSprite(-790, -530).loadFromSheet(ext + 'props-0', 'bg');
 	bg2.updateHitbox();
 	bg2.scrollFactor.set(0.9, 0.9);
 	bg2.scale.set(bgScale, bgScale);
-	
-	var bg3:FlxSprite = new FlxSprite(370, 1200).loadFromSheet(ext + 'props', 'splat');
+
+	var bg3:FlxSprite = new FlxSprite(370, 1200).loadFromSheet(ext + 'props-1', 'splat');
 	bg3.updateHitbox();
 	bg3.scale.set(bgScale, bgScale);
-	
-	var bg4:FlxSprite = new FlxSprite(990, -380).loadFromSheet(ext + 'props', 'lamp');
+
+	var bg4:FlxSprite = new FlxSprite(990, -380).loadFromSheet(ext + 'props-1', 'lamp');
 	bg4.updateHitbox();
 	bg4.scale.set(bgScale, bgScale);
-	
-	var bg5:FlxSprite = new FlxSprite(-750, 160).loadFromSheet(ext + 'props', 'fore');
+
+	var bg5:FlxSprite = new FlxSprite(-750, 160).loadFromSheet(ext + 'props-1', 'fore');
 	bg5.updateHitbox();
 	bg5.scale.set(bgScale, bgScale);
-	
-	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props', 'dark');
+
+	var dark:FlxSprite = new FlxSprite(-950, -160).loadFromSheet(ext + 'props-0', 'dark');
 	dark.scale.set(1.3, 1.3);
 	dark.blend = BlendMode.MULTIPLY;
 	
@@ -95,7 +99,7 @@ function onLoad()
 	finaleFGStuff.add(bg3);
 	finaleFGStuff.add(bg4);
 	finaleFGStuff.add(bg5);
-	finaleFGStuff.add(dark);
+	if (!ClientPrefs.lowQuality)finaleFGStuff.add(dark);
 	finaleFGStuff.add(finaleLight);
 	
 	finaleBGStuff.alpha = 0.001;
@@ -119,7 +123,7 @@ function onCreatePost()
 	camSpecialThing([750, 800], [750, 800], 0.8);
 	
 	add(finaleFGStuff);
-	add(finaleFlashbackStuff);
+	if (!ClientPrefs.lowQuality) add(finaleFlashbackStuff);
 	
 	lightoverlay = new FlxSprite(-550, 250).loadGraphic(Paths.image('stages/void/iluminao omaga'));
 	lightoverlay.scale.set(4, 4);
@@ -138,33 +142,33 @@ function onCreatePost()
 	lightoverlay.zIndex = 4;
 	finaleDarkFG.zIndex = 5;
 	
-	game.opponentStrums.visible = false;
+	opponentStrums.visible = false;
 	modManager.setValue("alpha", 1, 1);
 	refreshZ();
 	
-		if (ClientPrefs.shaders)
+	if (ClientPrefs.shaders)
 	{
 		var blackRimlightBase:ExtraDropShadowShader = new funkin.game.shaders.ExtraDropShadowShader();
 		
-		blackRimlightBase.threshold = .1;
+		blackRimlightBase.threshold = .05;
 		blackRimlightBase.strength = .85;
 		blackRimlightBase.setColorMatrix([
-			.3, .5, -.2, 0, -50,
-			-.25, .1, .05, 0, 10,
-			.4, .25, .6, 0, -92,
+			.4, .5, -.2, 0, -50,
+			-.25, .7, -.15, 0, -20,
+			.42, -.35, .85, 0, -72,
 			0, 0, 0, 1, 0
 		]);
 		blackRimlightBase.addLayer([
-			.5, 0, 1, 0, 192,
-			.1, 1, -.5, 0, 64,
-			0, 0, .35, 0, 64,
+			.7, .5, 1, 0, 192,
+			.3, .4, -.5, 0, 64,
+			-.1, .2, .35, 0, 74,
 			0, 0, 0, 1, 0
 		], 10, 14, .01);
 		blackRimlightBase.addLayer(
 			blackRimlightBase.addLayer([
-				.9, .7, .4, 0, 4,
-				-.2, .3, .1, 0, -18,
-				.2, .2, .4, 0, -28,
+				.9, .6, .4, 0, 4,
+				-.2, .5, .1, 0, -18,
+				-.2, .2, .4, 0, -28,
 				0, 0, 0, 1, 0
 			], 12, 40, .01, .4)
 		.colorMatrix, 96, 24, .01, .4);
@@ -189,7 +193,7 @@ function onCreatePost()
 
 function onBeatHit()
 {
-	if (curBeat % 4 == 0) finaleLight.animation.play('bop');
+	if (!ClientPrefs.lowQuality && curBeat % 4 == 0) finaleLight.animation.play('bop');
 }
 
 function onUpdate(elapsed)

@@ -1,6 +1,6 @@
 import funkin.data.ClientPrefs;
-
 import flixel.FlxSprite;
+import Reflect;
 
 var ext = 'stages/skeld/monotone/';
 var bbg:FlxSprite;
@@ -131,18 +131,13 @@ function onLoad()
 	bggreen.alpha = 0;
 	greentower.alpha = 0;
 	
-	platform = new FlxSprite(1340, 1090);
+	platform = new FlxSprite(1340, 1110);
 	platform.frames = Paths.getSparrowAtlas('stages/common/platform');
 	platform.animation.addByPrefix('bop', 'floating', 24, true);
 	platform.animation.play('bop');
 	platform.alpha = 0.00001;
 	
 	add(platform);
-	
-	blackImage = new FlxSprite(0, 0).makeGraphic(1920, 1080, 0xff000000);
-	blackImage.scale.set(2, 2);
-	add(blackImage);
-	blackImage.alpha = 0.0001;
 	
 	// pet 2
 	copyPet = new funkin.objects.Pet(142, PET_Y);
@@ -155,17 +150,35 @@ function onGameOverStart()
 
 function onCreatePost()
 {
+	blackImage = new flixel.system.FlxBGSprite();
+	blackImage.color = FlxColor.BLACK;
+	blackImage.alpha = 0;
+	stage.insert(stage.members.indexOf(dadGroup) + 1, blackImage);
+	
 	copyPet.loadPet(pet.curPet);
 	copyPet.flipX = !copyPet.flipX;
 	copyPet.x -= (copyPet._petOffset.x * 2);
-	copyPet.setColorTransform(1, 1, 1, 1, -16, -16, -16);
-	
-	if (Paths.fileExists('scripts/vent.hx')) initScript('scripts/vent');
 	add(copyPet);
+
+	var grayscale:ExtraDropShadowShader = new funkin.game.shaders.ExtraDropShadowShader();
+	grayscale.threshold = .05;
+	grayscale.strength = .85;
+	grayscale.setColorMatrix([
+		0.31, 0.52, 0.17, 0, 0,
+		0.31, 0.52, 0.17, 0, 0,
+		0.31, 0.52, 0.17, 0, 0,
+		0,    0,    0,    1, 0
+	]);
+	grayscale.attachedSprite = copyPet;
+	copyPet.useRenderTexture = true;
+
+	if (Paths.fileExists('scripts/vent.hx')) initScript('scripts/vent');
 	
 	// cache characters
-	if (!hasBfSkin) addCharacterToList('bf-fall', 0);
-	
+	preloadVariant('falling');
+	preloadVariant('defeat');
+	preloadVariant('windy');
+
 	addCharacterToList('greenEjected', 1);
 	addCharacterToList('monotone', 1);
 	addCharacterToList('red', 1);
@@ -173,7 +186,9 @@ function onCreatePost()
 	
 	if (hasBfSkin)
 	{
-		changeCharacter(boyfriend.getFlag('customMonotone') ?? boyfriend.curCharacter, 1);
+		final shift:Null<String> = (boyfriend.getFlag('variants')?.monotone ?? boyfriend.getFlag('customMonotone'));
+		
+		changeCharacter(shift ?? boyfriend.curCharacter, 1);
 		
 		if (dad.isPlayerInEditor) // i mean it works !
 		{
@@ -183,21 +198,20 @@ function onCreatePost()
 				'singLEFT' => 'singRIGHT',
 				'danceLeft' => 'danceRight'
 			];
-			
-			for (anim in dad.animation.getAnimationList())
+			var ogAnims = dad.animation.getNameList().copy();
+			for (animName in ogAnims)
 			{
 				for (name => newName in swapAnims)
 				{
-					if (StringTools.startsWith(anim.name, name))
+					if (StringTools.startsWith(animName, name))
 					{
-						dad.swapAnims(anim.name, newName + anim.name.substr(name.length));
-						break;
+						dad.swapAnims(animName, newName + animName.substr(name.length));
 					}
 				}
 			}
 		}
 		
-		dad.x = (-boyfriend.x - dad.width + 1950); // somehow its still not symetrical but whatever
+		if (shift == null) dad.x = (-boyfriend.x - dad.baseFrameWidth + (dad.getFlag('monotoneXOffset') ?? 0) + 1920);
 	}
 	
 	camHUD.alpha = .0001; // doy
@@ -218,7 +232,7 @@ function onCreatePost()
 	add(lightoverlay2);
 	
 	// black screen sprite
-	black = new FlxSprite(0, 0).makeGraphic(1280, 720, 0xff000000);
+	black = new FlxSprite(0, 0).makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xff000000); // live screen size so expand mode's wider canvas is fully covered
 	black.camera = camOther;
 	add(black);
 	black.visible = true;
@@ -227,7 +241,7 @@ function onCreatePost()
 	// Loggo. No other comment
 	yapsesh = new FlxSprite(0, 0);
 	yapsesh.frames = Paths.getSparrowAtlas(ext + 'dialogue');
-	yapsesh.animation.addByPrefix('bop', 'dialogue', 24, false);
+	yapsesh.animation.addByPrefix('bop', 'dialogue', 22, false);
 	yapsesh.camera = camOther;
 	yapsesh.zIndex = 12;
 	yapsesh.screenCenter();
@@ -268,13 +282,10 @@ function onEvent(n, v1, v2)
 				}
 				
 				pauseOverwrite = '';
-				if (v1 == 'green')
-				{
-					if (!hasBfSkin) triggerEventNote('Change Character', 'BF', 'bf-fall');
-				}
-				else if (!hasBfSkin) triggerEventNote('Change Character', 'BF', 'bf');
+				if (v1 != 'green' && v1 != 'black') setVariant();
+				
+				platform.alpha = 0.001;
 				defeatthing.alpha = 0.001;
-				if (hasBfSkin && game.boyfriend.curCharacter != 'bf-ghost') platform.alpha = 0.001;
 				bggreen.alpha = 0.001;
 				lightoverlay2.alpha = 1;
 				speedlines.alpha = 0.001;
@@ -315,18 +326,21 @@ function onEvent(n, v1, v2)
 					spinPet = false;
 					bbg.alpha = 1;
 				case 'green':
+					setVariant('falling');
+					spinPet = true;
 					triggerEventNote('Change Character', 'dad', 'greenEjected');
 					bggreen.alpha = 1;
 					lightoverlay2.alpha = 0.001;
 					greentower.alpha = 1;
 					speedlines.alpha = 0.5;
-					if (hasBfSkin && game.boyfriend.curCharacter != 'bf-ghost') platform.alpha = 1;
-					spinPet = true;
+					if (hasBfSkin && boyfriend.getFlag('floating') != true) platform.alpha = 1;
 					greentower.y = 0.001;
 					FlxTween.tween(greentower, {y: -300}, 20);
 					bbg.alpha = 0.001;
 					defeatthing.alpha = 0.001;
 				case 'black':
+					setVariant('defeat');
+					
 					triggerEventNote('Change Character', 'dad', 'blackdk');
 					defeatthing.alpha = 0.5;
 					lightoverlay2.alpha = 0.001;
@@ -335,7 +349,6 @@ function onEvent(n, v1, v2)
 				case 'ending':
 					FlxTween.tween(lightoverlay2, {alpha: 0}, 10);
 					FlxTween.tween(blackImage, {alpha: 1}, 12);
-					FlxTween.tween(dad, {alpha: 0}, 10);
 				case 'off':
 					triggerEventNote('flash', '2', '');
 				case 'on':
@@ -357,48 +370,79 @@ function onEvent(n, v1, v2)
 	if (dad.curCharacter == 'monotone') copyPet.kill();
 }
 
+var oldPet:Null<String> = null;
+var oldBf:Null<String> = null;
+
+function setVariant(?variant:String):Void
+{
+	var custom:Null<String> = (variant == null || boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
+	if (custom != null)
+	{
+		oldBf ??= boyfriend.curCharacter;
+		changeCharacter(custom, 0);
+	}
+	else if (oldBf != null)
+	{
+		changeCharacter(oldBf, 0);
+		oldBf = null;
+	}
+	
+	custom = (variant == null || pet.getFlag('variants') == null ? null : Reflect.field(pet.getFlag('variants'), variant));
+	if (custom != null)
+	{
+		oldPet ??= pet.curPet;
+		pet.loadPet(custom);
+	}
+	else if (oldPet != null)
+	{
+		pet.loadPet(oldPet);
+		oldPet = null;
+	}
+}
+
+function preloadVariant(variant:String):Void
+{
+	var custom:Null<String> = (boyfriend.getFlag('variants') == null ? null : Reflect.field(boyfriend.getFlag('variants'), variant));
+	if (custom != null) addCharacterToList(custom, 0);
+	
+	custom = (pet.getFlag('variants') == null ? null : Reflect.field(pet.getFlag('variants'), variant));
+	if (custom != null) new funkin.objects.Pet().loadPet(custom).destroy();
+}
+
 function onUpdate(elapsed:Float):Void
 {
-	var musicTime:Float = Conductor.songPosition;
-	funTime = musicTime;
-	if (speedlines != null) speedlines.y = -(funTime * 2 * (ClientPrefs.flashing ? 1.75 : .75));
+	if (ClientPrefs.inDevMode)
+	{
+		if (FlxG.keys.justPressed.Z) triggerEventNote('Legacy', 'red');
+		if (FlxG.keys.justPressed.X) triggerEventNote('Legacy', 'black');
+		if (FlxG.keys.justPressed.C) triggerEventNote('Legacy', 'green');
+		if (FlxG.keys.justPressed.V) triggerEventNote('Legacy', 'monotone');
+	}
+}
+
+function onUpdatePost(elapsed:Float):Void
+{
+	if (speedlines != null) speedlines.y = (Conductor.songPosition * -2 * (ClientPrefs.flashing ? 1.75 : .75));
+	
 	if (spinPet)
 	{
 		pet.x = (1850 + copyPet._petOffset.x);
 		pet.y = (800 + copyPet._petOffset.y);
 		pet.scrollFactor.set(1.2, 1.2);
 		if (pet.getFlag('spin') != false) pet.angularVelocity = 450;
-		pet.setColorTransform(1, 1, 1, 1, 0, 0, 0, -127);
+		pet.setColorTransform(1, 1, 1, 1, 0, 20, 40, -127);
 		pet.colorTransform.alphaMultiplier = 2;
-		pet.x += Math.sin(Conductor.songPosition / 100) * 200 * FlxG.elapsed;
-		pet.y = 800 + Math.sin(Conductor.songPosition / 100) * 50;
+		pet.x += Math.sin(Conductor.songPosition / 150) * 400 * FlxG.elapsed;
+		pet.y = 800 + Math.sin(Conductor.songPosition / 150) * 50;
 	}
 	else
 	{
-		pet.angle = 0;
+		pet.angle = pet.angularVelocity = 0;
 		pet.x = (PET_X - pet.width * .5 + copyPet._petOffset.x);
 		pet.y = (PET_Y - pet.height + copyPet._petOffset.y);
+		pet.setColorTransform(1, 1, 1, 1, 0, 0, 0, 0);
 		pet.scrollFactor.set(1, 1);
 		pet.setColorTransform();
-	}
-	if (ClientPrefs.inDevMode)
-	{
-		if (FlxG.keys.justPressed.Z)
-		{
-			triggerEventNote('Legacy', 'red');
-		}
-		if (FlxG.keys.justPressed.X)
-		{
-			triggerEventNote('Legacy', 'black');
-		}
-		if (FlxG.keys.justPressed.C)
-		{
-			triggerEventNote('Legacy', 'green');
-		}
-		if (FlxG.keys.justPressed.V)
-		{
-			triggerEventNote('Legacy', 'monotone');
-		}
 	}
 }
 
@@ -472,26 +516,28 @@ function defeatness(ya:Bool)
 	{
 		bfRimlight = new funkin.game.shaders.ExtraDropShadowShader();
 		
-		bfRimlight.threshold = .1;
+		bfRimlight.threshold = .05;
 		bfRimlight.strength = .85;
 		bfRimlight.setColorMatrix([
-			  .3,  .5, -.2, 0, -50,
-			-.25,  .1, .05, 0,  10,
-			  .4, .25,  .6, 0, -92,
-			   0,   0,   0, 1,   0
+			.4, .5, -.2, 0, -50,
+			-.25, .7, -.15, 0, -20,
+			.42, -.35, .85, 0, -72,
+			0, 0, 0, 1, 0
 		]);
 		bfRimlight.addLayer([
-			.5, 0,   1, 0, 192,
-			.1, 1, -.5, 0,  64,
-			 0, 0, .35, 0,  64,
-			 0, 0,   0, 1,   0
+			.7, .5, 1, 0, 192,
+			.3, .4, -.5, 0, 64,
+			-.1, .2, .35, 0, 74,
+			0, 0, 0, 1, 0
 		], 10, 14, .01);
-		bfRimlight.addLayer(bfRimlight.addLayer([
-			 .9, .7, .4, 0,   4,
-			-.2, .3, .1, 0, -18,
-			 .2, .2, .4, 0, -28,
-			  0,  0,  0, 1,   0
-		], 12, 40, .01, .4).colorMatrix, 96, 24, .01, .4);
+		bfRimlight.addLayer(
+			bfRimlight.addLayer([
+				.9, .6, .4, 0, 4,
+				-.2, .5, .1, 0, -18,
+				-.2, .2, .4, 0, -28,
+				0, 0, 0, 1, 0
+			], 12, 40, .01, .4)
+		.colorMatrix, 96, 24, .01, .4);
 		
 		petRimlight = new funkin.game.shaders.ExtraDropShadowShader().copyFrom(bfRimlight);
 	}

@@ -10,6 +10,7 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import funkin.objects.Character;
 import funkin.game.Rating;
 import funkin.data.*;
+import funkin.backend.SystemMonitor;
 
 typedef NoteSignal = FlxTypedSignal<(Note, PlayField) -> Void>;
 
@@ -118,16 +119,23 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	}
 	
 	public var splashLayer:FlxTypedContainer<FlxTypedContainer<Dynamic>>;
-	
+
 	/**
 	 * The container that all notesplashes are held in
 	 */
 	public var grpNoteSplashes:FlxTypedContainer<NoteSplash>;
-	
+
 	/**
 		The container that all sustain notesplashes are held in
 	**/
 	public var grpSusSplashes:FlxTypedContainer<SustainSplash>;
+
+	// Pre-allocated args for script calls in noteHit/noteMiss to avoid per-hit heap allocation.
+	// Must be static because noteHit/noteMiss are static callbacks.
+	static final _noteScriptArgs:Array<Dynamic> = [null, 0];
+	static final _noteTypeExclusions:Array<String> = [''];
+	static final _gfCharArray:Array<Null<Character>> = [null];
+	static final _ownerCharArray:Array<Null<Character>> = [null];
 	
 	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default')
 	{
@@ -222,8 +230,28 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		}
 		return collected;
 	}
-	
+
 	public function getTapNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> !note.isSustainNote);
+
+	/**
+	 * Zero-allocation version of getTapNotes: returns the highest-priority tap note
+	 * for the given direction without allocating any intermediate Array.
+	 */
+	public function getBestTapNote(dir:Int):Null<Note>
+	{
+		var best:Null<Note> = null;
+		for (note in notes)
+		{
+			if (!note.alive || note.isSustainNote || note.noteData != dir
+				|| note.wasGoodHit || note.tooLate || !note.canBeHit) continue;
+
+			if (best == null
+				|| note.hitPriority > best.hitPriority
+				|| (note.hitPriority == best.hitPriority && note.strumTime < best.strumTime))
+				best = note;
+		}
+		return best;
+	}
 	
 	public function getHoldNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> note.isSustainNote);
 	
@@ -279,34 +307,39 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		var scriptFunc:String = '';
 		if (field.playerControls) scriptFunc = 'goodNoteHit';
 		else scriptFunc = field.ID == 1 ? 'opponentNoteHit' : 'extraNoteHit';
-		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
-		PlayState.instance.scripts.call('${scriptFunc}Pre', scriptArgs);
-		
+
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		#if android SystemMonitor.profBegin('hitPreScript'); #end
+		PlayState.instance.scripts.call(scriptFunc + 'Pre', scriptArgs);
+		#if android SystemMonitor.profEnd(); #end
+
 		final strum:StrumNote = note.strum;
-		
+
+		#if android SystemMonitor.profBegin('hitStrum'); #end
 		if (strum != null)
 		{
 			strum.copyNoteColor(note);
 			strum.playAnim('confirm', true);
-			
+
 			if (field.autoPlayed)
 			{
 				var time:Float = 0.15;
 				if (note.isSustainNote && !note.isSustainEnd) time += 0.15;
 				time /= PlayState.instance.playbackRate;
-				
+
 				strum.resetAnim = time;
 			}
 		}
-		
+
 		if (!note.isSustainNote)
 		{
 			for (sustain in note.tail) // makes the hold note active when you press the base note
 			{
 				if (sustain.parent != note) continue; // ignore notes that have already been recycled
-				
+
 				sustain.blockHit = false;
 			}
 		}
@@ -314,53 +347,97 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		{
 			strum.coyoteTime = field.holdDropLeniency;
 		}
-		
+		#if android SystemMonitor.profEnd(); #end
+
 		if (field.playerControls)
 		{
 			if (note.wasGoodHit || field.autoPlayed && (note.ignoreNote || note.hitCausesMiss || note.canMiss)) return;
-			
+
 			if (ClientPrefs.hitsoundVolume > 0 && !note.hitsoundDisabled) FlxG.sound.play(Paths.sound('hitsound'), ClientPrefs.hitsoundVolume);
-			
+
 			if (note.hitCausesMiss)
 			{
 				field.onNoteMiss.dispatch(note, field);
-				
+
 				note.wasGoodHit = true;
-				
-				if (!note.isSustainNote) field.disposeNote(note);
-				
+
+				if (!note.isSustainNote)
+				{
+					#if android SystemMonitor.profBegin('hitDispose'); #end
+					field.disposeNote(note);
+					#if android SystemMonitor.profEnd(); #end
+				}
+
 				return;
 			}
-			
+
 			final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
-			
+
 			PlayState.instance.health += note.hitHealth * PlayState.instance.healthGain * susMult;
 			PlayState.instance.missCombo = 0;
 		}
-		
-		var chars:Array<Null<Character>> = note.gfNote ? [PlayState.instance.gf] : field.singers;
-		if (note.owner != null) chars = (note.singers != null && note.singers.length > 0 ? note.singers : [note.owner]);
-		
+
+		var chars:Array<Null<Character>>;
+		if (note.owner != null)
+		{
+			if (note.singers != null && note.singers.length > 0)
+				chars = note.singers;
+			else
+			{
+				_ownerCharArray[0] = note.owner;
+				chars = _ownerCharArray;
+			}
+		}
+		else if (note.gfNote)
+		{
+			_gfCharArray[0] = PlayState.instance.gf;
+			chars = _gfCharArray;
+		}
+		else
+		{
+			chars = field.singers;
+		}
+
+		// Prime suspect for the Android hit-lag: bf-running/danger (Danger song)
+		// use the heavier FlxAnimate atlas format instead of a plain sprite
+		// sheet, and char.playAnim() runs here on every single note hit.
+		#if android SystemMonitor.profBegin('hitCharSing'); #end
 		for (char in chars)
 			if (char != null) characterSing(char, note, field.playerControls);
-			
+		#if android SystemMonitor.profEnd(); #end
+
 		note.wasGoodHit = true;
-		
+
+		#if android SystemMonitor.profBegin('hitSplash'); #end
 		var shouldSplash:Bool = true;
 		if (field.playerControls)
 		{
 			shouldSplash = ((note.ratingData = Rating.judgeNote(note, Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) / PlayState.instance?.playbackRate)).ratingMod >= 1);
 		}
-		
+
 		if (field.noteSplashes && shouldSplash) field.spawnSplash(note);
 		field.spawnSusSplash(note, field.playerControls);
-		
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('hitNoteScript'); #end
 		final globalScript = PlayState.instance.callNoteTypeScript(note.noteType, 'hit', scriptArgs);
-		
+		if (ScriptConstants.stopping(globalScript))
+		{
+			#if android SystemMonitor.profEnd(); #end
+			return;
+		}
+
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, scriptFunc, scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, [note.noteType]);
-		
-		if (!note.isSustainNote) field.disposeNote(note);
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, _noteTypeExclusions);
+		#if android SystemMonitor.profEnd(); #end
+
+		if (!note.isSustainNote)
+		{
+			#if android SystemMonitor.profBegin('hitDispose'); #end
+			field.disposeNote(note);
+			#if android SystemMonitor.profEnd(); #end
+		}
 	}
 	
 	public static function noteMiss(note:Note, field:PlayField):Void
@@ -391,20 +468,21 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			{
 				if (char.animTimer <= 0)
 				{
-					var daAlt = '';
-					if (note.noteType == 'Alt Animation') daAlt = '-alt';
-					
-					var animToPlay:String = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss' + daAlt;
+					final baseMiss = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss';
+					final animToPlay:String = (note.noteType == 'Alt Animation') ? baseMiss + '-alt' : baseMiss;
 					char.playAnim(animToPlay, true);
 					char.holdTimer = 0;
 				}
 			}
 		}
 		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, 'noteMiss', scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, [note.noteType]);
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, _noteTypeExclusions);
 		
 		// hold note missing stuff, makes the hold unhittable (and kills it, might make it just transparent if i can fix some stuff)
 		if (!note.hitCausesMiss && !note.canMiss)
@@ -443,7 +521,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	{
 		if (note.noAnimation) return;
 		
-		final animToPlay = note.skin.singAnimations[Std.int(Math.abs(note.noteData))] + note.animSuffix;
+		final baseAnim = note.skin.singAnimations[Std.int(Math.abs(note.noteData))];
+		final animToPlay = note.animSuffix.length > 0 ? baseAnim + note.animSuffix : baseAnim;
 		
 		char.holdTimer = 0;
 		

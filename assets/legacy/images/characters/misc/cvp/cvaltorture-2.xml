@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="cvaltorture-2.png" width="2954" height="1241">
+	<SubTexture name="cval rozebud 0079" x="0" y="0" width="985" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0080" x="0" y="0" width="985" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0081" x="1969" y="0" width="985" height="1241" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0082" x="1969" y="0" width="985" height="1241" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0083" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0084" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0085" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0086" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0087" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+	<SubTexture name="cval rozebud 0088" x="985" y="0" width="984" height="1236" frameX="-378" frameY="-0" frameWidth="1364" frameHeight="1241"/>
+</TextureAtlas>

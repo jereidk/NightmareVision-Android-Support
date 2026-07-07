@@ -35,7 +35,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/henry/henry_i_phone",
+	"image": "characters/henry/henry_i_phone-0,characters/henry/henry_i_phone-1",
 	"position": [
 		0,
 		134
@@ -54,7 +54,10 @@
 		0
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
-	"_editor_isPlayer": true
+	"_editor_isPlayer": true,
+	"pausePortrait": "",
+	"flags": {},
+	"afterimages": true
 }

@@ -69,10 +69,10 @@ class CosmicubeData
 		cosmicubeItems.clear();
 		
 		var directories:Array<String> = [Paths.mods(), Paths.getCorePath()];
-		
+
 		for (mod in Mods.parseList().enabled)
 			directories.push(Paths.mods('$mod/'));
-			
+
 		// parse items stuff
 		for (dir in directories)
 		{
@@ -81,9 +81,9 @@ class CosmicubeData
 			{
 				modFolder = dir.substring(Paths.mods().length, dir.length - 1);
 			}
-			
+
 			var dir:String = '${dir}data/cosmicube/';
-			
+
 			if (!FunkinAssets.exists(dir)) continue;
 
 			for (file in FunkinAssets.readDirectory(dir))
@@ -95,10 +95,10 @@ class CosmicubeData
 				var meta:CosmicubeMetadata = haxe.Json.parse(FunkinAssets.getContent('$dir$file'));
 				meta.fileName = fileName;
 				meta.mod = modFolder;
-				
+
 				cosmicubeList.push(fileName);
 				cosmicubeMetas.set(fileName, meta);
-				cosmicubeItems.set(fileName, getShopItems('$dir/$fileName/', meta));
+				cosmicubeItems.set(fileName, getShopItems('$dir$fileName/', meta));
 			}
 		}
 	}

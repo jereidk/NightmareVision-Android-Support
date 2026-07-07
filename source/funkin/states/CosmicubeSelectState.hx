@@ -10,6 +10,7 @@ import funkin.input.TurboControl;
 import flixel.group.FlxSpriteGroup;
 
 using StringTools;
+import mobile.utils.MobileNavUtil;
 
 class CosmicubeSelectState extends AmongUIState
 {
@@ -47,7 +48,13 @@ class CosmicubeSelectState extends AmongUIState
 		add(backButton).revive();
 		
 		add(cards);
-		cards.setPosition(40, upperBar.height + 40);
+		// Cards had ~40px margins on both sides of the 1280 base canvas
+		// (roughly centered, not hugging an edge) — shift by half the
+		// 'expand'-mode cutout so that same centered look holds on wider
+		// screens instead of leaving all the extra space bunched on the
+		// right. Same pattern FunkinCrew/Funkin uses (CUTOUT_WIDTH * multiplier
+		// per element) in their own freeplay/story menus.
+		cards.setPosition(40 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, upperBar.height + 40);
 		
 		for (id in CosmicubeData.cosmicubeList)
 		{
@@ -60,6 +67,7 @@ class CosmicubeSelectState extends AmongUIState
 		
 		Mods.currentModDirectory = prevMod;
 		
+		#if !mobile
 		var bottomControls:AmongControls = new AmongControls([
 			['arrow', 'select'], //select
 			['enter', 'conf'], //conf
@@ -69,6 +77,7 @@ class CosmicubeSelectState extends AmongUIState
 		bottomControls.camera = camUpper;
 		bottomControls.zIndex = 12;
 		add(bottomControls);
+		#end
 		
 		localCurrency = null;
 		
@@ -77,7 +86,8 @@ class CosmicubeSelectState extends AmongUIState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -94,12 +104,12 @@ class CosmicubeSelectState extends AmongUIState
 	{
 		if (!lockMovement)
 		{
-			if (FlxG.keys.justPressed.TAB)
+			if (FlxG.keys.justPressed.TAB #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				lockMovement = true;
-				
+
 				FlxG.sound.play(Paths.sound('scrollMenu'), .6);
-				
+
 				openSubState(new CosmeticsSubstate());
 			}
 			
@@ -107,7 +117,7 @@ class CosmicubeSelectState extends AmongUIState
 			if (controls.UI_RIGHT_P) selectLooksie(false);
 			if (controlUP.PRESSED) select(-1);
 			if (controlDOWN.PRESSED) select(1);
-			if (FlxG.mouse.wheel != 0) select(-FlxG.mouse.wheel);
+			if (MobileNavUtil.allowPointerNav() && FlxG.mouse.wheel != 0) select(-FlxG.mouse.wheel);
 			if (controls.ACCEPT) accept();
 		}
 		
@@ -119,7 +129,7 @@ class CosmicubeSelectState extends AmongUIState
 		
 		final lerp:Float = Math.exp(-elapsed * 3);
 		
-		if (!lockMovement && FlxG.mouse.justPressed)
+		if (MobileNavUtil.allowPointerNav() && !lockMovement && FlxG.mouse.justPressed)
 		{
 			for (i => card in cards.members)
 			{
@@ -139,7 +149,7 @@ class CosmicubeSelectState extends AmongUIState
 			card.looksie.alpha = MathUtil.fpsLerp(card.looksie.alpha, looksie && card.selected ? 1 : .5, .2);
 			card.checkbox.alpha = MathUtil.fpsLerp(card.checkbox.alpha, !looksie && card.selected ? 1 : .5, .2);
 			
-			if (!lockMovement && card.selected && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
+			if (!lockMovement && card.selected && MobileNavUtil.allowPointerNav() && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
 			{
 				final overlapLooksie:Bool = FlxG.mouse.overlaps(card.looksie), overlapCheckbox:Bool = FlxG.mouse.overlaps(card.checkbox);
 				

@@ -17,6 +17,7 @@ import funkin.scripts.*;
 #if mobile
 import flixel.group.FlxGroup;
 import mobile.controls.MobileHitbox;
+import mobile.controls.MobileHitbox.HitboxLayout;
 import mobile.controls.MobileVirtualPad;
 import mobile.controls.NoteTapInput;
 #end
@@ -51,10 +52,10 @@ class MusicBeatState extends FlxUIState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false)
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && ClientPrefs.navInputMode != 'Virtual Pad') return;
-		virtualPad = new MobileVirtualPad(DPad, Action);
+		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
 	}
 
@@ -91,13 +92,25 @@ class MusicBeatState extends FlxUIState
 		{
 			if (ClientPrefs.gameInputMode == 'Virtual Pad')
 			{
-				addVirtualPad(LEFT_FULL, NONE, true);
+				addVirtualPad(LEFT_FULL, NONE, true, true); // last true = forGameplay
 				addVirtualPadCamera(DefaultDrawTarget);
 				return;
 			}
 
-			// Tap Notes: NoteTapInput is created externally (needs the notes group).
-			if (ClientPrefs.gameInputMode == 'Tap Notes') return;
+			// VSlice controls: tap the actual VSlice receptor sprites directly —
+			// invisible zones matching their real position/size (VSLICE_MATCH),
+			// not the separate Arrows scheme's own fixed-position flicker sprites.
+			if (ClientPrefs.gameInputMode == 'VSlice controls')
+			{
+				hitbox = new MobileHitbox(VSLICE_MATCH);
+				hitboxCam = new FlxCamera();
+				hitboxCam.bgColor.alpha = 0;
+				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
+				hitbox.cameras = [hitboxCam];
+				hitbox.visible = false;
+				add(hitbox);
+				return;
+			}
 
 			hitbox = new MobileHitbox();
 			hitboxCam = new FlxCamera();
@@ -150,8 +163,11 @@ class MusicBeatState extends FlxUIState
 	public var scripted:Bool = false;
 	public var scriptName:String = '';
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
+
+	final _updateArgs:Array<Dynamic> = [0.0];
+	static final _emptyArgs:Array<Dynamic> = [];
 	
-	inline function isHardcodedState() return (scriptGroup != null && !scriptGroup.call('customMenu') == true) || (scriptGroup == null);
+	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
 	{
@@ -161,14 +177,16 @@ class MusicBeatState extends FlxUIState
 			scriptName = stateName ?? '???';
 		}
 		
+		scriptGroup.scriptShareables.set('parent', this);
+
+		this.scriptName = scriptName;
+
 		final scriptFile = FunkinScript.getPath('scripts/states/$scriptName');
 		if (scriptGroup.exists(scriptFile)) return true;
-		
-		this.scriptName = scriptName;
-		
+
 		if (FunkinAssets.exists(scriptFile))
 		{
-			var newScript = FunkinScript.fromFile(scriptFile, scriptName);
+			var newScript = FunkinScript.fromFile(scriptFile, scriptName, null, scriptGroup.scriptShareables);
 			if (newScript.__garbage)
 			{
 				newScript = FlxDestroyUtil.destroy(newScript);
@@ -183,8 +201,9 @@ class MusicBeatState extends FlxUIState
 			scripted = true;
 		}
 		
-		if (callOnLoad) scriptGroup.call('onLoad', []);
-		
+		if (callOnLoad) scriptGroup.call('onLoad', _emptyArgs);
+
+
 		return scripted;
 	}
 	
@@ -273,6 +292,7 @@ class MusicBeatState extends FlxUIState
 		FlxTransitionableState.skipNextTransOut = false;
 		
 		PluginsManager.callOnScripts('onStateCreate');
+		GlobalScriptManager.instance?.onStateCreate(this);
 	}
 	
 	var _updatedMods:Bool = false;
@@ -304,6 +324,7 @@ class MusicBeatState extends FlxUIState
 	override function update(elapsed:Float)
 	{
 		addPlayTimeDelta();
+		SystemMonitor.checkFrame(elapsed);
 		
 		final oldStep:Int = curStep;
 		
@@ -322,9 +343,13 @@ class MusicBeatState extends FlxUIState
 		}
 		else if (PlayState.SONG != null) rollbackSection();
 		
-		final scriptArgs = [elapsed];
-		scriptGroup.call('onUpdate', scriptArgs);
-		PluginsManager.callOnScripts('onUpdate', scriptArgs);
+		_updateArgs[0] = elapsed;
+		var _smT = haxe.Timer.stamp();
+		scriptGroup.call('onUpdate', _updateArgs);
+		SystemMonitor.reportScriptTime('onUpdate', (haxe.Timer.stamp() - _smT) * 1000);
+		if (GlobalScriptManager.instance != null)
+			GlobalScriptManager.instance.onUpdate(elapsed);
+		PluginsManager.callOnScripts('onUpdate', _updateArgs);
 		super.update(elapsed);
 	}
 	
@@ -386,21 +411,21 @@ class MusicBeatState extends FlxUIState
 	
 	public function stepHit():Void
 	{
-		scriptGroup.call('onStepHit', []);
+		scriptGroup.call('onStepHit', _emptyArgs);
 		PluginsManager.callOnScripts('onStepHit');
-		
+
 		if (curStep % 4 == 0) beatHit();
 	}
-	
+
 	public function beatHit():Void
 	{
-		scriptGroup.call('onBeatHit', []);
+		scriptGroup.call('onBeatHit', _emptyArgs);
 		PluginsManager.callOnScripts('onBeatHit');
 	}
-	
+
 	public function sectionHit():Void
 	{
-		scriptGroup.call('onSectionHit', []);
+		scriptGroup.call('onSectionHit', _emptyArgs);
 		PluginsManager.callOnScripts('onSectionHit');
 	}
 	
@@ -450,7 +475,7 @@ class MusicBeatState extends FlxUIState
 	
 	override function closeSubState()
 	{
-		scriptGroup.call('onCloseSubState', []);
+		scriptGroup.call('onCloseSubState', _emptyArgs);
 		super.closeSubState();
 	}
 }

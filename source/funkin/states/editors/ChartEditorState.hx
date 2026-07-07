@@ -93,7 +93,7 @@ class OurLittleFriend extends FlxSprite
 	function buildOffsets(?path:String)
 	{
 		path ??= _offsetPath;
-		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in FunkinAssets.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
+		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in File.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
 		{
 			var value = i.trim().split(',');
 			offsets.set(k, [Std.parseFloat(value[0]), Std.parseFloat(value[1])]);
@@ -278,7 +278,6 @@ class ChartEditorState extends MusicBeatState
 	**/
 	var curSelectedNotes:Array<Array<Dynamic>> = [];
 	var holdingNotes:Array<Array<Dynamic>> = [null, null, null, null, null, null, null, null];
-	var tempBpm:Float = 0;
 	var playbackSpeed:Float = 1;
 	
 	public static var vocals:FlxSound = null;
@@ -359,6 +358,7 @@ class ChartEditorState extends MusicBeatState
 		}
 		
 		Conductor.bpm = _song.bpm;
+                PlayState.chartingMode = true;
 		Conductor.mapBPMChanges(_song);
 		initialKeyCount = _song.keys;
 		
@@ -409,7 +409,6 @@ class ChartEditorState extends MusicBeatState
 		
 		FlxG.mouse.visible = true;
 		
-		tempBpm = _song.bpm;
 		
 		addSection();
 		
@@ -1498,7 +1497,7 @@ class ChartEditorState extends MusicBeatState
 		
 		#if MODS_ALLOWED
 		var eventPushedMap:Map<String, Bool> = new Map<String, Bool>();
-		var directories:Array<String> = [];
+		var directories:Array<String> = [Paths.getCorePath('data/events/'), Paths.getCorePath('events/')];
 		
 		#if MODS_ALLOWED
 		directories.push(Paths.mods('data/events/'));
@@ -1897,7 +1896,7 @@ class ChartEditorState extends MusicBeatState
 		
 		try
 		{
-			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp', true);
+			final oppVocals:Null<Sound> = Paths.voices(currentSongName, 'opp');
 			if (oppVocals != null)
 			{
 				opponentVocals.loadEmbedded(oppVocals);
@@ -1976,6 +1975,7 @@ class ChartEditorState extends MusicBeatState
 			if (wname == 'section_beats')
 			{
 				_song.notes[curSec].sectionBeats = Std.int(nums.value);
+                                Conductor.mapBPMChanges(_song);
 				reloadGridLayer();
 			}
 			else if (wname == 'song_speed')
@@ -1984,9 +1984,8 @@ class ChartEditorState extends MusicBeatState
 			}
 			else if (wname == 'song_bpm')
 			{
-				tempBpm = nums.value;
+				_song.bpm = nums.value;
 				Conductor.mapBPMChanges(_song);
-				Conductor.bpm = nums.value;
 			}
 			else if (wname == 'song_strums')
 			{
@@ -2026,7 +2025,13 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'section_bpm')
 			{
 				_song.notes[curSec].bpm = nums.value;
-				updateGrid();
+
+				if (_song.notes[curSec].changeBPM)
+				{
+					Conductor.mapBPMChanges(_song);
+
+					updateGrid();
+				}
 			}
 			else if (wname == 'inst_volume')
 			{
@@ -2543,7 +2548,6 @@ class ChartEditorState extends MusicBeatState
 		// 	clickForInfo.color = 0xFF8c8c8c;
 		// }
 		
-		_song.bpm = tempBpm;
 		
 		strumLineNotes.visible = quant.visible = vortex;
 		

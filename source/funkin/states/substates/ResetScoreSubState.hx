@@ -31,8 +31,8 @@ class ResetScoreSubState extends MusicBeatSubstate
 	var otherTitleText:FlxText;
 	var bgThing:FlxSprite;
 	var menuBackButton:FlxSprite;
-	var bottomControls:funkin.objects.menu.AmongControls;
-	var mouseMode:Bool = false;
+	var bottomControls:Null<funkin.objects.menu.AmongControls>;
+	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	
 	var song:String;
 	var difficulty:Int;
@@ -70,7 +70,10 @@ class ResetScoreSubState extends MusicBeatSubstate
 		bgThing.alpha = 1;
 		add(bgThing);
 		
-		otherTitleText = new FlxText(340, 205, 0, Lang.str('reset_score', 'Reset Highscore'), 50);
+		// Same bug as WeekPickerSubstate's otherTitleText: hardcoded to align
+		// with bgThing's default-canvas position instead of bgThing.x (which
+		// menuBackButton/titleText below already correctly use).
+		otherTitleText = new FlxText(bgThing.x + 16, 205, 0, Lang.str('reset_score', 'Reset Highscore'), 50);
 		otherTitleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);
@@ -152,18 +155,20 @@ class ResetScoreSubState extends MusicBeatSubstate
 			}
 		}
 		
+		#if !mobile
 		bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
 			['esc', 'back'] // back
 		], false);
 		add(bottomControls);
+		#end
 		
 		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
 		
 		for (obj in members)
 		{
-			if (obj == bg || obj == bottomControls || !Std.isOfType(obj, FlxSprite)) continue;
+			if (obj == bg || (bottomControls != null && obj == bottomControls) || !Std.isOfType(obj, FlxSprite)) continue;
 			
 			var sprite:FlxSprite = cast obj;
 			var alpha:Float = sprite.alpha;
@@ -177,6 +182,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -190,7 +196,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		
 		if (!lockMovement)
 		{
-			if (FlxG.mouse.justPressed)
+			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				mouseMode = true;
 				var mousePos = FlxG.mouse.getWorldPosition();
@@ -230,7 +236,10 @@ class ResetScoreSubState extends MusicBeatSubstate
 			
 			if (controls.UI_LEFT_P || controls.UI_RIGHT_P)
 			{
+				#if !mobile
+				// Desktop: switch from mouse to keyboard
 				mouseMode = false;
+				#end
 				FlxG.sound.play(Paths.sound('scrollMenu'), 1);
 				onYes = !onYes;
 				updateOptions();
@@ -262,7 +271,7 @@ class ResetScoreSubState extends MusicBeatSubstate
 		
 		for (obj in members)
 		{
-			if (obj == bg || obj == bottomControls || !Std.isOfType(obj, FlxSprite)) continue;
+			if (obj == bg || (bottomControls != null && obj == bottomControls) || !Std.isOfType(obj, FlxSprite)) continue;
 			
 			var sprite:FlxSprite = cast obj;
 			FlxTween.cancelTweensOf(sprite);

@@ -20,6 +20,7 @@ class ScriptedSubstate extends funkin.backend.MusicBeatSubstate
 		
 		if (!scripted)
 		{
+			close();
 			FlxG.switchState(() -> new FallbackState('failed to load ($scriptName)!\nDoes it exist?', () -> FlxG.switchState(MainMenuState.new)));
 			return;
 		}

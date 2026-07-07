@@ -507,6 +507,9 @@
         "opt_category_misc": "杂项",
         "opt_category_credits": "鸣谢",
         "opt_category_notes": "音符",
+        "opt_category_editors": "Editors",
+        "opt_category_mobile": "Mobile",
+        "opt_category_dlc": "DLC Manager",
         "opt_controllermode": "手柄模式",
         "opt_controllermode_desc": "启用手柄支持。",
         "opt_downscroll": "按键下置",
@@ -668,6 +671,11 @@
         "who48": "懂没？\nGet it?",
         "who49": "啊啊啊啊啊啊啊！！\nArrrrggghhhhh!!!!",
         "who50": "我要杀了你们所有人！从你开始！！\nI'M GOING2KILLEVERY1STARTINGWITHU!!",
-        "who51": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG!!"
+        "who51": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG!!",
+        "who52": "啊哈！搞半天你是凶手！！\nAH HAH! SO IT WAS YOU ALL ALONG???",
+        "who-end": "要杀了你们所有人从你开始 不是伪装者。",
+
+        "victory": "胜利",
+        "credits_thanks": "感谢你的游玩!"
     }
 }

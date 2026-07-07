@@ -113,6 +113,9 @@ class ClientPrefs
 	// Users can enable it explicitly at their own risk (see GPU Caching option warning).
 	@saveVar public static var gpuCaching:Bool = #if android false #else true #end;
 
+	// Aspect ratio mode for scaling: 'fit' = keep 16:9 with black bars, 'stretch' = fill screen
+	@saveVar public static var aspectRatioMode:String = 'fit';
+
 	@saveVar public static var globalAntialiasing:Bool = true;
 	
 	@saveVar public static var lowQuality:Bool = false;
@@ -157,17 +160,27 @@ class ClientPrefs
 	
 	// mobile ------------------------------------------------------------------------//
 	#if mobile
-	@saveVar public static var navInputMode:String = 'Touch';
+	@saveVar public static var navInputMode:String = 'Virtual Pad';
 	@saveVar public static var gameInputMode:String = 'Hitbox';
+	@saveVar public static var noteLayout:String = 'Normal';
 
 	@saveVar public static var hitboxAlpha:Float = 0.2;
 
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
-	@saveVar public static var hapticFeedback:Bool = true;
-
-	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb'. */
+	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
+	@saveVar public static var virtualPadLayout:String = 'LeftFull';
+	@saveVar public static var customPadPositions:Array<Array<Float>> = [[-1,-1],[-1,-1],[-1,-1],[-1,-1]];
+	/** JSON map of all custom button positions (name -> [x, y]) for VirtualPadCustomizer. */
+	@saveVar public static var customPadPositionsJson:String = "";
+
+	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
+	@saveVar public static var drsEnabled:Bool = false;
+
+	/**
+	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
+	 */
 	#end
 
 	// gameplay ------------------------------------------------------------------------//
@@ -441,6 +454,13 @@ class ClientPrefs
 		}
 	}
 	
+	/** Returns true if numbered backup file exists on disk without consuming it. */
+	public static function hasBackup(name:String = 'funkin', n:Int = 1):Bool
+	{
+		final path:String = SaveUtil.getPath('', FlxG.stage.application.meta.get('file') + '/$name');
+		return FileSystem.exists(path.withoutExtension() + '-backup$n.sol');
+	}
+
 	public static function tryBindingSave(name:String = 'funkin'):Void
 	{
 		FlxG.save.bind(name, CoolUtil.getSavePath(), function(data:String, exception:haxe.Exception) {
@@ -516,6 +536,8 @@ class ClientPrefs
 	 */
 	public static function load()
 	{
+		if (FlxG.save.data.autoPause != null) FlxG.autoPause = FlxG.save.data.autoPause;
+
 		if (FlxG.save.data.volume != null) FlxG.sound.volume = FlxG.save.data.volume;
 		else FlxG.sound.volume = 0.6; // I'm doing them a fucking favor.
 		
@@ -523,8 +545,24 @@ class ClientPrefs
 		
 		if (DebugDisplay.instance != null) DebugDisplay.instance.visible = showFPS;
 		
-		if (FlxG.save.data.framerate == null) framerate = Std.int(FlxMath.bound(FlxG.stage.application.window.displayMode.refreshRate, 60, 240));
-		
+		#if android
+		// Android defaults every window to 60Hz regardless of the panel's real
+		// capability until the app explicitly opts into a faster supported
+		// mode — this doesn't persist itself, so it has to be requested again
+		// on every launch, not just the first one where we pick a default.
+		mobile.backend.AndroidUtils.requestHighRefreshRate();
+		#end
+
+		if (FlxG.save.data.framerate == null)
+		{
+			var detectedRate:Float = FlxG.stage.application.window.displayMode.refreshRate;
+			#if android
+			var androidRate = mobile.backend.AndroidUtils.getMaxRefreshRate();
+			if (androidRate > detectedRate) detectedRate = androidRate;
+			#end
+			framerate = Std.int(FlxMath.bound(detectedRate, 60, 240));
+		}
+
 		changeFps(framerate);
 		
 		if (FlxG.save.data.beans != null)

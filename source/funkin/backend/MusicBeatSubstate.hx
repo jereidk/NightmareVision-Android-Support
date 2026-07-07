@@ -10,6 +10,7 @@ import funkin.scripts.*;
 #if mobile
 import flixel.group.FlxGroup;
 import mobile.controls.MobileHitbox;
+import mobile.controls.MobileHitbox.HitboxLayout;
 import mobile.controls.MobileVirtualPad;
 #end
 
@@ -45,10 +46,10 @@ class MusicBeatSubstate extends FlxSubState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false)
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
-		virtualPad = new MobileVirtualPad(DPad, Action);
+		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
 	}
 
@@ -83,11 +84,27 @@ class MusicBeatSubstate extends FlxSubState
 		{
 			if (funkin.data.ClientPrefs.gameInputMode == 'Virtual Pad')
 			{
-				addVirtualPad(LEFT_FULL, NONE, true);
+				addVirtualPad(LEFT_FULL, NONE, true, true); // last true = forGameplay
 				addVirtualPadCamera(DefaultDrawTarget);
 				return;
 			}
 
+			// VSlice controls: tap the actual VSlice receptor sprites directly —
+			// invisible zones matching their real position/size (VSLICE_MATCH),
+			// not the separate Arrows scheme's own fixed-position flicker sprites.
+			if (funkin.data.ClientPrefs.gameInputMode == 'VSlice controls')
+			{
+				hitbox = new MobileHitbox(VSLICE_MATCH);
+				hitboxCam = new FlxCamera();
+				hitboxCam.bgColor.alpha = 0;
+				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
+				hitbox.cameras = [hitboxCam];
+				hitbox.visible = false;
+				add(hitbox);
+				return;
+			}
+
+			// Hitbox mode (and any future modes)
 			hitbox = new MobileHitbox();
 			hitboxCam = new FlxCamera();
 			hitboxCam.bgColor.alpha = 0;
@@ -124,6 +141,10 @@ class MusicBeatSubstate extends FlxSubState
 	public var scriptName:String = '';
 	public var scriptPrefix:String = 'substates';
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
+
+	final _updateArgs:Array<Dynamic> = [0.0];
+	final _beatStepArgs:Array<Dynamic> = [0];
+	static final _emptyArgs:Array<Dynamic> = [];
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
 	{
@@ -133,13 +154,16 @@ class MusicBeatSubstate extends FlxSubState
 			scriptName = stateName ?? '???';
 		}
 		
+		scriptGroup.scriptShareables.set('parent', this);
+
 		this.scriptName = scriptName;
-		
+
 		final scriptFile = FunkinScript.getPath('scripts/$scriptPrefix/$scriptName');
-		
+		if (scriptGroup.exists(scriptFile)) return true;
+
 		if (FunkinAssets.exists(scriptFile))
 		{
-			var _script = FunkinScript.fromFile(scriptFile);
+			var _script = FunkinScript.fromFile(scriptFile, scriptName, null, scriptGroup.scriptShareables);
 			if (_script.__garbage)
 			{
 				_script = FlxDestroyUtil.destroy(_script);
@@ -154,12 +178,15 @@ class MusicBeatSubstate extends FlxSubState
 			scripted = true;
 		}
 		
-		if (callOnLoad) scriptGroup.call('onLoad', []);
+		if (callOnLoad) scriptGroup.call('onLoad', _emptyArgs);
+		
+		if (GlobalScriptManager.instance != null)
+			GlobalScriptManager.instance.onStateCreate(this);
 		
 		return scripted;
 	}
 	
-	inline function isHardcodedState() return (scriptGroup != null && !scriptGroup.call('customMenu') == true) || (scriptGroup == null);
+	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
 	
 	public function refreshZ(?group:FlxTypedGroup<FlxBasic>)
 	{
@@ -185,8 +212,9 @@ class MusicBeatSubstate extends FlxSubState
 			}
 		}
 		
-		scriptGroup.call('onUpdate', [elapsed]);
-		
+		_updateArgs[0] = elapsed;
+		scriptGroup.call('onUpdate', _updateArgs);
+
 		super.update(elapsed);
 	}
 	
@@ -246,22 +274,25 @@ class MusicBeatSubstate extends FlxSubState
 	public function stepHit():Void
 	{
 		if (curStep % 4 == 0) beatHit();
-		scriptGroup.call('onStepHit', [curStep]);
+		_beatStepArgs[0] = curStep;
+		scriptGroup.call('onStepHit', _beatStepArgs);
 	}
-	
+
 	public function beatHit():Void
 	{
-		scriptGroup.call('onBeatHit', [curBeat]);
+		_beatStepArgs[0] = curBeat;
+		scriptGroup.call('onBeatHit', _beatStepArgs);
 	}
-	
+
 	public function sectionHit()
 	{
-		scriptGroup.call('onSectionHit');
+		scriptGroup.call('onSectionHit', _emptyArgs);
 	}
 	
 	override function destroy()
 	{
-		scriptGroup.call('onDestroy', []);
+		scriptGroup.call('onDestroy', _emptyArgs);
+
 		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
 
 		#if mobile

@@ -1,0 +1,56 @@
+IDEA: Correr el juego sin usar el teléfono (game streaming gratuito)
+=====================================================================
+
+CONCEPTO
+--------
+El teléfono solo recibe video + manda inputs.
+El juego corre en un servidor remoto con más potencia.
+
+
+OPCIÓN GRATUITA: Oracle Cloud Free Tier + Waydroid + Parsec
+------------------------------------------------------------
+
+1. Crear cuenta en Oracle Cloud (https://cloud.oracle.com)
+   - Instancia ARM Ampere A1 Compute — GRATIS PARA SIEMPRE
+   - Specs: 4 CPUs ARM, 24 GB RAM, 200 GB almacenamiento
+   - OS: Ubuntu 22.04
+
+2. Instalar Waydroid en la VM
+   - Waydroid = Android corriendo dentro de Linux
+   - Permite instalar y correr APKs normales
+   - https://waydro.id
+
+3. Instalar el APK del juego en Waydroid
+
+4. Streamear la pantalla al teléfono
+   - Parsec (https://parsec.app) — free tier disponible
+   - O VNC (menos latencia para imágenes estáticas)
+
+5. En el teléfono: abrir Parsec → conectar a la VM → jugar
+
+
+VENTAJAS
+--------
+- Completamente gratis (Oracle no cobra la instancia A1 free tier)
+- El teléfono solo decodifica video H.265 (usa muy poca RAM/CPU)
+- La VM tiene 24GB RAM — sin crashes por memoria
+
+PROBLEMAS
+---------
+- Latencia de internet añadida (~50-150ms dependiendo de tu ISP y región)
+  → Puede arruinar el timing de notas en FNF (ventana ~30ms)
+- Setup técnico complejo (Linux, Waydroid, firewall, ports)
+- Waydroid en ARM puede tener compatibilidad limitada con algunos APKs
+- Parsec free tier tiene restricciones de uso
+
+REGIONES DE ORACLE MÁS CERCANAS (latencia más baja)
+----------------------------------------------------
+- us-ashburn-1 (Virginia, USA)
+- us-phoenix-1 (Arizona, USA)
+- sa-saopaulo-1 (São Paulo, Brasil) ← mejor para Latinoamérica
+
+VEREDICTO
+---------
+Viable para probar y jugar casual. Para rhythm game competitivo/preciso,
+la latencia de red es el obstáculo principal sin una conexión de fibra
+óptica con <30ms de ping al servidor de Oracle.

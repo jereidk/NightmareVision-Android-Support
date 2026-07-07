@@ -24,7 +24,10 @@ class NotesSubState extends MusicBeatSubstate
 	var blackBG:FlxSprite;
 	var hsbText:Alphabet;
 	
-	var posX = 230;
+	// blackBG spans posX-25 to posX-25+870=1075+X, i.e. symmetric ~205px
+	// margins on the 1280 canvas — centered, not edge-anchored, so shifted by
+	// half the 'expand'-mode cutout (like CosmicubeSelectState's cards).
+	var posX = 230 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 	
 	public function new()
 	{
@@ -35,6 +38,14 @@ class NotesSubState extends MusicBeatSubstate
 		
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = 0xFFea71fd;
+		// Same fixed 1286x730 background as CreditsState — screenCenter() alone
+		// just leaves black bars on both sides on a wide 'expand'-mode screen.
+		// Stretch first (gated on gameCutoutSize.x, untouched in 'fit' mode).
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		bg.screenCenter();
 		add(bg);
 		
@@ -94,7 +105,8 @@ class NotesSubState extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -116,7 +128,7 @@ class NotesSubState extends MusicBeatSubstate
 					updateValue(1);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
-				else if (controls.RESET)
+				else if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 				{
 					resetValue(curSelected, typeSelected);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
@@ -175,7 +187,7 @@ class NotesSubState extends MusicBeatSubstate
 				changeType(1);
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
-			if (controls.RESET)
+			if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				for (i in 0...3)
 				{

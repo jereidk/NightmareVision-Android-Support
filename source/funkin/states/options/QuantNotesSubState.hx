@@ -29,7 +29,9 @@ class QuantNotesSubState extends MusicBeatSubstate
 	var blackBG:FlxSprite;
 	var hsbText:Alphabet;
 	
-	var posX = 230;
+	// Same symmetric-margin panel as NotesSubState.posX — shifted by half the
+	// 'expand'-mode cutout to stay centered.
+	var posX = 230 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 	
 	public static var defaults:Array<Array<Int>> = [
 		[0, -20, 0], // 4th
@@ -68,6 +70,14 @@ class QuantNotesSubState extends MusicBeatSubstate
 		
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
 		bg.color = 0xFFea71fd;
+		// Same fixed 1286x730 background as CreditsState/NotesSubState —
+		// stretch first (gated on gameCutoutSize.x) so screenCenter() covers
+		// the full width instead of leaving black bars on both sides.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		bg.screenCenter();
 		add(bg);
 		
@@ -120,7 +130,8 @@ class QuantNotesSubState extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -142,7 +153,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 					updateValue(1);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
-				else if (controls.RESET)
+				else if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 				{
 					resetValue(curSelected, typeSelected);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
@@ -201,7 +212,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 				changeType(1);
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
-			if (controls.RESET)
+			if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				for (i in 0...3)
 				{

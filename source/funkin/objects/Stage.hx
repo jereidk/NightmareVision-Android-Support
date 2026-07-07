@@ -244,6 +244,108 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 	{
 		//
 	}
+
+	/**
+	 * 'expand' mode reveals extra width/height beyond the 1280x720 design
+	 * resolution, and most stage backgrounds were only ever drawn/positioned
+	 * to cover that base canvas — on a wider screen the camera can pan/zoom
+	 * past their edge, exposing the camera's flat clear color (black by
+	 * default) as an obvious cut/seam.
+	 *
+	 * Rather than resize every stage's own art (which would need per-stage
+	 * tuning and still might not survive every camera zoom/pan), just make
+	 * that clear color match the stage instead of leaving it black: sample
+	 * the dominant color off whichever of this stage's own sprites has the
+	 * largest area (almost always its main background layer, since that's
+	 * consistently the widest/tallest thing any stage adds) and use that as
+	 * the camera's background. It only ever shows at the fringes on unusually
+	 * wide screens, so it just needs to blend in, not be exact.
+	 *
+	 * No-op outside 'expand' mode (gameCutoutSize.x is hard-zeroed there), so
+	 * the always-black default is untouched anywhere this doesn't apply.
+	 */
+	public function fillExpandModeBackdrop(camera:FlxCamera):Void
+	{
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x <= 0) return;
+
+		var biggest:Null<FlxSprite> = null;
+		var biggestArea:Float = 0;
+
+		for (member in members)
+		{
+			if (!(member is FlxSprite)) continue;
+
+			final spr:FlxSprite = cast member;
+			if (spr.graphic == null) continue;
+
+			final area:Float = spr.frameWidth * spr.frameHeight;
+			if (area > biggestArea)
+			{
+				biggestArea = area;
+				biggest = spr;
+			}
+		}
+
+		if (biggest == null || biggest.graphic == null) return;
+
+		// biggest.pixels can't be sampled directly: on Android its graphic is
+		// almost always GPU-only (ASTC textures upload straight to the GPU via
+		// BitmapData.fromTexture(), which has no CPU-side pixels — see
+		// AstcLoader's doc comment). Decode a separate, PNG-only, CPU-readable
+		// copy purely for sampling, using the same key this sprite's own
+		// graphic was cached under.
+		final key:String = biggest.graphic.key;
+		if (key == null || key.length == 0) return;
+
+		final bitmap:Null<openfl.display.BitmapData> = funkin.FunkinAssets.getBitmapData(key, false, true);
+		if (bitmap == null) return;
+
+		camera.bgColor = sampleDominantColor(bitmap);
+		bitmap.dispose();
+	}
+
+	// Same idea as CoolUtil.dominantColor (most-used opaque-ish color, ignoring
+	// near-transparent pixels and never picking pure black), but stepped
+	// across the image instead of visiting every pixel — stage backgrounds
+	// can be a lot bigger than the icons that utility was written for, and
+	// this only needs to be "close enough to blend in", not exact.
+	static function sampleDominantColor(bitmap:openfl.display.BitmapData):Int
+	{
+		final stepX:Int = Std.int(Math.max(1, bitmap.width / 100));
+		final stepY:Int = Std.int(Math.max(1, bitmap.height / 100));
+
+		var countByColor:Map<Int, Int> = [];
+		var x = 0;
+		while (x < bitmap.width)
+		{
+			var y = 0;
+			while (y < bitmap.height)
+			{
+				final pixelColor:FlxColor = bitmap.getPixel32(x, y);
+				if (pixelColor.alphaFloat > 0.05)
+				{
+					final opaqueColor:FlxColor = FlxColor.fromRGB(pixelColor.red, pixelColor.green, pixelColor.blue, 255);
+					countByColor.set(opaqueColor, (countByColor.get(opaqueColor) ?? 0) + 1);
+				}
+				y += stepY;
+			}
+			x += stepX;
+		}
+
+		var maxCount = 0;
+		var maxKey:Int = FlxColor.BLACK;
+		countByColor.set(FlxColor.BLACK, 0);
+		for (key => count in countByColor)
+		{
+			if (count >= maxCount)
+			{
+				maxCount = count;
+				maxKey = key;
+			}
+		}
+
+		return maxKey;
+	}
 	
 	inline function loadAnimationToSprite(spr:FlxSprite, anims:Null<Array<AnimationInfo>>)
 	{

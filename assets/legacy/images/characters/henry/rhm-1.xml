@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="rhm-1.png" width="3920" height="3086">
+	<SubTexture name="RHM Up New0005" x="0" y="0" width="444" height="864" frameX="-30" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0006" x="0" y="864" width="445" height="865" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0007" x="0" y="1729" width="445" height="867" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0008" x="444" y="0" width="445" height="864" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0009" x="0" y="864" width="445" height="865" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0010" x="0" y="1729" width="445" height="867" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0011" x="444" y="0" width="445" height="864" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0012" x="0" y="864" width="445" height="865" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0013" x="0" y="1729" width="445" height="867" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0014" x="444" y="0" width="445" height="864" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0015" x="0" y="864" width="445" height="865" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0016" x="0" y="1729" width="445" height="867" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM Up New0017" x="444" y="0" width="445" height="864" frameX="-29" frameY="-5" frameWidth="477" frameHeight="897"/>
+	<SubTexture name="RHM down new0000" x="445" y="864" width="529" height="728" frameX="-0" frameY="-19" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0001" x="445" y="864" width="529" height="728" frameX="-0" frameY="-19" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0002" x="445" y="1592" width="535" height="746" frameX="-4" frameY="-2" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0003" x="445" y="1592" width="535" height="746" frameX="-4" frameY="-2" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0004" x="889" y="0" width="535" height="747" frameX="-4" frameY="-1" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0005" x="889" y="0" width="535" height="747" frameX="-4" frameY="-1" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0006" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0007" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0008" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0009" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0010" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0011" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0012" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0013" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM down new0014" x="445" y="2338" width="535" height="748" frameX="-4" frameY="-0" frameWidth="540" frameHeight="748"/>
+	<SubTexture name="RHM intro new0000" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0001" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0002" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0003" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0004" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0005" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0006" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0007" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0008" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0009" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0010" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0011" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0012" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0013" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0014" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0015" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0016" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0017" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0018" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0019" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0020" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0021" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0022" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0023" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0024" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0025" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0026" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0027" x="974" y="747" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0028" x="980" y="1347" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0029" x="1424" y="0" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0030" x="980" y="1947" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0031" x="1562" y="600" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0032" x="1568" y="1200" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0033" x="1568" y="1800" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0034" x="2150" y="584" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0035" x="1568" y="2400" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0036" x="2156" y="1184" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0037" x="2156" y="1784" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0038" x="2156" y="2384" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0039" x="2744" y="601" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0040" x="2744" y="1201" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0041" x="3332" y="601" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0042" x="2744" y="1801" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0043" x="3332" y="1201" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0044" x="2744" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0045" x="3332" y="1801" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0046" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0047" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0048" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0049" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0050" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0051" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0052" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0053" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0054" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0055" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0056" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0057" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0058" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0059" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0060" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0061" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0062" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0063" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0064" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0065" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0066" x="3332" y="2401" width="588" height="600" frameX="-4" frameY="-218" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0067" x="3236" y="0" width="590" height="601" frameX="-1" frameY="-217" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0068" x="3236" y="0" width="590" height="601" frameX="-1" frameY="-217" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0069" x="2012" y="0" width="612" height="584" rotated="true" frameX="-0" frameY="-206" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="RHM intro new0070" x="2624" y="0" width="612" height="584" rotated="true" frameX="-0" frameY="-206" frameWidth="592" frameHeight="820"/>
+	<SubTexture name="rhm animation0006" x="0" y="2596" width="267" height="293" frameX="-8" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0007" x="0" y="2596" width="267" height="293" frameX="-8" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0008" x="980" y="2547" width="266" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0009" x="980" y="2547" width="266" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0010" x="1246" y="2547" width="265" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0011" x="1246" y="2547" width="265" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0012" x="980" y="2547" width="266" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0013" x="980" y="2547" width="266" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+	<SubTexture name="rhm animation0014" x="1246" y="2547" width="265" height="293" frameX="-9" frameY="-0" frameWidth="277" frameHeight="293"/>
+</TextureAtlas>

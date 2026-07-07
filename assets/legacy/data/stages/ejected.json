@@ -10,6 +10,7 @@
 	"pet": [1600, 800],
 	
 	"flags": {
-		"falling": true
+		"falling": true,
+		"windy": true
 	}
 }

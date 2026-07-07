@@ -1,60 +1,63 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
 			"offsets": [
-				853,
-				7
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
 			"anim": "firstDeath",
 			"indices": [],
-			"name": "BF dies"
+			"name": "balls BF dies"
 		},
 		{
 			"offsets": [
-				67,
-				-19
+				0,
+				0
 			],
 			"loop": true,
 			"fps": 24,
 			"anim": "deathLoop",
 			"indices": [],
-			"name": "BF Dead Loop"
+			"name": "balls BF Dead Loop"
 		},
 		{
 			"offsets": [
-				67,
-				45
+				0,
+				0
 			],
 			"loop": false,
 			"fps": 24,
 			"anim": "deathConfirm",
 			"indices": [],
-			"name": "BF Dead confirm"
+			"name": "balls BF Dead confirm"
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/gameover/bf_defeat_death_balls",
+	"image": "characters/gameover/bfdefeatgameovers",
 	"position": [
-		30,
-		326
+		-945,
+		266
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": "stage/defeat_kill_ballz_sfx",
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "bf",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": true,
 	"healthbar_colour": -13520687,
 	"camera_position": [
-		-29,
-		82
+		43,
+		-136
 	],
 	"gameover_loop_sound": null,
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1,
 	"_editor_isPlayer": true
 }

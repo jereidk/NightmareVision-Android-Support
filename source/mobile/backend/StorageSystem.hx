@@ -57,11 +57,18 @@ class StorageSystem
 	
 	/**
 	 * Requests Android storage permissions and creates the app's external directory.
-	 * Returns TRUE if the boot should halt (MANAGE permission flow pending), FALSE if ready.
 	 *
-	 * No APK extraction is performed here — all base-game assets are readable directly
-	 * from the APK via Assets.xxx(). External storage is used only for crash logs,
-	 * save files, user mods placed by the player, and DLC downloaded at runtime.
+	 * Always returns FALSE (never halts boot). No APK extraction happens here — all
+	 * base-game assets are readable directly from the APK via Assets.xxx(). External
+	 * storage is only used for crash logs, save files, user mods, and DLC downloaded
+	 * at runtime, none of which are required to start the game.
+	 *
+	 * The "All files access" system settings screen (when requested) launches as a
+	 * separate Activity and does not block this method — boot continues underneath it
+	 * so the game is already running by the time the player returns from Settings.
+	 * Previously this returned TRUE to halt boot while that screen was pending, but
+	 * with no resume hook to continue afterwards, that left the game stuck on a blank
+	 * screen until force-closed and relaunched.
 	 */
 	public static function getPermissions():Bool
 	{
@@ -80,13 +87,9 @@ class StorageSystem
 			PermissionUtils.requestPermissions(['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE']);
 		}
 
-		if (VERSION.SDK_INT >= VERSION_CODES.R)
+		if (VERSION.SDK_INT >= VERSION_CODES.R && !Environment.isExternalStorageManager())
 		{
-			if (!Environment.isExternalStorageManager())
-			{
-				Interface.requestSetting('MANAGE_APP_ALL_FILES_ACCESS_PERMISSION');
-				return true;
-			}
+			Interface.requestSetting('MANAGE_APP_ALL_FILES_ACCESS_PERMISSION');
 		}
 
 		try

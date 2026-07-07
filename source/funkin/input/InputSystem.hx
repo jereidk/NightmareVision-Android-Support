@@ -48,6 +48,18 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 	 * The list of actions checked for, in order of their note direction
 	 */
 	public static final ACTION_LIST:Array<Action> = [NOTE_LEFT, NOTE_DOWN, NOTE_UP, NOTE_RIGHT];
+
+	#if mobile
+	// update() runs every frame during gameplay; this used to be rebuilt from scratch every
+	// single call (unconditionally, whether or not anything was actually pressed) just to look
+	// up mobileIDs[noteData] below.
+	static final _mobileNoteIDs:Array<mobile.backend.flixel.input.FlxMobileInputID> = [
+		mobile.backend.flixel.input.FlxMobileInputID.noteLEFT,
+		mobile.backend.flixel.input.FlxMobileInputID.noteDOWN,
+		mobile.backend.flixel.input.FlxMobileInputID.noteUP,
+		mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT
+	];
+	#end
 	
 	/**
 	 * The current controls instance used for this input system
@@ -204,7 +216,13 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 				default: false;
 			};
 			if (pressed)
-				dispatchEvent(new InputEvent(InputEvent.INPUT_PRESSED, false, true, noteData, Keys, 0, now));
+			{
+				// Use the true OS touch-event timestamp when this press came from a
+				// touch button, so the songPosition correction in PlayState actually
+				// does something for touch instead of being a same-frame no-op.
+				final touchTs = controls.noteTouchPressTimestampMs(_mobileNoteIDs[noteData]);
+				dispatchEvent(new InputEvent(InputEvent.INPUT_PRESSED, false, true, noteData, Keys, 0, touchTs > 0 ? touchTs : now));
+			}
 
 			final released:Bool = switch noteData
 			{

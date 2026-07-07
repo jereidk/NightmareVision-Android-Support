@@ -36,6 +36,8 @@ function onLoad()
 	
 	ldSpeaker = new FlxSprite(400, 385);
 	ldSpeaker.frames = Paths.getSparrowAtlas(ext + 'stereo_taken');
+        ldSpeaker.scale.set(2, 2); // stereo_taken resized 50%, compensate with 2x scale
+        ldSpeaker.updateHitbox();
 	ldSpeaker.animation.addByPrefix('boom', 'stereo boom', 24, false);
 	ldSpeaker.zIndex = 11;
 	ldSpeaker.alpha = 0;

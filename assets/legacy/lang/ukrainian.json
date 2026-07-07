@@ -653,6 +653,9 @@
 
         // credits
         "opt_category_credits": "Титри",
+        "opt_category_editors": "Editors",
+        "opt_category_mobile": "Mobile",
+        "opt_category_dlc": "DLC Manager",
 
         // notes
         "opt_quants": "Кольори Стрілок",

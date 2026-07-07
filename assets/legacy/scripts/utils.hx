@@ -61,8 +61,6 @@ var camTwistIntensity:Float = 0;
 var camTwistIntensity2:Float = 3;
 var camTwist:Bool = false;
 
-public var tauntCharacter:Character;
-
 function onLoad()
 {
 	hasBfSkin = (ClientPrefs.bfSkin != 'default' && !isStoryMode);
@@ -85,7 +83,7 @@ function onCreatePost()
 	WATERMARK.setPosition((FlxG.width - WATERMARK.width), (FlxG.height - WATERMARK.height));
 	add(WATERMARK);
 	
-	DebugDisplay.addPlugin(() -> ('[ TAB to expand or collapse dev info ]' + (showDevInfo ? dbText : '')));
+	DebugDisplay.addPlugin(() -> ('[ TAB to hide or show debug menu ]' + (showDevInfo ? dbText : '')));
 }
 
 /**
@@ -139,10 +137,10 @@ function onMoveCamera(whosTurn:Bool)
 		var character = switch (whosTurn)
 		{
 			case 'gf': gf;
-			case 'dad': (game.opponentStrums?.owner ?? dad);
-			default: (game.playerStrums?.owner ?? boyfriend);
+			case 'dad': (opponentStrums?.owner ?? dad);
+			default: (playerStrums?.owner ?? boyfriend);
 		}
-		
+
 		if (game.camCurTarget != null) character = game.camCurTarget; // used for characters that aren't player or opponent
 		
 		final displacement = character.getSingDisplacement();
@@ -222,22 +220,19 @@ function onPopUpScorePost(note, rating)
 
 function onUpdate(elapsed)
 {
-	if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
-	{
-		var tauntCharacter:Character = (tauntCharacter ?? boyfriend);
-		
-		if (tauntCharacter.hasAnim('hey'))
-		{
-			tauntCharacter.playAnim('hey');
-			tauntCharacter.specialAnim = tauntCharacter.holding = true;
-		}
-	}
-	
 	if (!ClientPrefs.inDevMode) return;
 	if (FlxG.keys.justPressed.TAB)
 	{
 		showDevInfo = !showDevInfo;
-		dbGroup.visible = !dbGroup.visible;
+		
+		if (showDevInfo)
+		{
+			game.add(dbGroup);
+		}
+		else
+		{
+			game.remove(dbGroup, true);
+		}
 	}
 	
 	if (showDevInfo)
@@ -276,23 +271,6 @@ function onUpdate(elapsed)
 	}
 }
 
-function setTauntCharacter(note:Note)
-{
-	final playField = note.playField;
-	
-	if (playField?.isPlayer) // jsut made some bullshit
-	{
-		tauntCharacter = (note.owner ?? (note.gfNote ? gf : null));
-		tauntCharacter ??= (note.singers == null ? playField.owner : note.singers[0]);
-		
-		if (tauntCharacter == boyfriend) tauntCharacter = null; // ok
-	}
-}
-
-function noteMiss(note:Note) setTauntCharacter(note);
-function goodNoteHit(note:Note) setTauntCharacter(note);
-function extraNoteHit(note:Note) setTauntCharacter(note);
-
 public function getBool(sss:String, bbb:Bool, ?withSlashN:Bool = true):String
 {
 	return (withSlashN ? '\n' : '') + sss + ': ' + (bbb ? 'ON' : 'OFF');
@@ -303,7 +281,11 @@ function onFirstEventPush(event:EventNote) // I had to add this callback to all 
 	switch (event.event)
 	{
 		case 'Reactor Beep':
-			flashSprite = new FlxSprite(0, 0).makeScaledGraphic(1280, 720, 0xFFb30000);
+			// Was hardcoded to the 1280x720 base canvas — on a wide 'expand'-
+			// mode screen the flash only covered the original design area,
+			// leaving the extra revealed width on the sides untouched during
+			// the fade. Use the live screen size instead.
+			flashSprite = new FlxSprite(0, 0).makeScaledGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xFFb30000);
 			flashSprite.alpha = 0.001;
 			
 			if (ClientPrefs.photosensitive)
@@ -447,6 +429,11 @@ function onEvent(eventName, value1, value2)
 	}
 }
 
+function onSongStart()
+{
+	//boyfriend = null;
+}
+
 function onStepHit()
 {
 	if (camTwist)
@@ -477,11 +464,4 @@ function onBeatHit()
 		FlxTween.tween(camGame, {angle: twistShit * camTwistIntensity}, Conductor.stepCrotchet * 0.002, {ease: FlxEase.circOut});
 		FlxTween.tween(camGame, {x: -twistShit * camTwistIntensity}, Conductor.crochet * 0.001, {ease: FlxEase.linear});
 	}
-}
-
-// Called by PauseSubState dev option (Android-accessible via pause menu)
-function onToggleDebugInfo()
-{
-	showDevInfo = !showDevInfo;
-	dbGroup.visible = !dbGroup.visible;
 }

@@ -481,6 +481,9 @@
         "opt_language": "Taal",
         "opt_language_desc": "Kies je taal! Opmerking: alle talen behalve English (United States) zijn door de community vertaald!",
         "opt_category_credits": "Credits",
+        "opt_category_editors": "Editors",
+        "opt_category_mobile": "Mobile",
+        "opt_category_dlc": "DLC Manager",
         // some new misc menu stuff
         "rand": "Willekeurig",
         "reset":"Opnieuw Zetten",

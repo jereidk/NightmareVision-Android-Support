@@ -38,9 +38,17 @@ class Character extends Bopper implements IFlags
 	
 	public var animTimer:Float = 0;
 	public var specialAnim:Bool = false;
+
+	// Cache for the '-loop' name check in update() below: a finished non-looping animation stays
+	// "finished" every frame until something else plays, so without this the same string got
+	// reallocated (getAnimName() + '-loop') on every single frame a character sat idle on it.
+	var _loopAnimCacheKey:String;
+	var _loopAnimCacheVal:String;
 	public var holding(default, set):Bool = false;
 	public var stunned:Bool = false;
-	
+
+	public var canTaunt:Bool = true;
+
 	/**
 	 * Multiplier of how long a character holds the sing pose
 	 */
@@ -166,25 +174,26 @@ class Character extends Bopper implements IFlags
 		while (doubleGhosts.length < count)
 		{
 			final ghost = new FunkinSprite();
-			ghost.visible = false;
 			ghost.useRenderTexture = true;
 			ghost.antialiasing = true;
-			ghost.alpha = ghostAlpha;
-			
+			ghost.visible = false;
+
 			doubleGhosts.push(ghost);
 		}
 	}
 	
-	public function loadCharacter(name:String, force:Bool = false):Void
+	public function loadCharacter(name:String, force:Bool = false):Character
 	{
-		if (curCharacter == name && !force) return;
-		
+		if (curCharacter == name && !force) return this;
+			
 		for (ghost in doubleGhosts) ghost?.destroy();
 		doubleGhosts.resize(0);
-		
+			
 		loadFile(CharacterParser.fetchInfo(curCharacter = name));
-		
+			
 		genGhosts(PlayState.SONG?.keys ?? 0);
+
+		return this;
 	}
 	
 	// clean this up
@@ -274,16 +283,20 @@ class Character extends Bopper implements IFlags
 				{
 					addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				}
+				else
+				{
+					addOffset(anim.anim, 0, 0);
+				}
 			}
 		}
 		else
 		{
 			addAnimByPrefix('idle', 'BF idle dance', 24, false);
 		}
-		
+
 		dance(true);
+		if (!animation.curAnim?.looped) finishAnim();
 		setBaseFrameSize();
-		dance(true);
 	}
 	
 	override function update(elapsed:Float)
@@ -304,18 +317,19 @@ class Character extends Bopper implements IFlags
 			}
 		}
 		
+		final _curAnim = getAnimName();
 		if (specialAnim && isAnimFinished() && !holding)
 		{
 			specialAnim = false;
 			dance(forceDance);
 		}
-		else if (getAnimName().endsWith('miss') && isAnimFinished() && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
+		else if (_curAnim.endsWith('miss') && isAnimFinished() && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
 		{
 			dance(forceDance);
 			finishAnim();
 		}
-		
-		if (getAnimName().startsWith('sing') || holding) holdTimer += elapsed;
+
+		if (_curAnim.startsWith('sing') || holding) holdTimer += elapsed;
 		
 		if (!holding && holdTimer >= Conductor.stepCrotchet * 0.001 * singDuration)
 		{
@@ -323,7 +337,16 @@ class Character extends Bopper implements IFlags
 			holdTimer = 0;
 		}
 		
-		if (isAnimFinished() && hasAnim(getAnimName() + '-loop')) playAnim(getAnimName() + '-loop');
+		if (isAnimFinished())
+		{
+			final _an = getAnimName();
+			if (_loopAnimCacheKey != _an)
+			{
+				_loopAnimCacheKey = _an;
+				_loopAnimCacheVal = _an + '-loop';
+			}
+			if (hasAnim(_loopAnimCacheVal)) playAnim(_loopAnimCacheVal);
+		}
 		
 		if (ghostsEnabled)
 		{
@@ -383,27 +406,29 @@ class Character extends Bopper implements IFlags
 	
 	public function getSingDisplacement():FlxPoint
 	{
-		return switch (getAnimName().substr(4).split('-')[0].toLowerCase())
+		// Use charCodeAt to avoid substr/split/toLowerCase string allocations every frame.
+		// Bit-OR with 32 converts uppercase ASCII letters to lowercase (A-Z → a-z).
+		// Character 4 of a sing anim is the first letter of the direction: singUp, singDown, etc.
+		final name = getAnimName();
+		if (name.length < 5) return FlxPoint.weak();
+		return switch (name.charCodeAt(4) | 32)
 		{
-			case 'up':
-				FlxPoint.weak(0, -camDisplacement);
-			case 'down':
-				FlxPoint.weak(0, camDisplacement);
-			case 'left':
-				FlxPoint.weak(-camDisplacement, 0);
-			case 'right':
-				FlxPoint.weak(camDisplacement, 0);
-			default:
-				FlxPoint.weak();
+			case 117: FlxPoint.weak(0, -camDisplacement); // 'u' / 'U' → up
+			case 100: FlxPoint.weak(0,  camDisplacement); // 'd' / 'D' → down
+			case 108: FlxPoint.weak(-camDisplacement, 0); // 'l' / 'L' → left
+			case 114: FlxPoint.weak( camDisplacement, 0); // 'r' / 'R' → right
+			default:  FlxPoint.weak();
 		}
 	}
 	
-	public function playGhostAnim(ghostID = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
+	public function playGhostAnim(ghostID:Int = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
 		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
-		
+
 		var ghost = doubleGhosts[ghostID];
-		
+
+		if (ghost == null) return trace('what $ghostID');
+
 		if (ghost.frames == null)
 		{
 			ghost.frames = frames;
@@ -431,17 +456,17 @@ class Character extends Bopper implements IFlags
 		
 		ghostTweenGrp[ghostID]?.cancel();
 		
-		final direction:String = animName.substring(4).split('-')[0];
-		
+		final _dirCode:Int = (animName.length > 4) ? (animName.charCodeAt(4) | 32) : 0;
+
 		inline function resolveDir(x:Bool):Float
 		{
-			return switch (direction)
+			return switch (_dirCode)
 			{
+				case 117 /* u */: !x ? -ghostDisplacement : 0;
+				case 100 /* d */: !x ?  ghostDisplacement : 0;
+				case 114 /* r */:  x ?  ghostDisplacement : 0;
+				case 108 /* l */:  x ? -ghostDisplacement : 0;
 				default: 0;
-				case 'UP': !x ? -ghostDisplacement : 0;
-				case 'DOWN': !x ? ghostDisplacement : 0;
-				case 'RIGHT': x ? ghostDisplacement : 0;
-				case 'LEFT': x ? -ghostDisplacement : 0;
 			}
 		}
 		

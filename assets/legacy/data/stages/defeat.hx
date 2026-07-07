@@ -17,7 +17,8 @@ var glowTween2:FlxTween;
 var defeatBopTween:FlxTween;
 var defeatScaleTween:Dynamic = null;
 var ext:String = 'stages/void/';
-var defeatRetro:String = '';
+var bf:String;
+var defeatRetro:Null<String> = null;
 public var redscreen:FlxSprite;
 
 var bfRim:DropShadowShader;
@@ -117,7 +118,7 @@ function onCreatePost()
 	
 	if (boyfriend.hasFlag('defeatRetro'))
 	{
-		defeatRetro = boyfriend.getFlag('defeatRetro');
+		defeatRetro = (boyfriend.getFlag('variants')?.retro ?? boyfriend.getFlag('defeatRetro'));
 		addCharacterToList(defeatRetro, 0);
 	}
 	addCharacterToList('blackold', 1);
@@ -126,7 +127,7 @@ function onCreatePost()
 	dadGroup.zIndex = 1;
 	boyfriendGroup.zIndex = 0;
 	bodiesfront = new FlxSprite(-3770, -250).loadFromSheet(ext + 'props', 'deadFG');
-	bodiesfront.scale.set(5, 5);
+	bodiesfront.scale.set(10, 10);
 	bodiesfront.updateHitbox();
 	bodiesfront.setGraphicSize(Std.int(bodiesfront.width * 0.3));
 	bodiesfront.antialiasing = ClientPrefs.globalAntialiasing;
@@ -141,6 +142,7 @@ function onCreatePost()
 	lightoverlay.blend = BlendMode.ADD;
 	lightoverlay.antialiasing = ClientPrefs.globalAntialiasing;
 	lightoverlay.zIndex = 3;
+	lightoverlay.alpha = 0.6;
 	add(lightoverlay);
 	
 	redscreen.zIndex = 3;
@@ -151,25 +153,25 @@ function onCreatePost()
 	{
 		var blackRimlightBase:ExtraDropShadowShader = new funkin.game.shaders.ExtraDropShadowShader();
 		
-		blackRimlightBase.threshold = .1;
+		blackRimlightBase.threshold = .05;
 		blackRimlightBase.strength = .85;
 		blackRimlightBase.setColorMatrix([
-			.3, .5, -.2, 0, -50,
-			-.25, .1, .05, 0, 10,
-			.4, .25, .6, 0, -92,
+			.4, .5, -.2, 0, -50,
+			-.25, .7, -.15, 0, -20,
+			.42, -.35, .85, 0, -72,
 			0, 0, 0, 1, 0
 		]);
 		blackRimlightBase.addLayer([
-			.5, 0, 1, 0, 192,
-			.1, 1, -.5, 0, 64,
-			0, 0, .35, 0, 64,
+			.7, .5, 1, 0, 192,
+			.3, .4, -.5, 0, 64,
+			-.1, .2, .35, 0, 74,
 			0, 0, 0, 1, 0
 		], 10, 14, .01);
 		blackRimlightBase.addLayer(
 			blackRimlightBase.addLayer([
-				.9, .7, .4, 0, 4,
-				-.2, .3, .1, 0, -18,
-				.2, .2, .4, 0, -28,
+				.9, .6, .4, 0, 4,
+				-.2, .5, .1, 0, -18,
+				-.2, .2, .4, 0, -28,
 				0, 0, 0, 1, 0
 			], 12, 40, .01, .4)
 		.colorMatrix, 96, 24, .01, .4);
@@ -373,7 +375,8 @@ function onEvent(eventName, value1, value2)
 					prevAfterimages = boyfriend.ghostsEnabled;
 					prevScoreColor = scoreTxt.color;
 					
-					if (defeatRetro != '') changeCharacter(defeatRetro, 0);
+					bf = boyfriend.curCharacter;
+					if (defeatRetro != null) changeCharacter(defeatRetro, 0);
 					
 					boyfriend.ghostsEnabled = false;
 					
@@ -389,9 +392,11 @@ function onEvent(eventName, value1, value2)
 					scoreTxt.color = FlxColor.WHITE;
 					if (hasPet) pet.visible = false;
 					isRetro = true;
+					
 				case 1:
-					changeCharacter(hasBfSkin ? ClientPrefs.bfSkin : 'bf-defeat-scared', 0);
+					changeCharacter(bf, 0);
 					changeCharacter('black', 1);
+					checkStageFlag(boyfriend);
 					
 					boyfriend.ghostsEnabled = prevAfterimages;
 					
@@ -422,6 +427,7 @@ function onEvent(eventName, value1, value2)
 					FlxTween.tween(edgeglow1, {alpha: 0.5}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(edgeglow2, {alpha: 0.5}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(subtract, {alpha: 1}, 0.7, {ease: FlxEase.quadInOut});
+					FlxTween.tween(lightoverlay, {alpha: 0.7}, 0.7, {ease: FlxEase.quadInOut});
 				case 1:
 					FlxTween.tween(bodies, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(bodies2, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
@@ -429,6 +435,7 @@ function onEvent(eventName, value1, value2)
 					FlxTween.tween(edgeglow1, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(edgeglow2, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 					FlxTween.tween(subtract, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
+					FlxTween.tween(lightoverlay, {alpha: 0}, 0.7, {ease: FlxEase.quadInOut});
 			}
 	}
 }

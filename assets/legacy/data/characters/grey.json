@@ -1,59 +1,60 @@
 {
+	"pausePortrait": "",
 	"animations": [
 		{
+			"loop": false,
 			"offsets": [
 				-150,
 				89
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singRIGHT",
-			"indices": [],
-			"name": "right"
+			"fps": 24,
+			"name": "right",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				-82,
 				-59
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singDOWN",
-			"indices": [],
-			"name": "down"
+			"fps": 24,
+			"name": "down",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				25,
 				187
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singLEFT",
-			"indices": [],
-			"name": "left"
+			"fps": 24,
+			"name": "left",
+			"indices": []
 		},
 		{
+			"loop": false,
 			"offsets": [
 				-36,
 				71
 			],
-			"loop": false,
-			"fps": 24,
 			"anim": "singUP",
-			"indices": [],
-			"name": "up"
+			"fps": 24,
+			"name": "up",
+			"indices": []
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				60
 			],
-			"anim": "danceLeft",
+			"flipY": false,
+			"loop": false,
 			"fps": 24,
-			"name": "idle",
+			"anim": "danceLeft",
+			"flipX": false,
 			"indices": [
 				0,
 				1,
@@ -77,18 +78,18 @@
 				13,
 				14
 			],
-			"flipX": false
+			"name": "idle"
 		},
 		{
-			"loop": false,
-			"flipY": false,
 			"offsets": [
 				0,
 				60
 			],
-			"anim": "danceRight",
+			"flipY": false,
+			"loop": false,
 			"fps": 24,
-			"name": "idle",
+			"anim": "danceRight",
+			"flipX": false,
 			"indices": [
 				15,
 				16,
@@ -114,7 +115,7 @@
 				30,
 				31
 			],
-			"flipX": false
+			"name": "idle"
 		}
 	],
 	"no_antialiasing": false,
@@ -125,13 +126,15 @@
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
+	"flags": {},
 	"scalableOffsets": false,
 	"gameover_confirm_sound": null,
 	"healthicon": "gray",
+	"afterimages": true,
 	"gameover_character": null,
 	"vslice_sustains": false,
 	"flip_x": false,
-	"healthbar_colour": -9082999,
+	"healthbar_colour": -10332301,
 	"camera_position": [
 		500,
 		0

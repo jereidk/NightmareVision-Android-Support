@@ -12,6 +12,7 @@ import flixel.util.FlxStringUtil;
 import funkin.objects.HealthIcon;
 
 import flixel.group.FlxSpriteGroup;
+import mobile.utils.MobileNavUtil;
 
 class StoryMenuState extends AmongUIState
 {
@@ -43,15 +44,15 @@ class StoryMenuState extends AmongUIState
 	
 	public override function create():Void
 	{
+		FunkinAssets.cache.clearStoredMemory();
+		FunkinAssets.cache.clearUnusedMemory();
+
 		super.create();
-		
+
 		Mods.currentModDirectory = null;
-		
+
 		PlayState.isStoryMode = true;
 		PlayState.chartingMode = false;
-		
-		FunkinAssets.cache.clearStoredMemory();
-		// FunkinAssets.cache.clearUnusedMemory();
 		
 		maze = new StoryNode('root');
 		cruiser = new StoryCruiser();
@@ -59,7 +60,7 @@ class StoryMenuState extends AmongUIState
 		DiscordClient.changePresence("Story Menu");
 		
 		PlayState.missLimit = false;
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		persistentUpdate = true;
 		
@@ -69,6 +70,15 @@ class StoryMenuState extends AmongUIState
 		highscore_string = Lang.str('highscore');
 		
 		frame = new FlxSprite().loadGraphic(Paths.image('menu/story/border'));
+		// Full 1280x720 frame graphic — same "leaves a gap on wide 'expand'-
+		// mode screens" issue as OptionsState's panel and AmongUIState's
+		// upperBar. Gated on gameCutoutSize.x (zero outside 'expand' mode)
+		// rather than comparing FlxG.width to the asset's own size.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			frame.setGraphicSize(Std.int(frame.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(frame.height));
+			frame.updateHitbox();
+		}
 		add(frame);
 		
 		backButton.setPosition(85, 65);
@@ -110,6 +120,7 @@ class StoryMenuState extends AmongUIState
 		add(maze);
 		add(cruiser);
 		
+		#if !mobile
 		var bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -118,6 +129,7 @@ class StoryMenuState extends AmongUIState
 		bottomControls.cameras = [camUpper];
 		bottomControls.zIndex = 10;
 		add(bottomControls);
+		#end
 		
 		
 		for (node in nodes) node.curScript?.executeFunc('onCreatePost', [], node);
@@ -128,13 +140,23 @@ class StoryMenuState extends AmongUIState
 		goTo(node);
 		cruiser.snapToNode();
 		
-		FlxG.camera.x = 70;
-		FlxG.camera.width -= 140;
+		FlxG.camera.x = 50;
+		FlxG.camera.width -= 120;
+		#if mobile
+		FlxG.camera.y = 100;
+		FlxG.camera.height = 560;
+		#else
 		FlxG.camera.y = 250;
 		FlxG.camera.height = 410;
-		
+		#end
+
 		FlxG.camera.zoom = .42;
 		FlxG.camera.follow(cruiser, TOPDOWN, .15);
+		// Pre-set the correct deadzone so snapToTarget centers the cruiser
+		// in the actual camera viewport (not FlxG.height which TOPDOWN uses by default)
+		var _wDz:Float = Math.max(0, Math.min((800 - (FlxG.width + 800) * (1 - FlxG.camera.zoom)), (FlxG.camera.width - cruiser.width) * .5));
+		var _hDz:Float = Math.max(0, Math.min(950 - (FlxG.height + 800) * (1 - FlxG.camera.zoom), (FlxG.camera.height - cruiser.height) * .5));
+		FlxG.camera.deadzone.set(_wDz, _hDz, FlxG.camera.width - _wDz * 2, FlxG.camera.height - _hDz * 2);
 		FlxG.camera.snapToTarget();
 		
 		scriptGroup.call('onCreatePost', []);
@@ -226,14 +248,15 @@ class StoryMenuState extends AmongUIState
 	
 	public function onClickNode(node:StoryNode):Void
 	{
-		if (lockMovement) return;
-		
+		if (lockMovement || navCooldown > 0) return;
+
 		var hitTest = FlxG.mouse.getScreenPosition(camUpper);
+		final inBounds = !(hitTest.y < FlxG.camera.y || hitTest.y >= (FlxG.camera.y + FlxG.camera.height)
+			|| hitTest.x < 70 || hitTest.x >= (FlxG.width - 70));
 		hitTest.put();
-		
-		if (hitTest.y < FlxG.camera.y || hitTest.y >= (FlxG.camera.y + FlxG.camera.height)
-			|| hitTest.x < 70 || hitTest.x >= (FlxG.width - 70)) return;
-			
+
+		if (!inBounds) return;
+
 		if (node.unlocked)
 		{
 			goTo(node);
@@ -247,10 +270,11 @@ class StoryMenuState extends AmongUIState
 	public function accept():Void
 	{
 		var node:StoryNode = cast cruiser.followingNode;
-		
+		if (node == null) return;
+
 		if (node.curScript?.executeFunc('onAccept', [], node) == ScriptConstants.STOP_FUNC) return;
-		
-		if (node?.meta != null)
+
+		if (node.meta != null)
 		{
 			FlxG.sound.play(Paths.sound('panelAppear'), .5);
 			lockMovement = true;
@@ -276,9 +300,12 @@ class StoryMenuState extends AmongUIState
 	}
 	
 	var wasPressingCruiser:Bool = false;
+	var navCooldown:Float = 0;
 	
 	public override function update(elapsed:Float):Void
 	{
+		if (navCooldown > 0) navCooldown -= elapsed;
+
 		if (!lockMovement)
 		{
 			if (FlxG.sound.music != null && FlxG.sound.music.volume < .7) FlxG.sound.music.volume += (.5 * elapsed);
@@ -297,17 +324,20 @@ class StoryMenuState extends AmongUIState
 			}
 			#end
 
-			if (FlxG.mouse.justPressed)
+			if (MobileNavUtil.allowPointerNav())
 			{
-				wasPressingCruiser = FlxG.mouse.overlaps(cruiser);
-			}
-			else if (FlxG.mouse.justReleased && wasPressingCruiser && FlxG.mouse.overlaps(cruiser))
-			{
-				accept();
+				if (FlxG.mouse.justPressed)
+				{
+					wasPressingCruiser = FlxG.mouse.overlaps(cruiser);
+				}
+				else if (FlxG.mouse.justReleased && wasPressingCruiser && FlxG.mouse.overlaps(cruiser))
+				{
+					accept();
+				}
 			}
 			
-			var wDeadzone:Float = Math.min((800 - (FlxG.width + 800) * (1 - FlxG.camera.zoom)), (FlxG.camera.width - cruiser.width) * .5);
-			var hDeadzone:Float = Math.min(950 - (FlxG.height + 800) * (1 - FlxG.camera.zoom), (FlxG.camera.height - cruiser.height) * .5);
+			var wDeadzone:Float = Math.max(0, Math.min((800 - (FlxG.width + 800) * (1 - FlxG.camera.zoom)), (FlxG.camera.width - cruiser.width) * .5));
+			var hDeadzone:Float = Math.max(0, Math.min(950 - (FlxG.height + 800) * (1 - FlxG.camera.zoom), (FlxG.camera.height - cruiser.height) * .5));
 			FlxG.camera.deadzone.set(wDeadzone, hDeadzone, FlxG.camera.width - wDeadzone * 2, FlxG.camera.height - hDeadzone * 2);
 			
 			if (canZoom && FlxG.mouse.wheel != 0) FlxG.camera.zoom = FlxMath.bound(FlxG.camera.zoom + FlxG.mouse.wheel * FlxG.camera.zoom / 10, .25, .45);
@@ -316,7 +346,7 @@ class StoryMenuState extends AmongUIState
 		final cruiserScaleMult:Float = (!lockMovement && FlxG.mouse.overlaps(cruiser) ? (FlxG.mouse.pressed && wasPressingCruiser ? .9 : 1.1) : 1);
 		cruiser.scale.x = cruiser.scale.y = MathUtil.fpsLerp(cruiser.scale.x, cruiserScaleMult, .35);
 		
-		lerpScore = FlxMath.lerp(lerpScore, intendedScore, Math.min(elapsed * 30, 1));
+		lerpScore = MathUtil.fpsLerp(lerpScore, intendedScore, .5);
 		if (Math.abs(intendedScore - lerpScore) < 10) lerpScore = intendedScore;
 		
 		if (weekScore.visible) weekScore.text = ('${highscore_string}: ' + FlxStringUtil.formatMoney(Math.round(lerpScore), false));
@@ -327,8 +357,9 @@ class StoryMenuState extends AmongUIState
 	override function closeSubState()
 	{
 		super.closeSubState();
-		
+
 		lockMovement = false;
+		wasPressingCruiser = false;
 	}
 	
 	public function moveCruiser(direction:NodeDirection):Void
@@ -336,18 +367,18 @@ class StoryMenuState extends AmongUIState
 		if (cruiser.followingNode != null)
 		{
 			var nextNode:StoryNode = cast cruiser.followingNode.getNode(direction);
-			
 			if (nextNode != null && nextNode.unlocked) goTo(nextNode);
 		}
 		else
 		{
-			cruiser.followingNode = nodes.get('root');
+			var root = nodes.get('root');
+			if (root != null) goTo(root);
 		}
 	}
 	
 	public function goTo(node:StoryNode):Void
 	{
-		if (cruiser.followingNode == node) return;
+		if (node == null || cruiser.followingNode == node) return;
 		
 		var lastNode:StoryNode = nodes.get(currentNode);
 		if (lastNode != null)
@@ -379,7 +410,11 @@ class StoryMenuState extends AmongUIState
 		
 		node.curScript?.executeFunc('onSelect', [], node);
 		
-		if (node != lastNode) FlxG.sound.play(Paths.sound('scrollMenu'));
+		if (node != lastNode)
+		{
+			FlxG.sound.play(Paths.sound('scrollMenu'));
+			navCooldown = 0.25;
+		}
 	}
 	
 	public function updateInfo():Void

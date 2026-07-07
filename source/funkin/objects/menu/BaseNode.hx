@@ -163,7 +163,7 @@ class BaseNode extends FlxSpriteGroup {
 	}
 	
 	public static function getNodeDirectionFromString(?str:String):NodeDirection {
-		return switch (StringTools.trim(str.toLowerCase())) {
+		return switch (StringTools.trim((str ?? '').toLowerCase())) {
 			default: NONE;
 			case 'west': WEST;
 			case 'east': EAST;

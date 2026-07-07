@@ -1,5 +1,6 @@
 package funkin.states;
 
+import mobile.utils.MobileNavUtil;
 import flixel.FlxG;
 import flixel.FlxSprite;
 
@@ -100,7 +101,7 @@ class AwardsState extends AmongUIState
 		turboGroup.add(controlLEFT);
 		turboGroup.add(controlRIGHT);
 		
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
 		backButton.setPosition(15, 15);
 		add(backButton).revive();
@@ -110,12 +111,18 @@ class AwardsState extends AmongUIState
 		achArray = [];
 		var xAdd = 0;
 		var yAdd = 0;
+		// 7 columns * 165px pitch - the 45px column/icon-width difference = a
+		// 1110px-wide grid with symmetric 85px margins on the 1280 base canvas
+		// (centered, not edge-anchored). Shift by half the 'expand'-mode cutout
+		// to keep that same centered look on wider screens, same reasoning as
+		// CosmicubeSelectState's card list.
+		final gridX:Float = 85 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		for (i in 0...achievements.length)
 		{
 			final unlocked = ownAchievement(i);
 			var iconName:String = achievements[i].icon ?? GameFlags.getAchievementIcon(achievements[i].name);
 			if (!unlocked || !Paths.fileExists('images/awards/$iconName.png')) iconName = 'blank';
-			var img:FlxSprite = new FlxSprite(85 + (xAdd * 165), 30 + (yAdd * 130)).loadGraphic(Paths.image('awards/$iconName'));
+			var img:FlxSprite = new FlxSprite(gridX + (xAdd * 165), 30 + (yAdd * 130)).loadGraphic(Paths.image('awards/$iconName'));
 			img.setGraphicSize(120, 120);
 			img.updateHitbox();
 			img.ID = i;
@@ -166,6 +173,7 @@ class AwardsState extends AmongUIState
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -201,7 +209,7 @@ class AwardsState extends AmongUIState
 		if (selected.hidden && !unlocked)
 		{
 			nameText.text = '???';
-			infoText.text = Lang.str('AWARDS_SECRET');
+			infoText.text = Lang.str('AWARDS_SECRET', 'Keep playing to unlock this secret!');
 		}
 		else
 		{
@@ -299,9 +307,12 @@ class AwardsState extends AmongUIState
 	{
 		refreshPlayTimeText();
 		
+		if (ClientPrefs.navInputMode == 'Touch')
+		{
 		if (FlxG.mouse.justMoved)
 		{
 			mouseControlActive = true;
+		}  // navInputMode == Touch
 		}
 		
 		if (controlUP.PRESSED || controlDOWN.PRESSED || controlLEFT.PRESSED || controlRIGHT.PRESSED || controls.BACK)

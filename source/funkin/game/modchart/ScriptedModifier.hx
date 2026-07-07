@@ -14,7 +14,16 @@ class ScriptedModifier extends Modifier
 	var modType:ModifierType = MISC_MOD;
 	
 	var script:Null<FunkinScript> = null;
-	
+
+	// Reused across calls below instead of allocating a fresh args array every
+	// time — updateNote/updateReceptor/updateNoteSplash/updateSustainSplash and
+	// getPos run once per active note/receptor PER modifier, every frame, so a
+	// modchart with a couple of modifiers and a normal note count means dozens
+	// of these calls a frame.
+	final _updateArgs:Array<Dynamic> = [0.0];
+	final _noteArgs:Array<Dynamic> = [0.0, null, null, 0];
+	final _getPosArgs:Array<Dynamic> = [0.0, 0.0, 0.0, 0.0, null, 0, 0, null];
+
 	public function new(modMgr:ModManager, name:String = '', prefix:String = '', ?parent:Modifier)
 	{	
 		this.prefix = prefix;
@@ -23,7 +32,7 @@ class ScriptedModifier extends Modifier
 		
 		final scriptPath:String = FunkinScript.getPath('scripts/modifiers/$name');
 		
-		if (FunkinAssets.exists(scriptPath)) script = FunkinScript.fromFile(scriptPath, name, PlayState.instance?.scripts?.scriptShareables);
+		if (FunkinAssets.exists(scriptPath)) script = FunkinScript.fromFile(scriptPath, name, null, PlayState.instance?.scripts?.scriptShareables);
 		
 		if (script == null || script.__garbage)
 		{
@@ -68,14 +77,39 @@ class ScriptedModifier extends Modifier
 	
 	public override function getPos(time:Float, visualDiff:Float, timeDiff:Float, beat:Float, pos:Vector3, data:Int, player:Int, obj:FlxSprite)
 	{
-		return (script?.executeFunc('getPos', [time, visualDiff, timeDiff, beat, pos, data, player, obj], this) ?? pos);
+		if (script == null) return pos;
+		_getPosArgs[0] = time;
+		_getPosArgs[1] = visualDiff;
+		_getPosArgs[2] = timeDiff;
+		_getPosArgs[3] = beat;
+		_getPosArgs[4] = pos;
+		_getPosArgs[5] = data;
+		_getPosArgs[6] = player;
+		_getPosArgs[7] = obj;
+		return (script.executeFunc('getPos', _getPosArgs, this) ?? pos);
 	}
-	
-	public override function update(elapsed:Float):Void script?.executeFunc('onUpdate', [elapsed], this);
-	public override function updateNote(beat, obj, pos, player) script?.executeFunc('updateNote', [beat, obj, pos, player], this);
-	public override function updateReceptor(beat, obj, pos, player) script?.executeFunc('updateReceptor', [beat, obj, pos, player], this);
-	public override function updateNoteSplash(beat, obj, pos, player) script?.executeFunc('updateNoteSplash', [beat, obj, pos, player], this);
-	public override function updateSustainSplash(beat, obj, pos, player) script?.executeFunc('updateSustainSplash', [beat, obj, pos, player], this);
+
+	public override function update(elapsed:Float):Void
+	{
+		if (script == null) return;
+		_updateArgs[0] = elapsed;
+		script.executeFunc('onUpdate', _updateArgs, this);
+	}
+
+	public override function updateNote(beat, obj, pos, player) _callNoteHook('updateNote', beat, obj, pos, player);
+	public override function updateReceptor(beat, obj, pos, player) _callNoteHook('updateReceptor', beat, obj, pos, player);
+	public override function updateNoteSplash(beat, obj, pos, player) _callNoteHook('updateNoteSplash', beat, obj, pos, player);
+	public override function updateSustainSplash(beat, obj, pos, player) _callNoteHook('updateSustainSplash', beat, obj, pos, player);
+
+	inline function _callNoteHook(func:String, beat:Float, obj:Dynamic, pos:Vector3, player:Int):Void
+	{
+		if (script == null) return;
+		_noteArgs[0] = beat;
+		_noteArgs[1] = obj;
+		_noteArgs[2] = pos;
+		_noteArgs[3] = player;
+		script.executeFunc(func, _noteArgs, this);
+	}
 	
 	public override function destroy():Void
 	{

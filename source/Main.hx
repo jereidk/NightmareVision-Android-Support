@@ -11,12 +11,13 @@ import flixel.FlxGame;
 import flixel.input.keyboard.FlxKey;
 
 import funkin.backend.DebugDisplay;
+import funkin.scripts.GlobalScriptManager;
 
 @:nullSafety(Strict)
 class Main extends Sprite
 {
 	public static final PSYCH_VERSION:String = '0.5.2h';
-	public static final NMV_VERSION:String = '1.0';
+	public static final NMV_VERSION:String = '1.1.1bb';
 	public static final FUNKIN_VERSION:String = '0.2.7';
 	public static final LEGACY_VERSION:String = 'v' + NMV_VERSION;
 	
@@ -78,6 +79,7 @@ class Main extends Sprite
 		#end
 		
 		DebugDisplay.init();
+		GlobalScriptManager.init();
 		#if mobile
 		mobile.backend.MobileDebugPlugin.register();
 		#end
@@ -86,7 +88,26 @@ class Main extends Sprite
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}
 		#end
+
+		#if sys
+		FlxG.stage.window.onClose.add(onWindowClose);
+		#end
 	}
+
+	#if sys
+	static function onWindowClose():Void
+	{
+		@:privateAccess MusicBeatState.addPlayTimeDelta();
+		ClientPrefs.flush();
+		funkin.Mods.writeModList();
+
+		#if hxvlc
+		hxvlc.util.Handle.dispose();
+		#end
+
+		Sys.exit(0);
+	}
+	#end
 	
 	@:access(flixel.FlxCamera)
 	static function onResize(w:Int, h:Int)

@@ -1,14 +1,23 @@
 package funkin.states.substates;
 
+        #if mobile
+        import mobile.utils.MobileNavUtil;
+        import flixel.input.touch.FlxTouch;
+        import mobile.backend.flixel.input.FlxMobileInputID;
+        #end
+
+import funkin.input.TurboControl;
+
 import flixel.group.FlxSpriteGroup;
 
-import funkin.backend.MusicBeatSubstate;
 import funkin.states.*;
 import funkin.states.options.OptionsState;
 import funkin.utils.CameraUtil;
 import funkin.states.substates.CosmeticsSubstate;
+import flixel.addons.transition.FlxTransitionableState;
+import flixel.util.FlxStringUtil;
 
-class PauseSubState extends MusicBeatSubstate
+class PauseSubState extends funkin.backend.MusicBeatSubstate
 {
 	public static var instance:PauseSubState;
 	public static var songName:String = '';
@@ -27,11 +36,38 @@ class PauseSubState extends MusicBeatSubstate
 	var infoTitle:FlxText;
 	var infoSubtext:FlxText;
 	
+	var turboGroup:TurboControlGroup;
+	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
+	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
+
+	// Reused every frame in update() instead of letting FlxG.mouse.getScreenPosition() and the
+	// mobilePadJustReleased() array args allocate a fresh FlxPoint/Array each call.
+	var _mousePosPoint:FlxPoint = FlxPoint.get();
+	#if mobile
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
+	
+	public var skipToTimeOption:Null<FlxText> = null;
+
+        #if mobile
+        var mobileControlsAdded:Bool = false;
+        #end
+	var skipToTime:Float;
+	
 	override function create()
 	{
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlLEFT).rate = (1 / 45);
+		turboGroup.add(controlRIGHT).rate = (1 / 45);
+		
 		var cam:FlxCamera = CameraUtil.lastCamera;
 		instance = this;
-		
+
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(false);
+		#end
+
 		initStateScript('PauseSubState');
 		
 		pauseMusic = new FlxSound();
@@ -43,15 +79,25 @@ class PauseSubState extends MusicBeatSubstate
 		pauseGroup = new FlxSpriteGroup();
 		pauseGroup.cameras = [cam];
 		
-		pauseBG = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		pauseBG = new flixel.system.FlxBGSprite();
+		pauseBG.color = FlxColor.BLACK;
 		pauseBG.alpha = 0;
 		pauseGroup.add(pauseBG);
 		
-		var glow:FlxSprite = new FlxSprite(500, -12.65).loadGraphic(Paths.image('menu/freeplay/backGlow'));
+		// glow/portrait are anchored toward the right side of the 1280 base
+		// canvas (same backGlow/portrait pair and same magic numbers as
+		// FreeplayState) — shift both by the full revealed width in 'expand'
+		// mode so they keep hugging the right edge instead of drifting toward
+		// the center as the canvas widens.
+		final portraitShiftX:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x
+			: 0;
+
+		var glow:FlxSprite = new FlxSprite(500 + portraitShiftX, -12.65).loadGraphic(Paths.image('menu/freeplay/backGlow'));
 		glow.flipX = false;
 		glow.color = PlayState.instance.dad.healthColorArray != null ? PlayState.instance.dad.healthColour : FlxColor.WHITE;
 		pauseGroup.add(glow);
-		
+
 		var dwp:String = getDadPortrait();
 		var p:String = portraitExists(dwp) ? dwp : 'placeholder';
 		var portrait:FlxSprite = new FlxSprite(0, -125).loadGraphic(Paths.image('menu/freeplay/portraits/' + p));
@@ -59,8 +105,8 @@ class PauseSubState extends MusicBeatSubstate
 		portrait.offset.y += (portrait.frameHeight - 1097) * 0.5 * portrait.scale.y;
 		portrait.x = FlxG.width;
 		pauseGroup.add(portrait);
-		
-		FlxTween.tween(portrait, {x: 304.65}, 0.3, {ease: FlxEase.circOut});
+
+		FlxTween.tween(portrait, {x: 304.65 + portraitShiftX}, 0.3, {ease: FlxEase.circOut});
 		
 		var pad:Int = 15;
 		
@@ -74,23 +120,30 @@ class PauseSubState extends MusicBeatSubstate
 		
 		assignValues(getSongInfo(PlayState.SONG.song));
 		
+		
+
+                if (ClientPrefs.inDevMode)
+                {
+                        options.push('[DEV] debug info');
+                        options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
+                }
 		if (PlayState.chartingMode)
 		{
-			options.insert(2, 'leavechartingmode');
+			options.insert(2, 'skiptotime');
+			options.insert(3, 'leavechartingmode');
 		}
-
-		if (ClientPrefs.inDevMode)
-		{
-			options.push('[DEV] debug info');
-			options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
-		}
-
+		
+		var scale:Float = Math.min(300 / (options.length * 60), 1);
+		
 		for (i in 0...options.length)
 		{
 			var opt = new FlxText(-640, 0, -1, Lang.str(options[i], options[i]));
-			opt.setFormat(Paths.font('liber.ttf'), 48, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			
+			if (options[i] == 'skiptotime') skipToTimeOption = opt;
+			
+			opt.setFormat(Paths.font('liber.ttf'), Std.int(48 * scale), FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			opt.borderSize = 2;
-			opt.y = FlxG.height / 2 + (i * 60) - opt.height;
+			opt.y = FlxG.height / 2 + (i * 60 * scale) - opt.height;
 			opt.ID = i;
 			pauseGroup.add(opt);
 			optionText.push(opt);
@@ -100,19 +153,51 @@ class PauseSubState extends MusicBeatSubstate
 		looksie.origin.set(25, 75);
 		looksie.cameras = [cam];
 		looksie.flipX = true;
+		#if mobile
+		looksie.x = FlxG.width - looksie.width;
+		looksie.flipX = false;
+		#end
 		
 		add(pauseGroup);
 		add(looksie);
 		cameras = [cam];
 		
+		skipToTime = Math.max(PlayState.instance.getSongTime(), 0);
+		updateSkipTimeOption();
+
+                #if mobile
+                controls.isInSubstate = true;
+                addVirtualPad(UP_DOWN, A_B);
+                addVirtualPadCamera();
+                #end
+		
 		FlxG.sound.play(Paths.sound('panelAppear'), 0.5);
 		super.create();
-
-		#if mobile
-		controls.isInSubstate = true;
-		addVirtualPad(UP_DOWN, A_B);
-		addVirtualPadCamera();
-		#end
+	}
+	
+	function updateSkipTimeOption():Void
+	{
+		if (skipToTimeOption == null) return;
+		
+		final skipStr:String = Lang.str('skiptotime');
+		
+		if (skipToTimeOption.ID != curSelect)
+		{
+			skipToTimeOption.text = skipStr;
+			return;
+		}
+		
+		final timeStr:String = FlxStringUtil.formatTime(skipToTime / 1000, false);
+		
+		skipToTimeOption.text = (Lang.hasSpecial('rightToLeft') ? '$timeStr \t$skipStr' : '$skipStr \t$timeStr');
+	}
+	
+	public function changeSkipTime(secs:Float /* wait thats funny */):Void
+	{
+		if (skipToTimeOption == null) return;
+		
+		skipToTime = FlxMath.mod(skipToTime + secs * 1000, PlayState.instance.audio.inst?.length ?? PlayState.instance.songLength);
+		updateSkipTimeOption();
 	}
 	
 	override function update(elapsed:Float)
@@ -121,21 +206,28 @@ class PauseSubState extends MusicBeatSubstate
 		super.update(elapsed);
 		
 		var cam = cameras != null && cameras.length > 0 ? cameras[0] : FlxG.camera;
-		var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(cam);
+		var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(cam, _mousePosPoint);
 		
 		if (!viewingMode)
 		{
+			if (controlLEFT.PRESSED) changeSkipTime(-1);
+			if (controlRIGHT.PRESSED) changeSkipTime(1);
+			
+			#if mobile
+			if (controls.mobilePadJustReleased(_upKey)) changeSelection(-1);
+			else if (controls.mobilePadJustReleased(_downKey)) changeSelection(1);
+			#else
 			if (controls.UI_UP_P || FlxG.mouse.wheel > 0) changeSelection(-1);
-			if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
-			if (ClientPrefs.inDevMode)
+			else if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
+			#end
+			
+			if (ClientPrefs.inDevMode && (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X)))
 			{
-				if (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X))
-				{
-					// lockMovement = true;
-					FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
-					openSubState(new CosmeticsSubstate());
-				}
+				// lockMovement = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+				openSubState(new CosmeticsSubstate());
 			}
+			
 			if (controls.ACCEPT) acceptChoice();
 		}
 		
@@ -169,7 +261,7 @@ class PauseSubState extends MusicBeatSubstate
 		
 		for (item in optionText)
 		{
-			if (item.overlapsPoint(mousePos, true, cam) && FlxG.mouse.justPressed && !viewingMode)
+			if (item.overlapsPoint(mousePos, true, cam) && FlxG.mouse.justPressed && !viewingMode #if mobile && ClientPrefs.navInputMode != 'Virtual Pad' #end)
 			{
 				if (curSelect == item.ID)
 				{
@@ -182,14 +274,24 @@ class PauseSubState extends MusicBeatSubstate
 				}
 			}
 			
-			item.x = FlxMath.lerp(item.x, curSelect == item.ID ? 75 : 55, FlxMath.bound(elapsed * 15.6, 0, 1));
+			// Menu options hug the left edge by design — in 'expand' mode nudge
+			// them toward center by a fraction of the revealed width, same
+			// treatment (and same factor) as FreeplayState's card row.
+			final menuCenterShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.25
+				: 0;
+			item.x = FlxMath.lerp(item.x, (curSelect == item.ID ? 75 : 55) + menuCenterShift, FlxMath.bound(elapsed * 15.6, 0, 1));
 			item.alpha = FlxMath.lerp(item.alpha, curSelect == item.ID ? 1 : 0.3, FlxMath.bound(elapsed * 15.6, 0, 1)) * pauseGroup.alpha;
 		}
 	}
 	
 	override function destroy()
 	{
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(true);
+		#end
 		if (pauseMusic != null) pauseMusic.destroy();
+		_mousePosPoint.put();
 		super.destroy();
 	}
 	
@@ -212,7 +314,7 @@ class PauseSubState extends MusicBeatSubstate
 	
 	public static function getSongInfo(songID:String):Array<String>
 	{
-		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', null, true);
+		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', NORMAL);
 		var info:Array<String> = CoolUtil.coolTextFile(txt);
 		if (info != null && info.length > 0) return info;
 		return ['UNKNOWN', 'NO SONG INFO FOUND'];
@@ -235,6 +337,7 @@ class PauseSubState extends MusicBeatSubstate
 	{
 		FlxG.sound.play(Paths.sound('hover'), 0.5);
 		curSelect = FlxMath.wrap(curSelect + by, 0, options.length - 1);
+		updateSkipTimeOption();
 	}
 	
 	function acceptChoice():Void
@@ -243,28 +346,55 @@ class PauseSubState extends MusicBeatSubstate
 		{
 			case 'resumesong':
 				close();
+				
 			case 'restartsong':
 				restartSong();
+				
+			case 'skiptotime':
+				final curTime:Float = PlayState.instance.getSongTime();
+				
+				if (curTime > skipToTime)
+				{
+					PlayState.startOnTime = skipToTime;
+					
+					FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
+					
+					FlxG.resetState();
+				}
+				else if (curTime < skipToTime)
+				{
+					PlayState.startOnTime = skipToTime;
+					
+					PlayState.instance.setSongTime(skipToTime);
+					PlayState.instance.clearNotesBefore(skipToTime);
+					
+					PlayState.startOnTime = 0; // die
+					
+					close();
+				}
+				
 			case 'leavechartingmode':
 				PlayState.chartingMode = false;
 				close();
+				
 			case 'options':
 				PlayState.instance.paused = true;
-				PlayState.instance.audio?.stop();
+				if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
 				OptionsState.onPlayState = true;
 				FlxG.switchState(() -> new OptionsState());
-			case 'backtomenu':
-				returnToMain();
-
+				
 			case '[DEV] debug info':
-				PlayState.instance.scriptGroup.call('onToggleDebugInfo');
-				close();
-			case '[DEV] speed: 2x':
-				PlayState.instance.playbackRate = 2;
-				close();
-			case '[DEV] speed: back to 1x':
-				PlayState.instance.playbackRate = 1;
-				close();
+                                PlayState.instance.scriptGroup.call('onToggleDebugInfo');
+                                close();
+                        case '[DEV] speed: 2x':
+                                PlayState.instance.playbackRate = 2;
+                                close();
+                        case '[DEV] speed: back to 1x':
+                                PlayState.instance.playbackRate = 1;
+                                close();
+
+                        case 'backtomenu':
+				returnToMain();
 		}
 	}
 	
@@ -282,7 +412,7 @@ class PauseSubState extends MusicBeatSubstate
 	public function restartSong(noTrans:Bool = false):Void
 	{
 		PlayState.instance.paused = true;
-		PlayState.instance.audio?.stop();
+		if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
 		FlxG.resetState();
 	}
 }

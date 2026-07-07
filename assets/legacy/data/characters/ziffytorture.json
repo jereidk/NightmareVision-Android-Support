@@ -172,7 +172,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/misc/cvp/ziffytorture",
+	"image": "characters/misc/cvp/ziffytorture-0,characters/misc/cvp/ziffytorture-1",
 	"position": [
 		60,
 		170
@@ -188,6 +188,6 @@
 		-145,
 		70
 	],
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1
 }

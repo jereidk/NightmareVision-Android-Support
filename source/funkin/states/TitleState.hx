@@ -10,6 +10,7 @@ import flixel.addons.display.FlxBackdrop;
 
 import funkin.data.WeekData;
 import funkin.objects.Alphabet;
+import funkin.FunkinAssets;
 
 @:nullSafety
 class TitleState extends MusicBeatState
@@ -43,7 +44,8 @@ class TitleState extends MusicBeatState
 	var ngSpr:Null<FlxSprite> = null;
 	var logo:Null<FlxSprite> = null;
 	var titleText:Null<FlxSprite> = null;
-	
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	public static function init():Void
 	{
 		FunkinAssets.cache.clearStoredMemory();
@@ -52,10 +54,13 @@ class TitleState extends MusicBeatState
 		// for some reason the plugin scripts dont run sometimes when first loaded. oh well
 		funkin.scripting.PluginsManager.prepareSignals();
 		funkin.scripting.PluginsManager.populate();
+
 	}
 	
 	override public function create():Void
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		if (FlxG.save.data.photosensitive == null && !FlashingState.leftState)
 		{
 			CoolUtil.setTransSkip();
@@ -64,10 +69,16 @@ class TitleState extends MusicBeatState
 			return super.create();
 		}
 		
-		if (ClientPrefs.finaleState == COMPLETE && !ProgressionUtil.songIsClear('finale'))
+		if (ClientPrefs.finaleState == COMPLETE)
 		{
-			// failsafe for a realy specific case
-			ClientPrefs.finaleState = ACTIVE;
+			if (!ProgressionUtil.songIsClear('finale'))
+			{
+				ClientPrefs.finaleState = ACTIVE; // failsafe for a realy specific case
+			}
+			else if (!ClientPrefs.doubletrouble)
+			{
+				ClientPrefs.doubletrouble = true;
+			}
 		}
 		
 		init();
@@ -100,6 +111,7 @@ class TitleState extends MusicBeatState
 		}
 		
 		Conductor.bpm = 102;
+		Conductor.bpmChangeMap.resize(0);
 		
 		if (isHardcodedState() && scriptGroup.call('onStartIntro') != ScriptConstants.STOP_FUNC)
 		{
@@ -122,6 +134,11 @@ class TitleState extends MusicBeatState
 			titleText.animation.addByPrefix('press', "EnterStart", 24, false);
 			titleText.animation.play('idle');
 			titleText.y -= 55;
+			// x=300 was a hardcoded approximation of screenCenter() for this
+			// sprite's ~650px frame width on the 1280 base canvas — same
+			// screenCenter(X) convention logo/ngSpr already use below, so this
+			// tracks live FlxG.width instead of staying fixed on a wide screen.
+			titleText.screenCenter(X);
 			
 			logo.scale.set(0.84, 0.84);
 			logo.updateHitbox();
@@ -170,7 +187,13 @@ class TitleState extends MusicBeatState
 			return;
 		}
 		
-		final pressedEnter:Bool = FlxG.gamepads.lastActive?.justPressed.START || FlxG.keys.justPressed.ENTER || controls.ACCEPT || FlxG.mouse.justPressed;
+		// Always allow touch/click on TitleState for easy access
+		var allowMousePress:Bool = true;
+		#if mobile
+		// TitleState should always accept touch, regardless of navInputMode setting
+		allowMousePress = true;
+		#end
+		final pressedEnter:Bool = FlxG.gamepads.lastActive?.justPressed.START || FlxG.keys.justPressed.ENTER || controls.ACCEPT || (allowMousePress && FlxG.mouse.justPressed);
 		
 		if (!transitioning && skippedIntro)
 		{
@@ -331,6 +354,17 @@ class TitleState extends MusicBeatState
 			FlxG.camera.flash(FlxColor.WHITE, 4);
 			
 			skippedIntro = true;
+		}
+	}
+
+	override function destroy():Void
+	{
+		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
 		}
 	}
 }

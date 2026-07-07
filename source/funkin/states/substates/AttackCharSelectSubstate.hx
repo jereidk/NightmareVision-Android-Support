@@ -97,6 +97,7 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 		}
 		changeSelection(0);
 		
+		#if !mobile
 		var bottomControls = new funkin.objects.menu.AmongControls([
 			['arrow', 'select'], // select
 			['enter', 'conf'], // conf
@@ -104,13 +105,15 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 		], false);
 		bottomControls.zIndex = 10;
 		add(bottomControls);
-		
+
 		bottomControls.alpha = 0;
 		FlxTween.tween(bottomControls, {alpha: 1}, 0.35, {ease: FlxEase.circOut});
+		#end
 
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 
 		super.create();
@@ -123,7 +126,7 @@ class AttackCharSelectSubstate extends MusicBeatSubstate
 			if (controls.UI_RIGHT_P) changeSelection(1);
 			if (controls.UI_LEFT_P) changeSelection(-1);
 			
-			if (FlxG.mouse.justPressed)
+			if (FlxG.mouse.justPressed && ClientPrefs.navInputMode != 'Virtual Pad')
 			{
 				for (i => icon in iconArray)
 				{

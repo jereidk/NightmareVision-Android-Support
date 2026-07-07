@@ -53,6 +53,7 @@ class HotReloadPlugin extends FlxBasic
 			FlxG.resetState();
 			
 			funkin.Mods.loadTopMod();
+			FunkinAssets.invalidateAssetListCache(); // Refresh asset list after hot reload
 		}
 		if (FlxG.keys.justPressed.F7)
 		{

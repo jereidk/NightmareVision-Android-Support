@@ -11,6 +11,9 @@ import flixel.graphics.FlxGraphic;
 import flixel.system.FlxAssets;
 
 import funkin.backend.FunkinCache;
+#if (android && sys)
+import mobile.backend.StorageSystem;
+#end
 
 /**
  * backend for retrieving and caching assets
@@ -28,19 +31,38 @@ class FunkinAssets
 
 	private static function getCachedAssetList(?type:AssetType):Array<String>
 	{
-		if (type == null)
+		try
 		{
-			if (_assetListAllCache == null) _assetListAllCache = Assets.list();
-			return _assetListAllCache;
+			if (type == null)
+			{
+				if (_assetListAllCache == null) _assetListAllCache = Assets.list();
+				return _assetListAllCache;
+			}
+			final key = Std.string(type);
+			var cached = _assetListTypeCache.get(key);
+			if (cached == null)
+			{
+				cached = Assets.list(type);
+				_assetListTypeCache.set(key, cached);
+			}
+			return cached;
 		}
-		final key = Std.string(type);
-		var cached = _assetListTypeCache.get(key);
-		if (cached == null)
+		catch (e:Dynamic)
 		{
-			cached = Assets.list(type);
-			_assetListTypeCache.set(key, cached);
+			Logger.log('getCachedAssetList: Failed to get asset list: $e', WARN);
+			return [];
 		}
-		return cached;
+	}
+
+	/**
+	 * Invalidates the cached asset list.
+	 * Call this after loading mods, installing DLC, or any operation
+	 * that may change the available assets on disk.
+	 */
+	public static function invalidateAssetListCache():Void
+	{
+		_assetListAllCache = null;
+		_assetListTypeCache = new haxe.ds.StringMap();
 	}
 	
 	/**
@@ -115,19 +137,104 @@ class FunkinAssets
 	 *
 	 * Will return null in the case it cannot be found.
 	 */
-	public static function getBitmapData(path:String, useCache:Bool = true):Null<BitmapData>
+	public static function getBitmapData(path:String, useCache:Bool = true, skipAstc:Bool = false):Null<BitmapData>
 	{
+		// Validate path
+		if (path == null || path.length == 0)
+		{
+			Logger.log('getBitmapData: Invalid path (null or empty)', WARN);
+			return null;
+		}
+
 		// On Android, try loading a GPU-compressed ASTC override first.
 		// Checks external storage then bundled APK assets. Falls through to PNG
 		// if ASTC is unsupported, no .astc mirror exists, or loading fails.
+		//
+		// skipAstc forces the PNG-only path below instead — needed by anything
+		// that reads pixel data back off the result (ASTC textures load
+		// straight to the GPU via BitmapData.fromTexture(), which has no CPU
+		// pixels at all; see AstcLoader's own doc comment).
 		#if (android && cpp)
-		var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
-		if (astcBitmap != null) return astcBitmap;
+		if (!skipAstc)
+		{
+			try
+			{
+				var astcBitmap = mobile.backend.AstcLoader.tryLoad(path);
+				if (astcBitmap != null) return astcBitmap;
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('getBitmapData: ASTC load failed for "$path": $e', WARN);
+			}
+		}
 		#end
 
 		var bitmap:Null<BitmapData> = null;
-		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(path)) bitmap = BitmapData.fromFile(path);
-		else #end if (Assets.exists(path, IMAGE)) bitmap = Assets.getBitmapData(path, useCache);
+
+		// Try FileSystem first (external storage / mods, DLC) for mod override support.
+		// This ensures mods take priority over APK assets, matching getSoundUnsafe() behavior.
+		#if (MODS_ALLOWED || ASSET_REDIRECT)
+		try
+		{
+			if (FileSystem.exists(path)) {
+				var loadPath = path;
+				#if (android && sys)
+				try
+				{
+					// On Android, BitmapData.fromFile needs the full path with storage directory
+					// StorageSystem.getDirectory() returns /storage/emulated/0/.ImpostorLegacy/
+					loadPath = StorageSystem.getDirectory() + path;
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('getBitmapData: Failed to get storage directory: $e', WARN);
+					loadPath = path;
+				}
+				#end
+
+				try
+				{
+					bitmap = BitmapData.fromFile(loadPath);
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('getBitmapData: BitmapData.fromFile failed for "$loadPath": $e', WARN);
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('getBitmapData: FileSystem check failed for "$path": $e', WARN);
+		}
+		#end
+
+		// Fallback to APK bundled assets via Assets.getBitmapData.
+		// This handles files that are packaged inside the APK or cached by OpenFL.
+		if (bitmap == null)
+		{
+			#if android
+			try
+			{
+				if (Assets.exists(path, IMAGE)) {
+					// Do NOT pass allowCompressedTextures=false here: AstcLoader above can
+					// legitimately fail even when a .astc exists (e.g. at very early startup,
+					// before FlxG.stage.stage3Ds[0].context3D is ready), and for assets whose
+					// .png was deleted after ASTC conversion, openfl's own ASTC path here is
+					// the only remaining way to load them at all. Disabling it caused every
+					// such asset to fall through to flixel-logo. The double-premultiply risk
+					// this was meant to avoid is the lesser problem.
+					bitmap = Assets.getBitmapData(path, useCache);
+				}
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('getBitmapData: Assets.getBitmapData failed for "$path": $e', WARN);
+			}
+			#else
+			// For non-Android platforms without MODS_ALLOWED.
+			bitmap = Assets.getBitmapData(path, useCache);
+			#end
+		}
 
 		return bitmap;
 	}
@@ -137,58 +244,150 @@ class FunkinAssets
 	 */
 	public static function exists(path:String, ?type:AssetType):Bool
 	{
-		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(path)) return true;
-		#end
-		if (Assets.exists(path, type)) return true;
+		// Validate path
+		if (path == null || path.length == 0) return false;
+
+		try
+		{
+			#if (MODS_ALLOWED || ASSET_REDIRECT)
+			if (FileSystem.exists(path)) return true;
+			#end
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('exists: FileSystem check failed for "$path": $e', WARN);
+		}
+
+		try
+		{
+			if (Assets.exists(path, type)) return true;
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('exists: Assets.exists check failed for "$path": $e', WARN);
+		}
+
 		// Assets.exists() only matches file assets, not directories.
 		// Fall back to a prefix scan so callers that check if a directory
 		// "exists" in the APK (e.g. WeekData scanning assets/data/weeks/)
 		// get a correct answer even when nothing has been extracted.
-		final prefix = StringTools.endsWith(path, '/') ? path : (path + '/');
-		return Lambda.exists(getCachedAssetList(type), a -> StringTools.startsWith(a, prefix));
+		try
+		{
+			final prefix = StringTools.endsWith(path, '/') ? path : (path + '/');
+			return Lambda.exists(getCachedAssetList(type), a -> StringTools.startsWith(a, prefix));
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('exists: Prefix scan failed for "$path": $e', WARN);
+			return false;
+		}
 	}
 	
 	/**
 	 * Reads a given directory and returns all file names inside.
-	 * 
+	 *
 	 * if it could not be found, an empty array will be returned.
 	 */
 	public static function readDirectory(directory:String):Array<String>
 	{
+		// Validate directory
+		if (directory == null || directory.trim().length == 0) return [];
+
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(directory)) return FileSystem.readDirectory(directory);
-		#end
-		if (directory.trim().length == 0) return [];
-		// Normalize to trailing slash so the prefix strip is clean.
-		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
-		// Extract the first path component after the prefix (file or folder name).
-		// Deduplicate so a folder with many files appears only once.
-		final seen = new haxe.ds.StringMap<Bool>();
-		final result:Array<String> = [];
-		for (a in getCachedAssetList())
+		try
 		{
-			if (!StringTools.startsWith(a, prefix)) continue;
-			var rel = a.substring(prefix.length);
-			final slash = rel.indexOf('/');
-			final entry = slash >= 0 ? rel.substring(0, slash) : rel;
-			if (entry.length > 0 && !seen.exists(entry))
-			{
-				seen.set(entry, true);
-				result.push(entry);
-			}
+			if (FileSystem.exists(directory)) return FileSystem.readDirectory(directory);
 		}
-		return result;
+		catch (e:Dynamic)
+		{
+			Logger.log('readDirectory: FileSystem.readDirectory failed for "$directory": $e', WARN);
+		}
+		#end
+
+		// Normalize to trailing slash so the prefix strip is clean.
+		try
+		{
+			final hasTrailingSlash = StringTools.endsWith(directory, '/');
+			final prefix = hasTrailingSlash ? directory : (directory + '/');
+
+			// Extract the first path component after the prefix (file or folder name).
+			// Deduplicate so a folder with many files appears only once.
+			final seen = new haxe.ds.StringMap<Bool>();
+			final result:Array<String> = [];
+
+			for (a in getCachedAssetList())
+			{
+				try
+				{
+					if (!StringTools.startsWith(a, prefix)) continue;
+
+					var rel = a.substring(prefix.length);
+					if (rel.length == 0) continue;
+
+					final slash = rel.indexOf('/');
+					final entry = slash >= 0 ? rel.substring(0, slash) : rel;
+
+					if (entry.length > 0 && !seen.exists(entry))
+					{
+						seen.set(entry, true);
+						result.push(entry);
+					}
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('readDirectory: Error processing entry "$a": $e', WARN);
+					continue;
+				}
+			}
+			return result;
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('readDirectory: Asset list scan failed for "$directory": $e', WARN);
+			return [];
+		}
 	}
 
 	public static function isDirectory(directory:String):Bool
 	{
+		// Validate directory
+		if (directory == null || directory.trim().length == 0) return false;
+
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(directory)) return FileSystem.isDirectory(directory);
+		try
+		{
+			if (FileSystem.exists(directory)) return FileSystem.isDirectory(directory);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('isDirectory: FileSystem check failed for "$directory": $e', WARN);
+		}
 		#end
-		if (directory.trim().length == 0) return false;
-		final prefix = StringTools.endsWith(directory, '/') ? directory : (directory + '/');
-		return Lambda.exists(getCachedAssetList(), a -> StringTools.startsWith(a, prefix));
+
+		try
+		{
+			final hasTrailingSlash = StringTools.endsWith(directory, '/');
+			final prefix = hasTrailingSlash ? directory : (directory + '/');
+
+			for (a in getCachedAssetList())
+			{
+				try
+				{
+					if (StringTools.startsWith(a, prefix)) return true;
+				}
+				catch (e:Dynamic)
+				{
+					Logger.log('isDirectory: Error checking entry "$a": $e', WARN);
+					continue;
+				}
+			}
+			return false;
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('isDirectory: Asset list scan failed for "$directory": $e', WARN);
+			return false;
+		}
 	}
 	
 	/**
@@ -199,19 +398,57 @@ class FunkinAssets
 	 */
 	public static function getGraphicUnsafe(key:String, useCache:Bool = true, allowGPU:Bool = true):Null<FlxGraphic>
 	{
-		if (useCache && cache.currentTrackedGraphics.exists(key))
+		// Validate key
+		if (key == null || key.length == 0)
 		{
-			cache.localTrackedAssets.push(key);
-			return cache.currentTrackedGraphics.get(key);
+			Logger.log('getGraphicUnsafe: Invalid key (null or empty)', WARN);
+			return null;
 		}
-		
+
+		try
+		{
+			if (useCache && cache.currentTrackedGraphics.exists(key))
+			{
+				cache.localTrackedAssets.set(key, true);
+				return cache.currentTrackedGraphics.get(key);
+			}
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('getGraphicUnsafe: Cache lookup failed for "$key": $e', WARN);
+		}
+
 		var bitmap:Null<BitmapData> = getBitmapData(key);
-		
+
 		if (bitmap != null)
 		{
-			return cache.cacheBitmap(key, bitmap, allowGPU);
+			try
+			{
+				return cache.cacheBitmap(key, bitmap, allowGPU);
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('getGraphicUnsafe: cacheBitmap failed for "$key": $e', WARN);
+				return null;
+			}
 		}
-		
+
+		// Log failure details
+		#if android
+		try
+		{
+			Logger.log("[getGraphicUnsafe] FAILED for: $key", WARN);
+			Logger.log('  - BitmapData result was null', WARN);
+			Logger.log('  - Key: $key', WARN);
+			Logger.log('  - FileSystem.exists: ${sys.FileSystem.exists(key)}', WARN);
+			Logger.log('  - Assets.exists: ${Assets.exists(key, IMAGE)}', WARN);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log("[getGraphicUnsafe] Diagnostic logging failed: $e", WARN);
+		}
+		#end
+
 		return null;
 	}
 	
@@ -222,17 +459,50 @@ class FunkinAssets
 	 * @param allowGPU If true and is enabled in settings, the graphic will be cached on in video memory
 	 */
 	public static function getGraphic(key:String, useCache:Bool = true, allowGPU:Bool = true):FlxGraphic
-	{
-		final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
-		
-		if (graphic != null)
 		{
-			return graphic;
-		}
-		
-		Logger.log('graphic ($key) was not found. Returning flixel-logo instead');
-		
-		return FlxG.bitmap.add('flixel/images/logo/default.png');
+			// Validate key
+			if (key == null || key.length == 0)
+			{
+				Logger.log('getGraphic: Invalid key (null or empty)', WARN);
+				return FlxG.bitmap.add('flixel/images/logo/default.png');
+			}
+
+			final graphic:Null<FlxGraphic> = getGraphicUnsafe(key, useCache, allowGPU);
+
+			if (graphic != null)
+			{
+				return graphic;
+			}
+
+			Logger.log('graphic ($key) was not found. Returning flixel-logo instead', WARN);
+
+			// FALLBACK DIAGNOSTIC - Detailed logging for debugging
+			#if android
+			try
+			{
+				Logger.log("[FunkinAssets] GRAPHIC FALLBACK TRIGGERED for: $key", WARN);
+				Logger.log('  Date: ${Date.now()}', WARN);
+				Logger.log('  WHAT HAPPENED: The graphic was not found in any asset source.', WARN);
+				Logger.log('  ATTEMPTED SOURCES:', WARN);
+				Logger.log('    1. ASTC compressed override (mobile.backend.AstcLoader)', WARN);
+				Logger.log('    2. Assets.getBitmapData() [APK bundled]', WARN);
+				Logger.log('    3. FileSystem.exists() + BitmapData.fromFile() [external]', WARN);
+				Logger.log('    4. Flixel internal cache', WARN);
+				Logger.log('  DIAGNOSTIC INFO:', WARN);
+				Logger.log('    FileSystem.exists(key): ${sys.FileSystem.exists(key)}', WARN);
+				Logger.log('    Assets.exists(key, IMAGE): ${Assets.exists(key, IMAGE)}', WARN);
+				Logger.log('  ACTION: Returning Flixel logo as fallback.', WARN);
+				Logger.log('  FIX: Check if file exists in assets/legacy/images/ and verify Project.xml includes it.', WARN);
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log("[FunkinAssets] GRAPHIC FALLBACK DIAGNOSTIC LOGGING FAILED: $e", WARN);
+			}
+			#else
+			Logger.log("[FunkinAssets] GRAPHIC FALLBACK TRIGGERED for: $key", WARN);
+			#end
+
+			return FlxG.bitmap.add('flixel/images/logo/default.png');
 	}
 	
 	/**
@@ -267,7 +537,7 @@ class FunkinAssets
 	{
 		if (useCache && cache.currentTrackedSounds.exists(key))
 		{
-			cache.localTrackedAssets.push(key);
+			cache.localTrackedAssets.set(key, true);
 			return cache.currentTrackedSounds.get(key);
 		}
 		

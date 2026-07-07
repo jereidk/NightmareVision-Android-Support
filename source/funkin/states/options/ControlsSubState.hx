@@ -16,6 +16,7 @@ import funkin.objects.*;
 import funkin.input.Controls;
 import funkin.input.InputFormatter;
 import funkin.objects.menu.ScrollBar;
+import mobile.utils.MobileNavUtil;
 
 class ControlsSubState extends MusicBeatSubstate
 {
@@ -46,7 +47,13 @@ class ControlsSubState extends MusicBeatSubstate
 	var titleText:FlxText;
 	var languageTextYOffset:Float = 0;
 	
-	var panelX:Float = 480;
+	// Same 676px-wide, asymmetrically-placed panel as BaseOptionsMenu (480
+	// left margin / 124 right margin on the 1280 canvas) — this substate
+	// doesn't extend BaseOptionsMenu so it needed the same fix independently.
+	// Shifted by the FULL 'expand'-mode cutout to keep that 124px right
+	// margin exact instead of leaving a gap between this panel/camera and
+	// the wider background behind it.
+	var panelX:Float = 480 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
 	var optionEndY:Float = 0;
 	
 	final topBound:Float = 150;
@@ -140,7 +147,8 @@ class ControlsSubState extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(UP_DOWN, A_B);
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 
@@ -295,7 +303,14 @@ class ControlsSubState extends MusicBeatSubstate
 				}
 		}
 		
+		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
+		#if mobile
+		var allowMouseInput = MobileNavUtil.allowPointerNav();
+		if (!allowMouseInput) mouseControlActive = false;
+		if (allowMouseInput && (FlxG.mouse.justMoved || FlxG.mouse.justPressed || FlxG.mouse.wheel != 0)) mouseControlActive = true;
+		#else
 		if (FlxG.mouse.justMoved || FlxG.mouse.justPressed || FlxG.mouse.wheel != 0) mouseControlActive = true;
+		#end
 		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK) mouseControlActive = false;
 		
 		if (mouseControlActive && state == SELECT && FlxG.mouse.justMoved)

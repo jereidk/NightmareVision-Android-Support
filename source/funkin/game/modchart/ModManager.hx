@@ -82,6 +82,8 @@ class ModManager implements IFlxDestroyable
 	public var modArray:Array<Modifier> = [];
 	
 	public var activeMods:Array<Array<String>> = [[], []]; // by player
+
+	public var vsliceBaseY:Float = 0;
 	
 	inline public function quickRegister(mod:Modifier) registerMod(mod.getName(), mod);
 	
@@ -151,13 +153,21 @@ class ModManager implements IFlxDestroyable
 			// so what I need to do is like, check other submods before removing the parent
 			
 			if (activeMods[player] == null) activeMods[player] = [];
-			
+
 			register.get(modName).setValue(val, player);
-			
+
+			// Membership in activeMods only changes on push/remove below; the relative order of
+			// mods that DIDN'T change stays valid from the last sort, so skip re-sorting (a fresh
+			// closure + full Array.sort every single call) when nothing actually changed. This
+			// matters a lot in practice: setValue() is called every frame for the duration of any
+			// active EaseEvent (queueEase), and by every scripted setPercent/setValue call.
+			var changed = false;
+
 			if (!activeMods[player].contains(name) && mod.shouldExecute(player, val))
 			{
 				if (daMod.getName() != name) activeMods[player].push(daMod.getName());
 				activeMods[player].push(name);
+				changed = true;
 			}
 			else if (!mod.shouldExecute(player, val))
 			{
@@ -172,28 +182,28 @@ class ModManager implements IFlxDestroyable
 						break;
 					}
 				}
-				if (daMod != modParent) activeMods[player].remove(daMod.getName());
+				if (daMod != modParent) changed = activeMods[player].remove(daMod.getName()) || changed;
 				if (modParent != null)
 				{
 					if (modParent.shouldExecute(player, modParent.getValue(player)))
 					{
-						activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+						if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 						return;
 					}
 					for (subname => submod in modParent.submods)
 					{
 						if (submod.shouldExecute(player, submod.getValue(player)))
 						{
-							activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+							if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 							return;
 						}
 					}
-					activeMods[player].remove(modParent.getName());
+					changed = activeMods[player].remove(modParent.getName()) || changed;
 				}
-				else activeMods[player].remove(daMod.getName());
+				else changed = activeMods[player].remove(daMod.getName()) || changed;
 			}
-			
-			activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+
+			if (changed) activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 		}
 	}
 	
@@ -214,6 +224,12 @@ class ModManager implements IFlxDestroyable
 	
 	public function getBaseX(direction:Int, player:Int):Float
 	{
+		// VSlice uses Funkin original receptor positioning (centered)
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+		{
+			return funkin.objects.note.StrumNote.getCenteredXPos(direction);
+		}
+		
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
 		switch (player)
 		{
@@ -284,7 +300,20 @@ class ModManager implements IFlxDestroyable
 		if (!obj.active) return pos;
 		
 		pos.x = getBaseX(data, player);
-		pos.y = (50 + diff + Note.swagWidth * .5);
+		
+		// VSlice uses centered Y position (like Funkin original)
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+		{
+			// Notes fall from above toward the receptor at vsliceBaseY
+			// pos.y is the CENTER of the note/receptor
+			// Receptor center is at vsliceBaseY + STRUMLINE_SIZE/2
+			// diff (visPos) is the visual distance - positive means approaching
+			pos.y = vsliceBaseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE / 2 + diff;
+		}
+		else
+		{
+			pos.y = (50 + diff + Note.swagWidth * .5);
+		}
 		pos.z = 0;
 		
 		if (activeMods[player] != null)

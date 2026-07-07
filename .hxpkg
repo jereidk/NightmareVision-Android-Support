@@ -27,8 +27,8 @@
             },
             {
                 "name": "hscript-iris",
-                "link": "https://github.com/pisayesiwsi/hscript-iris",
-                "branch": "62d828b5f9100867bb30becd5c9fa251b138ba1a"
+                "link": "https://github.com/jereidk/hscript-iris",
+                "branch": "edfef36727f6cddcb8d3233cd3b414c87d4f6719"
             },
             {
                 "name": "hxcpp-debug-server",

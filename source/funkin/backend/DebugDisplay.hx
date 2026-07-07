@@ -34,12 +34,18 @@ class FpsDisplayMode
 	 * The Fps counter will additional info per state.
 	 */
 	public static inline final ADVANCED:Int = 2;
-
+	
+	/**
+	 * The Fps counter will show detailed memory breakdown.
+	 */
+	public static inline final MEMORY:Int = 3;
+	
 	public static inline function fromString(str:String):Int
 	{
 		return switch (str)
 		{
 			case 'Advanced': ADVANCED;
+			case 'Memory':   MEMORY;
 			case 'Simple':   SIMPLE;
 			default:         DISABLED;
 		}
@@ -107,16 +113,29 @@ class DebugDisplay extends Sprite
 	public var currentFPS(default, null):Int = 0;
 	
 	/**
-		The current memory usage of the garbage collector.
-	**/
+	 * GC Memory - Heap en uso por HXCPP
+	 */
 	public var gcMemory(get, never):Float;
 	
 	/**
-	 * The current memory usage of the entire program.
-	 * 
-	 * Only supported on `Windows` currently
+	 * GC Reserved - Heap reservado total
+	 */
+	public var gcReserved(get, never):Float;
+	
+	/**
+	 * GC Large Pool - Pool para objetos grandes
+	 */
+	public var gcLargePool(get, never):Float;
+	
+	/**
+	 * Task Memory (RSS) - Memoria física real del proceso
 	 */
 	public var taskMemory(get, never):Float;
+	
+	/**
+	 * Gráficos en cache de Flixel
+	 */
+	public var cachedGraphics(get, never):Int;
 	
 	public var displayType:Int = FpsDisplayMode.SIMPLE;
 	
@@ -200,14 +219,43 @@ class DebugDisplay extends Sprite
 		if (!canUpdate || (displayType == FpsDisplayMode.DISABLED)) return;
 
 		#if cpp
-		var str = 'FPS: $currentFPS • [GC: ${FlxStringUtil.formatBytes(gcMemory)} | Task: ${FlxStringUtil.formatBytes(taskMemory)}]';
+		var str = 'FPS: $currentFPS • GC: ${FlxStringUtil.formatBytes(gcMemory)}';
 		#else
 		var str = 'FPS: $currentFPS • GC: ${FlxStringUtil.formatBytes(gcMemory)}';
 		#end
 
 		#if mobile
-		str += ' • Arch: ${get_arch()}';
+		str += ' • ${get_arch()}';
 		#end
+		
+		if (displayType == FpsDisplayMode.MEMORY)
+		{
+			#if cpp
+			final rss = taskMemory;
+			final heap = gcMemory;
+			final pct = rss > 0 ? Std.int(heap / rss * 100) : 0;
+			str += '\n╔══ MEMORY ════════════════════════╗';
+			str += '\n║  GC Heap   : ${_pad(FlxStringUtil.formatBytes(heap), 12)}  ${pct}% of RSS';
+			str += '\n║  GC Rsvd   : ${FlxStringUtil.formatBytes(gcReserved)}';
+			str += '\n║  Large Pool: ${FlxStringUtil.formatBytes(gcLargePool)}';
+			str += '\n║  RSS (proc): ${FlxStringUtil.formatBytes(rss)}';
+			str += '\n║  Textures  : $cachedGraphics cached';
+			#if android
+			str += '\n║  DRS       : ${mobile.backend.DynamicResolution.active ? "▶ active" : "■ idle"}';
+			#end
+			str += '\n╚══════════════════════════════════╝';
+			#elseif mobile
+			str += '\n╔══ MEMORY ════════════════════════╗';
+			str += '\n║  Textures  : $cachedGraphics cached';
+			str += '\n║  RSS (proc): ${FlxStringUtil.formatBytes(taskMemory)}';
+			#if android
+			str += '\n║  DRS       : ${mobile.backend.DynamicResolution.active ? "▶ active" : "■ idle"}';
+			#end
+			str += '\n╚══════════════════════════════════╝';
+			#else
+			str += '\n│ Textures: $cachedGraphics cached';
+			#end
+		}
 
 		if (displayType == FpsDisplayMode.ADVANCED)
 		{
@@ -216,23 +264,44 @@ class DebugDisplay extends Sprite
 			{
 				var scripted:funkin.scripting.ScriptedState = cast FlxG.state;
 				var path = funkin.scripts.FunkinScript.getPath('scripts/states/${scripted.scriptName}');
-				className = 'ScriptedState • (${path.replace('scripts/states/', '../../')})';
+				className = 'ScriptedState (${path.replace('scripts/states/', '')})';
 			}
-			
-			str += '\nState: $className';
-			
+			else
+			{
+				// trim long package names for readability
+				final parts = className.split('.');
+				className = parts[parts.length - 1];
+			}
+
+			str += '\n─────────────────────────────────';
+			str += '\nState  : $className';
+
+			if (FlxG.state.subState != null)
+			{
+				var subName = Type.getClassName(Type.getClass(FlxG.state.subState));
+				final sp = subName.split('.');
+				str += '\nSubstate: ${sp[sp.length - 1]}';
+			}
+
+			#if android
+			str += '\nDRS    : ${mobile.backend.DynamicResolution.active ? "▶ ON" : "■ off"} | Tex: $cachedGraphics';
+			final winW = FlxG.stage.window.width;
+			final winH = FlxG.stage.window.height;
+			str += '\nDevice : ${winW}×${winH} → game ${FlxG.width}×${FlxG.height}';
+			#else
+			str += '\nTex: $cachedGraphics cached';
+			#end
+
 			for (fun in plugins)
 			{
 				try
 				{
 					final pluginStr:Null<String> = fun();
-					
 					if (pluginStr != null && pluginStr.length > 0) str += '\n$pluginStr';
 				}
 				catch (e)
 				{
 					Logger.log('Error on debug display plugin: $e', WARN);
-					
 					plugins.remove(fun);
 				}
 			}
@@ -252,6 +321,36 @@ class DebugDisplay extends Sprite
 		return hl.Gc.stats().currentMemory;
 		#else
 		return (cast openfl.system.System.totalMemoryNumber : UInt);
+		#end
+	}
+	
+	inline function get_gcReserved():Float
+	{
+		#if cpp
+		return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_RESERVED);
+		#else
+		return 0;
+		#end
+	}
+	
+	inline function get_gcLargePool():Float
+	{
+		#if cpp
+		return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_LARGE);
+		#else
+		return 0;
+		#end
+	}
+	
+	inline function get_cachedGraphics():Int
+	{
+		#if flixel
+		var count = 0;
+		@:privateAccess
+		for (key in FlxG.bitmap._cache.keys()) count++;
+		return count;
+		#else
+		return 0;
 		#end
 	}
 
@@ -291,5 +390,11 @@ class DebugDisplay extends Sprite
 	inline function get_taskMemory():Float
 	{
 		return external.Native.getTaskMemory();
+	}
+
+	static inline function _pad(s:String, len:Int):String
+	{
+		while (s.length < len) s += ' ';
+		return s;
 	}
 }

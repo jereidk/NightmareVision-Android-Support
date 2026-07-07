@@ -28,20 +28,33 @@ class CrashHandler
 	static function onUncaughtError(event:UncaughtErrorEvent)
 	{
 		FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
-		
+
 		var curFlxState:String = 'N/A';
-		
+		var stateInfo:String = '';
+
 		if (FlxG.state != null)
 		{
 			final cl = Type.getClass(FlxG.state);
 			if (cl != null) curFlxState = 'FlxState: ' + (Type.getClassName(cl) ?? 'N/A');
 			FlxG.state.persistentUpdate = FlxG.state.persistentDraw = false;
+
+			// Capture additional state info for debugging
+			try
+			{
+				stateInfo += '\nState members: ${FlxG.state.members.length} sprites';
+				if (Reflect.hasField(FlxG.state, 'stage'))
+				{
+					var stage = Reflect.getProperty(FlxG.state, 'stage');
+					stateInfo += '\nStage: ${stage != null ? Type.getClassName(Type.getClass(stage)) : 'null'}';
+				}
+			}
+			catch (e:Dynamic) {}
 		}
-		
+
 		var message:String = Std.string(event.error);
-		
+
 		#if sys Sys.println #else trace #end (message);
-		
+
 		if (Std.isOfType(event.error, Error))
 		{
 			message = cast(event.error, Error).message;
@@ -50,9 +63,9 @@ class CrashHandler
 		{
 			message = cast(event.error, ErrorEvent).text;
 		}
-		
+
 		var stackMessage:String = '';
-		
+
 		for (stackItem in haxe.CallStack.exceptionStack(true))
 		{
 			switch (stackItem)
@@ -68,17 +81,17 @@ class CrashHandler
 				case FilePos(s, file, line, column):
 					stackMessage += file + " (line " + line + ")";
 			}
-			
+
 			stackMessage += '\n';
 		}
-		
+
 		event.preventDefault();
 		event.stopPropagation();
 		event.stopImmediatePropagation();
 
 		final callstackMessage = stackMessage.trim().length == 0 ? ' N/A' : '\n$stackMessage';
 
-		var fullReport = '$curFlxState\n\nException caught: $message\n\nCallstack:$callstackMessage';
+		var fullReport = '$curFlxState\n\nException caught: $message$stateInfo\n\nCallstack:$callstackMessage';
 
 		// Write crash log before touching Flixel state — this survives double-faults
 		// and native crashes that kill the process before FallbackState renders.
@@ -88,7 +101,7 @@ class CrashHandler
 			final logPath = #if android mobile.backend.StorageSystem.getDirectory() #else "./" #end + 'crash.log';
 			sys.io.File.saveContent(logPath, fullReport);
 		}
-		catch (_:Dynamic) {}
+		catch (e:Dynamic) { Logger.log('CrashHandler: Failed to write crash log: $e', ERROR); }
 		#end
 
 		FlxG.switchState(() -> new FallbackState(fullReport, () -> FlxG.switchState(() -> new MainMenuState())));

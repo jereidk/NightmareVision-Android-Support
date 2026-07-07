@@ -127,6 +127,7 @@ class SpectogramSprite extends FlxTypedSpriteGroup<FlxSprite>
 				
 				group.members[i].setGraphicSize(Std.int(Math.max(line.length, 1)), Std.int(1));
 				group.members[i].angle = line.degrees;
+				line.put();
 			}
 			
 			wavOptimiz = 1; // hard set wavOptimiz to 1 so its a pure thing
@@ -226,6 +227,7 @@ class SpectogramSprite extends FlxTypedSpriteGroup<FlxSprite>
 					}
 					
 					var line = FlxPoint.get(prevLine.x - group.members[i].x, prevLine.y - group.members[i].y);
+					line.put();
 					
 					// dont draw a line until i figure out a nicer way to view da spikes and shit idk lol!
 				}
@@ -290,6 +292,7 @@ class SpectogramSprite extends FlxTypedSpriteGroup<FlxSprite>
 					
 					group.members[Std.int(remappedSample)].setGraphicSize(Std.int(Math.max(line.length, 1)), Std.int(1));
 					group.members[Std.int(remappedSample)].angle = line.degrees;
+					line.put();
 				}
 			}
 		}

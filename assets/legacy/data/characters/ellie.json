@@ -79,7 +79,7 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/henry/Ellie_Assets",
+	"image": "characters/henry/Ellie_Assets-0,characters/henry/Ellie_Assets-1",
 	"position": [
 		-30,
 		30
@@ -95,6 +95,6 @@
 		-260,
 		110
 	],
-	"sing_duration": 4,
+	"sing_duration": 6,
 	"scale": 1
 }

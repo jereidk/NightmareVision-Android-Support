@@ -6,6 +6,7 @@ var furiousRage:FlxSprite;
 var emergency:FlxSprite;
 var starsBG:FlxBackDrop;
 var starsFG:FlxBackDrop;
+var whoend:FlxText;
 
 function onLoad()
 {
@@ -22,16 +23,24 @@ function onLoad()
 	starsFG.visible = false;
 	add(starsFG);
 	
+    whoend = new flixel.text.FlxText(0, 1120, -1, 'i love my boyfriend');
+	whoend.setFormat(Paths.font('vcr.ttf'), 50, 0xFFFFFFFF);
+	whoend.antialiasing = false;
+	insert(0, whoend);
+	whoend.text = Lang.str('who-end');
+	whoend.updateHitbox();
+	whoend.x = 1100 - (whoend.frameWidth / 2);
+	
 	whoAngered = new FlxSprite(-1000, 975);
 	whoAngered.loadGraphic(Paths.image(ext + "mad mad dude"));
 	whoAngered.visible = false;
 	add(whoAngered);
-	
+
 	bg = new FlxSprite(0, 100);
 	bg.loadGraphic(Paths.image(ext + "deadguy"));
 	add(bg);
 	pet.zIndex = 0;
-	
+
 	meeting = new FlxSprite(0, -100);
 	meeting.frames = Paths.getSparrowAtlas(ext + 'meeting');
 	meeting.animation.addByPrefix('buzz', 'meeting buzz', 16, false);
@@ -42,7 +51,7 @@ function onLoad()
 	meeting.visible = false;
 	// meeting.animation.play('buzz', true);
 	add(meeting);
-	
+
 	furiousRage = new FlxSprite(0, 0);
 	furiousRage.loadGraphic(Paths.image(ext + "KILLYOURSELF"));
 	furiousRage.setGraphicSize(Std.int(furiousRage.width * 0.9));
@@ -66,7 +75,7 @@ function onLoad()
 }
 
 function onCreatePost()
-{
+{	
 	game.isCameraOnForcedPos = true;
 	game.snapCamToPos(1100, 1150);
 }
@@ -102,6 +111,7 @@ function onEvent(eventName, value1, value2)
 								emergency.visible = true;
 							}
 						case 1:
+							whoend.visible = true;
 							furiousRage.visible = false;
 							emergency.visible = false;
 							bg.visible = false;

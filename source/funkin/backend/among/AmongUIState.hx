@@ -21,11 +21,20 @@ class AmongUIState extends MusicBeatState
 	public var lockMovement:Bool = false;
 	
 	public var returnState:Class<flixel.FlxState> = MainMenuState;
-	
+
+	// Shared leak fix for every AmongUIState screen (Freeplay, StoryMenu,
+	// CosmicubeSelect, Awards): without this, the dynamically-rendered
+	// bitmaps each subclass creates (labels, icons, etc.) outlive the state
+	// and accumulate on every visit, same as the fix already applied to
+	// TitleState/FreeplayState/PlayState/MainMenuState/OptionsState.
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
 	public override function create():Void
 	{
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		super.create();
-		
+
 		var ext:String = 'menu/common';
 		
 		camUpper = new FlxCamera();
@@ -45,6 +54,17 @@ class AmongUIState extends MusicBeatState
 		add(starsFG);
 		
 		upperBar = new FlxSprite(-2, -1.4, Paths.image('$ext/topBar'));
+		// Fixed-width bar (1283px) sized for the 1280 base canvas — shared by
+		// every AmongUIState screen (Freeplay, StoryMenu, CosmicubeSelect), so
+		// on a wide 'expand'-mode screen it left a bare gap on the right in
+		// all three at once. Gated on gameCutoutSize.x (zero outside 'expand'
+		// mode) rather than comparing FlxG.width to the asset's own size, so
+		// this can't accidentally fire in 'fit'/'stretch' mode.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			upperBar.setGraphicSize(Std.int(upperBar.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(upperBar.height));
+			upperBar.updateHitbox();
+		}
 		backButton = new FlxSprite(12, 8).loadGraphic(Paths.image('$ext/menuBack'));
 		backButton.kill();
 		
@@ -86,10 +106,16 @@ class AmongUIState extends MusicBeatState
 		beanIcon = FlxDestroyUtil.destroy(beanIcon);
 		
 		CosmicubeData.setMoney(localCurrency, localBeans);
-		
+
 		ClientPrefs.flush();
-		
+
 		super.destroy();
+
+		if (_bitmapSnapshotAtCreate != null)
+		{
+			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
+		}
 	}
 	
 	function set_localBeans(v:Int):Int

@@ -52,10 +52,6 @@ function goodNoteHit(note)
 
 function onCreatePost()
 {
-	if (hasBfSkin && game.boyfriend.curCharacter == 'bfpolus')
-	{
-		triggerEventNote('Change Character', 'boyfriend', 'bfpolusblow');
-	}
 	camSpecialThing([1600, 1300], [1800, 1300]);
 	var mainoverlay:FlxSprite = new FlxSprite(0, 0);
 	mainoverlay.loadGraphic(Paths.image(ext + "newoverlay"));

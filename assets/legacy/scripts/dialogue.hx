@@ -1,5 +1,7 @@
 import flixel.addons.text.FlxTypeText;
+
 import funkin.FunkinAssets;
+import funkin.backend.FunkinRatioScaleMode;
 
 using StringTools;
 
@@ -35,9 +37,9 @@ public var repeatedCutscenes:Bool = false;
  * other thingies
 **/
 public var videoCheckStory:Bool = true;
+
 public var skippableVideo:Bool = true;
 public var video:FunkinVideoSprite;
-
 public var skipText:FlxText; // skip video text
 var bgFade:FlxSprite;
 var box:RGBSprite;
@@ -82,7 +84,7 @@ function onVidEnd()
 {
 	hideCaption();
 	
-	video.kill();
+	video.destroy();
 	vidPlaying = false;
 	camGame.visible = true;
 	skipText.visible = false;
@@ -107,21 +109,20 @@ function onVidEnd()
 public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canSkip:Bool, ?onEnd:Void->Void, ?onFormat:Void->Void)
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
-
+	
 	songStartCallback = () -> return Function_Stop;
-
+	
 	skippableVideo = (canSkip ?? true); // fuck you hscript
 	dialogueAfter = (dAfter ?? true);
-
+	
 	if (!dialogueAfter) PlayState.seenCutscene = true;
-
+	
 	blackYnot = new FlxSprite().makeScaledGraphic(FlxG.width + 3, FlxG.height, FlxColor.BLACK);
 	blackYnot.camera = camOther;
 	add(blackYnot);
-
+	
 	video = new FunkinVideoSprite();
-
-	video.onEnd(onVidEnd);
+	
 	video.onFormat(() -> {
 		vidPlaying = true;
 		video.camera = camOther;
@@ -133,27 +134,21 @@ public function videoCutscene(?vid:String = 'sussus-moogus', ?dAfter:Bool, ?canS
 		// ^ for windowed fullscreen
 		textFade();
 	});
-
+	
 	add(video);
-
+	
 	if (onEnd != null) video.onEnd(onEnd);
 	if (onFormat != null) video.onFormat(onFormat);
-
+	video.onEnd(onVidEnd);
+	
 	if (video.load(Paths.video(Paths.sanitize(vid))))
 	{
 		video.delayAndStart();
 	}
 	else
 	{
-		// Video file missing or inaccessible — skip the cutscene entirely and let PlayState's
-		// own songStartCallback() call (which fires after all scripts load) trigger startCountdown.
-		// Do NOT call startCountdown() here: song scripts run videoCutscene() at top-level code
-		// time (before PlayState line 905), so calling startCountdown() twice would crash the
-		// countdown state machine.
-		if (blackYnot != null) { blackYnot.kill(); blackYnot = null; }
-		video.kill();
-		PlayState.seenCutscene = true;
-		songStartCallback = startCountdown;
+		if (onEnd != null) onEnd();
+		onVidEnd();
 	}
 }
 
@@ -187,7 +182,7 @@ function speakerAnims(char:String = 'bf')
 	}
 	else
 	{
-		var path:String = Paths.getPath('data/dialogue/' + char + '.json', null, true);
+		var path:String = Paths.getPath('data/dialogue/' + char + '.json', null, PathsTestMode.NORMAL);
 		dialogueChar = FunkinAssets.parseJson5(FunkinAssets.getContent(path));
 		charMap[char] = dialogueChar;
 		loadUp = true;
@@ -330,7 +325,7 @@ function v4SpeakerShit()
 public function readDialogue()
 {
 	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
-	var txt = Paths.getPath('songs/' + Paths.sanitize(songName) + '/dialogue.txt', null, true);
+	var txt = Paths.getPath('songs/' + Paths.sanitize(songName) + '/dialogue.txt', null, PathsTestMode.NORMAL);
 	dialogueList = CoolUtil.coolTextFile(txt);
 	if (dialogueList.length == 0) return;
 	
@@ -348,7 +343,10 @@ public function readDialogue()
 	var gLtR:FlxTextAlign = (rightLeft ? FlxTextAlign.RIGHT : FlxTextAlign.LEFT);
 	rtlMode = rightLeft;
 	
-	var textX:Float = rightLeft ? 300 : 350; // 325.85
+	// box/port1/bubble below all screenCenter(X) dynamically, but the actual
+	// dialogue text (textX) never did — same half-cutout shift as everywhere
+	// else this session so it stays aligned with the box on wide screens.
+	var textX:Float = (rightLeft ? 300 : 350) + FunkinRatioScaleMode.gameCutoutSize.x * 0.5; // 325.85
 	
 	// trace('Loading dialogue at ' + txt);
 	if (hasDialogueAudio)
@@ -376,7 +374,9 @@ public function readDialogue()
 	box.x = Math.round(box.x);
 	box.rgbGraphics.setColors([0xFFFF1515, 0xFF666666, 0xFF7D0058]);
 	
-	var port0:FunkinSprite = new FunkinSprite(196.85, 251);
+	// Side portraits, unlike port1/box/bubble, are never screenCenter()'d —
+	// same half-cutout shift to keep them aligned with the box.
+	var port0:FunkinSprite = new FunkinSprite(196.85 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 251);
 	port0.updateHitbox();
 	port0.visible = false;
 	port0.alpha = 0;
@@ -389,7 +389,7 @@ public function readDialogue()
 	port1.alpha = 0;
 	
 	// portrait right
-	var port2:FunkinSprite = new FunkinSprite(864.75 + 50, 216);
+	var port2:FunkinSprite = new FunkinSprite(864.75 + 50 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 216);
 	port2.updateHitbox();
 	port2.visible = false;
 	port2.alpha = 0;
@@ -410,7 +410,10 @@ public function readDialogue()
 	}
 	
 	icon = new HealthIcon('red', false);
-	icon.setPosition(rightLeft ? 920 : 220, (bubble.getMidpoint().y - 75));
+	// Speaker face icon — same half-cutout shift as port0/port2/textX above,
+	// it never had one so it drifted away from the box (which does shift,
+	// via box.screenCenter()) on wide 'expand'-mode screens.
+	icon.setPosition((rightLeft ? 920 : 220) + FunkinRatioScaleMode.gameCutoutSize.x * 0.5, (bubble.getMidpoint().y - 75));
 	icon.setGraphicSize(Std.int(icon.width * 0.7));
 	icon.updateHitbox();
 	boxGroup.add(icon);
@@ -535,11 +538,17 @@ function dialogueUpdate(elapsed:Float)
 		if (dialogueEnded)
 		{
 			if (dialogueList.length > 0) refreshDialogue(true);
-			else goodBialogue();
+			else
+			{
+				goodBialogue();
+			}
 		}
-		else swagDialogue.skip();
+		else
+		{
+			swagDialogue.skip();
+		}
 	}
-	#if mobile
+	// Touch handling for mobile
 	for (touch in FlxG.touches.list)
 	{
 		if (touch.justReleased)
@@ -553,7 +562,6 @@ function dialogueUpdate(elapsed:Float)
 			break;
 		}
 	}
-	#end
 }
 
 function goodBialogue()
