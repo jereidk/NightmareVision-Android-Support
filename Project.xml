@@ -28,7 +28,12 @@
     <set name="BUILD_DIR" value="${BUILD_DIR}-tracy" if="FEATURE_DEBUG_TRACY"/>
 
     <assets path='assets/embeds' rename='assets' embed="false" />
-    <assets path="assets/legacy" rename="assets" embed="false" />
+    <!-- Test: embedding core assets (Psych Engine mobile does this — only its
+         mods folder is embed=false) instead of extracting ~2000+ loose files
+         that every Paths.sound()/image() call has to hit FileSystem.exists()
+         against, cascading through Mods.enabled on every miss. FunkinAssets'
+         accessors already have an Assets.* fallback for the embedded case. -->
+    <assets path="assets/legacy" rename="assets" embed="true" />
 
     <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
     <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
