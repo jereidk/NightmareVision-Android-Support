@@ -108,7 +108,9 @@ class FreeplayCard extends FlxSpriteGroup
 		name.text = songName;
 		
 		icon.changeIcon(song.icon);
-		icon.setGraphicSize(Std.int(icon.frameWidth * 0.6));
+		// Was 0.6 — with rows CARD_DISTANCE (117px) apart, that rendered each
+		// icon tall/close enough to visibly overlap the row above/below it.
+		icon.setGraphicSize(Std.int(icon.frameWidth * 0.45));
 		
 		if (locked)
 		{
@@ -171,7 +173,9 @@ class FreeplayCard extends FlxSpriteGroup
 		credit.text = song.credit;
 		
 		credit.visible = !locked;
-		icon.setPosition(card.x - 13, card.y - 23);
+		// Y offset reduced to match the smaller icon (was -23, tuned for the
+		// old larger size and creeping up into the previous row).
+		icon.setPosition(card.x - 10, card.y - 12);
 	}
 	
 	public function unlockCard()
