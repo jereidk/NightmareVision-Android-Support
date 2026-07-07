@@ -67,6 +67,7 @@
     <!-- MACROS -->
 
     <haxeflag name="--macro" value="addMetadata('@:build(funkin.backend.macro.FlxMacro.buildFlxSprite())', 'flixel.FlxSprite')" />
+    <haxeflag name="--macro" value="addMetadata('@:build(funkin.backend.macro.FlxMacro.buildFlxBasic())', 'flixel.FlxBasic')" />
     <haxeflag name="--macro" value="addMetadata('@:build(funkin.backend.macro.FlxMacro.buildFlxCamera())', 'flixel.FlxCamera')" />
     <haxeflag name="--macro" value="addMetadata('@:build(funkin.backend.macro.FlxMacro.buildFlxGraphic())', 'flixel.graphics.FlxGraphic')" />
     <haxeflag name="--macro" value="addMetadata('@:build(funkin.backend.macro.FlxMacro.buildFlxDrawBaseItem())', 'flixel.graphics.tile.FlxDrawBaseItem')" />
@@ -114,11 +115,6 @@
 
     <!--Disable the Flixel core debugger. Automatically gets set whenever you compile in release mode!-->
     <haxedef name="FLX_NO_DEBUG" unless="debug"/>
-
-    <!--Pool Mouse/TouchEvent objects instead of allocating a new one per event.
-        Matters most on Android, where the virtual pad generates a steady stream
-        of TOUCH_MOVE events during gameplay.-->
-    <haxedef name="openfl_pool_events"/>
 
     <!--For haxe 4.3.0 and newer cleaner error reporting-->
     <haxedef name="message.reporting" value="pretty"/>
