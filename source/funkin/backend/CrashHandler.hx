@@ -27,6 +27,12 @@ class CrashHandler
 	
 	static function onUncaughtError(event:UncaughtErrorEvent)
 	{
+		// SystemMonitor buffers sysmon.log lines in memory and only flushes
+		// periodically — force it out now so the last buffered lines (often
+		// the most useful ones for diagnosing what led to this crash) aren't
+		// lost if the process dies right after this handler runs.
+		#if android SystemMonitor.flush(); #end
+
 		FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
 
 		var curFlxState:String = 'N/A';

@@ -2058,8 +2058,10 @@ class PlayState extends MusicBeatState
 	override public function draw():Void
 	{
 		#if android SystemMonitor.profBegin('draw'); #end
+		#if android final _gcBeforeDraw = SystemMonitor.gcUsageSnapshot(); #end
 		super.draw();
 		#if android SystemMonitor.profEnd(); #end
+		#if android SystemMonitor.drawGcCollision(_gcBeforeDraw); #end
 	}
 
 	override public function update(elapsed:Float):Void

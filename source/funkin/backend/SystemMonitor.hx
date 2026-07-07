@@ -76,6 +76,24 @@ class SystemMonitor
 	static var _suppressUntil:Float = 0.0;
 	static inline final WRITE_SUPPRESS_S:Float = 0.15;
 
+	// _write() used to open+append+flush+close the file on every single call —
+	// every [SPIKE]/[GAMEPLAY]/[LARGE-GC] line paid a fresh file-open syscall on
+	// Android flash storage, which is exactly why WRITE_SUPPRESS_S above had to
+	// exist in the first place. Now _write() only appends to an in-memory
+	// buffer (no I/O); the buffer is flushed to one file handle kept open for
+	// the whole session, either every FLUSH_LINE_THRESHOLD lines or every
+	// FLUSH_INTERVAL_S seconds, whichever comes first. Actual disk I/O — and
+	// the spike-suppression window — now only happens on that periodic flush,
+	// not on every logged event.
+	static var _writeBuffer:StringBuf = new StringBuf();
+	static var _bufferedLines:Int = 0;
+	static var _lastFlushTime:Float = 0.0;
+	static inline final FLUSH_LINE_THRESHOLD:Int = 20;
+	static inline final FLUSH_INTERVAL_S:Float = 1.0;
+	#if (android && sys)
+	static var _fileOut:sys.io.FileOutput = null;
+	#end
+
 	// Script timing: annotate the next spike with which script event caused it
 	static var _lastScriptNote:String = '';
 	static inline final SCRIPT_NOTE_MS:Float = 5.0;   // >5ms → annotate next spike
@@ -513,13 +531,14 @@ class SystemMonitor
 		var breakdown = _profBreakdown();
 		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
 		var gcHoldSuffix = _gcCollisionsHoldRelease > 0 ? '  [GC hit holdRelease x$_gcCollisionsHoldRelease, ~${Std.int(_gcBytesFreedHoldRelease / 1024)}KB]' : '';
+		var gcDrawSuffix = _gcCollisionsDraw > 0 ? '  [GC hit draw x$_gcCollisionsDraw, ~${Std.int(_gcBytesFreedDraw / 1024)}KB]' : '';
 		#if cpp
 		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
 		#else
 		var gcAnySuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcHoldSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
 		profReset();
 	}
 
@@ -598,6 +617,8 @@ class SystemMonitor
 		_gcBytesFreed = 0;
 		_gcCollisionsHoldRelease = 0;
 		_gcBytesFreedHoldRelease = 0;
+		_gcCollisionsDraw = 0;
+		_gcBytesFreedDraw = 0;
 		_frameGcCollisions = 0;
 		_frameGcBytesFreed = 0;
 	}
@@ -624,6 +645,15 @@ class SystemMonitor
 	// noteHitDispatch's.
 	static var _gcCollisionsHoldRelease:Int = 0;
 	static var _gcBytesFreedHoldRelease:Int = 0;
+
+	// Same idea, applied to the whole draw() call. checkFrame()'s [SPIKE]/[LARGE-GC]
+	// detectors only know a collection happened SOMETIME during the frame, not
+	// whether it landed inside draw() specifically — this confirms it directly,
+	// bracketing the exact same super.draw() call the "draw" prof tag already
+	// times, so a draw=100ms+ line can be read as "was a GC collision" vs.
+	// "was actually 100ms of rendering work" instead of guessing from correlation.
+	static var _gcCollisionsDraw:Int = 0;
+	static var _gcBytesFreedDraw:Int = 0;
 
 	/** Snapshot heap usage right before a span you want to check for a GC collision. */
 	public static inline function gcUsageSnapshot():Float
@@ -654,6 +684,19 @@ class SystemMonitor
 		{
 			_gcCollisionsHoldRelease++;
 			_gcBytesFreedHoldRelease += Std.int(freed);
+		}
+	}
+
+	/** Same as noteGcCollision(), but tracked separately for the draw() span. */
+	public static function drawGcCollision(before:Float):Void
+	{
+		if (!enabled) return;
+		final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		final freed = before - after;
+		if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+		{
+			_gcCollisionsDraw++;
+			_gcBytesFreedDraw += Std.int(freed);
 		}
 	}
 
@@ -761,17 +804,43 @@ class SystemMonitor
 	{
 		#if (android && sys)
 		if (logPath.length == 0) return;
-		try {
-			var out = File.append(logPath, false);
-			out.writeString(timestamp() + ' ' + line + '\n');
-			out.flush();
-			out.close();
-			// Suppress spike detection after file I/O so write latency
-			// doesn't appear as a fake frame spike in the log.
-			_suppressUntil = haxe.Timer.stamp() + WRITE_SUPPRESS_S;
-		} catch (e:Dynamic) { Logger.log('SystemMonitor: _write failed: $e', WARN); }
+		_writeBuffer.add(timestamp() + ' ' + line + '\n');
+		_bufferedLines++;
+		var now = haxe.Timer.stamp();
+		if (_bufferedLines >= FLUSH_LINE_THRESHOLD || now - _lastFlushTime >= FLUSH_INTERVAL_S)
+			_flushBuffer();
 		#end
 	}
+
+	/**
+	 * Writes the buffered lines to disk and flushes. Cheap no-op if the
+	 * buffer is empty. Called periodically by _write(), and forced from
+	 * CrashHandler right before an uncaught error is reported so the last
+	 * buffered lines (often the most useful ones) aren't lost.
+	 */
+	public static function flush():Void
+	{
+		#if (android && sys)
+		if (_writeBuffer.length == 0) return;
+		try {
+			if (_fileOut == null) _fileOut = File.append(logPath, false);
+			_fileOut.writeString(_writeBuffer.toString());
+			_fileOut.flush();
+			_writeBuffer = new StringBuf();
+			_bufferedLines = 0;
+			_lastFlushTime = haxe.Timer.stamp();
+			// Suppress spike detection after real file I/O so write latency
+			// doesn't appear as a fake frame spike in the log.
+			_suppressUntil = haxe.Timer.stamp() + WRITE_SUPPRESS_S;
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: flush failed: $e', WARN);
+			_fileOut = null; // force a reopen attempt next time
+		}
+		#end
+	}
+
+	static inline function _flushBuffer():Void
+		flush();
 
 	static function formatBytes(bytes:Int):String
 	{
