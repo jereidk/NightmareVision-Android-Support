@@ -637,7 +637,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			{
 				final camIdx = FlxG.cameras.list.indexOf(gridCamera);
 				funkin.backend.Logger.log('[CosmeticsGridSprDebug] bgSpr.visible=${bgSpr.visible} bgSpr.alpha=${bgSpr.alpha} bgSpr.exists=${bgSpr.exists} bgSpr.color=${bgSpr.color} bgSpr.cameras.length=${bgSpr.cameras.length} bgSpr.animation.name=${bgSpr.animation.name} bgSpr.numFrames=${bgSpr.frames != null ? bgSpr.frames.numFrames : -1}');
-				funkin.backend.Logger.log('[CosmeticsGridCamDebug2] gridCamera.visible=${gridCamera.visible} gridCamera.alpha=${gridCamera.alpha} gridCamera.exists=${gridCamera.exists} camIndexInList=$camIdx camerasListLength=${FlxG.cameras.list.length} substate.alpha=$alpha substate.visible=$visible substate.cameras.length=${cameras != null ? cameras.length : -1}');
+				funkin.backend.Logger.log('[CosmeticsGridCamDebug2] gridCamera.visible=${gridCamera.visible} gridCamera.alpha=${gridCamera.alpha} gridCamera.exists=${gridCamera.exists} camIndexInList=$camIdx camerasListLength=${FlxG.cameras.list.length} substate.visible=$visible substate.cameras.length=${cameras != null ? cameras.length : -1}');
 			}
 
 			var whiteSpr = new FlxSprite();
