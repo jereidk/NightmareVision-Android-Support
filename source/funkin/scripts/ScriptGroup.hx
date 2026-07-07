@@ -49,7 +49,16 @@ class ScriptGroup implements IFlxDestroyable
 	 * array of all `FunkinScript` instances
 	 */
 	public var members:Array<FunkinScript> = [];
-	
+
+	// Memoizes "does any current member implement this event" so repeated,
+	// per-frame calls (e.g. onMoveCamera, called every frame regardless of
+	// whether any mod actually hooks it) can skip the full members loop —
+	// and the per-script FunkinScript.exists() lookup inside it — once the
+	// answer is known. exists() reads a script's own interp.variables map,
+	// which is fixed once the script is parsed, so the answer only changes
+	// when the member list itself changes (see addScript()/clear() below).
+	final _hasHookCache:Map<String, Bool> = new Map();
+
 	public function new(?parent:Dynamic)
 	{
 		@:privateAccess
@@ -68,12 +77,13 @@ class ScriptGroup implements IFlxDestroyable
 	public function addScript(script:Null<FunkinScript>, allowDupeNames:Bool = false):Bool
 	{
 		if (script == null || (!allowDupeNames && exists(script.name))) return false;
-		
+
 		@:privateAccess
 		final interp:InterpEx = cast script.interp;
 		if (interp.parent != parent) interp.parent = parent;
 		interp.sharedFields = scriptShareables;
 		members.push(script);
+		_hasHookCache.clear(); // the new script may implement events previously cached as unheard
 		return true;
 	}
 	
@@ -92,13 +102,27 @@ class ScriptGroup implements IFlxDestroyable
 	{
 		// Fast path: skip all allocations when no scripts are loaded (common during vanilla gameplay).
 		if (members.length == 0) return ScriptConstants.CONTINUE_FUNC;
+
+		// Fast path: nothing currently loaded implements this event at all — skip the
+		// members loop (and every per-script exists() lookup in it) entirely. Matters
+		// most for hooks fired unconditionally every frame (e.g. onMoveCamera) when no
+		// mod actually listens to them.
+		if (_hasHookCache.get(event) == false) return ScriptConstants.CONTINUE_FUNC;
+
 		exclusions ??= _emptyExclusions;
-		
+
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
-		
+		var anyListener = false;
+
 		for (i in members)
 		{
 			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
+
+			// Set as soon as we know the answer, not after the loop — a halting
+			// return below exits early, and the cache should still capture
+			// "yes, something listens" even on that path.
+			anyListener = true;
+			_hasHookCache.set(event, true);
 
 			final _t = timingEnabled ? haxe.Timer.stamp() : 0.0;
 
@@ -118,7 +142,9 @@ class ScriptGroup implements IFlxDestroyable
 				if (ret != ScriptConstants.CONTINUE_FUNC) returnVal = ret;
 			}
 		}
-		
+
+		_hasHookCache.set(event, anyListener);
+
 		return returnVal;
 	}
 	
@@ -160,6 +186,7 @@ class ScriptGroup implements IFlxDestroyable
 		if (callOnDestroy) call('onDestroy', null, true);
 		var toDestroy = members.copy();
 		members = [];
+		_hasHookCache.clear();
 		for (script in toDestroy)
 			script.destroy();
 	}
