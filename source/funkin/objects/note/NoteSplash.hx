@@ -30,7 +30,11 @@ class NoteSplash extends RGBSprite implements funkin.game.modchart.IModNote
 	public function new(x:Float = 0, y:Float = 0, noteData:Int = 0, player:Int = 0)
 	{
 		super(x, y);
-		
+
+		// Position is fully driven by modManager.updateObject() every frame — same reasoning
+		// as Note.hx's moves=false.
+		moves = false;
+
 		this._note = null;
 		this._strum = null;
 		

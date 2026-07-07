@@ -84,7 +84,11 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		this.parent = parent;
 		this.player = player;
 		super(x, y);
-		
+
+		// Receptor position is fully driven by modManager.getPos()/updateObject() every frame —
+		// same reasoning as Note.hx's moves=false: nothing here ever sets velocity/acceleration/drag.
+		moves = false;
+
 		skin = NoteUtil.getSkinFromID(parent?.player ?? 0);
 		
 		texture = skin.noteTexture; // Load texture and anims

@@ -289,7 +289,15 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public function new(strumTime:Float = 0, noteData:Int = 0, ?prevNote:Note, sustainNote:Bool = false, inEditor:Bool = false, player:Int = 0)
 	{
 		super();
-		
+
+		// Position is always driven manually (modManager.getPos()/updateObject() overwrites
+		// x/y every frame) — nothing ever sets velocity/acceleration/drag on a Note. Without
+		// this, FlxObject.update() still runs updateMotion()'s velocity/drag integration on
+		// every single note, every frame, for no effect. Psych Mobile's Note.hx sets this too
+		// (this.moves = false in its constructor) — confirmed here it's the same story:
+		// nothing in this codebase ever touches note.velocity/.acceleration/.drag.
+		this.moves = false;
+
 		this.player = player;
 		this.prevNote = prevNote;
 		this.isSustainNote = sustainNote;
