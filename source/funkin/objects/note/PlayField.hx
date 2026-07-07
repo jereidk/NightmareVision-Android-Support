@@ -396,7 +396,12 @@ class PlayField extends FlxTypedContainer<StrumNote>
 
 			final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
 
+			// set_health() runs the HUD health-bar update synchronously on every
+			// hit — untagged until now, so any cost here was landing inside the
+			// unexplained noteHitDispatch gap instead of its own line.
+			#if android SystemMonitor.profBegin('hitHealth'); #end
 			PlayState.instance.health += note.hitHealth * PlayState.instance.healthGain * susMult;
+			#if android SystemMonitor.profEnd(); #end
 			PlayState.instance.missCombo = 0;
 		}
 
