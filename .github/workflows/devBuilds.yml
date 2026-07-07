@@ -224,7 +224,7 @@ jobs:
             echo "Found: $NAS_FILE"
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
-          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
@@ -477,7 +477,7 @@ jobs:
             echo "Found: $NAS_FILE"
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
-          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
@@ -739,7 +739,7 @@ jobs:
             echo "Found: $NAS_FILE"
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
-          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
