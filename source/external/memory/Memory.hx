@@ -17,5 +17,20 @@ extern class Memory
 	 */
 	@:native("getCurrentRSS")
 	public static function getCurrentUsage():cpp.UInt64;
+
+	/**
+	 * Returns the system-wide total physical RAM in bytes, or zero if the
+	 * value cannot be determined on this OS (Linux/Android only for now).
+	 */
+	@:native("getSystemTotalMemory")
+	public static function getSystemTotalMemory():cpp.UInt64;
+
+	/**
+	 * Returns the system-wide currently available RAM in bytes (via
+	 * /proc/meminfo's MemAvailable — the same figure Android's low-memory
+	 * killer watches), or zero if it cannot be determined on this OS.
+	 */
+	@:native("getSystemAvailableMemory")
+	public static function getSystemAvailableMemory():cpp.UInt64;
 }
 #end

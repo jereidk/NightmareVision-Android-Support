@@ -411,9 +411,9 @@ class SystemMonitor
 				cause = '  [cause unknown]';
 				#end
 			}
-			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$cause');
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$cause${_systemMemContext()}');
 			#else
-			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)');
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)${_systemMemContext()}');
 			#end
 			_lastScriptNote = '';
 		}
@@ -437,9 +437,9 @@ class SystemMonitor
 				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
 			}
 			else cause = '  [no texture/member change — plain heap garbage]';
-			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed  state=$state$cause');
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed  state=$state$cause${_systemMemContext()}');
 			#else
-			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed');
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_systemMemContext()}');
 			#end
 		}
 		#end
@@ -892,10 +892,37 @@ class SystemMonitor
 	{
 		#if (android && cpp)
 		try {
-			return 'N/A'; // Android doesn't expose total RAM easily
+			var bytes = Native.getSystemTotalMemory();
+			var memMB = Std.int(bytes.toInt() / 1024 / 1024);
+			if (memMB > 0) return memMB + ' MB';
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
 		#end
 		return '?';
+	}
+
+	// Android's low-memory killer watches this same figure (/proc/meminfo's
+	// MemAvailable). If it's low right when a [SPIKE] or [LARGE-GC] fires,
+	// the OS squeezing overall system memory is a much stronger, more
+	// actionable lead than anything we can infer from our own texture-cache
+	// diffing — this had zero visibility before, since lime's SDL backend
+	// receives Android's onTrimMemory callback but silently discards it
+	// (SDLApplication.cpp's SDL_EVENT_LOW_MEMORY case is a no-op).
+	static function _systemMemContext():String
+	{
+		#if (android && cpp)
+		try {
+			var availBytes = Native.getSystemAvailableMemory();
+			var totalBytes = Native.getSystemTotalMemory();
+			var availMB = Std.int(availBytes.toInt() / 1024 / 1024);
+			var totalMB = Std.int(totalBytes.toInt() / 1024 / 1024);
+			if (availMB > 0 && totalMB > 0)
+			{
+				var pct = Std.int(availMB / totalMB * 100);
+				return '  sysFree=${availMB}MB/${totalMB}MB(${pct}%)';
+			}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get system memory context: $e', WARN); }
+		#end
+		return '';
 	}
 
 	static function getFreeRAM():String

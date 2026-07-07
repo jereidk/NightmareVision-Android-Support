@@ -77,4 +77,59 @@ size_t getCurrentRSS( )
 #endif
 }
 
+/**
+ * Returns the system-wide total physical RAM in bytes, or zero if the
+ * value cannot be determined on this OS. Linux/Android only for now —
+ * that's the only platform this is currently needed on.
+ */
+size_t getSystemTotalMemory( )
+{
+#if defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+    FILE* fp = NULL;
+    if ( (fp = fopen( "/proc/meminfo", "r" )) == NULL )
+        return (size_t)0L;
+    char line[256];
+    long totalKB = -1;
+    while ( fgets( line, sizeof(line), fp ) != NULL )
+    {
+        if ( sscanf( line, "MemTotal: %ld kB", &totalKB ) == 1 )
+            break;
+    }
+    fclose( fp );
+    if ( totalKB < 0 ) return (size_t)0L;
+    return (size_t)totalKB * (size_t)1024;
+
+#else
+    return (size_t)0L;
+#endif
+}
+
+/**
+ * Returns the system-wide currently available (estimated free-to-use,
+ * including reclaimable cache) physical RAM in bytes, via /proc/meminfo's
+ * MemAvailable — the same figure Android's own low-memory killer watches.
+ * Zero if it cannot be determined on this OS.
+ */
+size_t getSystemAvailableMemory( )
+{
+#if defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+    FILE* fp = NULL;
+    if ( (fp = fopen( "/proc/meminfo", "r" )) == NULL )
+        return (size_t)0L;
+    char line[256];
+    long availableKB = -1;
+    while ( fgets( line, sizeof(line), fp ) != NULL )
+    {
+        if ( sscanf( line, "MemAvailable: %ld kB", &availableKB ) == 1 )
+            break;
+    }
+    fclose( fp );
+    if ( availableKB < 0 ) return (size_t)0L;
+    return (size_t)availableKB * (size_t)1024;
+
+#else
+    return (size_t)0L;
+#endif
+}
+
 #endif // MEMORY_H
