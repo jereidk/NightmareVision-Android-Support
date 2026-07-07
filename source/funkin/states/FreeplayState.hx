@@ -696,8 +696,15 @@ class FreeplayState extends AmongUIState
 			final targetAlpha:Float = FlxMath.lerp(1.0, CIRCLE_FADE, normalizedDist);
 			c.alpha = MathUtil.fpsLerp(c.alpha, targetAlpha, 0.12);
 
-			// Add subtle scale effect for focused circles
-			final targetScale:Float = FlxMath.lerp(1.1, 0.95, normalizedDist);
+			// Add subtle scale effect for focused circles — 1.1/0.95 are a
+			// multiplier on the row's actual icon size (set via setGraphicSize
+			// to CIRCLE_HEIGHT, e.g. 24px), not an absolute scale. Using them
+			// directly as scale.x/y ignored that base entirely and grew every
+			// icon toward ~native size (142px) every frame, which is why the
+			// row rendered huge/overlapping instead of the small tight strip
+			// CIRCLE_HEIGHT/CIRCLE_PADDING were tuned for.
+			final baseScale:Float = CIRCLE_HEIGHT / c.frameHeight;
+			final targetScale:Float = baseScale * FlxMath.lerp(1.1, 0.95, normalizedDist);
 			c.scale.x = MathUtil.fpsLerp(c.scale.x, targetScale, 0.12);
 			c.scale.y = c.scale.x;
 
