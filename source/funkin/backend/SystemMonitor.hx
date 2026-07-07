@@ -42,6 +42,13 @@ class SystemMonitor
 	 */
 	static var logPath:String = '';
 
+	// Monotonic session clock (haxe.Timer.stamp() at init()) used to append a
+	// "t+SSSSSms" field to every timestamp — wall-clock HH:MM:SS alone can't
+	// distinguish ordering between two lines that land in the same second,
+	// which happened more than once in real device logs (a [SPIKE] and a
+	// [LARGE-GC] both landing at the same wall-clock second).
+	static var _startStamp:Float = 0.0;
+
 	/**
 	 * Previous FPS values for averaging
 	 */
@@ -93,6 +100,8 @@ class SystemMonitor
 	#if (android && sys)
 	static var _fileOut:sys.io.FileOutput = null;
 	#end
+	static var _totalBytesWritten:Int = 0;
+	static inline final RUNTIME_LOG_CAP_BYTES:Int = 5 * 1024 * 1024; // 5MB
 
 	// Script timing: annotate the next spike with which script event caused it
 	static var _lastScriptNote:String = '';
@@ -118,6 +127,16 @@ class SystemMonitor
 	// GC spike detection
 	#if cpp
 	static var _lastGcUsage:Float = 0.0;
+
+	// [LARGE-GC] tells you how much a collection freed, but not how long it
+	// took to accumulate — 42MB freed after 30s of light gameplay reads very
+	// differently from 42MB freed after 3s of dense notes. This tracks heap
+	// growth on every frame that ISN'T itself a collection, so it holds
+	// "bytes allocated since the last collection" at all times; read (and
+	// reset) whenever any collection actually fires, alongside how long that
+	// took, to turn a one-off byte count into an allocation rate.
+	static var _heapGrowthSinceLastGc:Float = 0.0;
+	static var _lastGcGrowthResetTime:Float = 0.0;
 	#end
 
 	// Every-frame GC accumulation across a whole [GAMEPLAY] reporting window
@@ -152,7 +171,7 @@ class SystemMonitor
 		try {
 			var dir:String = mobile.backend.StorageSystem.getDirectory();
 			logPath = dir + 'sysmon.log';
-			
+
 			// Clear or start fresh
 			try {
 				if (FileSystem.exists(logPath)) {
@@ -162,7 +181,17 @@ class SystemMonitor
 					}
 				}
 			} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to check log file: $e', WARN); }
-			
+
+			_startStamp = haxe.Timer.stamp();
+			#if cpp
+			// Seed with the real current usage instead of the 0.0 default —
+			// otherwise the very first checkFrame() sees a fake multi-MB "growth"
+			// (0 → actual heap usage) that would otherwise pollute the very first
+			// _heapGrowthSinceLastGc reading.
+			_lastGcUsage = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			_lastGcGrowthResetTime = _startStamp;
+			#end
+
 			_write('============================================================');
 			_write('SYSTEM MONITOR START  ' + Date.now().toString());
 			_write('============================================================');
@@ -185,7 +214,8 @@ class SystemMonitor
 	static function timestamp():String
 	{
 		var d = Date.now();
-		return '[' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + ']';
+		var tMs = Std.int((haxe.Timer.stamp() - _startStamp) * 1000);
+		return '[' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + ' t+${tMs}ms]';
 	}
 
 	static inline function pad(n:Int):String
@@ -216,8 +246,8 @@ class SystemMonitor
 		// Memory Stats
 		lines.push('');
 		lines.push('[MEMORY]');
-		lines.push('  Total RAM: ' + getTotalRAM() + ' MB');
-		lines.push('  Free RAM: ' + getFreeRAM() + ' MB');
+		lines.push('  Total RAM: ' + getTotalRAM());
+		lines.push('  Free RAM: ' + getFreeRAM());
 
 		#if (openfl_v22_up)
 		try {
@@ -258,7 +288,7 @@ class SystemMonitor
 		}
 		
 		// Also log current memory state
-		_write('  RAM Free: ' + getFreeRAM() + ' MB');
+		_write('  RAM Free: ' + getFreeRAM());
 		#if flixel
 		_write('  GPU Textures: ' + getBitmapCacheCount());
 		#end
@@ -358,10 +388,20 @@ class SystemMonitor
 		var gcNow = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
 		var gcFreed = _lastGcUsage - gcNow;
 		_lastGcUsage = gcNow;
+		// Snapshot before any reset below, so a collision this exact frame can
+		// still report what accumulated leading up to it.
+		var growthBeforeThisGc = _heapGrowthSinceLastGc;
+		var growthSecBeforeThisGc = now - _lastGcGrowthResetTime;
 		if (gcFreed > FRAME_GC_THRESHOLD_BYTES)
 		{
 			_frameGcCollisions++;
 			_frameGcBytesFreed += Std.int(gcFreed);
+			_heapGrowthSinceLastGc = 0;
+			_lastGcGrowthResetTime = now;
+		}
+		else if (gcFreed < 0)
+		{
+			_heapGrowthSinceLastGc += -gcFreed;
 		}
 		#end
 
@@ -398,7 +438,7 @@ class SystemMonitor
 			// 100KB, not 1MB: matches noteGcCollision()'s threshold below — smaller
 			// partial collections (e.g. NativeAlloc-triggered ones) still fully
 			// explain a frame hitch and shouldn't fall through to "cause unknown".
-			else if (gcFreed > 100 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB]';
+			else if (gcFreed > 100 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}]';
 			#end
 			else if (_lastScriptNote.length > 0) cause = '  [script: $_lastScriptNote]';
 			else if (memberDelta > 5) cause = '  [+$memberDelta objects added to state]';
@@ -437,9 +477,9 @@ class SystemMonitor
 				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
 			}
 			else cause = '  [no texture/member change — plain heap garbage]';
-			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed  state=$state$cause${_systemMemContext()}');
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}  state=$state$cause${_systemMemContext()}');
 			#else
-			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_systemMemContext()}');
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}${_systemMemContext()}');
 			#end
 		}
 		#end
@@ -823,12 +863,14 @@ class SystemMonitor
 		#if (android && sys)
 		if (_writeBuffer.length == 0) return;
 		try {
+			var chunk = _writeBuffer.toString();
 			if (_fileOut == null) _fileOut = File.append(logPath, false);
-			_fileOut.writeString(_writeBuffer.toString());
+			_fileOut.writeString(chunk);
 			_fileOut.flush();
 			_writeBuffer = new StringBuf();
 			_bufferedLines = 0;
 			_lastFlushTime = haxe.Timer.stamp();
+			_totalBytesWritten += chunk.length;
 			// Suppress spike detection after real file I/O so write latency
 			// doesn't appear as a fake frame spike in the log.
 			_suppressUntil = haxe.Timer.stamp() + WRITE_SUPPRESS_S;
@@ -836,11 +878,36 @@ class SystemMonitor
 			Logger.log('SystemMonitor: flush failed: $e', WARN);
 			_fileOut = null; // force a reopen attempt next time
 		}
+		// init() only trims the log at startup, so a single very long session
+		// could otherwise grow it unbounded — rotate mid-session too, same as
+		// the startup check, once we've personally written past the cap.
+		if (_totalBytesWritten > RUNTIME_LOG_CAP_BYTES) _rotateLog();
 		#end
 	}
 
 	static inline function _flushBuffer():Void
 		flush();
+
+	#if (android && sys)
+	static function _rotateLog():Void
+	{
+		try {
+			if (_fileOut != null) { _fileOut.close(); _fileOut = null; }
+			if (FileSystem.exists(logPath)) FileSystem.deleteFile(logPath);
+			_totalBytesWritten = 0;
+			_fileOut = File.append(logPath, false);
+			var marker = timestamp() + ' ============================================================\n'
+				+ timestamp() + ' [LOG ROTATED — hit the ' + Std.int(RUNTIME_LOG_CAP_BYTES / 1024 / 1024) + 'MB runtime cap, earlier lines this session were discarded]\n'
+				+ timestamp() + ' ============================================================\n';
+			_fileOut.writeString(marker);
+			_fileOut.flush();
+			_totalBytesWritten += marker.length;
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: log rotation failed: $e', WARN);
+			_fileOut = null;
+		}
+	}
+	#end
 
 	static function formatBytes(bytes:Int):String
 	{
@@ -899,6 +966,18 @@ class SystemMonitor
 		#end
 		return '?';
 	}
+
+	// Formats the "how long did this take to accumulate" context for a GC
+	// collision — turns a one-off byte count into an allocation rate, so
+	// "42MB freed" reads as either "over 30s of light gameplay" (unremarkable)
+	// or "over 3s of dense notes" (something is allocating heavily per note).
+	#if cpp
+	static inline function _growthSuffix(growthBytes:Float, growthSec:Float):String
+	{
+		if (growthBytes <= 0 || growthSec <= 0) return '';
+		return ', grew ${Std.int(growthBytes / 1024)}KB over ${Std.int(growthSec * 10) / 10}s';
+	}
+	#end
 
 	// Android's low-memory killer watches this same figure (/proc/meminfo's
 	// MemAvailable). If it's low right when a [SPIKE] or [LARGE-GC] fires,
