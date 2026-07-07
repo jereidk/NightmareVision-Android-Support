@@ -30,12 +30,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	var otherTitleText:FlxText;
 	
 	var bubl:FlxSpriteGroup;
-	// Was declared but never actually used in the grid math below (both axes
-	// were hardcoded to a `* 78` stride against a 71px-tall icon — only a 7px
-	// gap). Wired in properly with a smaller icon so the grid still fits
-	// within cubeCamera's fixed 620px width at 8 columns.
-	var CIRCLE_SIZE:Float = 55;
-	var CIRCLE_PADDING:Float = 16;
+	var CIRCLE_PADDING:Float = 12;
 	var CIRC_WRAP = 7;
 	var curSelection:Int = 0;
 	var WEEKS_WRAP = 0;
@@ -93,8 +88,6 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		bubl = new FlxSpriteGroup();
 		bubl.camera = cubeCamera;
 		add(bubl);
-		final stride:Float = CIRCLE_SIZE + CIRCLE_PADDING;
-
 		for (i in 0...WEEKS_WRAP)
 		{
 			if (iX > CIRC_WRAP)
@@ -102,14 +95,14 @@ class WeekPickerSubstate extends MusicBeatSubstate
 				iX = 0;
 				iY += 1;
 			}
-
+			
 			Mods.currentModDirectory = weeks[i].mod;
-
+			
 			var w:String = weeks[i].section;
-			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * stride)).loadGraphic(Paths.image('menu/freeplay/sections/$w'));
-			circ.setGraphicSize(-1, Std.int(CIRCLE_SIZE));
+			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * 78)).loadGraphic(Paths.image('menu/freeplay/sections/$w'));
+			circ.setGraphicSize(-1, 71);
 			circ.updateHitbox();
-			circ.x = iX * stride;
+			circ.x = iX * 78; // Std.int(FlxMath.remapToRange(iX, 0, CIRC_WRAP - 1, 0, Math.min((CIRC_WRAP - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width);
 			circ.ID = i;
 			bubl.add(circ);
 			
@@ -236,7 +229,7 @@ class WeekPickerSubstate extends MusicBeatSubstate
 			acceptWeek(curSelection);
 		}
 		var ugh = FlxMath.bound((curSelection - CIRC_WRAP - 1) / (CIRC_WRAP + 1), 0, WEEKS_WRAP);
-		cubeCamera.scroll.y = FlxMath.lerp(cubeCamera.scroll.y, Math.floor(ugh) * (CIRCLE_SIZE + CIRCLE_PADDING), FlxMath.bound(elapsed * 15.6, 0, 1));
+		cubeCamera.scroll.y = FlxMath.lerp(cubeCamera.scroll.y, Math.floor(ugh) * 78, FlxMath.bound(elapsed * 15.6, 0, 1));
 	}
 	
 	override function destroy()
