@@ -185,6 +185,11 @@ class FreeplayState extends AmongUIState
 		circles = new FlxSpriteGroup();
 		circles.camera = camUpper;
 		circles.zIndex = 22;
+		// Never had an explicit y — defaulted to 0, sitting flush against the
+		// very top of the screen (clipped by the device's own top edge/notch)
+		// instead of inside camUpper's topBar (85px tall; sectionText/infoText
+		// sit right below it at y=80/91).
+		circles.y = 32;
 		add(circles);
 
 		// 1.1 feature
