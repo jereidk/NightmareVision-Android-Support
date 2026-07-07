@@ -6,6 +6,9 @@ import funkin.data.CosmicubeData;
 import funkin.objects.menu.ScrollBar;
 import funkin.objects.menu.AmongControls;
 import funkin.input.TurboControl;
+#if mobile
+import mobile.backend.flixel.input.FlxMobileInputID;
+#end
 
 import flixel.graphics.frames.FlxAtlasFrames;
 
@@ -14,6 +17,15 @@ using StringTools;
 class CosmeticsSubstate extends MusicBeatSubstate
 {
 	static var hasPreloadedForSession:Bool = false;
+
+	// Reused by mobilePadJustReleased() calls in update() instead of allocating a fresh
+	// single-element Array every frame.
+	#if mobile
+	static final _leftKey:Array<FlxMobileInputID> = [LEFT];
+	static final _rightKey:Array<FlxMobileInputID> = [RIGHT];
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
 	
 	public static function preloadForFreeplay():Void
 	{
@@ -1199,10 +1211,10 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				if (!mouseMode)
 				{
 					#if mobile
-					if (controls.mobilePadJustReleased([LEFT])) gridMove(-1, 0);
-					if (controls.mobilePadJustReleased([RIGHT])) gridMove(1, 0);
-					if (controls.mobilePadJustReleased([UP])) gridMove(0, -1);
-					if (controls.mobilePadJustReleased([DOWN])) gridMove(0, 1);
+					if (controls.mobilePadJustReleased(_leftKey)) gridMove(-1, 0);
+					if (controls.mobilePadJustReleased(_rightKey)) gridMove(1, 0);
+					if (controls.mobilePadJustReleased(_upKey)) gridMove(0, -1);
+					if (controls.mobilePadJustReleased(_downKey)) gridMove(0, 1);
 					#else
 					if (controlLEFT.PRESSED) gridMove(-1, 0);
 					if (controlRIGHT.PRESSED) gridMove(1, 0);
@@ -1288,8 +1300,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				#end
 				
 				#if mobile
-				if (controls.mobilePadJustReleased([DOWN])) { selectedCategory = FlxMath.wrap(selectedCategory + 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
-				else if (controls.mobilePadJustReleased([UP])) { selectedCategory = FlxMath.wrap(selectedCategory - 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				if (controls.mobilePadJustReleased(_downKey)) { selectedCategory = FlxMath.wrap(selectedCategory + 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
+				else if (controls.mobilePadJustReleased(_upKey)) { selectedCategory = FlxMath.wrap(selectedCategory - 1, 0, 2); FlxG.sound.play(Paths.sound('scrollMenu'), 0.5); updateCategoryDisplay(); }
 				#else
 				if (controls.UI_DOWN_P || controls.UI_UP_P || FlxG.mouse.wheel != 0)
 				{

@@ -63,15 +63,23 @@ class PathModifier extends NoteModifier
 		}
 	}
 	
+	// prefix never changes after construction, so these lookup keys are built once here instead
+	// of every getPos() call (i.e. once per active note/receptor, per frame).
+	var _speedKey:String;
+	var _visualKey:String;
+
 	public function new(modMgr:ModManager, prefix:String = 'basePath', ?parent:Modifier)
-	{	
+	{
 		this.prefix = prefix;
-		
+
 		super(modMgr, parent);
-		
+
 		moveSpeed = getMoveSpeed();
-		
+
 		tracePath(getPath());
+
+		_speedKey = '${prefix}speed';
+		_visualKey = '${prefix}visual';
 	}
 	
 	override function getPos(time:Float, visualDiff:Float, timeDiff:Float, beat:Float, pos:Vector3, data:Int, player:Int, obj:FlxSprite)
@@ -79,12 +87,10 @@ class PathModifier extends NoteModifier
 		if (getValue(player) == 0 || pathData.length == 0) return pos;
 		
 		final daPath = pathData[data % pathData.length], totalDist = totalDists[data % totalDists.length];
-		
-		final prefix:String = getName();
-		
-		final moveSpeed:Float = (moveSpeed * (1 - getSubmodValue('${prefix}speed', player)));
-		
-		final progress = ((getSubmodValue('${prefix}visual', player) > 0 ? visualDiff : timeDiff) / moveSpeed * totalDist);
+
+		final moveSpeed:Float = (moveSpeed * (1 - getSubmodValue(_speedKey, player)));
+
+		final progress = ((getSubmodValue(_visualKey, player) > 0 ? visualDiff : timeDiff) / moveSpeed * totalDist);
 		final clampProgress = FlxMath.bound(progress, 0, totalDist);
 		
 		for (idx in 0 ... daPath.length - 1)

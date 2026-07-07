@@ -476,13 +476,14 @@ class SystemMonitor
 		var t = songTimeMs / 1000;
 		var breakdown = _profBreakdown();
 		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
+		var gcHoldSuffix = _gcCollisionsHoldRelease > 0 ? '  [GC hit holdRelease x$_gcCollisionsHoldRelease, ~${Std.int(_gcBytesFreedHoldRelease / 1024)}KB]' : '';
 		#if cpp
 		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
 		#else
 		var gcAnySuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcHoldSuffix$gcAnySuffix');
 		profReset();
 	}
 
@@ -544,6 +545,8 @@ class SystemMonitor
 		_profStack = [];
 		_gcCollisions = 0;
 		_gcBytesFreed = 0;
+		_gcCollisionsHoldRelease = 0;
+		_gcBytesFreedHoldRelease = 0;
 		_frameGcCollisions = 0;
 		_frameGcBytesFreed = 0;
 	}
@@ -563,6 +566,14 @@ class SystemMonitor
 	static var _gcCollisions:Int = 0;
 	static var _gcBytesFreed:Int = 0;
 
+	// Same idea, applied to holdRelease (dance()'s string interpolation was found
+	// and fixed here, but the span is also where Character.set_holding() runs a
+	// full playAnim() switch back to idle — worth its own counter to confirm
+	// whether a GC collision still lands in this specific span independently of
+	// noteHitDispatch's.
+	static var _gcCollisionsHoldRelease:Int = 0;
+	static var _gcBytesFreedHoldRelease:Int = 0;
+
 	/** Snapshot heap usage right before a span you want to check for a GC collision. */
 	public static inline function gcUsageSnapshot():Float
 	{
@@ -579,6 +590,19 @@ class SystemMonitor
 		{
 			_gcCollisions++;
 			_gcBytesFreed += Std.int(freed);
+		}
+	}
+
+	/** Same as noteGcCollision(), but tracked separately for the holdRelease span. */
+	public static function holdReleaseGcCollision(before:Float):Void
+	{
+		if (!enabled) return;
+		final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		final freed = before - after;
+		if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+		{
+			_gcCollisionsHoldRelease++;
+			_gcBytesFreedHoldRelease += Std.int(freed);
 		}
 	}
 

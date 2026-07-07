@@ -33,7 +33,7 @@ class GameOverSubstate extends MusicBeatSubstate
 	 * The sound effect to be played on death.
 	 */
 	public static var deathSoundName:Null<String> = null;
-	
+
 	/**
 	 * The music to be played in the game over.
 	 */
@@ -158,7 +158,8 @@ class GameOverSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
-		PlayState.instance?.scripts.call('onUpdate', [elapsed]);
+		_updateArgs[0] = elapsed;
+		PlayState.instance?.scripts.call('onUpdate', _updateArgs);
 		super.update(elapsed);
 		
 		if (controls.ACCEPT && !isEnding)
@@ -219,7 +220,8 @@ class GameOverSubstate extends MusicBeatSubstate
 			Conductor.songPosition = FlxG.sound.music.time;
 		}
 		
-		PlayState.instance?.scripts.call('onUpdatePost', [elapsed]);
+		_updateArgs[0] = elapsed;
+		PlayState.instance?.scripts.call('onUpdatePost', _updateArgs);
 	}
 	
 	#if mobile

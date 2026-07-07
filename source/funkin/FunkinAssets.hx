@@ -216,6 +216,13 @@ class FunkinAssets
 			try
 			{
 				if (Assets.exists(path, IMAGE)) {
+					// Do NOT pass allowCompressedTextures=false here: AstcLoader above can
+					// legitimately fail even when a .astc exists (e.g. at very early startup,
+					// before FlxG.stage.stage3Ds[0].context3D is ready), and for assets whose
+					// .png was deleted after ASTC conversion, openfl's own ASTC path here is
+					// the only remaining way to load them at all. Disabling it caused every
+					// such asset to fall through to flixel-logo. The double-premultiply risk
+					// this was meant to avoid is the lesser problem.
 					bitmap = Assets.getBitmapData(path, useCache);
 				}
 			}
@@ -224,7 +231,7 @@ class FunkinAssets
 				Logger.log('getBitmapData: Assets.getBitmapData failed for "$path": $e', WARN);
 			}
 			#else
-			// For non-Android platforms without MODS_ALLOWED
+			// For non-Android platforms without MODS_ALLOWED.
 			bitmap = Assets.getBitmapData(path, useCache);
 			#end
 		}

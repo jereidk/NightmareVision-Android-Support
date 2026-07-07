@@ -3,6 +3,7 @@ package funkin.states.substates;
         #if mobile
         import mobile.utils.MobileNavUtil;
         import flixel.input.touch.FlxTouch;
+        import mobile.backend.flixel.input.FlxMobileInputID;
         #end
 
 import funkin.input.TurboControl;
@@ -38,6 +39,14 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	var turboGroup:TurboControlGroup;
 	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
 	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
+
+	// Reused every frame in update() instead of letting FlxG.mouse.getScreenPosition() and the
+	// mobilePadJustReleased() array args allocate a fresh FlxPoint/Array each call.
+	var _mousePosPoint:FlxPoint = FlxPoint.get();
+	#if mobile
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
 	
 	public var skipToTimeOption:Null<FlxText> = null;
 
@@ -197,7 +206,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		super.update(elapsed);
 		
 		var cam = cameras != null && cameras.length > 0 ? cameras[0] : FlxG.camera;
-		var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(cam);
+		var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(cam, _mousePosPoint);
 		
 		if (!viewingMode)
 		{
@@ -205,8 +214,8 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 			if (controlRIGHT.PRESSED) changeSkipTime(1);
 			
 			#if mobile
-			if (controls.mobilePadJustReleased([UP])) changeSelection(-1);
-			else if (controls.mobilePadJustReleased([DOWN])) changeSelection(1);
+			if (controls.mobilePadJustReleased(_upKey)) changeSelection(-1);
+			else if (controls.mobilePadJustReleased(_downKey)) changeSelection(1);
 			#else
 			if (controls.UI_UP_P || FlxG.mouse.wheel > 0) changeSelection(-1);
 			else if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
@@ -282,6 +291,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		mobile.backend.AndroidUtils.setGameplayState(true);
 		#end
 		if (pauseMusic != null) pauseMusic.destroy();
+		_mousePosPoint.put();
 		super.destroy();
 	}
 	

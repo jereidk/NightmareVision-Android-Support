@@ -472,7 +472,8 @@ class AstcLoader
 			if (sys.FileSystem.exists(pngPath))
 				pngBitmap = BitmapData.fromFile(pngPath);
 			else if (OflAssets.exists(pngPath))
-				pngBitmap = OflAssets.getBitmapData(pngPath, false); // useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
+				// useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
+				pngBitmap = OflAssets.getBitmapData(pngPath, false);
 		}
 		catch (e:Dynamic) {}
 

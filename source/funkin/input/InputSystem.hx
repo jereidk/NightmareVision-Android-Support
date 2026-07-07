@@ -48,6 +48,18 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 	 * The list of actions checked for, in order of their note direction
 	 */
 	public static final ACTION_LIST:Array<Action> = [NOTE_LEFT, NOTE_DOWN, NOTE_UP, NOTE_RIGHT];
+
+	#if mobile
+	// update() runs every frame during gameplay; this used to be rebuilt from scratch every
+	// single call (unconditionally, whether or not anything was actually pressed) just to look
+	// up mobileIDs[noteData] below.
+	static final _mobileNoteIDs:Array<mobile.backend.flixel.input.FlxMobileInputID> = [
+		mobile.backend.flixel.input.FlxMobileInputID.noteLEFT,
+		mobile.backend.flixel.input.FlxMobileInputID.noteDOWN,
+		mobile.backend.flixel.input.FlxMobileInputID.noteUP,
+		mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT
+	];
+	#end
 	
 	/**
 	 * The current controls instance used for this input system
@@ -193,12 +205,6 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 		// Controls.NOTE_*_P/R getters already handle both hitbox and virtualPad correctly.
 		// ACTION_LIST order: 0=LEFT, 1=DOWN, 2=UP, 3=RIGHT.
 		final now = System.getTimer();
-		final mobileIDs:Array<mobile.backend.flixel.input.FlxMobileInputID> = [
-			mobile.backend.flixel.input.FlxMobileInputID.noteLEFT,
-			mobile.backend.flixel.input.FlxMobileInputID.noteDOWN,
-			mobile.backend.flixel.input.FlxMobileInputID.noteUP,
-			mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT
-		];
 		for (noteData in 0...4)
 		{
 			final pressed:Bool = switch noteData
@@ -214,7 +220,7 @@ class InputSystem implements flixel.util.IFlxDestroyable extends EventDispatcher
 				// Use the true OS touch-event timestamp when this press came from a
 				// touch button, so the songPosition correction in PlayState actually
 				// does something for touch instead of being a same-frame no-op.
-				final touchTs = controls.noteTouchPressTimestampMs(mobileIDs[noteData]);
+				final touchTs = controls.noteTouchPressTimestampMs(_mobileNoteIDs[noteData]);
 				dispatchEvent(new InputEvent(InputEvent.INPUT_PRESSED, false, true, noteData, Keys, 0, touchTs > 0 ? touchTs : now));
 			}
 

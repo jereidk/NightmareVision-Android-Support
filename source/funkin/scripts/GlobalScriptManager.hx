@@ -41,6 +41,10 @@ class GlobalScriptManager
 	/** The persistent script group shared across all states. */
 	public var scriptGroup(default, null):ScriptGroup;
 
+	// Reused for scriptGroup.call('onUpdate', ...) below instead of allocating
+	// a fresh [elapsed] array every frame.
+	final _updateArgs:Array<Dynamic> = [0.0];
+
 	/**
 	 * Initializes the global script manager.
 	 * Call once from Main.hx at startup.
@@ -182,7 +186,8 @@ class GlobalScriptManager
 	 */
 	public function onUpdate(elapsed:Float):Void
 	{
-		scriptGroup.call('onUpdate', [elapsed]);
+		_updateArgs[0] = elapsed;
+		scriptGroup.call('onUpdate', _updateArgs);
 	}
 
 	/**

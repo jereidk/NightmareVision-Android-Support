@@ -74,6 +74,56 @@ class Modifier implements IFlxDestroyable
 		if (submods.exists(modName)) return submods.get(modName).getValue(player);
 		else return 0;
 	}
+
+	// Many modifiers look up per-column submods with keys like 'alpha3' or 'transform2Y-a',
+	// rebuilding that key from a string interpolation on every updateNote/getPos call — i.e. once
+	// per active note, per frame. These two caches memoize the built key so repeated lookups for
+	// the same (prefix, n[, suffix]) reuse the same String instead of allocating a new one.
+	var _keyCache:Map<String, Map<String, Array<String>>> = [];
+	var _keyCache2:Map<String, Map<String, String>> = [];
+
+	function catKey(prefix:String, n:Int, suffix:String = ''):String
+	{
+		var bySuffix = _keyCache.get(prefix);
+		if (bySuffix == null)
+		{
+			bySuffix = new Map();
+			_keyCache.set(prefix, bySuffix);
+		}
+
+		var arr = bySuffix.get(suffix);
+		if (arr == null)
+		{
+			arr = [];
+			bySuffix.set(suffix, arr);
+		}
+
+		var s = arr[n];
+		if (s == null)
+		{
+			s = (suffix.length == 0) ? '$prefix$n' : '$prefix$n$suffix';
+			arr[n] = s;
+		}
+		return s;
+	}
+
+	function catKey2(prefix:String, suffix:String):String
+	{
+		var bySuffix = _keyCache2.get(prefix);
+		if (bySuffix == null)
+		{
+			bySuffix = new Map();
+			_keyCache2.set(prefix, bySuffix);
+		}
+
+		var s = bySuffix.get(suffix);
+		if (s == null)
+		{
+			s = '$prefix$suffix';
+			bySuffix.set(suffix, s);
+		}
+		return s;
+	}
 	
 	public function setSubmodPercent(modName:String, endPercent:Float, player:Int) return submods.get(modName).setPercent(endPercent, player);
 	

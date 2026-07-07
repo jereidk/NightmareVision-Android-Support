@@ -179,24 +179,26 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	// kept for notescript stuff
 	public function executeFunc(func:String, ?parameters:Array<Dynamic>, ?theObject:Any, ?extraVars:Map<String, Dynamic>):Dynamic
 	{
-		extraVars ??= [];
-		
-		if (exists(func))
+		if (!exists(func)) return null;
+
+		var daFunc = get(func);
+		if (!Reflect.isFunction(daFunc)) return null;
+
+		var returnVal:Dynamic = null;
+
+		// Fast path: by far the common case across the codebase is "bind `this`,
+		// call, restore `this`" with no other extraVars — every per-frame hook
+		// (Note/ScriptedModifier/StoryNode/GameOverSubstate updates) goes through
+		// here. Save/restore via two locals instead of allocating two Maps
+		// (extraVars, defaultShit) on every single call; nesting/reentrancy is
+		// still safe since each call gets its own locals, same as the Map path.
+		if (extraVars == null)
 		{
-			var daFunc = get(func);
-			if (Reflect.isFunction(daFunc))
+			if (theObject != null)
 			{
-				var returnVal:Dynamic = null;
-				var defaultShit:Map<String, Dynamic> = [];
-				
-				if (theObject != null) extraVars.set("this", theObject);
-				
-				for (key in extraVars.keys())
-				{
-					defaultShit.set(key, get(key));
-					set(key, extraVars.get(key));
-				}
-				
+				var oldThis = get("this");
+				set("this", theObject);
+
 				try
 				{
 					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
@@ -205,16 +207,49 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 				{
 					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
 				}
-				
-				for (key in defaultShit.keys())
-				{
-					set(key, defaultShit.get(key));
-				}
-				
-				return returnVal;
+
+				set("this", oldThis);
 			}
+			else
+			{
+				try
+				{
+					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+				}
+				catch (e:haxe.Exception)
+				{
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+				}
+			}
+
+			return returnVal;
 		}
-		return null;
+
+		var defaultShit:Map<String, Dynamic> = [];
+
+		if (theObject != null) extraVars.set("this", theObject);
+
+		for (key in extraVars.keys())
+		{
+			defaultShit.set(key, get(key));
+			set(key, extraVars.get(key));
+		}
+
+		try
+		{
+			returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+		}
+		catch (e:haxe.Exception)
+		{
+			Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+		}
+
+		for (key in defaultShit.keys())
+		{
+			set(key, defaultShit.get(key));
+		}
+
+		return returnVal;
 	}
 	
 	@:inheritDoc

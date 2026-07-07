@@ -37,6 +37,10 @@ class NoteTapInput extends FlxBasic
 	/** Extra hit padding around each note sprite (px, in game-logical space). */
 	static inline final HIT_PAD:Float = 45;
 
+	// Reused below instead of letting FlxTouch.getScreenPosition() pull a fresh FlxPoint from
+	// the pool (and never return it) on every touch-down.
+	var _touchPosPoint:FlxPoint = FlxPoint.get();
+
 	public function new(notes:FlxTypedGroup<Note>):Void
 	{
 		super();
@@ -63,7 +67,7 @@ class NoteTapInput extends FlxBasic
 			{
 				// Convert screen coordinates to camGame logical space
 				// This handles camera zoom, scroll, and offset correctly
-				var touchPos = touch.getScreenPosition(camGame);
+				var touchPos = touch.getScreenPosition(camGame, _touchPosPoint);
 				final lane = _findNoteLane(touchPos.x, touchPos.y);
 				if (lane >= 0)
 				{
@@ -197,6 +201,7 @@ class NoteTapInput extends FlxBasic
 	{
 		super.destroy();
 		_heldTouches.clear();
+		_touchPosPoint.put();
 	}
 }
 #end

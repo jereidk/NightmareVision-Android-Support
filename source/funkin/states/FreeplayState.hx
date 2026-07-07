@@ -83,9 +83,18 @@ enum UnlockAnimPhase
 class FreeplayState extends AmongUIState
 {
 	public var weeks:Array<FreeplayWeek> = []; // Freeplay Weeks, put your shit in here
-	
+
 	public static var curMonth:Int = 0;
 	public static var curSelect:Int = 0;
+
+	// Reused by mobilePadJustReleased() calls in update() instead of allocating a fresh
+	// single-element Array every frame.
+	#if mobile
+	static final _leftKey:Array<FlxMobileInputID> = [LEFT];
+	static final _rightKey:Array<FlxMobileInputID> = [RIGHT];
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
 	
 	var smoothMonth:Float = 0;
 	var smoothSelect:Float = 0;
@@ -652,8 +661,8 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.music.volume += 0.5 * elapsed;
 			}
 			
-			if (controlLEFT.PRESSED #if mobile || controls.mobilePadJustReleased([LEFT]) #end) changeSection(-1);
-			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadJustReleased([RIGHT]) #end) changeSection(1);
+			if (controlLEFT.PRESSED #if mobile || controls.mobilePadJustReleased(_leftKey) #end) changeSection(-1);
+			else if (controlRIGHT.PRESSED #if mobile || controls.mobilePadJustReleased(_rightKey) #end) changeSection(1);
 
 			if (FlxG.mouse.wheel != 0)
 			{
@@ -667,8 +676,8 @@ class FreeplayState extends AmongUIState
 				}
 			}
 
-			if (controlUP.PRESSED #if mobile || controls.mobilePadJustReleased([UP]) #end) changeSong(-1, false);
-			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadJustReleased([DOWN]) #end) changeSong(1, false);
+			if (controlUP.PRESSED #if mobile || controls.mobilePadJustReleased(_upKey) #end) changeSong(-1, false);
+			else if (controlDOWN.PRESSED #if mobile || controls.mobilePadJustReleased(_downKey) #end) changeSong(1, false);
 			
 			if (controls.ACCEPT) acceptSong();
 			

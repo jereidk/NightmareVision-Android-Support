@@ -1,6 +1,7 @@
 package mobile.controls;
 
 import flixel.FlxG;
+import flixel.input.FlxInput.FlxInputState;
 import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.math.FlxPoint;
@@ -372,17 +373,9 @@ class MobileVirtualPad extends TouchInputManager
 			// Only show pad when keyboard or gamepad is pressed during gameplay
 			keyboardPressed = FlxG.keys.justPressed.ANY;
 			gamepadPressed = false;
-			if (FlxG.gamepads.numActiveGamepads > 0)
-			{
-				for (gamepad in FlxG.gamepads.getActiveGamepads())
-				{
-					if (gamepad.justPressed.ANY)
-					{
-						gamepadPressed = true;
-						break;
-					}
-				}
-			}
+			// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
+			// scan it for a justPressed button; anyButton() checks the same state with no allocation.
+			if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
 			if (keyboardPressed || gamepadPressed)
 			{
 				this.visible = true;
@@ -396,7 +389,18 @@ class MobileVirtualPad extends TouchInputManager
 		}
 
 		// Normal behavior for non-gameplay pads or when Virtual Pad navigation is enabled
-		if (FlxG.touches.justStarted().length > 0)
+		// (FlxG.touches.justStarted() would allocate a fresh Array every frame just to check
+		// its length and immediately discard it - scan the existing touch list instead)
+		var anyTouchJustStarted = false;
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.justPressed)
+			{
+				anyTouchJustStarted = true;
+				break;
+			}
+		}
+		if (anyTouchJustStarted)
 		{
 			if (!this.visible)
 			{
@@ -413,17 +417,9 @@ class MobileVirtualPad extends TouchInputManager
 
 		keyboardPressed = FlxG.keys.justPressed.ANY;
 
-		if (FlxG.gamepads.numActiveGamepads > 0)
-		{
-			for (gamepad in FlxG.gamepads.getActiveGamepads())
-			{
-				if (gamepad.justPressed.ANY)
-				{
-					gamepadPressed = true;
-					break;
-				}
-			}
-		}
+		// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
+		// scan it for a justPressed button; anyButton() checks the same state with no allocation.
+		if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
 
 		if (keyboardPressed || gamepadPressed)
 		{
