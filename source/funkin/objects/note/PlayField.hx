@@ -11,6 +11,7 @@ import funkin.objects.Character;
 import funkin.game.Rating;
 import funkin.data.*;
 import funkin.backend.SystemMonitor;
+import funkin.Mods;
 
 typedef NoteSignal = FlxTypedSignal<(Note, PlayField) -> Void>;
 
@@ -302,6 +303,26 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		removeNote(note);
 	}
 	
+	// Paths.sound('hitsound') resolves through getPath()/modFolders(), which on
+	// Android (MODS_ALLOWED) does a real FileSystem.exists() call per enabled mod,
+	// falling back to a full linear scan of the cached asset list (thousands of
+	// entries) whenever none of those exist() checks hit — every single time,
+	// even though the Sound itself is already cached by FunkinAssets and the
+	// resolved path never changes between hits. Cached here once so a hit-dense
+	// section doesn't re-pay that resolution cost on every note.
+	static var _hitsoundCache:Null<openfl.media.Sound> = null;
+	static var _hitsoundCacheMod:String = null;
+
+	static inline function hitsound():openfl.media.Sound
+	{
+		if (_hitsoundCache == null || _hitsoundCacheMod != Mods.currentModDirectory)
+		{
+			_hitsoundCache = Paths.sound('hitsound');
+			_hitsoundCacheMod = Mods.currentModDirectory;
+		}
+		return _hitsoundCache;
+	}
+
 	public static function noteHit(note:Note, field:PlayField):Void
 	{
 		var scriptFunc:String = '';
@@ -353,7 +374,9 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		{
 			if (note.wasGoodHit || field.autoPlayed && (note.ignoreNote || note.hitCausesMiss || note.canMiss)) return;
 
-			if (ClientPrefs.hitsoundVolume > 0 && !note.hitsoundDisabled) FlxG.sound.play(Paths.sound('hitsound'), ClientPrefs.hitsoundVolume);
+			#if android SystemMonitor.profBegin('hitsoundPlay'); #end
+			if (ClientPrefs.hitsoundVolume > 0 && !note.hitsoundDisabled) FlxG.sound.play(hitsound(), ClientPrefs.hitsoundVolume);
+			#if android SystemMonitor.profEnd(); #end
 
 			if (note.hitCausesMiss)
 			{
