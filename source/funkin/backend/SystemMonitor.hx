@@ -54,6 +54,16 @@ class SystemMonitor
 	static inline final SPIKE_FACTOR:Float = 3.5;
 	static inline final SPIKE_COOLDOWN:Float = 2.0;
 
+	// SPIKE_FACTOR is relative to the recent average, which is itself inflated
+	// during dense note sections — a genuinely huge GC collection (tens of MB)
+	// can land in a frame that's slow in absolute terms but not 3.5x slower than
+	// an already-elevated average, so it never fires as a [SPIKE] and never gets
+	// cause-attributed. This fires on an absolute byte threshold instead, so it
+	// catches those regardless of how busy the surrounding frames already are.
+	static var _lastLargeGcTime:Float = -999.0;
+	static inline final LARGE_GC_THRESHOLD_BYTES:Int = 10 * 1024 * 1024; // 10MB
+	static inline final LARGE_GC_COOLDOWN:Float = 1.0;
+
 	// Above this, a wall-clock gap between checkFrame() calls almost certainly
 	// isn't a real single-frame hitch — it's this state's update() not having
 	// run at all for a while (a FlxSubstate without persistentUpdate was open,
@@ -389,6 +399,32 @@ class SystemMonitor
 			#end
 			_lastScriptNote = '';
 		}
+		#if cpp
+		// Absolute-threshold check, separate from the relative [SPIKE] trigger above
+		// (see LARGE_GC_THRESHOLD_BYTES comment) — only fires if this exact frame
+		// didn't already get a [SPIKE] line, so a single event doesn't double-report.
+		else if (gcFreed > LARGE_GC_THRESHOLD_BYTES && now - _lastLargeGcTime > LARGE_GC_COOLDOWN)
+		{
+			_lastLargeGcTime = now;
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			var cause:String;
+			if (texDelta > 0)
+			{
+				var newKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!_lastBitmapKeys.exists(k)) newKeys.push(k);
+				newKeys.sort((a, b) -> Reflect.compare(a, b));
+				var shown = newKeys.slice(0, 6).map(_keyTail);
+				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
+			}
+			else cause = '  [no texture/member change — plain heap garbage]';
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed  state=$state$cause');
+			#else
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed');
+			#end
+		}
+		#end
 
 		#if flixel
 		_lastBitmapCount = curBitmapCount;
