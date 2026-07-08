@@ -46,7 +46,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-fat
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-fat
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -343,7 +343,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -635,7 +635,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm32
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm32
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
