@@ -107,14 +107,26 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        timeout-minutes: 15
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
+          set -euo pipefail
           if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
             echo "lime.ndll already present, skipping rebuild."
           else
-            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
             haxelib run lime rebuild cpp -release
             if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
               echo "ERROR: Missing Lime ndll after rebuild"
@@ -424,14 +436,26 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        timeout-minutes: 15
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
+          set -euo pipefail
           if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
             echo "lime.ndll already present, skipping rebuild."
           else
-            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
             haxelib run lime rebuild cpp -release
             if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
               echo "ERROR: Missing Lime ndll after rebuild"
@@ -736,14 +760,26 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        timeout-minutes: 15
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
+          set -euo pipefail
           if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
             echo "lime.ndll already present, skipping rebuild."
           else
-            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
             haxelib run lime rebuild cpp -release
             if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
               echo "ERROR: Missing Lime ndll after rebuild"
