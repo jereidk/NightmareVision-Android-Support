@@ -63,7 +63,7 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -344,7 +344,7 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -625,7 +625,7 @@ jobs:
         run: |
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
+          haxelib run hxpkg install --force
 
       - name: Prepare Lime source
         if: steps.lime-cache.outputs.cache-hit != 'true'
