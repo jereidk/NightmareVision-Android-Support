@@ -2078,6 +2078,7 @@ class PlayState extends MusicBeatState
 			{ _drsActive = true;  mobile.backend.DynamicResolution.setActive(true); }
 		else if (_drsActive && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
 			{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
+		SystemMonitor.reportDrsState(_drsActive);
 		#end
 
 		if (cameraLerping && !inCutscene)
