@@ -15,33 +15,52 @@ operation it already performs every frame regardless -- unlike a hand-rolled
 FBO + blit-shader downscale, this costs no extra GPU rendering time at all.
 This is the Java-level equivalent of the NDK's ANativeWindow_setBuffersGeometry.
 
-Adds two static methods to SDLActivity (same file as the `mSurface` reference
+Adds static methods to SDLActivity (same file as the `mSurface` reference
 they need -- protected fields are only reachable from the same package):
   - setRenderBufferSize(width, height): shrink the buffer for render scale < 100%
   - resetRenderBufferSize(): SurfaceHolder.setSizeFromLayout() to go back to 1:1
+  - getSurfaceBufferWidth/Height(): diagnostics, read SDLSurface.mWidth/mHeight
+  - getSurfaceChangedCallCount/getLastSurfaceChanged{Width,Height}(): more
+    diagnostics, read the counters patch-lime-sdlsurface-diagnostics.py adds
+  - getSurfaceViewLayoutWidth/Height(): the View's own layout size, for comparison
+
+IMPORTANT -- idempotency: this content has changed shape multiple times
+across this project's development (methods added, a diagnostics bug fixed),
+and a naive "if MARKER_STRING in content: skip" check is fooled by ANY of
+those older versions sitting in a stale .haxelib/lime CI cache, since the
+marker string (e.g. "setRenderBufferSize") is present in all of them --
+that exact bug shipped an APK with a known-broken diagnostic method for two
+builds in a row before it was caught by testing on a real device.
+
+Instead of matching our own inserted content (which is exactly what keeps
+changing), this replaces everything found between two STABLE anchors that
+are part of the original, unpatched file and never change: the
+mMotionListener/mHIDDeviceManager field pair, and the "This is what SDL
+runs in" comment right after wherever our block ends up. Whatever's between
+them -- nothing (pristine), or any past version of our block -- gets
+replaced wholesale with the current block below, so this always converges
+regardless of what a stale cache is carrying.
 
 Usage: patch-lime-sdlactivity-renderscale.py <path to SDLActivity.java>
 """
 
+import re
 import sys
 
 path = sys.argv[1]
 with open(path) as f:
     content = f.read()
 
-MARKER = "setRenderBufferSize"
-
-if MARKER in content:
-    print("Already patched, skipping.")
-    sys.exit(0)
-
-anchor = (
+START_ANCHOR = (
     "    protected static SDLGenericMotionListener_API14 mMotionListener;\n"
     "    protected static HIDDeviceManager mHIDDeviceManager;\n"
 )
-assert content.count(anchor) == 1, f"expected exactly 1 match for the field-declaration anchor, found {content.count(anchor)}"
+END_ANCHOR = "    // This is what SDL runs in. It invokes SDL_main(), eventually\n"
 
-insertion = (
+assert content.count(START_ANCHOR) == 1, f"expected exactly 1 match for the start anchor, found {content.count(START_ANCHOR)}"
+assert content.count(END_ANCHOR) == 1, f"expected exactly 1 match for the end anchor, found {content.count(END_ANCHOR)}"
+
+block = (
     "\n"
     "    /**\n"
     "     * Render-scale support: shrinks the SurfaceView's backing buffer to the\n"
@@ -112,13 +131,27 @@ insertion = (
     "    public static int getSurfaceViewLayoutHeight() {\n"
     "        return mSurface != null ? mSurface.getHeight() : -1;\n"
     "    }\n"
+    "\n"
 )
 
-content = content.replace(anchor, anchor + insertion, 1)
+start = content.index(START_ANCHOR) + len(START_ANCHOR)
+end = content.index(END_ANCHOR)
+gap = content[start:end]
 
-assert MARKER in content, "setRenderBufferSize still missing after patching"
+if gap == block:
+    print("Already patched with the current version, skipping.")
+    sys.exit(0)
+
+if gap.strip() == "":
+    print("Pristine file, inserting RenderScale block.")
+else:
+    print("Found an older/different version of the RenderScale block -- replacing with the current version.")
+
+content = content[:start] + block + content[end:]
+
+assert "getSurfaceViewLayoutHeight" in content, "RenderScale block still missing after patching"
 
 with open(path, 'w') as f:
     f.write(content)
 
-print("Patched SDLActivity.java: added setRenderBufferSize()/resetRenderBufferSize()")
+print("Patched SDLActivity.java: RenderScale block is now up to date")

@@ -18,6 +18,14 @@ Adds:
   - static int sLastSurfaceChangedWidth / sLastSurfaceChangedHeight -- what
     the most recent call actually reported
 
+IMPORTANT -- idempotency: same lesson as patch-lime-sdlactivity-renderscale.py
+(a naive "if MARKER in content: skip" check shipped a stale, already-fixed
+diagnostic to a real APK for two builds in a row because a CI cache had an
+older version lying around). Both insertions here replace the gap between
+STABLE anchors from the original, unpatched file -- content that's never
+touched by us -- rather than trying to recognize our own past output, so
+re-running this with edited content always converges on the version below.
+
 Usage: patch-lime-sdlsurface-diagnostics.py <path to SDLSurface.java>
 """
 
@@ -27,17 +35,15 @@ path = sys.argv[1]
 with open(path) as f:
     content = f.read()
 
-MARKER = "sSurfaceChangedCallCount"
+# --- Field declarations: insert the 3 static counters after mWidth/mHeight ---
 
-if MARKER in content:
-    print("Already patched, skipping.")
-    sys.exit(0)
+FIELD_START_ANCHOR = "    protected float mWidth, mHeight;\n"
+FIELD_END_ANCHOR = "    // Is SurfaceView ready for rendering\n"
 
-field_anchor = "    protected float mWidth, mHeight;\n"
-assert content.count(field_anchor) == 1, f"expected exactly 1 match for the mWidth/mHeight field anchor, found {content.count(field_anchor)}"
+assert content.count(FIELD_START_ANCHOR) == 1, f"expected exactly 1 match for the mWidth/mHeight field anchor, found {content.count(FIELD_START_ANCHOR)}"
+assert content.count(FIELD_END_ANCHOR) == 1, f"expected exactly 1 match for the mIsSurfaceReady comment anchor, found {content.count(FIELD_END_ANCHOR)}"
 
-field_insertion = (
-    "    protected float mWidth, mHeight;\n"
+field_block = (
     "\n"
     "    // Diagnostics for RenderScale (see patch-lime-sdlsurface-diagnostics.py):\n"
     "    // lets Haxe-side code tell apart \"surfaceChanged() never fired\" from\n"
@@ -46,27 +52,49 @@ field_insertion = (
     "    protected static int sSurfaceChangedCallCount = 0;\n"
     "    protected static int sLastSurfaceChangedWidth = -1;\n"
     "    protected static int sLastSurfaceChangedHeight = -1;\n"
+    "\n"
 )
 
-content = content.replace(field_anchor, field_insertion, 1)
+field_start = content.index(FIELD_START_ANCHOR) + len(FIELD_START_ANCHOR)
+field_end = content.index(FIELD_END_ANCHOR)
+field_gap = content[field_start:field_end]
 
-call_anchor = (
+fields_already_current = field_gap == field_block
+
+if not fields_already_current:
+    content = content[:field_start] + field_block + content[field_end:]
+
+# --- surfaceChanged(): track every call right after mWidth/mHeight are set ---
+
+CALL_START_ANCHOR = (
     "        mWidth = width;\n"
     "        mHeight = height;\n"
 )
-assert content.count(call_anchor) == 1, f"expected exactly 1 match for the mWidth/mHeight assignment in surfaceChanged(), found {content.count(call_anchor)}"
+CALL_END_ANCHOR = "        int nDeviceWidth = width;\n"
 
-call_insertion = (
-    "        mWidth = width;\n"
-    "        mHeight = height;\n"
+assert content.count(CALL_START_ANCHOR) == 1, f"expected exactly 1 match for the mWidth/mHeight assignment in surfaceChanged(), found {content.count(CALL_START_ANCHOR)}"
+assert content.count(CALL_END_ANCHOR) == 1, f"expected exactly 1 match for the nDeviceWidth anchor, found {content.count(CALL_END_ANCHOR)}"
+
+call_block = (
     "        sSurfaceChangedCallCount++;\n"
     "        sLastSurfaceChangedWidth = width;\n"
     "        sLastSurfaceChangedHeight = height;\n"
 )
 
-content = content.replace(call_anchor, call_insertion, 1)
+call_start = content.index(CALL_START_ANCHOR) + len(CALL_START_ANCHOR)
+call_end = content.index(CALL_END_ANCHOR)
+call_gap = content[call_start:call_end]
 
-assert MARKER in content, "sSurfaceChangedCallCount still missing after patching"
+calls_already_current = call_gap == call_block
+
+if fields_already_current and calls_already_current:
+    print("Already patched with the current version, skipping.")
+    sys.exit(0)
+
+if not calls_already_current:
+    content = content[:call_start] + call_block + content[call_end:]
+
+assert "sSurfaceChangedCallCount" in content, "diagnostics fields still missing after patching"
 
 with open(path, 'w') as f:
     f.write(content)
