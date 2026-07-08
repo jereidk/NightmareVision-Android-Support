@@ -144,7 +144,7 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_HEIGHT:Float = 24; // icon size — keep these small, they're a row of month markers, not a focal element
+	var CIRCLE_HEIGHT:Float = 36; // icon size
 	var CIRCLE_PADDING:Float = 12; // spacing between circle icons — tight, they should read as one connected row
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
