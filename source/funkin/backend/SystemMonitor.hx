@@ -547,6 +547,17 @@ class SystemMonitor
 	static inline final GAMEPLAY_LOG_INTERVAL:Float = 1.0; // seconds between samples
 	static inline final GAMEPLAY_FPS_WARN:Int = 50;        // below this, flag the line
 
+	// Wall-clock (not game-elapsed) start of the current reporting window, so
+	// we can compare "real time this window actually took" against "sum of
+	// everything we profiled inside it". A real device log showed the tagged
+	// phases (draw/script/superUpdate/notesLoop/...) adding up to a small
+	// fraction of the real time elapsed during the worst fps drops — this
+	// makes that gap a hard, logged number instead of something inferred by
+	// hand from fps + tag sums, to find out whether the missing time is CPU
+	// work we're just not tagging yet, or something outside our control
+	// entirely (GPU/vsync/compositor).
+	static var _gameplayWindowStartStamp:Float = 0.0;
+
 	/**
 	 * Call once per frame from PlayState.update() during an active song.
 	 * Writes a one-line FPS + note-density snapshot roughly once a second —
@@ -569,6 +580,19 @@ class SystemMonitor
 		var mark = fps < GAMEPLAY_FPS_WARN ? '!' : ' ';
 		var t = songTimeMs / 1000;
 		var breakdown = _profBreakdown();
+		var taggedMs = _profTotal();
+
+		final nowStamp = haxe.Timer.stamp();
+		final realWindowMs = (nowStamp - _gameplayWindowStartStamp) * 1000;
+		_gameplayWindowStartStamp = nowStamp;
+		var gapSuffix = '';
+		if (realWindowMs > 0)
+		{
+			final unaccountedMs = realWindowMs - taggedMs;
+			final unaccountedPct = Std.int(unaccountedMs / realWindowMs * 100);
+			gapSuffix = '  unaccounted=${Std.int(unaccountedMs)}ms(${unaccountedPct}%)';
+		}
+
 		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
 		var gcHoldSuffix = _gcCollisionsHoldRelease > 0 ? '  [GC hit holdRelease x$_gcCollisionsHoldRelease, ~${Std.int(_gcBytesFreedHoldRelease / 1024)}KB]' : '';
 		var gcDrawSuffix = _gcCollisionsDraw > 0 ? '  [GC hit draw x$_gcCollisionsDraw, ~${Std.int(_gcBytesFreedDraw / 1024)}KB]' : '';
@@ -578,7 +602,7 @@ class SystemMonitor
 		var gcAnySuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gapSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
 		profReset();
 	}
 
@@ -586,6 +610,7 @@ class SystemMonitor
 	public static function resetGameplayTimer():Void
 	{
 		_gameplayLogTimer = 0.0;
+		_gameplayWindowStartStamp = haxe.Timer.stamp();
 	}
 
 	// ==================== PHASE PROFILING ====================
@@ -644,6 +669,17 @@ class SystemMonitor
 		entries.sort((a, b) -> a.ms < b.ms ? 1 : (a.ms > b.ms ? -1 : 0));
 		var parts = [for (e in entries) if (e.ms >= 0.5) '${e.tag}=${Std.int(e.ms)}ms'];
 		return parts.join(' ');
+	}
+
+	// Sum of every tag accumulated since the last profReset() — used to
+	// compare against real wall-clock time for a reporting window (see
+	// _gameplayWindowStartStamp) to find out how much of each window isn't
+	// covered by any profBegin/profEnd span at all.
+	static function _profTotal():Float
+	{
+		var total:Float = 0;
+		for (t in _profTags) total += _profMs.get(t);
+		return total;
 	}
 
 	/** Clears accumulated phase timings — call after folding them into a report. */
