@@ -225,6 +225,13 @@ jobs:
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
 
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
@@ -477,6 +484,13 @@ jobs:
             echo "Found: $NAS_FILE"
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -739,6 +753,13 @@ jobs:
             echo "Found: $NAS_FILE"
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
