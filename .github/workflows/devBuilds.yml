@@ -48,8 +48,12 @@ jobs:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-fat
 
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
       - name: Install Linux system deps
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -361,8 +365,12 @@ jobs:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
       - name: Install Linux system deps
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -669,8 +677,12 @@ jobs:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm32
 
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
       - name: Install Linux system deps
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
