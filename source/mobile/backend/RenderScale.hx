@@ -26,6 +26,8 @@ class RenderScale
 	#if android
 	static var _setBufferSize = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "setRenderBufferSize", "(II)V");
 	static var _resetBufferSize = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "resetRenderBufferSize", "()V");
+	static var _getBufferWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferWidth", "()I");
+	static var _getBufferHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferHeight", "()I");
 	#end
 
 	public static var currentScale(default, null):Float = 1.0;
@@ -53,6 +55,15 @@ class RenderScale
 				currentScale = scale;
 				Logger.log('[RenderScale] Set to ${Std.int(scale * 100)}% (${w}x${h})', NOTICE);
 			}
+
+			// Diagnostics: setFixedSize() only takes effect once the next
+			// surfaceChanged() callback fires (async), and it resizes the surface
+			// BUFFER -- not necessarily what Flixel/OpenFL think the resolution is.
+			// Log both readings twice: immediately (expected to still show the OLD
+			// buffer size, proving the async gap is real) and after a delay
+			// (expected to show the NEW size if the OS + engine both reacted).
+			logDiagnostics('immediate');
+			haxe.Timer.delay(() -> logDiagnostics('+500ms'), 500);
 		}
 		catch (e:Dynamic)
 		{
@@ -60,4 +71,23 @@ class RenderScale
 		}
 		#end
 	}
+
+	#if android
+	static function logDiagnostics(when:String):Void
+	{
+		try
+		{
+			final bufW = (_getBufferWidth([]) : Int);
+			final bufH = (_getBufferHeight([]) : Int);
+			Logger.log('[RenderScale][$when] surfaceBuffer=${bufW}x${bufH} '
+				+ 'FlxG=${flixel.FlxG.width}x${flixel.FlxG.height} '
+				+ 'stage=${flixel.FlxG.stage.stageWidth}x${flixel.FlxG.stage.stageHeight} '
+				+ 'window=${flixel.FlxG.stage.window.width}x${flixel.FlxG.stage.window.height}', NOTICE);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('[RenderScale][$when] Failed to read diagnostics: $e', WARN);
+		}
+	}
+	#end
 }
