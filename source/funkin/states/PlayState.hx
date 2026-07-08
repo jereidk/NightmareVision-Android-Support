@@ -421,9 +421,23 @@ class PlayState extends MusicBeatState
 	public var defaultCamZoomAdd:Float = 0;
 
 	#if android
-	var _drsRing:Array<Float> = [for (_ in 0...10) 1 / 60];
+	// 60 frames (~1s at full rate), not 10 — a 10-frame window let a single
+	// spike (~200ms) push the average over the activate threshold for one
+	// frame, then immediately fall back under the deactivate threshold the
+	// next frame once that spike aged out of the ring, so DRS was measured
+	// flapping on/off within the same second on a real device (see sysmon.log
+	// [DRS] on/off pairs one second apart) instead of staying engaged through
+	// a genuinely slow section.
+	static inline final DRS_RING_SIZE:Int = 60;
+	var _drsRing:Array<Float> = [for (_ in 0...DRS_RING_SIZE) 1 / 60];
 	var _drsRingIdx:Int = 0;
 	var _drsActive:Bool = false;
+	// Minimum time DRS stays engaged once triggered, regardless of the
+	// rolling average — a second line of defense against flapping, since
+	// even a 60-frame average can dip below the deactivate threshold for a
+	// frame or two during a brief lull inside an overall slow section.
+	static inline final DRS_MIN_ACTIVE_S:Float = 1.5;
+	var _drsActivatedAt:Float = 0.0;
 	#end
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
@@ -2069,14 +2083,15 @@ class PlayState extends MusicBeatState
 		canPlayAwardSound = true;
 
 		#if android
-		_drsRing[_drsRingIdx % 10] = elapsed;
+		_drsRing[_drsRingIdx % DRS_RING_SIZE] = elapsed;
 		_drsRingIdx++;
 		var _drsSum:Float = 0;
 		for (t in _drsRing) _drsSum += t;
-		final _drsAvg:Float = _drsSum / 10;
+		final _drsAvg:Float = _drsSum / DRS_RING_SIZE;
+		final _drsNow:Float = haxe.Timer.stamp();
 		if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / 30)
-			{ _drsActive = true;  mobile.backend.DynamicResolution.setActive(true); }
-		else if (_drsActive && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
+			{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
+		else if (_drsActive && (_drsNow - _drsActivatedAt >= DRS_MIN_ACTIVE_S) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
 			{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
 		SystemMonitor.reportDrsState(_drsActive);
 		#end
