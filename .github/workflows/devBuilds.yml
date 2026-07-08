@@ -253,6 +253,12 @@ jobs:
             python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
+          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
@@ -541,6 +547,12 @@ jobs:
           while IFS= read -r SURFACE_FILE; do
             echo "Found: $SURFACE_FILE"
             python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
+
+          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
@@ -835,6 +847,12 @@ jobs:
           while IFS= read -r SURFACE_FILE; do
             echo "Found: $SURFACE_FILE"
             python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
+
+          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so

@@ -28,6 +28,11 @@ class RenderScale
 	static var _resetBufferSize = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "resetRenderBufferSize", "()V");
 	static var _getBufferWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferWidth", "()I");
 	static var _getBufferHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferHeight", "()I");
+	static var _getSurfaceChangedCallCount = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceChangedCallCount", "()I");
+	static var _getLastSurfaceChangedWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getLastSurfaceChangedWidth", "()I");
+	static var _getLastSurfaceChangedHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getLastSurfaceChangedHeight", "()I");
+	static var _getSurfaceViewLayoutWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceViewLayoutWidth", "()I");
+	static var _getSurfaceViewLayoutHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceViewLayoutHeight", "()I");
 	#end
 
 	public static var currentScale(default, null):Float = 1.0;
@@ -79,7 +84,14 @@ class RenderScale
 		{
 			final bufW = (_getBufferWidth([]) : Int);
 			final bufH = (_getBufferHeight([]) : Int);
+			final callCount = (_getSurfaceChangedCallCount([]) : Int);
+			final lastW = (_getLastSurfaceChangedWidth([]) : Int);
+			final lastH = (_getLastSurfaceChangedHeight([]) : Int);
+			final layoutW = (_getSurfaceViewLayoutWidth([]) : Int);
+			final layoutH = (_getSurfaceViewLayoutHeight([]) : Int);
 			Logger.log('[RenderScale][$when] surfaceBuffer=${bufW}x${bufH} '
+				+ 'surfaceChangedCalls=$callCount lastReported=${lastW}x${lastH} '
+				+ 'viewLayout=${layoutW}x${layoutH} '
 				+ 'FlxG=${flixel.FlxG.width}x${flixel.FlxG.height} '
 				+ 'stage=${flixel.FlxG.stage.stageWidth}x${flixel.FlxG.stage.stageHeight} '
 				+ 'window=${flixel.FlxG.stage.window.width}x${flixel.FlxG.stage.window.height}', NOTICE);
