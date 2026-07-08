@@ -178,6 +178,18 @@ class ClientPrefs
 	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
 	@saveVar public static var drsEnabled:Bool = false;
 
+	/** DRS activates once the rolling-average FPS drops below this value. */
+	@saveVar public static var drsActivateFps:Int = 30;
+
+	/** DRS deactivates once the rolling-average FPS rises above this value (must stay below drsActivateFps to avoid flapping). */
+	@saveVar public static var drsDeactivateFps:Int = 50;
+
+	/** Minimum seconds DRS stays engaged once triggered, regardless of the rolling average — prevents rapid on/off flapping. */
+	@saveVar public static var drsMinActiveSeconds:Float = 1.5;
+
+	/** Debug: forces DRS on for the whole song regardless of frame rate, to test whether the frame-cache mechanism itself helps independent of when it triggers. */
+	@saveVar public static var drsForceAlwaysOn:Bool = false;
+
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
 	 */

@@ -95,6 +95,38 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			'drsEnabled', 'bool', false);
 		option.onChange = markCustomPreset;
 		addOption(option);
+
+		// The four options below tune DRS without needing a new build — useful
+		// while we're still figuring out the right thresholds for real devices.
+		var option:Option = new Option(Lang.str('opt_drsActivate', 'DRS Activate FPS'),
+			Lang.str('opt_drsActivate_desc', 'DRS turns on once the average fps drops below this.'),
+			'drsActivateFps', 'int', 30);
+		option.minValue = 15;
+		option.maxValue = 55;
+		option.displayFormat = 'below %v FPS';
+		addOption(option);
+
+		var option:Option = new Option(Lang.str('opt_drsDeactivate', 'DRS Deactivate FPS'),
+			Lang.str('opt_drsDeactivate_desc', 'DRS turns back off once the average fps rises above this.\nKeep this higher than the Activate value or DRS won\'t turn off.'),
+			'drsDeactivateFps', 'int', 50);
+		option.minValue = 20;
+		option.maxValue = 60;
+		option.displayFormat = 'above %v FPS';
+		addOption(option);
+
+		var option:Option = new Option(Lang.str('opt_drsMinActive', 'DRS Minimum Active Time'),
+			Lang.str('opt_drsMinActive_desc', 'Once DRS turns on, it stays on for at least this long,\neven if fps recovers sooner — prevents rapid on/off flickering.'),
+			'drsMinActiveSeconds', 'float', 1.5);
+		option.minValue = 0.5;
+		option.maxValue = 5;
+		option.displayFormat = '%v s';
+		addOption(option);
+
+		var option:Option = new Option(Lang.str('opt_drsForceOn', 'DRS Force Always On'),
+			Lang.str('opt_drsForceOn_desc',
+				'[DEBUG] Keeps DRS on for the whole song regardless of framerate,\nignoring the Activate/Deactivate/Minimum settings above.\nUse to test whether DRS itself helps, separate from tuning when it triggers.'),
+			'drsForceAlwaysOn', 'bool', false);
+		addOption(option);
 		#end
 
 		super();

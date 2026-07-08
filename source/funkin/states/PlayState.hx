@@ -432,11 +432,12 @@ class PlayState extends MusicBeatState
 	var _drsRing:Array<Float> = [for (_ in 0...DRS_RING_SIZE) 1 / 60];
 	var _drsRingIdx:Int = 0;
 	var _drsActive:Bool = false;
-	// Minimum time DRS stays engaged once triggered, regardless of the
-	// rolling average — a second line of defense against flapping, since
-	// even a 60-frame average can dip below the deactivate threshold for a
-	// frame or two during a brief lull inside an overall slow section.
-	static inline final DRS_MIN_ACTIVE_S:Float = 1.5;
+	// Minimum active duration is a second line of defense against flapping,
+	// since even a 60-frame average can dip below the deactivate threshold
+	// for a frame or two during a brief lull inside an overall slow section.
+	// Both this and the activate/deactivate fps thresholds are exposed as
+	// ClientPrefs (Graphics settings) so they can be retuned in-game without
+	// a new build if the defaults turn out not to be right for a given device.
 	var _drsActivatedAt:Float = 0.0;
 	#end
 
@@ -2089,10 +2090,23 @@ class PlayState extends MusicBeatState
 		for (t in _drsRing) _drsSum += t;
 		final _drsAvg:Float = _drsSum / DRS_RING_SIZE;
 		final _drsNow:Float = haxe.Timer.stamp();
-		if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / 30)
-			{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
-		else if (_drsActive && (_drsNow - _drsActivatedAt >= DRS_MIN_ACTIVE_S) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / 50))
-			{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
+		// drsForceAlwaysOn bypasses the fps-triggered logic entirely, so we can
+		// test whether the frame-cache mechanism itself helps at all, isolated
+		// from whether the threshold/timing tuning is right.
+		if (ClientPrefs.drsForceAlwaysOn)
+		{
+			if (ClientPrefs.drsEnabled && !_drsActive)
+				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
+			else if (!ClientPrefs.drsEnabled && _drsActive)
+				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
+		}
+		else
+		{
+			if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / ClientPrefs.drsActivateFps)
+				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
+			else if (_drsActive && (_drsNow - _drsActivatedAt >= ClientPrefs.drsMinActiveSeconds) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / ClientPrefs.drsDeactivateFps))
+				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
+		}
 		SystemMonitor.reportDrsState(_drsActive);
 		#end
 
