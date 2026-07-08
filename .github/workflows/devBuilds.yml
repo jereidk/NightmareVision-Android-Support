@@ -14,6 +14,13 @@ jobs:
   Android:
     name: Build Android
     runs-on: ubuntu-latest
+    # actions: write is only used by the cache-pruning steps below (gh api
+    # DELETE on stale Actions caches); contents: read is what checkout needs.
+    # Explicit because setting *any* permissions here overrides the repo's
+    # default grants down to just this list.
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -263,6 +270,19 @@ jobs:
           restore-keys: |
             hxcpp-cache-android-fat-${{ runner.os }}-
 
+      # This cache's key includes a source-tree hash, so it changes on every
+      # commit that touches .hx files -- restore-keys lets the step above
+      # seed from the closest old entry, but actions/cache always saves a
+      # fresh full copy afterwards regardless, leaving the old one as dead
+      # weight (see commit 15913508 for what that eventually caused). Prune
+      # it down to just the entry that was already restored this run, kept
+      # as a fallback in case this run's own save never happens.
+      - name: Prune stale hxcpp compile caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-${{ runner.os }}-" "${{ github.ref }}"
+
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
@@ -295,6 +315,9 @@ jobs:
   Android-ARM64:
     name: Build Android (ARM64)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -546,6 +569,14 @@ jobs:
           restore-keys: |
             hxcpp-android-arm64-${{ runner.os }}-
 
+      # See the matching comment on "Prune stale hxcpp compile caches" in the
+      # fat build job above -- same source-hash-keyed cache, same growth problem.
+      - name: Prune stale hxcpp build-artifact caches (ARM64)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-${{ runner.os }}-" "${{ github.ref }}"
+
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
@@ -576,6 +607,9 @@ jobs:
   Android-ARM32:
     name: Build Android (ARM32)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6.0.2
@@ -828,6 +862,14 @@ jobs:
           key: hxcpp-android-arm32-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm32-${{ runner.os }}-
+
+      # See the matching comment on "Prune stale hxcpp compile caches" in the
+      # fat build job above -- same source-hash-keyed cache, same growth problem.
+      - name: Prune stale hxcpp build-artifact caches (ARM32)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
