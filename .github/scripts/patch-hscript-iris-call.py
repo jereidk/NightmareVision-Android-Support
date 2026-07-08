@@ -14,6 +14,20 @@ IrisCall object past that statement. That makes it safe to reuse a single
 instance field and mutate it in place instead of constructing a new one each
 time -- same idea already used for GlobalScriptManager's `_updateArgs`.
 
+IMPORTANT: the field must be lazily created *inside* call(), not given a
+class-level default-value initializer. Every real script instance in this
+codebase is actually an IrisEx/FunkinScript, and IrisEx.new() never really
+calls `super(...)` -- it's hidden behind an `if (false == true) super(...)`
+so the compiler's "must call super" check is satisfied without the parent
+constructor's body (including its field initializers) ever running. A
+class-level `var _reusableCall: IrisCall = {...};` on Iris silently stays
+null forever for every script in the game, so call() would write into a
+null object on its very first real invocation. Confirmed by reproducing the
+exact pattern standalone (Haxe/Neko): the field is null post-construction
+and mutating it throws. Lazy-init sidesteps the constructor chain entirely
+since it runs from inside the method body, which always executes regardless
+of how the instance was constructed.
+
 Usage: patch-hscript-iris-call.py <path to Iris.hx>
 """
 
@@ -44,7 +58,11 @@ edits = [
         "\t// and don't retain it across a later call() on this same Iris instance\n"
         "\t// (true of every caller in NightmareVision-Android-Support as of this\n"
         "\t// patch: ScriptGroup.call() extracts .returnValue in the same expression).\n"
-        "\tvar _reusableCall: IrisCall = {funName: \"\", signature: null, returnValue: null};\n"
+        "\t// Left uninitialized here on purpose -- lazily created on first use inside\n"
+        "\t// call() itself, since IrisEx (every real script in this codebase) never\n"
+        "\t// actually runs Iris's own constructor body, so a field initializer here\n"
+        "\t// would never execute and this would stay null forever.\n"
+        "\tvar _reusableCall: IrisCall = null;\n"
         "\n"
         "\t/**\n"
         "\t * Calls a method on the script\n",
@@ -53,9 +71,13 @@ edits = [
         "\t\t\tfinal ret = Reflect.callMethod(null, ny, args);\n"
         "\t\t\treturn {funName: fun, signature: ny, returnValue: ret};\n",
         "\t\t\tfinal ret = Reflect.callMethod(null, ny, args);\n"
-        "\t\t\t_reusableCall.funName = fun;\n"
-        "\t\t\t_reusableCall.signature = ny;\n"
-        "\t\t\t_reusableCall.returnValue = ret;\n"
+        "\t\t\tif (_reusableCall == null)\n"
+        "\t\t\t\t_reusableCall = {funName: fun, signature: ny, returnValue: ret};\n"
+        "\t\t\telse {\n"
+        "\t\t\t\t_reusableCall.funName = fun;\n"
+        "\t\t\t\t_reusableCall.signature = ny;\n"
+        "\t\t\t\t_reusableCall.returnValue = ret;\n"
+        "\t\t\t}\n"
         "\t\t\treturn _reusableCall;\n",
     ),
 ]
