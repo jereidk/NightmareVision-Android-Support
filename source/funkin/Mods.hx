@@ -111,7 +111,21 @@ class Mods
 	{
 		if (!FunkinAssets.exists('modsList.txt'))
 		{
-			File.saveContent('modsList.txt', '');
+			// On a fresh install, this can run before the "All files access"
+			// permission (requested by StorageSystem.getPermissions()) is
+			// actually granted -- that request launches a separate settings
+			// Activity and boot continues underneath it without waiting, so
+			// this write can hit a real permission error here. Never fatal:
+			// mods just stay unavailable until the next launch, once the
+			// permission has landed.
+			try
+			{
+				File.saveContent('modsList.txt', '');
+			}
+			catch (e:Dynamic)
+			{
+				trace('Warn: failed to create modsList.txt (permission not granted yet?): $e');
+			}
 		}
 	}
 	
@@ -302,11 +316,19 @@ class Mods
 		for (mod in all)
 		{
 			if (fileStr.length > 0) fileStr += '\n';
-			
+
 			fileStr += '$mod|${enabled.contains(mod) ? '1' : '0'}';
 		}
-		
-		File.saveContent('modsList.txt', fileStr);
+
+		// Same permission-timing race as ensureModsListExists() above -- never fatal.
+		try
+		{
+			File.saveContent('modsList.txt', fileStr);
+		}
+		catch (e:Dynamic)
+		{
+			trace('Warn: failed to save modsList.txt (permission not granted yet?): $e');
+		}
 	}
 	
 	public static function loadTopMod()
