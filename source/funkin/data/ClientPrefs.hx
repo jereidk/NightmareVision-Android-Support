@@ -576,12 +576,14 @@ class ClientPrefs
 
 		if (FlxG.save.data.framerate == null)
 		{
-			var detectedRate:Float = FlxG.stage.application.window.displayMode.refreshRate;
-			#if android
-			var androidRate = mobile.backend.AndroidUtils.getMaxRefreshRate();
-			if (androidRate > detectedRate) detectedRate = androidRate;
-			#end
-			framerate = Std.int(FlxMath.bound(detectedRate, 60, 240));
+			// Used to auto-detect and default to the panel's max refresh rate
+			// (90/120Hz+ on most modern phones), but the game is GPU fill-rate
+			// bound even on the simplest possible stage (confirmed via Perfetto
+			// traces) -- targeting a rate that high uniformly multiplies GPU
+			// work every single frame, on every device, regardless of scene
+			// complexity. 60 is a safe default; players on devices that can
+			// actually sustain more can still raise it manually here.
+			framerate = 60;
 		}
 
 		changeFps(framerate);
