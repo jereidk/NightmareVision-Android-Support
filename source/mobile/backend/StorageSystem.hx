@@ -21,40 +21,71 @@ using StringTools;
 class StorageSystem
 {
 	private static var folderName(get, never):String;
-	
+
 	private static function get_folderName():String
 	{
 		return Application.current.meta.get('file');
 	}
-	
+
+	// Both getters below end up calling Environment.getExternalStorageDirectory()
+	// on Android, a JNI round-trip into Java, for a value that's constant for
+	// the whole process (the OS storage root + a fixed app folder name never
+	// change mid-session, regardless of whether storage permission has been
+	// granted yet — permission only gates actual file I/O on this path, not
+	// the path string itself). Several call sites (CrashHandler, GameLogger,
+	// SystemMonitor, GlobalScriptManager, FunkinAssets, AndroidUtils) call
+	// getDirectory() well after startup, some potentially repeatedly during a
+	// burst of external asset/mod loading — cache each result after the first
+	// real computation instead of re-paying the JNI cost every time. A
+	// same-value race on first use from DLCManager's background thread is
+	// harmless (worst case: computed twice, both give the identical string).
+	static var _cachedStorageDirectory:String = null;
+	static var _cachedDirectory:String = null;
+
 	/**
 	 * Returns the base storage directory path without forcing a trailing slash.
 	 */
 	public static inline function getStorageDirectory():String
 	{
-		#if android
-		return Path.addTrailingSlash(Environment.getExternalStorageDirectory() + '/.' + folderName);
-		#elseif ios
-		return lime.system.System.documentsDirectory;
+		#if (android || ios)
+		if (_cachedStorageDirectory == null)
+		{
+			#if android
+			_cachedStorageDirectory = Path.addTrailingSlash(Environment.getExternalStorageDirectory() + '/.' + folderName);
+			#else
+			_cachedStorageDirectory = lime.system.System.documentsDirectory;
+			#end
+		}
+		return _cachedStorageDirectory;
 		#else
+		// Sys.getCwd() is genuinely dynamic on desktop (Sys.setCwd() can change
+		// it mid-session) — not safe to cache, so this branch stays uncached.
 		return Sys.getCwd();
 		#end
 	}
-	
+
 	/**
 	 * Returns the base storage directory path.
 	 */
 	public static function getDirectory():String
 	{
-		#if android
-		return Environment.getExternalStorageDirectory() + '/.' + folderName + '/';
-		#elseif ios
-		return lime.system.System.documentsDirectory;
+		#if (android || ios)
+		if (_cachedDirectory == null)
+		{
+			#if android
+			_cachedDirectory = Environment.getExternalStorageDirectory() + '/.' + folderName + '/';
+			#else
+			_cachedDirectory = lime.system.System.documentsDirectory;
+			#end
+		}
+		return _cachedDirectory;
 		#else
+		// Sys.getCwd() is genuinely dynamic on desktop (Sys.setCwd() can change
+		// it mid-session) — not safe to cache, so this branch stays uncached.
 		return Sys.getCwd();
 		#end
 	}
-	
+
 	/**
 	 * Requests Android storage permissions and creates the app's external directory.
 	 *
