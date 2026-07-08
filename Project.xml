@@ -59,8 +59,6 @@
     <haxelib name="haxeui-core"/>
     <haxelib name="haxeui-flixel"/>
 
-    <haxelib name="grig.audio"/>
-    
     <haxelib name="json5hx"/>
     <haxelib name="json2object"/>
     <haxelib name="android-manager" if="android"/>
