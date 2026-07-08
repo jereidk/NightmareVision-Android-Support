@@ -191,6 +191,15 @@ class ClientPrefs
 	@saveVar public static var drsForceAlwaysOn:Bool = false;
 
 	/**
+	 * Render resolution scale (1.0 = native, 0.75 = 75%, etc). Unlike DRS, this
+	 * doesn't skip frames -- it shrinks every real frame via Android's hardware
+	 * surface scaler (mobile.backend.RenderScale), attacking GPU fill-rate cost
+	 * directly. Confirmed via Perfetto that this game is fill-rate bound, not
+	 * CPU-bound, so this is expected to help more than DRS on its own.
+	 */
+	@saveVar public static var renderScale:Float = 1.0;
+
+	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
 	 */
 	#end

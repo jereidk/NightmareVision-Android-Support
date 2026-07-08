@@ -127,6 +127,21 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 				'[DEBUG] Keeps DRS on for the whole song regardless of framerate,\nignoring the Activate/Deactivate/Minimum settings above.\nUse to test whether DRS itself helps, separate from tuning when it triggers.'),
 			'drsForceAlwaysOn', 'bool', false);
 		addOption(option);
+
+		// Different mechanism from DRS above: DRS skips whole frames, this shrinks
+		// every real frame via Android's hardware surface scaler (near-zero extra
+		// GPU cost, confirmed via on-device Perfetto traces to be the actual
+		// bottleneck — GPU fill-rate, not CPU/script/note-count). Applies live so
+		// you can feel the difference immediately.
+		var option:Option = new Option(Lang.str('opt_renderScale', 'Render Scale'),
+			Lang.str('opt_renderScale_desc',
+				'Renders the game at a lower internal resolution and lets the\ndisplay scale it up — cheaper for the GPU on every single frame.\nLower = faster but softer image. 100% = native, no change.'),
+			'renderScale', 'percent', 1.0);
+		option.minValue = 0.5;
+		option.maxValue = 1.0;
+		option.changeValue = 0.05;
+		option.onChange = () -> mobile.backend.RenderScale.apply(ClientPrefs.renderScale);
+		addOption(option);
 		#end
 
 		super();

@@ -232,6 +232,20 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
+      - name: Patch Lime SDL for Android render-scale support
+        run: |
+          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
+          while IFS= read -r ACTIVITY_FILE; do
+            echo "Found: $ACTIVITY_FILE"
+            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
+          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
+
+          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
+
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
@@ -491,6 +505,20 @@ jobs:
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      - name: Patch Lime SDL for Android render-scale support
+        run: |
+          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
+          while IFS= read -r ACTIVITY_FILE; do
+            echo "Found: $ACTIVITY_FILE"
+            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
+          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
+
+          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -760,6 +788,20 @@ jobs:
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      - name: Patch Lime SDL for Android render-scale support
+        run: |
+          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
+          while IFS= read -r ACTIVITY_FILE; do
+            echo "Found: $ACTIVITY_FILE"
+            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
+          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
+
+          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
+          while IFS= read -r SURFACE_FILE; do
+            echo "Found: $SURFACE_FILE"
+            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
+          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         if: steps.lime-cache.outputs.cache-hit != 'true'

@@ -153,7 +153,14 @@ class Init extends FlxState
 		funkin.input.Controls.init();
 		
 		ClientPrefs.load();
-		
+
+		// Applied here (after load, not next to DynamicResolution.init() above)
+		// since it needs the saved value, and reapplied whenever the setting
+		// changes live from GraphicsSettingsSubState. A no-op at 1.0 (default).
+		#if (android && cpp)
+		if (ClientPrefs.renderScale < 0.999) mobile.backend.RenderScale.apply(ClientPrefs.renderScale);
+		#end
+
 		funkin.backend.GameLogger.init();
 		funkin.backend.SystemMonitor.init();
 		funkin.data.Highscore.load();
