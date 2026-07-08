@@ -85,27 +85,37 @@ jobs:
         run: haxelib dev lime .haxelib/lime/git
 
       - name: Ensure hxcpp for Lime rebuild
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
       - name: Wrap g++-13 to force C++23
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/cxx-wrap
           printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
           chmod +x /tmp/cxx-wrap/g++-13
           echo "/tmp/cxx-wrap" >> $GITHUB_PATH
 
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
-          haxelib run lime rebuild cpp -release
-          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
-            echo "ERROR: Missing Lime ndll"
-            exit 1
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
           fi
 
       - name: Prepare NDK clang++ for Android
@@ -388,27 +398,37 @@ jobs:
         run: haxelib dev lime .haxelib/lime/git
 
       - name: Ensure hxcpp for Lime rebuild
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
       - name: Wrap g++-13 to force C++23
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/cxx-wrap
           printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
           chmod +x /tmp/cxx-wrap/g++-13
           echo "/tmp/cxx-wrap" >> $GITHUB_PATH
 
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
-          haxelib run lime rebuild cpp -release
-          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
-            echo "ERROR: Missing Lime ndll"
-            exit 1
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
           fi
 
       - name: Prepare NDK clang++ for Android
@@ -686,27 +706,37 @@ jobs:
         run: haxelib dev lime .haxelib/lime/git
 
       - name: Ensure hxcpp for Lime rebuild
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: haxelib install hxcpp > /dev/null --quiet
 
       - name: Wrap g++-13 to force C++23
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p /tmp/cxx-wrap
           printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
           chmod +x /tmp/cxx-wrap/g++-13
           echo "/tmp/cxx-wrap" >> $GITHUB_PATH
 
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         env:
           CC: gcc-13
           CXX: g++-13
         run: |
-          haxelib run lime rebuild cpp -release
-          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
-            echo "ERROR: Missing Lime ndll"
-            exit 1
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it) -- rebuilding."
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
           fi
 
       - name: Prepare NDK clang++ for Android
