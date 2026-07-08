@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}
+          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-fat
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -152,9 +152,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          key: gradle-android-fat-${{ hashFiles('**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-android-
+            gradle-android-fat-
 
       - name: Patch SDL posix process for Android
         run: |
@@ -306,7 +306,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}
+          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -412,9 +412,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-android-
+            gradle-android-arm64-
 
       - name: Patch SDL posix process for Android
         run: |
@@ -573,7 +573,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}
+          key: lime-android-v4-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm32
 
       - name: Install Linux system deps
         if: steps.lime-cache.outputs.cache-hit != 'true'
@@ -681,9 +681,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-android-${{ hashFiles('**/gradle-wrapper.properties') }}
+          key: gradle-android-arm32-${{ hashFiles('**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-android-
+            gradle-android-arm32-
 
       - name: Patch SDL posix process for Android
         run: |
