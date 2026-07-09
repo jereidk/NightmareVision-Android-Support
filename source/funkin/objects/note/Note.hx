@@ -473,7 +473,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		
 		updateHitbox();
 		
-		antialiasing = skin?.antialiasing ?? true;
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
 		
 		x += swagWidth * (noteData % (skin?.keys ?? 4));
 		

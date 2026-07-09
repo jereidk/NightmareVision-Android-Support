@@ -64,7 +64,7 @@ class NoteSplash extends RGBSprite implements funkin.game.modchart.IModNote
 		
 		texture ??= 'noteSplashes';
 		
-		antialiasing = skin?.antialiasing ?? true;
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
 		
 		if (_textureLoaded != texture) loadAnims(texture);
 		

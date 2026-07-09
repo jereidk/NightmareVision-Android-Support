@@ -94,7 +94,7 @@ class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 		
 		skin = NoteUtil.getSkinFromID(player);
 		
-		antialiasing = skin?.antialiasing ?? true;
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
 
 			if (_textureLoaded != skin.sustainSplashTexture) addAnims(skin);
 		

@@ -130,7 +130,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		baseScale.copyFrom(scale);
 		updateHitbox();
 		
-		antialiasing = skin.antialiasing;
+		antialiasing = skin.antialiasing && ClientPrefs.globalAntialiasing;
 		
 		if (lastAnim != null) playAnim(lastAnim, true);
 		
