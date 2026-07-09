@@ -21,7 +21,7 @@ Unofficial Android port of the **VS Impostor Legacy** mod, built on the [Nightma
 
 **Engine upstream credits**
 * ShadowMario and Co. — [Psych Engine](https://github.com/ShadowMario/FNF-PsychEngine)
-* Nebula_Zorua — [Psych fork NMV is built off](https://github.com/nebulazorua/exe-psych-fork) and Modchart backend
+* Nebula_Zorua — Modchart backend and the [Psych Engine fork](https://github.com/nebulazorua/exe-psych-fork) NMV is built off
 * Rozebud — chart editor ([FPS Plus](https://github.com/ThatRozebudDude/FPS-Plus-Public))
 * Codename Engine crew — camera rotation support
 * FunkinCrew — [Lime](https://github.com/FunkinCrew/lime), [OpenFL](https://github.com/FunkinCrew/openfl), [hxcpp](https://github.com/FunkinCrew/hxcpp) forks
