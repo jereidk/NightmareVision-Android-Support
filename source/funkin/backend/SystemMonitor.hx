@@ -148,6 +148,15 @@ class SystemMonitor
 	static var _frameGcBytesFreed:Int = 0;
 	static inline final FRAME_GC_THRESHOLD_BYTES:Int = 100 * 1024;
 
+	// Total bytes allocated during the current [GAMEPLAY] window (sum of the
+	// positive heap-usage deltas checkFrame() already computes). [LARGE-GC]'s
+	// "grew X over Ys" only surfaces a rate when a big collection happens to
+	// fire; this puts the allocation rate on EVERY gameplay line instead, so
+	// it can be correlated with the live note count next to it — the device
+	// logs that led here showed the rate swinging ~2MB/s → ~54MB/s between
+	// sparse and dense sections and the correlation is the open question.
+	static var _windowAllocBytes:Float = 0.0;
+
 	// Per-frame evidence capture for "[cause unknown]" spikes: texture/sound
 	// loads and sudden member-count jumps that happen to land in the same
 	// frame as a spike are much stronger evidence than nothing at all.
@@ -402,6 +411,7 @@ class SystemMonitor
 		else if (gcFreed < 0)
 		{
 			_heapGrowthSinceLastGc += -gcFreed;
+			_windowAllocBytes += -gcFreed;
 		}
 		#end
 
@@ -613,12 +623,15 @@ class SystemMonitor
 		var gcDrawSuffix = _gcCollisionsDraw > 0 ? '  [GC hit draw x$_gcCollisionsDraw, ~${Std.int(_gcBytesFreedDraw / 1024)}KB]' : '';
 		#if cpp
 		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
+		var allocSuffix = realWindowMs > 0 ? '  alloc=${Std.int(_windowAllocBytes / 1024 / (realWindowMs / 1000))}KB/s' : '';
+		_windowAllocBytes = 0;
 		#else
 		var gcAnySuffix = '';
+		var allocSuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
 		var drsSuffix = '  drs=${_drsActiveNow ? "ON" : "off"}${_drsActivations > 0 ? " (x" + _drsActivations + " this window)" : ""}';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$suffix$gapSuffix$drsSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$drsSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
 		_drsActivations = 0;
 		profReset();
 	}
@@ -628,6 +641,7 @@ class SystemMonitor
 	{
 		_gameplayLogTimer = 0.0;
 		_gameplayWindowStartStamp = haxe.Timer.stamp();
+		_windowAllocBytes = 0;
 	}
 
 	// ==================== PHASE PROFILING ====================
