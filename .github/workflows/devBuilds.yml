@@ -285,12 +285,25 @@ jobs:
             python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
-          haxelib run lime rebuild android -release
-          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
-            echo "ERROR: Missing Liblime 64 so"
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
             exit 1
           fi
 
@@ -607,12 +620,25 @@ jobs:
             python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
-          haxelib run lime rebuild android -release
-          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
-            echo "ERROR: Missing Liblime 64 so"
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
             exit 1
           fi
 
@@ -933,12 +959,25 @@ jobs:
             python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
           done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
-        if: steps.lime-cache.outputs.cache-hit != 'true'
         run: |
-          haxelib run lime rebuild android -release
-          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
-            echo "ERROR: Missing Liblime 64 so"
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
             exit 1
           fi
 
