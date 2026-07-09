@@ -192,6 +192,16 @@ function openCodeBox()
 		// field was already on stage when focus lands, which is timing-sensitive).
 		// Kick Lime's window text input directly so the keyboard always shows.
 		if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = true;
+
+		// The same FOCUS_IN timing gap also skips TextField.__enableInput(),
+		// which is what actually wires up typed characters and Enter -- not
+		// just the keyboard's visibility. It only runs from this_onFocusIn(),
+		// which requires stage != null && stage.focus == this simultaneously;
+		// neither was true yet at any earlier point (construction, addChild).
+		// Both hold now, so re-toggling `type` forces set_type() to call
+		// this_onFocusIn() again, this time under the right conditions.
+		codeField.type = "dynamic";
+		codeField.type = "input";
 	}
 	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
 
