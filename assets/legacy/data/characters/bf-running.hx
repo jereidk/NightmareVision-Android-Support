@@ -29,7 +29,7 @@ function onUpdatePost(elapsed):Void
 	if (parent.animation.curAnim.looped)
 	{
 		parent.animation.curAnim.pause();
-		parent.animCurFrame = legs.animCurFrame;
+		parent.animCurFrame = Math.min(legs.animCurFrame, parent.animation.curAnim.numFrames - 1);
 	}
 	
 	parent.y = (bfAnchorPoint[1] + legPosY[legs.animCurFrame]);
