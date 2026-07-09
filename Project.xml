@@ -105,8 +105,11 @@
         for 100-270ms — those pauses ARE the periodic gameplay stutters, and
         were even caught landing inside note-hit dispatch. Generational mode
         sweeps short-lived garbage in cheap minor collections instead of
-        paying a full mark each time. Base-game Funkin' ships with this
-        enabled for the same workload shape.-->
+        paying a full mark each time. NOTE: this is an experimental hxcpp
+        mode (base-game Funkin' only reports its state on a debug screen,
+        labeled "Exp" -- it does NOT ship with it enabled). Treat builds
+        with this as test builds; revert this define if instability shows
+        up that release builds without it don't have.-->
     <haxedef name="HXCPP_GC_GENERATIONAL"/>
 
     <!--Enable for better crash handling/reporting-->
