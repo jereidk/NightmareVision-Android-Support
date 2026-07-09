@@ -1,8 +1,34 @@
-# VS Impostor Legacy — Android Port
+<p align="center">
+	<a href="https://github.com/NMVTeam/NightmareVision">
+		<img src="assets/legacy/images/branding/UpdogBlack.png" alt="Made with NightmareVision Engine" width="325"/>
+	</a>
+</p>
 
-Unofficial Android port of the **VS Impostor Legacy** mod, built on the [NightmareVision engine](https://github.com/NMVTeam/NightmareVision).
+<h1 align="center">VS Impostor Legacy — Android Port</h1>
 
-> APKs are generated automatically via GitHub Actions on every push.
+<p align="center"><b>Current version:</b> 1.1.1bb &nbsp;·&nbsp; unofficial Android port, built on the <a href="https://github.com/NMVTeam/NightmareVision">NightmareVision engine</a></p>
+
+<p align="center">
+	Original PC mod available on
+	<a href="https://gamejolt.com/games/vsimpostor/643430">
+		<img src="https://s.gjcdn.net/img/favicon.png" width="16"/>
+		GameJolt
+	</a>
+	 and
+	<a href="https://gamebanana.com/mods/55652">
+		<img src="https://images.gamebanana.com/static/img/favicon/32x32.png" width="16"/>
+		GameBanana
+	</a>
+</p>
+
+> [!NOTE]
+> APKs for this port are generated automatically via GitHub Actions on every push — check the [Actions tab](../../actions) for the latest build artifacts.
+
+---
+
+A total-conversion mod for **Friday Night Funkin'**, in which you face off against colorful Among Us characters, across over 10 weeks and 57 songs. **VS Impostor: Legacy** is a from-the-ground-up remaster of the original 2023 mod, faithful to the original experience while adding new tweaks, features, awards, and cosmetics to collect — and maybe a few secrets to discover along the way.
+
+This repository adapts the mod to run natively on **Android**, on top of NightmareVision's existing mobile backend.
 
 ---
 
@@ -108,3 +134,6 @@ To install directly on a connected device via USB debugging:
 ```sh
 haxelib run lime test android -release
 ```
+
+> [!TIP]
+> You can add `-D ASSET_REDIRECT` to either build command so in-game assets update live as they're changed in the `assets` folder. Do **not** include this flag when making a release build.
