@@ -3,8 +3,8 @@
 	"animations": [
 		{
 			"offsets": [
-				83,
-				648
+				25,
+				-69
 			],
 			"loop": false,
 			"fps": 24,
@@ -14,8 +14,8 @@
 		},
 		{
 			"offsets": [
-				104,
-				673
+				-162,
+				-15
 			],
 			"loop": false,
 			"fps": 24,
@@ -25,8 +25,8 @@
 		},
 		{
 			"offsets": [
-				-16,
-				671
+				-292,
+				-76
 			],
 			"loop": false,
 			"fps": 24,
@@ -36,8 +36,8 @@
 		},
 		{
 			"offsets": [
-				212,
-				634
+				61,
+				28
 			],
 			"loop": false,
 			"fps": 24,
@@ -88,8 +88,8 @@
 		},
 		{
 			"offsets": [
-				62,
-				641
+				42,
+				34
 			],
 			"flipY": false,
 			"loop": true,
@@ -103,8 +103,8 @@
 	"no_antialiasing": false,
 	"image": "characters/story/black/blackdk",
 	"position": [
-		-270,
-		580
+		-410,
+		-29
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
