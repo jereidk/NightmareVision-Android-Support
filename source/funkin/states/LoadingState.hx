@@ -1,6 +1,7 @@
 package funkin.states;
 
 import flixel.addons.display.FlxBackdrop;
+import flixel.addons.transition.FlxTransitionableState;
 import flixel.tweens.FlxTween.FlxTweenType;
 import flixel.util.typeLimit.NextState;
 
@@ -169,6 +170,24 @@ class LoadingState extends MusicBeatState
 		if (!switching && shownTime >= MIN_SHOW_TIME)
 		{
 			switching = true;
+
+			// MusicBeatState.startOutro() (triggered by FlxG.switchState())
+			// normally opens a SwipeTransition substate first and only
+			// switches once its 0.48s tween finishes -- but that substate's
+			// `gradientFill` is a fully OPAQUE black sprite added the instant
+			// it's created, not something that fades in, so the screen goes
+			// solid black immediately, well before PlayState.create() (the
+			// actual multi-second blocking load this whole state exists to
+			// hide) even starts. Since no frame renders during that
+			// synchronous create() call, that solid black frame is what
+			// stays on screen for the entire real load -- this state's own
+			// tip/pet/icon visuals were already gone by then, defeating the
+			// point. Skipping this one transition leaves this state's last
+			// drawn frame on screen (frozen, but on-theme) for the whole
+			// load instead; PlayState's own entrance wipe (a separate flag,
+			// untouched here) still plays normally once it's actually built.
+			FlxTransitionableState.skipNextTransIn = true;
+
 			FlxG.switchState(nextState);
 		}
 	}
