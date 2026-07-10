@@ -9,20 +9,8 @@ import flixel.text.FlxText;
 import flixel.FlxSprite;
 import flixel.FlxCamera;
 import openfl.display.BitmapData;
-import openfl.geom.Rectangle;
 import openfl.sensors.Accelerometer;
 import openfl.events.AccelerometerEvent;
-import openfl.text.TextField;
-import openfl.text.TextFormat;
-import openfl.events.KeyboardEvent;
-import openfl.events.Event;
-
-// NOTE: openfl.text.TextFieldType and openfl.text.TextFormatAlign are NOT
-// imported here on purpose — hscript's import mechanism can't resolve these
-// two (logged as "Import ... could not be added" and, on use, "Unknown
-// variable"). Both are enum abstracts over String with an `@:from String`
-// conversion, so plain string literals ("input", "center") are used below
-// instead and convert implicitly — same runtime result, no import needed.
 
 // ── Secret gesture: shake the device to open the panel ───────────────────────
 // Deliberately NOT a tap/hold/touch gesture and NOT a typed code — the panel
@@ -44,19 +32,14 @@ var SHAKE_WINDOW:Float            = 2.2;  // all peaks must land within this man
 var chargeGlow:FlxSprite = null;
 
 // ── Second access route: a typed code on the device keyboard ────────────────
-// Unlike the shake, this one is meant to be findable — a small, deliberately
-// styled corner button that opens a real text field (native Android keyboard
-// pops up automatically once it gets focus). Change DEV_CODE to whatever you want.
-var DEV_CODE:String = 'jereidk';
-
-// Matches the code-entry field's own height (40px) so the trigger icon and
-// the box it opens feel like one consistent-sized control.
-var CODE_TRIGGER_SIZE:Int   = 40;
-var CODE_TRIGGER_MARGIN:Int = 12;
-
-var codeTriggerBg:FlxSprite  = null;
-var codeField:TextField      = null;
-var codeBoxOpen:Bool         = false;
+// Moved to native code (source/funkin/states/MainMenuState.hx) -- the raw
+// openfl.text.TextField version here fought OpenFL's own FOCUS_IN timing gap
+// and, even once worked around, still ran its event listeners through the
+// hscript interpreter. The native version uses flixel.text.FlxInputText,
+// whose FlxInputTextManager listens to the Stage's own TextEvent.TEXT_INPUT
+// directly instead of relying on a TextField's own internal enable state.
+// Native code calls `scriptGroup.call('openPanel', [])` below once the code
+// is correct, so buildPanel()/openPanel()/closePanel() stay here unchanged.
 
 // ── Dev panel state ───────────────────────────────────────────────────────────
 var panelOpen:Bool          = false;
@@ -105,15 +88,6 @@ function onLoad()
 		accel = new Accelerometer();
 		accel.addEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
 	}
-
-	// Small, visible corner button — top-right — for the code-entry route.
-	// Understated but findable on purpose; the icon itself reads as a tiny
-	// stylized keyboard so it doesn't need a text label to explain itself.
-	codeTriggerBg = new FlxSprite(FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN, CODE_TRIGGER_MARGIN);
-	codeTriggerBg.loadGraphic(cachedShape('devpanel_keyboardicon', () -> keyboardIcon(CODE_TRIGGER_SIZE, COL_BG_TOP, COL_ACCENT)));
-	codeTriggerBg.alpha = 0.75;
-	codeTriggerBg.scrollFactor.set();
-	add(codeTriggerBg);
 }
 
 // buildPanel() runs here — AFTER the compiled state finishes adding all menu
@@ -131,163 +105,6 @@ function onDestroy()
 		accel.removeEventListener(AccelerometerEvent.UPDATE, onAccelUpdate);
 		accel = null;
 	}
-	closeCodeBox(false);
-}
-
-// ── Code-entry route ──────────────────────────────────────────────────────────
-function toggleCodeBox()
-{
-	if (codeBoxOpen) closeCodeBox(false);
-	else openCodeBox();
-}
-
-function openCodeBox()
-{
-	if (codeField != null) return;
-	codeBoxOpen = true;
-	pulseCodeTrigger(true);
-
-	var format = new TextFormat(null, 20, 0xFFECE8FF);
-	format.align = "center";
-
-	codeField = new TextField();
-	codeField.type = "input";
-	codeField.width = 260;
-	codeField.height = 40;
-	codeField.background = true;
-	codeField.backgroundColor = 0xFF14142A;
-	codeField.border = true;
-	codeField.borderColor = COL_ACCENT;
-	codeField.embedFonts = false;
-	codeField.defaultTextFormat = format;
-	codeField.multiline = false;
-	// Single line, short code only: 10 chars max, and explicitly disallow
-	// newline/return characters (multiline=false alone didn't stop Enter from
-	// growing the field on some Android/OpenFL combos).
-	codeField.maxChars = 10;
-	codeField.restrict = "^\n\r";
-	codeField.text = '';
-	// Belt-and-suspenders on top of defaultTextFormat: on some Android/OpenFL
-	// combos, characters typed through the native soft keyboard render but
-	// stay invisible unless textColor is also set directly and the format is
-	// force-applied to the (currently empty) text range up front.
-	codeField.textColor = 0xFFECE8FF;
-	codeField.setTextFormat(format);
-
-	// Anchored to the raw window corner (not the logical Flixel resolution),
-	// tucked just under the keyboard-icon button in the top-right. On a
-	// device whose aspect ratio doesn't match, this may need nudging —
-	// adjust these two offsets if it lands somewhere odd on-device.
-	codeField.x = FlxG.stage.stageWidth - 272;
-	codeField.y = 56;
-
-	try
-	{
-		FlxG.game.parent.addChild(codeField);
-		FlxG.stage.focus = codeField;
-		codeField.setSelection(0, 0);
-
-		// On Android, focusing a TextField doesn't reliably raise the soft
-		// keyboard through OpenFL's own FOCUS_IN wiring (it only fires if the
-		// field was already on stage when focus lands, which is timing-sensitive).
-		// Kick Lime's window text input directly so the keyboard always shows.
-		if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = true;
-
-		// The same FOCUS_IN timing gap also skips TextField.__enableInput(),
-		// which is what actually wires up typed characters and Enter -- not
-		// just the keyboard's visibility. It only runs from this_onFocusIn(),
-		// which requires stage != null && stage.focus == this simultaneously;
-		// neither was true yet at any earlier point (construction, addChild).
-		// Both hold now, so re-toggling `type` forces set_type() to call
-		// this_onFocusIn() again, this time under the right conditions.
-		codeField.type = "dynamic";
-		codeField.type = "input";
-	}
-	catch (e:Dynamic) { trace('code box: failed to attach text field — $e'); }
-
-	codeField.addEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
-	codeField.addEventListener(Event.CHANGE, onCodeFieldChange);
-}
-
-function pulseCodeTrigger(active:Bool)
-{
-	if (codeTriggerBg == null) return;
-	FlxTween.cancelTweensOf(codeTriggerBg.scale);
-	codeTriggerBg.alpha = active ? 1.0 : 0.75;
-	codeTriggerBg.scale.set(active ? 1.15 : 1.0, active ? 1.15 : 1.0);
-	FlxTween.tween(codeTriggerBg.scale, {x: 1.0, y: 1.0}, 0.25, {ease: FlxEase.quadOut});
-}
-
-function onCodeFieldKey(e:Dynamic)
-{
-	if (e.keyCode == 13)
-	{
-		// Stop Enter/Done from inserting a newline before we can strip it —
-		// this field is meant to stay a single short line.
-		try { e.preventDefault(); } catch (ex:Dynamic) {}
-		submitCode();
-	}
-}
-
-function onCodeFieldChange(e:Dynamic)
-{
-	if (codeField == null) return;
-
-	// Belt-and-suspenders alongside multiline=false + restrict: if a newline
-	// still sneaks in (seen on some Android/OpenFL builds via the soft
-	// keyboard's Enter/Done key), strip it immediately instead of letting the
-	// field grow.
-	if (codeField.text.indexOf("\n") >= 0 || codeField.text.indexOf("\r") >= 0)
-	{
-		var cleaned = StringTools.replace(StringTools.replace(codeField.text, "\r", ""), "\n", "");
-		codeField.text = cleaned;
-		codeField.setSelection(cleaned.length, cleaned.length);
-		return;
-	}
-
-	// Auto-submit the moment the typed text matches — no need to press Enter.
-	var typed = StringTools.trim(codeField.text).toLowerCase();
-	if (typed == DEV_CODE) submitCode();
-}
-
-function submitCode()
-{
-	if (codeField == null) return;
-
-	var typed = StringTools.trim(codeField.text).toLowerCase();
-	if (typed == DEV_CODE)
-	{
-		closeCodeBox(true);
-		openPanel();
-	}
-	else
-	{
-		codeField.text = '';
-		codeField.backgroundColor = COL_DANGER;
-		FlxG.sound.play(Paths.sound('error'), 0.6);
-		haxe.Timer.delay(function() {
-			if (codeField != null) codeField.backgroundColor = 0xFF14142A;
-		}, 400);
-	}
-}
-
-function closeCodeBox(success:Bool)
-{
-	codeBoxOpen = false;
-	pulseCodeTrigger(false);
-
-	if (codeField == null) return;
-
-	codeField.removeEventListener(KeyboardEvent.KEY_DOWN, onCodeFieldKey);
-	codeField.removeEventListener(Event.CHANGE, onCodeFieldChange);
-	if (FlxG.stage.focus == codeField) FlxG.stage.focus = null;
-	try { if (FlxG.stage.window != null) FlxG.stage.window.textInputEnabled = false; }
-	catch (e:Dynamic) {}
-	try { if (codeField.parent != null) codeField.parent.removeChild(codeField); }
-	catch (e:Dynamic) {}
-	codeField = null;
-
-	if (!success) FlxG.sound.play(Paths.sound('cancelMenu'), 0.5);
 }
 
 // ── Shake detection ───────────────────────────────────────────────────────────
@@ -403,33 +220,6 @@ function roundedRectTop(w:Int, h:Int, color:Int, radius:Int):BitmapData
 			if (inside) bmp.setPixel32(px, py, color);
 		}
 	}
-
-	return bmp;
-}
-
-// Small stylized keyboard glyph, drawn procedurally (no font-glyph reliance,
-// no risk of a Unicode symbol silently failing to render): a rounded body
-// with a 4-column row of key-caps and a wide spacebar row underneath.
-function keyboardIcon(size:Int, bgColor:Int, keyColor:Int):BitmapData
-{
-	var bmp = roundedRect(size, size, bgColor, Std.int(size * 0.22));
-
-	var margin:Int  = Std.int(size * 0.16);
-	var cols:Int    = 4;
-	var gap:Int     = Std.int(size * 0.06);
-	var usableW:Int = size - margin * 2;
-	var keyW:Float  = (usableW - gap * (cols - 1)) / cols;
-	var keyH:Int    = Std.int(size * 0.14);
-	var rowY:Int    = Std.int(size * 0.28);
-
-	for (col in 0...cols)
-	{
-		var kx = Std.int(margin + col * (keyW + gap));
-		bmp.fillRect(new Rectangle(kx, rowY, keyW, keyH), keyColor);
-	}
-
-	var barY:Int = rowY + keyH + gap;
-	bmp.fillRect(new Rectangle(margin, barY, usableW, keyH), keyColor);
 
 	return bmp;
 }
@@ -728,36 +518,10 @@ function onUpdate()
 		trace('no money :(');
 	}
 
-	// ── Code-entry trigger (only live while the panel itself isn't open) ────
-	// Note: only the trigger toggles the box. We deliberately don't try to
-	// detect "tapped outside the field" here — the raw TextField lives in
-	// real window pixels while FlxG.touches reports logical game coordinates,
-	// so the two don't line up and a naive "anything else closes it" check
-	// would fire the moment you tap the field itself to type.
-	if (!panelOpen)
-	{
-		var touches = FlxG.touches.list;
-		if (touches != null)
-		{
-			for (touch in touches)
-			{
-				if (!touch.justReleased) continue;
-				var triggerX0 = FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN - 6;
-				var triggerX1 = FlxG.width - CODE_TRIGGER_MARGIN + 6;
-				var triggerY0 = CODE_TRIGGER_MARGIN - 6;
-				var triggerY1 = CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 6;
-				if (touch.x >= triggerX0 && touch.x <= triggerX1 && touch.y >= triggerY0 && touch.y <= triggerY1)
-					toggleCodeBox();
-				break;
-			}
-		}
-	}
-
-	// ── Panel interaction (only reachable via the shake gesture or code) ────
+	// ── Panel interaction (only reachable via the shake gesture or native
+	// code-entry gate, which calls scriptGroup.call('openPanel', []) once
+	// the code is correct) ──────────────────────────────────────────────────
 	if (!panelOpen) return;
-
-	// The panel opened while the code box was still up — tidy it away.
-	if (codeBoxOpen) closeCodeBox(true);
 
 	if (panelCooldown > 0) { panelCooldown--; return; }
 

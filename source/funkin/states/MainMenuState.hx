@@ -5,11 +5,13 @@ import flixel.FlxSprite;
 import flixel.addons.display.FlxBackdrop;
 import flixel.input.keyboard.FlxKey;
 import flixel.text.FlxText;
+import flixel.text.FlxInputText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 
 import openfl.display.BitmapData;
+import openfl.geom.Rectangle;
 
 import funkin.data.*;
 import funkin.data.CosmicubeData;
@@ -57,6 +59,33 @@ class MainMenuState extends MusicBeatState
 	static final MENU_LABEL_MIN_SIZE:Int = 12;
 
 	static final YT_CHANNEL_URL:String = 'https://youtube.com/@jere-idk?si=zqgS9D-dDx8IWmJ_';
+
+	// ── Dev-panel code-entry gate ────────────────────────────────────────────
+	// Previously an hscript overlay using a raw openfl.text.TextField, which
+	// fought OpenFL's own FOCUS_IN timing gap (TextField.__enableInput() --
+	// the thing that actually wires up typed characters and Enter, not just
+	// keyboard visibility -- only runs from this_onFocusIn(), which requires
+	// stage != null && stage.focus == this to BOTH already be true; neither
+	// held at any of the field's trigger points) and, even once that was
+	// worked around, still ran the event listeners through the hscript
+	// interpreter. Ported to native + flixel.text.FlxInputText: its
+	// FlxInputTextManager listens to the Stage's own TextEvent.TEXT_INPUT
+	// directly (fires unconditionally, unlike a TextField's own internal
+	// enable state) and to the Lime window's onKeyDown/onKeyUp signals, so
+	// neither failure point exists here. It also lives in Flixel's normal
+	// logical coordinate space, removing the raw-window-vs-logical-pixel
+	// mismatch the old field's manual x/y positioning had to account for.
+	static inline final DEV_CODE:String = 'jereidk';
+	static inline final CODE_TRIGGER_SIZE:Int = 40;
+	static inline final CODE_TRIGGER_MARGIN:Int = 12;
+	static inline final DEV_COL_BG:Int = 0xFF14142A;
+	static inline final DEV_COL_ACCENT:Int = 0xFF9D5CFF;
+	static inline final DEV_COL_DANGER:Int = 0xFF7F1D1D;
+	static inline final DEV_COL_TEXT:Int = 0xFFECE8FF;
+
+	var devCodeTriggerBg:FlxSprite = null;
+	var devCodeField:FlxInputText = null;
+	var devCodeBoxOpen:Bool = false;
 
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
@@ -220,6 +249,10 @@ class MainMenuState extends MusicBeatState
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
 		addVirtualPadCamera();
+		#end
+
+		#if android
+		if (ClientPrefs.inDevMode) createDevCodeTrigger();
 		#end
 	}
 
@@ -639,6 +672,10 @@ class MainMenuState extends MusicBeatState
 		super.update(elapsed);
 
 		scriptGroup.call('onUpdatePost', [elapsed]);
+
+		#if android
+		updateDevCodeGate();
+		#end
 	}
 
 	override function destroy()
@@ -650,5 +687,191 @@ class MainMenuState extends MusicBeatState
 			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
 			_bitmapSnapshotAtCreate = null;
 		}
+
+		// super.destroy() above already destroyed these (both were added via
+		// add()) -- just drop the stale references.
+		devCodeTriggerBg = null;
+		devCodeField = null;
+	}
+
+	// ── Dev-panel code-entry gate ────────────────────────────────────────────
+
+	function createDevCodeTrigger():Void
+	{
+		devCodeTriggerBg = new FlxSprite(FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN, CODE_TRIGGER_MARGIN);
+		devCodeTriggerBg.loadGraphic(cachedDevShape('devpanel_keyboardicon', () -> devKeyboardIcon(CODE_TRIGGER_SIZE, DEV_COL_BG, DEV_COL_ACCENT)));
+		devCodeTriggerBg.alpha = 0.75;
+		devCodeTriggerBg.scrollFactor.set();
+		add(devCodeTriggerBg);
+	}
+
+	function updateDevCodeGate():Void
+	{
+		if (!ClientPrefs.inDevMode) return;
+
+		// Only the trigger toggles the box -- deliberately no "tap elsewhere
+		// closes it" check, since the field itself would count as "elsewhere".
+		if (!devCodeBoxOpen)
+		{
+			var touches = FlxG.touches.list;
+			if (touches != null)
+			{
+				for (touch in touches)
+				{
+					if (!touch.justReleased) continue;
+					final x0 = FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN - 6;
+					final x1 = FlxG.width - CODE_TRIGGER_MARGIN + 6;
+					final y0 = CODE_TRIGGER_MARGIN - 6;
+					final y1 = CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 6;
+					if (touch.x >= x0 && touch.x <= x1 && touch.y >= y0 && touch.y <= y1) toggleDevCodeBox();
+					break;
+				}
+			}
+			return;
+		}
+
+		// Auto-submit the moment the typed text matches -- no need to press Enter.
+		if (devCodeField != null && StringTools.trim(devCodeField.text).toLowerCase() == DEV_CODE) submitDevCode();
+	}
+
+	function toggleDevCodeBox():Void
+	{
+		if (devCodeBoxOpen) closeDevCodeBox();
+		else openDevCodeBox();
+	}
+
+	function openDevCodeBox():Void
+	{
+		if (devCodeField != null) return;
+		devCodeBoxOpen = true;
+		pulseDevCodeTrigger(true);
+
+		devCodeField = new FlxInputText(FlxG.width - 272, 56, 260, '', 20, DEV_COL_TEXT, DEV_COL_BG);
+		devCodeField.fieldBorderThickness = 2;
+		devCodeField.fieldBorderColor = DEV_COL_ACCENT;
+		devCodeField.alignment = FlxTextAlign.CENTER;
+		devCodeField.multiline = false;
+		devCodeField.maxChars = 10;
+		devCodeField.scrollFactor.set();
+		add(devCodeField);
+
+		devCodeField.onEnter.add(_ -> submitDevCode());
+		devCodeField.startFocus();
+	}
+
+	function pulseDevCodeTrigger(active:Bool):Void
+	{
+		if (devCodeTriggerBg == null) return;
+		FlxTween.cancelTweensOf(devCodeTriggerBg.scale);
+		devCodeTriggerBg.alpha = active ? 1.0 : 0.75;
+		devCodeTriggerBg.scale.set(active ? 1.15 : 1.0, active ? 1.15 : 1.0);
+		FlxTween.tween(devCodeTriggerBg.scale, {x: 1.0, y: 1.0}, 0.25, {ease: FlxEase.quadOut});
+	}
+
+	function submitDevCode():Void
+	{
+		if (devCodeField == null) return;
+
+		final typed = StringTools.trim(devCodeField.text).toLowerCase();
+		if (typed == DEV_CODE)
+		{
+			closeDevCodeBox();
+			scriptGroup.call('openPanel', []);
+		}
+		else
+		{
+			devCodeField.text = '';
+			devCodeField.backgroundColor = DEV_COL_DANGER;
+			FlxG.sound.play(Paths.sound('error'), 0.6);
+			haxe.Timer.delay(() -> {
+				if (devCodeField != null) devCodeField.backgroundColor = DEV_COL_BG;
+			}, 400);
+		}
+	}
+
+	function closeDevCodeBox():Void
+	{
+		devCodeBoxOpen = false;
+		pulseDevCodeTrigger(false);
+
+		if (devCodeField == null) return;
+		remove(devCodeField, true);
+		devCodeField.destroy();
+		devCodeField = null;
+	}
+
+	function devRoundedRect(w:Int, h:Int, color:Int, radius:Int):BitmapData
+	{
+		var bmp = new BitmapData(w, h, true, 0x00000000);
+		var r = radius;
+
+		for (px in 0...w)
+		{
+			for (py in 0...h)
+			{
+				var inside = true;
+
+				if (px < r && py < r)
+				{
+					var dx = r - px, dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px >= w - r && py < r)
+				{
+					var dx = px - (w - r - 1), dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px < r && py >= h - r)
+				{
+					var dx = r - px, dy = py - (h - r - 1);
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px >= w - r && py >= h - r)
+				{
+					var dx = px - (w - r - 1), dy = py - (h - r - 1);
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+
+				if (inside) bmp.setPixel32(px, py, color);
+			}
+		}
+
+		return bmp;
+	}
+
+	function devKeyboardIcon(size:Int, bgColor:Int, keyColor:Int):BitmapData
+	{
+		var bmp = devRoundedRect(size, size, bgColor, Std.int(size * 0.22));
+
+		var margin:Int = Std.int(size * 0.16);
+		var cols:Int = 4;
+		var gap:Int = Std.int(size * 0.06);
+		var usableW:Int = size - margin * 2;
+		var keyW:Float = (usableW - gap * (cols - 1)) / cols;
+		var keyH:Int = Std.int(size * 0.14);
+		var rowY:Int = Std.int(size * 0.28);
+
+		for (col in 0...cols)
+		{
+			var kx = Std.int(margin + col * (keyW + gap));
+			bmp.fillRect(new Rectangle(kx, rowY, keyW, keyH), keyColor);
+		}
+
+		var barY:Int = rowY + keyH + gap;
+		bmp.fillRect(new Rectangle(margin, barY, usableW, keyH), keyColor);
+
+		return bmp;
+	}
+
+	// Same caching approach as FunkinCache/MobileVirtualPad button textures:
+	// this per-pixel loop only ever runs once for the lifetime of the app.
+	function cachedDevShape(key:String, builder:Void->BitmapData):Dynamic
+	{
+		var existing = FunkinAssets.cache.currentTrackedGraphics.get(key);
+		if (existing != null) return existing;
+
+		var graphic = FunkinAssets.cache.cacheBitmap(key, builder());
+		FunkinAssets.cache.currentTrackedGraphics.addPermanentKey(key);
+		return graphic;
 	}
 }
