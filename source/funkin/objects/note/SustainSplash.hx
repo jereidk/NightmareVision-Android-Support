@@ -112,52 +112,39 @@ class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 		__isPlayer = isPlayer;
 	}
 	
-	var __parent:Note;
 	var __tail:Note;
 	var __isPlayer:Bool = false;
-
+	
 	function findTail(note:Null<Note>)
 	{
-		__parent = note;
 		__tail = note;
 		if (__tail != null && __tail.tail.length > 0)
 		{
 			__tail = __tail.tail[__tail.tail.length - 1];
 		}
 	}
-
+	
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-
+		
 		watchTail();
 	}
-
+	
 	function watchTail()
 	{
-		// Re-resolve the last known segment every frame instead of trusting
-		// the one findTail() cached at construction time -- a sustain's tail
-		// segments can now spawn gradually over several frames after the
-		// head instead of all at once (see PlayState.recycleNote()'s
-		// pending-tail queue), so "the last segment" right when this splash
-		// was created isn't necessarily the sustain's TRUE final segment
-		// yet for a long enough hold. Keep tracking forward as later
-		// segments come into existence instead of completing early against
-		// a still-growing sustain.
-		if (__parent != null && __parent.tail.length > 0) __tail = __parent.tail[__parent.tail.length - 1];
-
 		if (__tail == null)
 		{
 			kill(); // die dont even splash jsut die
 			return;
 		}
-
+		
 		if (__tail.wasGoodHit) completed = true;
-
+		
 		if (!__tail.alive && !getAnimName().startsWith('end'))
 		{
 			completed = true;
-
+			
 			if (__isPlayer) playAnim('end$data', true);
 			else kill();
 		}

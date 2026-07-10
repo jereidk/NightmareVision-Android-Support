@@ -243,21 +243,11 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	
 	private function set_texture(value:String):String
 	{
-		// reloadNote() treats an empty value as "fall back to skin.noteTexture"
-		// but never reports that resolved name back here -- this used to always
-		// store the raw (often empty) `value`, so the very next assignment
-		// (identical resolved atlas or not) always looked like a change and paid
-		// a full reload again. _resetTexture()'s forced `texture = ''` followed
-		// moments later by PlayField.addNote()'s `note.texture = _skin.noteTexture`
-		// was reloading the SAME atlas twice on every single note spawn this way
-		// -- resolving the default here first lets that second call's guard
-		// actually catch "nothing changed" instead of always missing.
-		final resolved:String = (value != null && value.length > 0) ? value : (skin?.noteTexture ?? 'NOTE_assets');
-		if (texture == resolved) return texture;
-
+		if (texture == value) return texture;
+		
 		reloadNote('', value);
-
-		return (texture = resolved);
+		
+		return (texture = value);
 	}
 	
 	private function set_noteType(value:String):String
@@ -359,31 +349,11 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
 
-		// NOT `prefix = suffix = texture = ''` -- set_texture() now returns the
-		// RESOLVED atlas name (see its own comment), not the raw '' passed in,
-		// so chaining through it here would leave prefix/suffix holding an
-		// atlas path instead of clearing them, corrupting reloadNote()'s next
-		// `this.prefix + arraySkin[lastIndex] + this.suffix` atlas path build.
-		prefix = suffix = '';
-		texture = '';
-
+		prefix = suffix = texture = '';
+		
 		playAnim(getDefaultAnim(), true);
-
-		// Must run AFTER playAnim() above, not before -- _loadNoteAnims() used
-		// to size the sprite off `width`/`height` right after reassigning
-		// `frames`, which still reflected whatever frame the ATLAS COLLECTION
-		// defaults to (its first frame), not this note's actual direction.
-		// That only ever looked right because every recycle used to reload
-		// twice (see set_texture()'s comment) -- the FIRST reload's playAnim()
-		// left the sprite showing the correct frame, so the SECOND reload's
-		// (now-skipped) sizing pass measured the right thing by accident.
-		// With the redundant second reload gone, sizing has to happen here,
-		// after this function's own playAnim() already picked the right
-		// frame, instead of inside _loadNoteAnims().
-		if (skin != null) setGraphicSize(Std.int(width * skin.noteScale));
-
 		updateHitbox();
-
+		
 		baseScale.copyFrom(scale);
 	}
 	
@@ -407,13 +377,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			tailState.splash = null;
 		}
 		
-		// prevNote != this: with deferred tail spawning, a long hold's earlier
-		// segment can be consumed+disposed before its next segment drains from
-		// the pending queue -- and notes.recycle() (first dead member) can then
-		// hand that exact object back as the NEXT segment, arriving here with
-		// prevNote pointing at ourselves. Linking would create a self-loop
-		// (this.prevNote == this.nextNote == this) that corrupts the chain.
-		if (prevNote != null && prevNote != this)
+		if (prevNote != null)
 		{
 			this.prevNote = prevNote;
 			prevNote.nextNote = this;
@@ -428,18 +392,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			isSustainEnd = queueNote.isSustainEnd;
 			isSustainNote = queueNote.isSustainNote;
 			player = lane = queueNote.playField;
-
-			// Refresh BEFORE _resetTexture() below reloads the atlas, instead of
-			// leaving `skin` stale from whatever field this pooled Note last
-			// belonged to. NoteUtil.getSkinFromID() returns the exact same
-			// NoteSkin instance PlayField.addNote() will apply moments later (both
-			// resolve through the same NoteUtil.noteskins registry by player ID),
-			// so this reload already lands on the correct atlas and
-			// PlayField.addNote()'s own `note.texture = _skin.noteTexture` sees a
-			// match and skips its own reload -- see set_texture()'s comment for
-			// why that guard actually catches it now.
-			skin = NoteUtil.getSkinFromID(player);
-
+			
 			strumTime = queueNote.strumTime;
 			sustainLength = queueNote.sustainLength;
 		}
@@ -513,15 +466,9 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		loadNoteAnims();
 		
 		if (animName != null) playAnim(animName, true);
-
-		// Must run AFTER playAnim() above -- see _resetTexture()'s matching
-		// comment. _loadNoteAnims() used to do this itself, timed BEFORE
-		// playAnim() ever ran, sizing off whatever frame `frames` happened to
-		// default to instead of this note's actual direction.
-		if (skin != null) setGraphicSize(Std.int(width * skin.noteScale));
-
+		
 		if (inEditor && !skipScale) setGraphicSize(ChartEditorState.GRID_SIZE, ChartEditorState.GRID_SIZE);
-
+		
 		baseScale.copyFrom(scale);
 		
 		updateHitbox();
@@ -558,19 +505,16 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		final noteAnims = skin.noteAnims;
 		final directionAnims = noteAnims[noteData % noteAnims.length];
-
+		
 		for (anim in directionAnims)
 		{
 			addAnimByPrefix(anim.anim, '${anim.xmlName}0', anim.fps, true);
 			addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 		}
-
-		// Sizing intentionally NOT done here -- this runs before the caller
-		// (reloadNote()/_resetTexture()) has actually played this note's
-		// direction-specific animation, so `width`/`height` at this point
-		// still reflect whatever frame `frames` defaulted to (its first
-		// frame), not this note's real shape. Both callers size the sprite
-		// themselves, right after their own playAnim() call.
+		
+		setGraphicSize(Std.int(width * skin.noteScale));
+		
+		baseScale.copyFrom(scale);
 	}
 	
 	public function updateColors()
