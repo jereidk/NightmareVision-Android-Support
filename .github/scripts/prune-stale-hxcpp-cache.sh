@@ -22,16 +22,25 @@
 # housekeeping, not something a compile should ever depend on.
 #
 # Usage: prune-stale-hxcpp-cache.sh <key-prefix> <ref>
-# Requires: GH_TOKEN with actions:write, run from inside the checked-out repo.
+# Requires: GH_TOKEN with actions:write, run from inside the checked-out repo,
+# and GITHUB_REPOSITORY set (always true on an Actions runner).
 
 set -uo pipefail
 
 PREFIX="${1:?Usage: $0 <key-prefix> <ref>}"
 REF="${2:?Usage: $0 <key-prefix> <ref>}"
+REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY must be set}"
 
-echo "[prune-cache] Looking for caches matching prefix '$PREFIX' on ref '$REF'"
+echo "[prune-cache] Looking for caches matching prefix '$PREFIX' on ref '$REF' in $REPO"
 
-IDS=$(gh api "/repos/{owner}/{repo}/actions/caches" \
+# -R is explicit on purpose: this repo has a submodule (content/NMV-Base-Game,
+# a DIFFERENT owner/repo) checked out alongside it, and gh api's automatic
+# {owner}/{repo} template resolves from whatever git context it finds in the
+# working tree -- with two .git trees present it was silently resolving to
+# the wrong repo and 404ing on every run, which meant this script never
+# pruned anything and stale caches just piled up until GitHub's own eviction
+# kicked in.
+IDS=$(gh api -R "$REPO" "/repos/{owner}/{repo}/actions/caches" \
     -f "key=$PREFIX" -f "ref=$REF" -f "per_page=100" \
     --jq '.actions_caches | sort_by(.created_at) | reverse | .[1:] | .[].id' 2>&1)
 STATUS=$?
@@ -50,7 +59,7 @@ fi
 COUNT=0
 while IFS= read -r ID; do
     [ -z "$ID" ] && continue
-    if gh api -X DELETE "/repos/{owner}/{repo}/actions/caches/$ID" >/dev/null 2>&1; then
+    if gh api -R "$REPO" -X DELETE "/repos/{owner}/{repo}/actions/caches/$ID" >/dev/null 2>&1; then
         echo "[prune-cache] Deleted stale cache id=$ID"
         COUNT=$((COUNT + 1))
     else
