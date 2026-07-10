@@ -102,9 +102,17 @@ class MainMenuState extends MusicBeatState
 	// Deliberately NOT a tap/hold/touch gesture and NOT a typed code -- the
 	// panel is undocumented in-game. Values are in Gs (1.0 = standing still),
 	// the unit OpenFL's Accelerometer reports in.
-	static inline final DEV_SHAKE_DELTA:Float = 1.6; // jolt size (Gs) to count as one shake peak
+	//
+	// 1.6G was reachable by ordinary handling -- picking the phone up,
+	// tapping firmly through a menu, walking with it in hand -- which is
+	// exactly what a player is doing right as MainMenuState loads (tapping
+	// through the title screen), so the panel could pop open with no
+	// deliberate shake at all. Bumped to a jolt size + rep count more in
+	// line with standard "shake to undo"/"shake to report" gesture
+	// thresholds (~2.5-3G), which normal handling doesn't reach.
+	static inline final DEV_SHAKE_DELTA:Float = 2.8; // jolt size (Gs) to count as one shake peak
 	static inline final DEV_SHAKE_PEAK_COOLDOWN:Float = 0.22; // min gap between counted peaks
-	static inline final DEV_SHAKE_COUNT_NEEDED:Int = 4; // peaks required
+	static inline final DEV_SHAKE_COUNT_NEEDED:Int = 5; // peaks required
 	static inline final DEV_SHAKE_WINDOW:Float = 2.2; // all peaks must land within this many seconds
 
 	var devAccel:Accelerometer = null;
