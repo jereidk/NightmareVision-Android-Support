@@ -2201,10 +2201,19 @@ class PlayState extends MusicBeatState
 		}
 		
 		final spawnOffset:Float = (spawnTime / songSpeed);
-		
+
+		// Disabling noteSplashes/opponentStrums (which only affect rendering,
+		// via FlxGroup.draw()'s own `basic.visible` skip) made no measurable
+		// difference to dense-section fps -- so the cost isn't in drawing
+		// notes. This loop (object recycle, RGBGraphics realloc, group
+		// reorder via notes.remove()+insert(0,...), animation restart) was
+		// never wrapped in any prof tag, so its real cost has been invisible
+		// inside "unaccounted" this whole time. Tagging it to find out.
+		#if android SystemMonitor.profBegin('noteSpawn'); #end
 		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes[_noteSpawnIdx++]);
-			
+		#if android SystemMonitor.profEnd(); #end
+
 		var tempVector = funkin.backend.math.Vector3.get();
 		
 		final canUpdateModchart:Bool = (modifiersRegistered && playFields != null);
