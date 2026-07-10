@@ -19,7 +19,7 @@
 				-6
 			],
 			"flipY": false,
-			"loop": false,
+			"loop": true,
 			"fps": 24,
 			"anim": "deathLoop",
 			"flipX": false,
