@@ -286,19 +286,25 @@ class PlayState extends MusicBeatState
 	// per-head order is guaranteed -- acceptable since spawnOffset already
 	// gives a multi-hundred-ms cushion before anything here is actually
 	// needed on screen.
-	// Caps how many pending tails a single frame will drain (see update()'s
-	// second noteSpawn while loop) even if more have crossed their spawn
-	// threshold. A real device log showed noteSpawn staying elevated for
-	// many consecutive seconds instead of just a single frame -- once a
-	// frame runs long, Conductor.songPosition (tied to real audio playback
-	// time, not render frame count) jumps forward by whatever real time
-	// actually elapsed, so the NEXT frame's threshold check can find an even
-	// bigger backlog crossed at once, which takes even longer to drain, in
-	// a self-feeding spiral. Bounding the per-frame drain means a backlog
-	// gets paid off over several frames at a predictable cost each instead
-	// of compounding; segments that miss this frame's cap simply drain next
-	// frame, a few ms later than their ideal threshold at worst.
-	static inline final MAX_PENDING_TAILS_PER_FRAME:Int = 12;
+	// Caps how many notes a single frame will spawn -- both head notes
+	// (queueNotes/_noteSpawnIdx) and deferred tails (_pendingTails) --
+	// even if more have crossed their spawn threshold. A real device log
+	// showed noteSpawn staying elevated (up to 1000ms+) for many
+	// consecutive seconds instead of just a single frame. Root cause:
+	// Conductor.songPosition is tied to real audio playback time, not
+	// render frame count, so once a frame runs long, the NEXT frame's
+	// threshold check can find an even bigger backlog crossed at once,
+	// which takes even longer to drain, in a self-feeding spiral. This was
+	// first applied only to the tail-drain loop, which turned out to be
+	// half the fix: a backlog of HEAD notes (each carrying its own
+	// notes.recycle()/preRecycle()/spawnNote() cost, same as before
+	// pooling ever staggered anything) could still burst through that
+	// loop uncapped and reproduce the exact same spiral on its own.
+	// Bounding both means a backlog gets paid off over several frames at
+	// a predictable cost each instead of compounding; notes that miss a
+	// frame's cap simply spawn next frame, a few ms later than their
+	// ideal threshold at worst.
+	static inline final MAX_NOTE_SPAWNS_PER_FRAME:Int = 12;
 
 	var _pendingTails:Array<PendingTail> = [];
 	var _pendingTailIdx:Int = 0;
@@ -2507,11 +2513,16 @@ class PlayState extends MusicBeatState
 		// them on their OWN schedule instead, spreading that same total work
 		// across many frames.
 		#if android SystemMonitor.profBegin('noteSpawn'); #end
-		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+		var _headsSpawnedThisFrame:Int = 0;
+		while (_headsSpawnedThisFrame < MAX_NOTE_SPAWNS_PER_FRAME && _noteSpawnIdx < queueNotes.length
+			&& (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+		{
 			recycleNote(queueNotes[_noteSpawnIdx++]);
+			_headsSpawnedThisFrame++;
+		}
 
 		var _pendingTailsDrained:Int = 0;
-		while (_pendingTailsDrained < MAX_PENDING_TAILS_PER_FRAME && _pendingTailIdx < _pendingTails.length
+		while (_pendingTailsDrained < MAX_NOTE_SPAWNS_PER_FRAME && _pendingTailIdx < _pendingTails.length
 			&& (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
 		{
 			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
