@@ -1536,6 +1536,39 @@ class PlayState extends MusicBeatState
 		}
 	}
 
+	#if android
+	/**
+	 * Dev-only measurement, no effect on real gameplay: times how long
+	 * constructing one `Note` for every note THE WHOLE CHART will ever
+	 * need (heads + every sustain segment, not just prewarmNotePool()'s
+	 * peak-concurrency count) actually takes on this device. That's the
+	 * number a full build-everything-upfront migration (matching Psych
+	 * Mobile's generateSong(), which builds a real Note per chart note
+	 * before the countdown starts) would have to pay during loading.
+	 * Built into a throwaway local array and destroyed right after, so
+	 * `notes`/`queueNotes`/the real pool are never touched.
+	 */
+	function benchmarkFullNoteConstruction():Void
+	{
+		var total:Int = 0;
+		for (qn in queueNotes)
+		{
+			total++;
+			if (qn.tail != null) total += qn.tail.length;
+		}
+
+		final built:Array<Note> = [];
+		final startStamp:Float = haxe.Timer.stamp();
+		for (i in 0...total) built.push(new Note());
+		final elapsedMs:Float = (haxe.Timer.stamp() - startStamp) * 1000;
+
+		for (n in built) n.destroy();
+
+		final perNoteMs:Float = (total > 0 ? elapsedMs / total : 0);
+		Logger.log('[NoteBuildBenchmark] song=$curSong totalNotes=$total (heads+sustain segments) elapsed=${Std.int(elapsedMs)}ms avg=${perNoteMs}ms/note -- cost of a full build-everything-upfront migration during loading, for reference only');
+	}
+	#end
+
 	public function clearNotesBefore(time:Float):Void
 	{
 		// Advance the index past notes that are before `time`; compact lazily.
@@ -1885,6 +1918,10 @@ class PlayState extends MusicBeatState
 		_eventSpawnIdx = 0;
 
 		prewarmNotePool();
+
+		#if android
+		if (ClientPrefs.inDevMode) benchmarkFullNoteConstruction();
+		#end
 
 		speedChanges.sort(SortUtil.svSort);
 		
