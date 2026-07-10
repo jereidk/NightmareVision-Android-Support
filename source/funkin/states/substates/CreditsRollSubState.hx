@@ -8,7 +8,12 @@ class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
 	public var onFinish:Void->Void = null;
 	
 	public var camCredits:FlxCamera;
-	
+
+	// Same fix as MusicBeatState's own _updateArgs: reused every frame instead
+	// of allocating a fresh `[elapsed]` array literal on every single
+	// scriptGroup.call('onUpdatePost', ...) below.
+	final _updatePostArgs:Array<Dynamic> = [0.0];
+
 	public function new(skippable:Bool = false, ?onFinish:Void->Void, ?onSkip:Void->Void)
 	{
 		super();
@@ -45,7 +50,8 @@ class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
 			close();
 		}
 		
-		scriptGroup.call('onUpdatePost', [elapsed]);
+		_updatePostArgs[0] = elapsed;
+		scriptGroup.call('onUpdatePost', _updatePostArgs);
 	}
 	
 	public override function destroy():Void

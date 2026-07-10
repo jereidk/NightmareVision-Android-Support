@@ -376,9 +376,22 @@ class SystemMonitor
 		// A substate without persistentUpdate was almost certainly open for
 		// this whole gap (checkFrame only runs from MusicBeatState, never
 		// MusicBeatSubstate) — not a genuine hitch. Reset quietly.
+		//
+		// Also silently re-sync the GC usage baseline here before bailing --
+		// this early return used to skip that update entirely, so any GC
+		// that ran during a long gap (a state's create(), which routinely
+		// exceeds MAX_REASONABLE_GAP while loading dozens of textures) left
+		// _lastGcUsage stale. The very next real gcFreed computation would
+		// then compare a CURRENT reading against that stale, pre-gap
+		// baseline instead of what actually happened during the gap,
+		// misattributing (or hiding) whatever collection occurred inside it
+		// to/from a later, unrelated frame.
 		if (realElapsed > MAX_REASONABLE_GAP)
 		{
 			_smoothElapsed = 0.016;
+			#if cpp
+			_lastGcUsage = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			#end
 			return;
 		}
 

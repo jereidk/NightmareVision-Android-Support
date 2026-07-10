@@ -163,6 +163,12 @@ class MainMenuState extends MusicBeatState
 	// MainMenuState visit, since this is the hub state revisited constantly.
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
+	// Same fix as MusicBeatState's own _updateArgs: reused every frame instead
+	// of allocating a fresh `[elapsed]` array literal on every single
+	// scriptGroup.call('onUpdatePost', ...) below, which MainMenuState sits on
+	// idling (menu music playing, tweens running) far longer than most states.
+	final _updatePostArgs:Array<Dynamic> = [0.0];
+
 	override function create()
 	{
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
@@ -749,7 +755,8 @@ class MainMenuState extends MusicBeatState
 
 		super.update(elapsed);
 
-		scriptGroup.call('onUpdatePost', [elapsed]);
+		_updatePostArgs[0] = elapsed;
+		scriptGroup.call('onUpdatePost', _updatePostArgs);
 
 		#if android
 		updateDevCodeGate();
