@@ -1,6 +1,7 @@
 package funkin.states;
 
 import flixel.FlxG;
+import flixel.FlxCamera;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxBackdrop;
 import flixel.input.keyboard.FlxKey;
@@ -12,6 +13,8 @@ import flixel.util.FlxColor;
 
 import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
+import openfl.sensors.Accelerometer;
+import openfl.events.AccelerometerEvent;
 
 import funkin.data.*;
 import funkin.data.CosmicubeData;
@@ -21,6 +24,7 @@ import funkin.utils.ProgressionUtil;
 import funkin.utils.CoolUtil;
 import funkin.states.options.*;
 import funkin.states.*;
+import funkin.states.substates.CreditsRollSubState;
 import funkin.states.editors.MasterEditorMenu;
 
 class MainMenuState extends MusicBeatState
@@ -86,6 +90,60 @@ class MainMenuState extends MusicBeatState
 	var devCodeTriggerBg:FlxSprite = null;
 	var devCodeField:FlxInputText = null;
 	var devCodeBoxOpen:Bool = false;
+
+	// ── Dev panel: full port from the former hscript overlay (assets/legacy/
+	// scripts/states/MainMenuState.hx, now deleted) ─────────────────────────
+	// Keeping the whole thing native is more consistent with the code-entry
+	// gate above (one less interpreted-vs-compiled seam to reason about) and
+	// keeps the panel's existence out of the asset folder entirely, where a
+	// curious player poking through the APK/mod folder could stumble on it.
+
+	// ── Secret gesture: shake the device to open the panel ────────────────
+	// Deliberately NOT a tap/hold/touch gesture and NOT a typed code -- the
+	// panel is undocumented in-game. Values are in Gs (1.0 = standing still),
+	// the unit OpenFL's Accelerometer reports in.
+	static inline final DEV_SHAKE_DELTA:Float = 1.6; // jolt size (Gs) to count as one shake peak
+	static inline final DEV_SHAKE_PEAK_COOLDOWN:Float = 0.22; // min gap between counted peaks
+	static inline final DEV_SHAKE_COUNT_NEEDED:Int = 4; // peaks required
+	static inline final DEV_SHAKE_WINDOW:Float = 2.2; // all peaks must land within this many seconds
+
+	var devAccel:Accelerometer = null;
+	var devLastAccelMag:Float = 1.0;
+	var devShakeTimestamps:Array<Float> = [];
+	var devShakeCooldownUntil:Float = 0;
+
+	// Ambient "charge" glow -- a small, unlabeled dot that quietly brightens
+	// with each shake. Nothing explains what it is; only someone who already
+	// knows the gesture will recognize it building.
+	var devChargeGlow:FlxSprite = null;
+
+	// ── Panel state ─────────────────────────────────────────────────────────
+	var devPanelOpen:Bool = false;
+	var devPanelAll:Array<FlxSprite> = [];
+	var devPanelBtns:Array<{x:Float, y:Float, w:Float, h:Float, idx:Int}> = [];
+	var devPanelCooldown:Int = 0;
+	var devPanelCam:FlxCamera = null; // dedicated top-most camera, always renders above game sprites
+
+	var devLblUnlock:FlxText = null;
+	var devLblUnlockReq:FlxText = null;
+	var devLblReset:FlxText = null;
+	var devResetBtnSpr:FlxSprite = null;
+
+	// Two-tap confirm guard for the destructive reset button.
+	var devResetArmed:Bool = false;
+	var devResetArmedUntil:Float = 0;
+
+	// Panel palette (DEV_COL_BG/ACCENT/DANGER/TEXT already declared above,
+	// shared with the code-entry field -- DEV_COL_BG matches the old
+	// hscript's COL_BG_TOP, the panel's own darker body gets its own const).
+	static inline final DEV_PANEL_BG:Int = 0xFF0B0B18;
+	static inline final DEV_COL_SECTION:Int = 0xFF6B6B9E;
+	static inline final DEV_COL_TOGGLE:Int = 0xFF1E1B4B;
+	static inline final DEV_COL_TOGGLE_ON:Int = 0xFF3730A5;
+	static inline final DEV_COL_LOOT:Int = 0xFF4C1D95;
+	static inline final DEV_COL_MONEY:Int = 0xFF14532D;
+	static inline final DEV_COL_DANGER_ARMED:Int = 0xFFB91C1C;
+	static inline final DEV_COL_CLOSE:Int = 0xFF17171F;
 
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
@@ -252,7 +310,12 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		#if android
-		if (ClientPrefs.inDevMode) createDevCodeTrigger();
+		if (ClientPrefs.inDevMode)
+		{
+			createDevCodeTrigger();
+			createDevPanelAccess();
+			buildDevPanel();
+		}
 		#end
 	}
 
@@ -676,6 +739,8 @@ class MainMenuState extends MusicBeatState
 		#if android
 		updateDevCodeGate();
 		#end
+
+		updateDevPanel();
 	}
 
 	override function destroy()
@@ -692,6 +757,12 @@ class MainMenuState extends MusicBeatState
 		// add()) -- just drop the stale references.
 		devCodeTriggerBg = null;
 		devCodeField = null;
+
+		if (devAccel != null)
+		{
+			devAccel.removeEventListener(AccelerometerEvent.UPDATE, onDevAccelUpdate);
+			devAccel = null;
+		}
 	}
 
 	// ── Dev-panel code-entry gate ────────────────────────────────────────────
@@ -776,7 +847,7 @@ class MainMenuState extends MusicBeatState
 		if (typed == DEV_CODE)
 		{
 			closeDevCodeBox();
-			scriptGroup.call('openPanel', []);
+			openDevPanel();
 		}
 		else
 		{
@@ -873,5 +944,412 @@ class MainMenuState extends MusicBeatState
 		var graphic = FunkinAssets.cache.cacheBitmap(key, builder());
 		FunkinAssets.cache.currentTrackedGraphics.addPermanentKey(key);
 		return graphic;
+	}
+
+	function devRoundedRectTop(w:Int, h:Int, color:Int, radius:Int):BitmapData
+	{
+		var bmp = new BitmapData(w, h, true, 0x00000000);
+		var r = radius;
+
+		for (px in 0...w)
+		{
+			for (py in 0...h)
+			{
+				var inside = true;
+
+				if (px < r && py < r)
+				{
+					var dx = r - px, dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+				else if (px >= w - r && py < r)
+				{
+					var dx = px - (w - r - 1), dy = r - py;
+					if (dx * dx + dy * dy > r * r) inside = false;
+				}
+
+				if (inside) bmp.setPixel32(px, py, color);
+			}
+		}
+
+		return bmp;
+	}
+
+	// ── Dev panel access: shake gesture ─────────────────────────────────────
+
+	function createDevPanelAccess():Void
+	{
+		devChargeGlow = new FlxSprite(FlxG.width - 16, FlxG.height - 16);
+		devChargeGlow.makeGraphic(6, 6, DEV_COL_ACCENT);
+		devChargeGlow.alpha = 0;
+		devChargeGlow.scrollFactor.set();
+		add(devChargeGlow);
+
+		if (Accelerometer.isSupported)
+		{
+			devAccel = new Accelerometer();
+			devAccel.addEventListener(AccelerometerEvent.UPDATE, onDevAccelUpdate);
+		}
+	}
+
+	function onDevAccelUpdate(e:Dynamic):Void
+	{
+		if (devPanelOpen) return;
+
+		var mag = Math.sqrt(e.accelerationX * e.accelerationX + e.accelerationY * e.accelerationY + e.accelerationZ * e.accelerationZ);
+		var delta = Math.abs(mag - devLastAccelMag);
+		devLastAccelMag = mag;
+
+		var now = haxe.Timer.stamp();
+		if (delta < DEV_SHAKE_DELTA || now < devShakeCooldownUntil) return;
+
+		devShakeCooldownUntil = now + DEV_SHAKE_PEAK_COOLDOWN;
+
+		devShakeTimestamps.push(now);
+		while (devShakeTimestamps.length > 0 && now - devShakeTimestamps[0] > DEV_SHAKE_WINDOW)
+			devShakeTimestamps.shift();
+
+		pulseDevCharge(devShakeTimestamps.length / DEV_SHAKE_COUNT_NEEDED);
+
+		if (devShakeTimestamps.length >= DEV_SHAKE_COUNT_NEEDED)
+		{
+			devShakeTimestamps = [];
+			resetDevCharge();
+			openDevPanel();
+		}
+	}
+
+	function pulseDevCharge(progress:Float):Void
+	{
+		if (devChargeGlow == null) return;
+		FlxTween.cancelTweensOf(devChargeGlow);
+		devChargeGlow.alpha = Math.min(progress, 1.0);
+		devChargeGlow.scale.set(1 + progress, 1 + progress);
+		FlxTween.tween(devChargeGlow, {alpha: 0}, 0.7, {ease: FlxEase.quadOut});
+	}
+
+	function resetDevCharge():Void
+	{
+		if (devChargeGlow == null) return;
+		FlxTween.cancelTweensOf(devChargeGlow);
+		devChargeGlow.alpha = 0;
+		devChargeGlow.scale.set(1, 1);
+	}
+
+	// ── Dev panel content ────────────────────────────────────────────────────
+
+	function buildDevPanel():Void
+	{
+		var PW:Int = 560;
+		var PH:Int = 560;
+		var px:Int = Std.int((FlxG.width - PW) / 2);
+		var py:Int = Std.int((FlxG.height - PH) / 2);
+		var BW:Int = PW - 48;
+		var BH:Int = 48;
+		var BX:Int = px + 24;
+
+		function reg(thing:FlxSprite):Void
+		{
+			thing.visible = false;
+			devPanelAll.push(thing);
+			add(thing);
+		}
+
+		// Full-screen dim behind the panel.
+		var overlay = new FlxSprite(0, 0);
+		overlay.makeGraphic(FlxG.width, FlxG.height, 0xBF000000);
+		reg(overlay);
+
+		// Panel body -- proper rounded corners instead of a flat rectangle.
+		var bg = new FlxSprite(px, py);
+		bg.loadGraphic(cachedDevShape('devpanel_bg', () -> devRoundedRect(PW, PH, DEV_PANEL_BG, 22)));
+		reg(bg);
+
+		// Subtle top highlight band (fake gradient: a lighter strip along the
+		// top, flat-bottomed so it blends into the panel body beneath it).
+		var topBand = new FlxSprite(px, py);
+		topBand.loadGraphic(cachedDevShape('devpanel_topband', () -> devRoundedRectTop(PW, 90, DEV_COL_BG, 22)));
+		topBand.alpha = 0.9;
+		reg(topBand);
+
+		// Accent bar.
+		var accent = new FlxSprite(px + 22, py + 18);
+		accent.makeGraphic(6, 46, DEV_COL_ACCENT);
+		reg(accent);
+
+		// Title.
+		var title = new FlxText(px + 40, py + 20, PW - 80, 'DEVELOPER PANEL', 24);
+		title.color = 0xFFECE8FF;
+		reg(title);
+
+		var subtitle = new FlxText(px + 40, py + 48, PW - 80, 'you shouldn\'t be here', 12);
+		subtitle.color = 0xFF6B6B9E;
+		reg(subtitle);
+
+		var rowY:Int = py + 104;
+
+		function sectionLabel(text:String):Void
+		{
+			var lbl = new FlxText(BX, rowY, BW, text, 13);
+			lbl.color = DEV_COL_SECTION;
+			reg(lbl);
+			rowY += 24;
+		}
+
+		function addRow(label:String, bgColor:Int, btnIdx:Int, cacheKey:String):FlxText
+		{
+			var spr = new FlxSprite(BX, rowY);
+			spr.loadGraphic(cachedDevShape(cacheKey, () -> devRoundedRect(BW, BH, bgColor, 10)));
+			reg(spr);
+
+			var lbl = new FlxText(BX, rowY + 14, BW, label, 16);
+			lbl.alignment = FlxTextAlign.CENTER;
+			lbl.color = 0xFFFFFFFF;
+			reg(lbl);
+
+			devPanelBtns.push({x: BX, y: rowY, w: BW, h: BH, idx: btnIdx});
+			rowY += BH + 10;
+			return lbl;
+		}
+
+		sectionLabel('PROGRESSION');
+		devLblUnlock = addRow(devUnlockLabel(), ClientPrefs.forceUnlock ? DEV_COL_TOGGLE_ON : DEV_COL_TOGGLE, 0,
+			ClientPrefs.forceUnlock ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
+		devLblUnlockReq = addRow(devUnlockReqLabel(), ClientPrefs.forceUnlockReq ? DEV_COL_TOGGLE_ON : DEV_COL_TOGGLE, 1,
+			ClientPrefs.forceUnlockReq ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
+		addRow('◆  Unlock All Cosmetics', DEV_COL_LOOT, 2, 'devpanel_loot');
+		addRow('★  Grant All Achievements', DEV_COL_LOOT, 3, 'devpanel_loot');
+
+		rowY += 6;
+		sectionLabel('ECONOMY');
+		addRow('Grant 1,000,000 Beans', DEV_COL_MONEY, 4, 'devpanel_money');
+
+		rowY += 6;
+		sectionLabel('DANGER ZONE');
+		devResetBtnSpr = null;
+		devLblReset = addRow('⚠  Reset Money & Cosmetics', DEV_COL_DANGER, 5, 'devpanel_danger');
+		// grab the sprite behind the label we just added (last-1 in devPanelAll before the label)
+		devResetBtnSpr = devPanelAll[devPanelAll.length - 2];
+
+		rowY += 8;
+		addRow('✕  Close', DEV_COL_CLOSE, 6, 'devpanel_close');
+	}
+
+	function devUnlockLabel():String
+		return (ClientPrefs.forceUnlock ? '✓  Unlock Everything  ON' : '✗  Unlock Everything  OFF');
+
+	function devUnlockReqLabel():String
+		return (ClientPrefs.forceUnlockReq ? '✓  Bypass Requirements  ON' : '✗  Bypass Requirements  OFF');
+
+	function devResetLabel():String
+		return (devResetArmed ? '⚠  TAP AGAIN TO CONFIRM' : '⚠  Reset Money & Cosmetics');
+
+	function openDevPanel():Void
+	{
+		devPanelOpen = true;
+		devPanelCooldown = 5;
+		devResetArmed = false;
+
+		if (devLblUnlock != null) devLblUnlock.text = devUnlockLabel();
+		if (devLblUnlockReq != null) devLblUnlockReq.text = devUnlockReqLabel();
+		if (devLblReset != null) devLblReset.text = devResetLabel();
+
+		// Dedicated camera added last = renders on top of everything: game
+		// sprites, virtual pad, HUD, all of it.
+		if (devPanelCam == null)
+		{
+			devPanelCam = new FlxCamera();
+			devPanelCam.bgColor = 0x00000000;
+			FlxG.cameras.add(devPanelCam);
+			for (thing in devPanelAll) thing.cameras = [devPanelCam];
+		}
+
+		FlxG.sound.play(Paths.sound('panelAppear'), 0.6);
+
+		// Cascading fade/slide-in entrance.
+		var i = 0;
+		for (thing in devPanelAll)
+		{
+			thing.visible = true;
+			var startY = thing.y;
+			thing.y = startY + 18;
+			thing.alpha = 0;
+
+			var delay = Math.min(i * 0.012, 0.18);
+			FlxTween.tween(thing, {y: startY, alpha: 1}, 0.28, {ease: FlxEase.quintOut, startDelay: delay});
+			i++;
+		}
+	}
+
+	function closeDevPanel():Void
+	{
+		devPanelOpen = false;
+		devResetArmed = false;
+		FlxG.sound.play(Paths.sound('panelDisappear'), 0.5);
+		for (thing in devPanelAll)
+		{
+			FlxTween.cancelTweensOf(thing);
+			thing.visible = false;
+			thing.alpha = 1;
+		}
+	}
+
+	function handleDevBtnTap(idx:Int):Void
+	{
+		switch (idx)
+		{
+			case 0: // Force Unlock toggle
+				ClientPrefs.forceUnlock = !ClientPrefs.forceUnlock;
+				ClientPrefs.doubletrouble = ClientPrefs.forceUnlock;
+				ClientPrefs.flush();
+				if (devLblUnlock != null) devLblUnlock.text = devUnlockLabel();
+				FlxG.sound.play(Paths.sound('select'), 0.6);
+
+			case 1: // Force Unlock Req toggle
+				ClientPrefs.forceUnlockReq = !ClientPrefs.forceUnlockReq;
+				ClientPrefs.flush();
+				if (devLblUnlockReq != null) devLblUnlockReq.text = devUnlockReqLabel();
+				FlxG.sound.play(Paths.sound('select'), 0.6);
+
+			case 2: // Unlock all cosmicube cosmetics
+				ClientPrefs.cosmicubeUnlocks = ProgressionUtil.allImpostorItems.copy();
+				ClientPrefs.flush();
+				FlxG.sound.play(Paths.sound('cosmicubePop'), 0.8);
+
+			case 3: // Grant every achievement
+				for (award in GameFlags.getAwards())
+					GameFlags.giveAchievement(award.id);
+				FlxG.sound.play(Paths.sound('unlockSong'), 0.8);
+
+			case 4: // Grant money
+				CosmicubeData.currentMoney += 1000000;
+				ClientPrefs.flush();
+				FlxG.sound.play(Paths.sound('getbeans'), 0.8);
+
+			case 5: // Reset money + cube unlocks -- two-tap confirm to avoid fat-finger data loss
+				if (!devResetArmed)
+				{
+					devResetArmed = true;
+					devResetArmedUntil = haxe.Timer.stamp() + 3.0;
+					if (devLblReset != null) devLblReset.text = devResetLabel();
+					if (devResetBtnSpr != null)
+					{
+						var bw = Std.int(devResetBtnSpr.width), bh = Std.int(devResetBtnSpr.height);
+						devResetBtnSpr.loadGraphic(cachedDevShape('devpanel_danger_armed', () -> devRoundedRect(bw, bh, DEV_COL_DANGER_ARMED, 10)));
+					}
+					FlxG.sound.play(Paths.sound('warn'), 0.7);
+				}
+				else
+				{
+					CosmicubeData.currentMoney = 0;
+					ClientPrefs.cosmicubeUnlocks.resize(0);
+					ClientPrefs.flush();
+					FlxG.sound.play(Paths.sound('error'), 0.7);
+					closeDevPanel();
+				}
+
+			case 6: // Close
+				closeDevPanel();
+		}
+	}
+
+	function updateDevPanel():Void
+	{
+		if (!ClientPrefs.inDevMode) return;
+
+		// ── Desktop keyboard shortcuts (dev convenience on PC/editor) ──────
+		if (FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.SEVEN)
+		{
+			ClientPrefs.finaleState = (ClientPrefs.finaleState == FinaleState.ACTIVE
+				? FinaleState.INACTIVE : FinaleState.ACTIVE);
+			ClientPrefs.flush();
+			TitleState.initialized = false;
+			FlxG.resetGame();
+		}
+		if (FlxG.keys.justPressed.NINE)
+		{
+			persistentUpdate = persistentDraw = false;
+			openSubState(new CreditsRollSubState(true,
+				() -> persistentUpdate = persistentDraw = true,
+				() -> persistentUpdate = persistentDraw = true));
+		}
+		if (FlxG.keys.justPressed.SIX)
+		{
+			ClientPrefs.forceUnlockReq = !ClientPrefs.forceUnlockReq;
+			ClientPrefs.flush();
+			trace(ClientPrefs.forceUnlockReq ? 'FORCE UNLOCK REQ ON' : 'FORCE UNLOCK REQ OFF');
+		}
+		if (FlxG.keys.justPressed.FIVE)
+		{
+			ClientPrefs.cosmicubeUnlocks.resize(0);
+			ClientPrefs.flush();
+			trace('Cosmicube progress reset');
+		}
+		if (FlxG.keys.justPressed.FOUR)
+		{
+			ClientPrefs.forceUnlock = !ClientPrefs.forceUnlock;
+			ClientPrefs.doubletrouble = ClientPrefs.forceUnlock;
+			ClientPrefs.flush();
+			trace(ClientPrefs.forceUnlock ? 'FORCE UNLOCK ON' : 'FORCE UNLOCK OFF');
+		}
+		if (FlxG.keys.justPressed.THREE)
+		{
+			ClientPrefs.unlockedSongs = [];
+			ClientPrefs.flush();
+			trace('WIPED SONG DATA');
+		}
+		if (FlxG.keys.justPressed.TWO)
+		{
+			CosmicubeData.currentMoney += 1000000;
+			ClientPrefs.flush();
+			trace('FREE MONEY');
+		}
+		if (FlxG.keys.justPressed.ONE)
+		{
+			CosmicubeData.currentMoney = 0;
+			ClientPrefs.flush();
+			trace('no money :(');
+		}
+
+		// ── Panel interaction (only reachable via the shake gesture or the
+		// code-entry gate) ──────────────────────────────────────────────────
+		if (!devPanelOpen) return;
+
+		if (devPanelCooldown > 0) { devPanelCooldown--; return; }
+
+		// Auto-revert the destructive-reset arm state if the player doesn't
+		// confirm within the window.
+		if (devResetArmed && haxe.Timer.stamp() > devResetArmedUntil)
+		{
+			devResetArmed = false;
+			if (devLblReset != null) devLblReset.text = devResetLabel();
+			if (devResetBtnSpr != null)
+			{
+				var bw = Std.int(devResetBtnSpr.width), bh = Std.int(devResetBtnSpr.height);
+				devResetBtnSpr.loadGraphic(cachedDevShape('devpanel_danger', () -> devRoundedRect(bw, bh, DEV_COL_DANGER, 10)));
+			}
+		}
+
+		var touches = FlxG.touches.list;
+		if (touches != null)
+		{
+			for (touch in touches)
+			{
+				if (!touch.justReleased) continue;
+				var tapped = false;
+				for (btn in devPanelBtns)
+				{
+					if (touch.x >= btn.x && touch.x <= btn.x + btn.w &&
+					    touch.y >= btn.y && touch.y <= btn.y + btn.h)
+					{
+						handleDevBtnTap(btn.idx);
+						tapped = true;
+						break;
+					}
+				}
+				if (!tapped) closeDevPanel();
+				break;
+			}
+		}
 	}
 }
