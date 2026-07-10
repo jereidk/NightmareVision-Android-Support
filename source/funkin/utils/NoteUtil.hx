@@ -502,15 +502,21 @@ class NoteUtil
 		{r: 0xFF3A3A6C, g: 0xFFFFFF, b: 0xFF17202B} // 192nd
 	];
 	
-	public static function getCurColors(id:Int = 0, quant:Int = 0, player:Int = 0)
+	public static function getCurColors(id:Int = 0, quant:Int = 0, player:Int = 0, ?into:RGBGraphics)
 	{
 		final skin = getSkinFromID(player);
-		
+
 		final idx = id > skin.keys ? 0 : id;
 
 		var colors = skin.colors[idx];
 		if (ClientPrefs.quants && quant != 0) colors = quantDefaultColors[quants.indexOf(quant)];
-		
+
+		if (into != null)
+		{
+			into.reset(colors.r, colors.g, colors.b);
+			return into;
+		}
+
 		return new RGBGraphics(colors.r, colors.g, colors.b);
 	}
 	

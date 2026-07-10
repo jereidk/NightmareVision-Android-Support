@@ -1472,7 +1472,14 @@ class PlayState extends MusicBeatState
 	{
 		note.kill();
 		note.garbage = true;
-		notes.remove(note, true);
+		// NOT removed from `notes` — a killed-but-still-a-member note is
+		// exactly what notes.recycle()'s getFirstAvailable() looks for
+		// (first member with exists == false). Splicing it out here used to
+		// permanently discard it from the pool, so every single note spawn
+		// fell through to `new Note()` instead of reusing one — the pool
+		// never actually pooled anything. Left in place, the group settles
+		// at roughly the song's peak concurrent note count and spawns after
+		// that point are real reuses.
 	}
 	
 	public function clearNotesBefore(time:Float):Void
@@ -2202,13 +2209,17 @@ class PlayState extends MusicBeatState
 		
 		final spawnOffset:Float = (spawnTime / songSpeed);
 
-		// Disabling noteSplashes/opponentStrums (which only affect rendering,
-		// via FlxGroup.draw()'s own `basic.visible` skip) made no measurable
-		// difference to dense-section fps -- so the cost isn't in drawing
-		// notes. This loop (object recycle, RGBGraphics realloc, group
-		// reorder via notes.remove()+insert(0,...), animation restart) was
-		// never wrapped in any prof tag, so its real cost has been invisible
-		// inside "unaccounted" this whole time. Tagging it to find out.
+		// Profiling this (previously untagged, hiding inside "unaccounted")
+		// showed noteSpawn cost scaling hard with burst size (~800ms for a
+		// 26-note burst). Root cause: disposeNote()/notesLoop used to splice
+		// dead notes out of `notes` entirely, so notes.recycle() could never
+		// find a reusable dead member — every single spawn fell through to
+		// `new Note()` (full FlxSprite construction + a duplicate
+		// _resetTexture() on top of the one preRecycle() already does) plus
+		// a fresh RGBGraphics allocation, none of which "pooling" was
+		// actually avoiding. Both are fixed now (see disposeNote()'s
+		// comment, and NoteUtil.getCurColors()'s `into` param) — keeping
+		// this tag to confirm the improvement on the next real build.
 		#if android SystemMonitor.profBegin('noteSpawn'); #end
 		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes[_noteSpawnIdx++]);
@@ -2275,12 +2286,11 @@ class PlayState extends MusicBeatState
 			while (i < notes.length)
 			{
 				var daNote = notes.members[i ++];
-				
-				if (!daNote.alive) {
-					notes.remove(daNote, true);
-					i --;
-					continue;
-				}
+
+				// Dead notes are left in the group as pool fodder for
+				// notes.recycle() (see disposeNote()'s comment) instead of
+				// being spliced out — just skip them here.
+				if (!daNote.alive) continue;
 				
 				final field = daNote.playField;
 
@@ -3353,8 +3363,13 @@ class PlayState extends MusicBeatState
 	
 	public function KillNotes():Void
 	{
-		while (notes.length > 0)
-			disposeNote(notes.members[0]);
+		// disposeNote() no longer removes members from `notes` (see its
+		// comment) so it can't be used to drain this to empty anymore —
+		// this is a full teardown (song end/retry), so just kill everything
+		// and wipe the group outright instead.
+		for (note in notes.members)
+			if (note != null) note.kill();
+		notes.clear();
 
 		queueNotes.resize(0);
 		_noteSpawnIdx = 0;

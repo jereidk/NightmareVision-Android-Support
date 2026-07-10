@@ -346,9 +346,9 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
 		
-		rgbGraphics = NoteUtil.getCurColors(noteData, quant, player);
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
-		
+
 		prefix = suffix = texture = '';
 		
 		playAnim(getDefaultAnim(), true);

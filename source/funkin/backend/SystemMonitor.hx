@@ -631,7 +631,10 @@ class SystemMonitor
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
 		var drsSuffix = '  drs=${_drsActiveNow ? "ON" : "off"}${_drsActivations > 0 ? " (x" + _drsActivations + " this window)" : ""}';
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s notes=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$drsSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
+		// noteCount is PlayState.notes.length — the note *pool* size (a
+		// fixed-size, reused set of Note objects once note pooling actually
+		// works), not the count of notes currently in flight.
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$drsSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
 		_drsActivations = 0;
 		profReset();
 	}
