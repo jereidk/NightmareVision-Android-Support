@@ -846,10 +846,16 @@ class FreeplayState extends AmongUIState
 		if (ret != null) return trace('THIS CHART IS INVALID! FUCK!');
 		
 		final switchToCharter:Bool = (FlxG.keys.pressed.SHIFT && ClientPrefs.inDevMode);
-		
-		if (switchToCharter) ChartEditorState._song = PlayState.SONG;
-		
-		FlxG.switchState(switchToCharter ? ChartEditorState.new : PlayState.new);
+
+		if (switchToCharter)
+		{
+			ChartEditorState._song = PlayState.SONG;
+			FlxG.switchState(ChartEditorState.new);
+		}
+		else
+		{
+			LoadingState.loadAndSwitchState(PlayState.new);
+		}
 	}
 	
 	override function destroy()

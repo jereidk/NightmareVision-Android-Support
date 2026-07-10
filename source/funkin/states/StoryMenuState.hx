@@ -295,8 +295,8 @@ class StoryMenuState extends AmongUIState
 		PlayState.storyMeta.score = 0;
 		
 		PlayState.SONG = Chart.fromSong(PlayState.storyMeta.playlist[0], PlayState.storyMeta.difficulty);
-		
-		FlxG.switchState(PlayState.new);
+
+		LoadingState.loadAndSwitchState(PlayState.new);
 	}
 	
 	var wasPressingCruiser:Bool = false;
