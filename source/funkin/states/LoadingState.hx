@@ -4,6 +4,9 @@ import flixel.addons.display.FlxBackdrop;
 import flixel.tweens.FlxTweenType;
 import flixel.util.typeLimit.NextState;
 
+import funkin.backend.Difficulty;
+import funkin.data.CharacterData.CharacterParser;
+import funkin.objects.HealthIcon;
 import funkin.objects.Pet;
 
 /**
@@ -12,10 +15,11 @@ import funkin.objects.Pet;
  * (see FlxGame.switchState()) -- no frame renders while it's working, so
  * a loading screen can't show LIVE progress through that block without
  * splitting create() into resumable steps. This is the "safe minimal"
- * version instead: show something real (song name, a tip, a moving pet)
- * for at least MIN_SHOW_TIME using the same starfield/vignette/fonts as
- * the main menu, THEN trigger the real switch -- so the freeze is
- * bookended by an on-theme loading screen instead of a static wipe.
+ * version instead: show something real (opponent, song, difficulty, a
+ * tip, a moving pet) for at least MIN_SHOW_TIME using the same
+ * starfield/vignette/fonts as the main menu, THEN trigger the real
+ * switch -- so the freeze is bookended by an on-theme loading screen
+ * instead of a static wipe.
  */
 class LoadingState extends MusicBeatState
 {
@@ -26,6 +30,8 @@ class LoadingState extends MusicBeatState
 	// Long enough that the screen never just flashes by, short enough it
 	// doesn't feel like padding -- roughly two SwipeTransition beats.
 	static inline final MIN_SHOW_TIME:Float = 1.1;
+
+	static inline final ACCENT:FlxColor = 0xFFFF4444; // matches FreeplayCard's own selection accent
 
 	var nextState:NextState;
 	var shownTime:Float = 0;
@@ -49,6 +55,20 @@ class LoadingState extends MusicBeatState
 		add(new FlxBackdrop(Paths.image('menu/common/starBG')));
 		add(new FlxBackdrop(Paths.image('menu/common/starFG')));
 
+		// Soft warm highlight behind the title/icon cluster -- same additive
+		// technique MainMenuState uses for its own glow, just scaled down and
+		// tinted to sit behind a smaller area instead of covering the screen.
+		var glow = new FlxSprite().loadGraphic(Paths.image('menu/main/glow'));
+		glow.scale.set(0.55, 0.55);
+		glow.updateHitbox();
+		glow.color = ACCENT;
+		glow.alpha = 0.55;
+		glow.blend = ADD;
+		glow.screenCenter(X);
+		glow.y = 30;
+		glow.scrollFactor.set();
+		add(glow);
+
 		var vignette = new FlxSprite().loadGraphic(Paths.image('menu/main/vignette'));
 		vignette.scrollFactor.set();
 		vignette.active = false;
@@ -60,15 +80,56 @@ class LoadingState extends MusicBeatState
 		vignette.screenCenter();
 		add(vignette);
 
-		var songName:String = '';
-		if (PlayState.SONG != null && PlayState.SONG.song != null && PlayState.SONG.song.length > 0)
-			songName = PlayState.SONG.song.charAt(0).toUpperCase() + PlayState.SONG.song.substr(1);
+		var song = PlayState.SONG;
 
-		var titleText = new FlxText(0, 150, FlxG.width, Lang.str('loading_title', 'CARGANDO') + (songName.length > 0 ? '\n$songName' : ''), 56);
+		var songName:String = '';
+		if (song != null && song.song != null && song.song.length > 0)
+			songName = song.song.charAt(0).toUpperCase() + song.song.substr(1);
+
+		// Cheap metadata-only lookup (just parses the character JSON, no
+		// atlas/sprite construction -- see Pet.hx's own use of this for the
+		// same reason) so the icon matches what the HUD actually shows for
+		// this opponent (e.g. "danger" character -> "black" icon), not just
+		// whatever HealthIcon's own placeholder fallback would guess from
+		// the raw character id.
+		if (song != null && song.player2 != null && song.player2.length > 0)
+		{
+			var opponentInfo = CharacterParser.fetchInfoUnsafe(song.player2);
+			var iconKey:String = opponentInfo?.healthicon ?? song.player2;
+
+			var icon = new HealthIcon(iconKey, false);
+			icon.setGraphicSize(90, 90);
+			icon.updateHitbox();
+			icon.antialiasing = ClientPrefs.globalAntialiasing;
+			icon.screenCenter(X);
+			icon.x -= 130;
+			icon.y = 100;
+			icon.scrollFactor.set();
+			add(icon);
+
+			FlxTween.tween(icon.scale, {x: icon.scale.x * 1.08, y: icon.scale.y * 1.08}, 0.6,
+				{type: PINGPONG, ease: FlxEase.sineInOut});
+		}
+
+		var titleText = new FlxText(0, 118, FlxG.width, Lang.str('loading_title', 'CARGANDO') + (songName.length > 0 ? '\n$songName' : ''), 56);
 		titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 56, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		titleText.borderSize = 3;
 		titleText.scrollFactor.set();
 		add(titleText);
+
+		FlxTween.tween(titleText.scale, {x: 1.04, y: 1.04}, 0.9, {type: PINGPONG, ease: FlxEase.sineInOut});
+
+		if (song != null)
+		{
+			var diffName:String = Difficulty.difficulties[PlayState.storyMeta.difficulty] ?? '';
+			if (diffName.length > 0)
+			{
+				var diffText = new FlxText(0, titleText.y + 92, FlxG.width, diffName.toUpperCase(), 26);
+				diffText.setFormat(Paths.font('vcr.ttf'), 26, ACCENT, CENTER, OUTLINE, FlxColor.BLACK);
+				diffText.scrollFactor.set();
+				add(diffText);
+			}
+		}
 
 		var tip:String = FlxG.random.getObject(TitleState.funFacts) ?? '';
 		var tipText = new FlxText(100, FlxG.height - 140, FlxG.width - 200, tip, 26);
