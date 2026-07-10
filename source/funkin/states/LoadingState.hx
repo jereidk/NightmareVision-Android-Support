@@ -92,12 +92,12 @@ class LoadingState extends MusicBeatState
 			var iconKey:String = opponentInfo?.healthicon ?? song.player2;
 
 			var icon = new HealthIcon(iconKey, false);
-			icon.setGraphicSize(150, 150);
+			icon.setGraphicSize(220, 220);
 			icon.updateHitbox();
 			icon.antialiasing = ClientPrefs.globalAntialiasing;
 			icon.screenCenter(X);
-			icon.x -= 190;
-			icon.y = 90;
+			icon.x -= 250;
+			icon.y = 70;
 			icon.scrollFactor.set();
 			add(icon);
 
@@ -105,14 +105,14 @@ class LoadingState extends MusicBeatState
 				{type: PINGPONG, ease: FlxEase.sineInOut});
 		}
 
-		var loadingLabel = new FlxText(0, 90, FlxG.width, Lang.str('loading_title', 'CARGANDO'), 32);
-		loadingLabel.setFormat(Paths.font('vcr.ttf'), 32, ACCENT, CENTER, OUTLINE, FlxColor.BLACK);
+		var loadingLabel = new FlxText(0, 70, FlxG.width, Lang.str('loading_title', 'CARGANDO'), 46);
+		loadingLabel.setFormat(Paths.font('vcr.ttf'), 46, ACCENT, CENTER, OUTLINE, FlxColor.BLACK);
 		loadingLabel.scrollFactor.set();
 		add(loadingLabel);
 
-		var titleText = new FlxText(0, loadingLabel.y + 42, FlxG.width, songName, 76);
-		titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 76, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
-		titleText.borderSize = 3;
+		var titleText = new FlxText(0, loadingLabel.y + 62, FlxG.width, songName, 110);
+		titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 110, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
+		titleText.borderSize = 4;
 		titleText.scrollFactor.set();
 		add(titleText);
 
