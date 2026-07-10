@@ -2774,15 +2774,28 @@ class PlayState extends MusicBeatState
 	
 	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
 	{
+		// Sub-breakdown of the outer 'noteSpawn' tag -- profBegin/profEnd is a
+		// stack that accumulates per-tag across the whole frame, so these
+		// nest cleanly under it and show up as their own lines in the
+		// [GAMEPLAY] breakdown without double-counting. Added to find out
+		// WHERE inside a note spawn the cost actually is (pool scan vs field
+		// reset/texture vs scripts) instead of continuing to guess after the
+		// burst-capping fixes didn't fully resolve sustained noteSpawn cost.
+		#if android SystemMonitor.profBegin('noteSpawn.recycle'); #end
 		var note:Note = notes.recycle(Note, () -> new Note());
+		#if android SystemMonitor.profEnd(); #end
 
+		#if android SystemMonitor.profBegin('noteSpawn.preRecycle'); #end
 		note.preRecycle(queueNote, parent, prevNote);
+		#if android SystemMonitor.profEnd(); #end
 
 		if (parent != null) return note;
 
 		if (queueNote.tail != null)
 		{
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNote'); #end
 			final note:Note = spawnNote(note);
+			#if android SystemMonitor.profEnd(); #end
 
 			if (note != null) enqueuePendingTails(note, queueNote, queueNote.tail);
 
@@ -2790,7 +2803,10 @@ class PlayState extends MusicBeatState
 		}
 		else
 		{
-			return spawnNote(note);
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNote'); #end
+			final result:Note = spawnNote(note);
+			#if android SystemMonitor.profEnd(); #end
+			return result;
 		}
 	}
 
@@ -2843,7 +2859,9 @@ class PlayState extends MusicBeatState
 		}
 		else if (entry.parentNote.wasGoodHit) tailNote.blockHit = false;
 
+		#if android SystemMonitor.profBegin('noteSpawn.spawnNote'); #end
 		spawnNote(tailNote);
+		#if android SystemMonitor.profEnd(); #end
 	}
 
 	inline function spawnNote(note:Note):Null<Note>
