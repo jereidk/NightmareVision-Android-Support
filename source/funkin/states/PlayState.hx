@@ -1633,8 +1633,25 @@ class PlayState extends MusicBeatState
 		while (i >= 0)
 		{
 			var daNote:Note = notes.members[i];
-			if (daNote.strumTime - 350 < time) disposeNote(daNote);
-			
+			if (daNote.strumTime - 350 < time)
+			{
+				// A still-alive note is also tracked in its PlayField's own
+				// `notes` array (used for hit-detection scans, see
+				// PlayField.addNote/forEachAliveNote) -- disposing it here
+				// via the pool-only disposeNote() kills it but never calls
+				// PlayField.removeNote(), leaving a stale reference behind.
+				// If that same Note object later gets recycled back into the
+				// same field, addNote() pushes it again with no dedupe check,
+				// so the field ends up with two entries for one physical
+				// note -- forEachAliveNote() would then run its callback on
+				// it twice. Route through the field's own disposeNote() (which
+				// also removes it from that array) whenever the note is
+				// actually attached to one; already-dead pool fodder has no
+				// playField, so the plain kill is enough for those.
+				if (daNote.playField != null) daNote.playField.disposeNote(daNote);
+				else disposeNote(daNote);
+			}
+
 			--i;
 		}
 	}

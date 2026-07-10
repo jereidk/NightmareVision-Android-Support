@@ -520,17 +520,22 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public function updateColors()
 	{
 		if (!reAssignable) return;
-		
-		rgbGraphics = NoteUtil.getCurColors(noteData, quant, player);
+
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 	}
-	
+
 	// SPECIFICALLY for note types, only use if u 100% do not want to have ur note re-colored
 	public function setCustomColor(color:Array<FlxColor>)
 	{
-		var fallback = NoteUtil.getCurColors(noteData, quant, player);
-		
-		rgbGraphics = fallback;
-		
+		// Reuse the existing RGBGraphics instance (see _resetTexture()'s own
+		// `into` use) instead of allocating a new one -- this runs on every
+		// preRecycle() of a 'Hurt Note' (set_noteType's 'Hurt Note' case
+		// calls this right after _resetTexture() already reused rgbGraphics
+		// correctly), so allocating here silently reintroduced the same
+		// per-recycle GC pressure that reusing `into` elsewhere was meant
+		// to eliminate.
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
+
 		if (color != null || color.length == skin?.keys ?? 4)
 		{
 			reAssignable = false;
