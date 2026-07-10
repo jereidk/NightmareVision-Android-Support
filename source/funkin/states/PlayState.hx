@@ -55,8 +55,13 @@ import funkin.video.FunkinVideoSprite;
 
 // Shared by every deferred tail segment queued from the same head note (see
 // PlayState._pendingTails) so they can chain prevNote correctly even though
-// they're no longer recycled back-to-back in a single call.
-private typedef PendingTailChain = {lastNote:Note};
+// they're no longer recycled back-to-back in a single call. `headQueueNote`
+// is the QueueNote the head was originally recycled against -- preRecycle()
+// always stamps `note.queueNote` with whatever QueueNote a pooled object
+// CURRENTLY represents, so comparing that back against this lets a deferred
+// tail detect "my head's pool slot got reused for something else before I
+// got a chance to spawn" instead of corrupting a stranger's tailState.
+private typedef PendingTailChain = {lastNote:Note, headQueueNote:QueueNote};
 
 private typedef PendingTail =
 {
@@ -281,6 +286,20 @@ class PlayState extends MusicBeatState
 	// per-head order is guaranteed -- acceptable since spawnOffset already
 	// gives a multi-hundred-ms cushion before anything here is actually
 	// needed on screen.
+	// Caps how many pending tails a single frame will drain (see update()'s
+	// second noteSpawn while loop) even if more have crossed their spawn
+	// threshold. A real device log showed noteSpawn staying elevated for
+	// many consecutive seconds instead of just a single frame -- once a
+	// frame runs long, Conductor.songPosition (tied to real audio playback
+	// time, not render frame count) jumps forward by whatever real time
+	// actually elapsed, so the NEXT frame's threshold check can find an even
+	// bigger backlog crossed at once, which takes even longer to drain, in
+	// a self-feeding spiral. Bounding the per-frame drain means a backlog
+	// gets paid off over several frames at a predictable cost each instead
+	// of compounding; segments that miss this frame's cap simply drain next
+	// frame, a few ms later than their ideal threshold at worst.
+	static inline final MAX_PENDING_TAILS_PER_FRAME:Int = 12;
+
 	var _pendingTails:Array<PendingTail> = [];
 	var _pendingTailIdx:Int = 0;
 
@@ -2491,8 +2510,13 @@ class PlayState extends MusicBeatState
 		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes[_noteSpawnIdx++]);
 
-		while (_pendingTailIdx < _pendingTails.length && (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
+		var _pendingTailsDrained:Int = 0;
+		while (_pendingTailsDrained < MAX_PENDING_TAILS_PER_FRAME && _pendingTailIdx < _pendingTails.length
+			&& (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
+		{
 			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
+			_pendingTailsDrained++;
+		}
 		#if android SystemMonitor.profEnd(); #end
 
 		var tempVector = funkin.backend.math.Vector3.get();
@@ -2749,7 +2773,7 @@ class PlayState extends MusicBeatState
 		{
 			final note:Note = spawnNote(note);
 
-			if (note != null) enqueuePendingTails(note, queueNote.tail);
+			if (note != null) enqueuePendingTails(note, queueNote, queueNote.tail);
 
 			return note;
 		}
@@ -2759,9 +2783,9 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	function enqueuePendingTails(headNote:Note, tails:Array<QueueNote>):Void
+	function enqueuePendingTails(headNote:Note, headQueueNote:QueueNote, tails:Array<QueueNote>):Void
 	{
-		final chain:PendingTailChain = {lastNote: headNote};
+		final chain:PendingTailChain = {lastNote: headNote, headQueueNote: headQueueNote};
 		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
 	}
 
@@ -2779,6 +2803,20 @@ class PlayState extends MusicBeatState
 	// own hold.
 	function spawnPendingTail(entry:PendingTail):Void
 	{
+		// Under heavy lag the drain can fall far enough behind that the
+		// head's own natural disposal (notesLoop(), once songPosition passes
+		// strumTime+sustainLength) fires BEFORE all of its tails have
+		// drained -- the now-dead head's pool slot can then get handed back
+		// out by notes.recycle() for a completely unrelated note before this
+		// entry's turn comes up. Pushing into a stranger's tailState.tail
+		// (or into a stale one that's already `= null` from destroy()) is
+		// exactly the kind of thing that crashes hxcpp silently instead of
+		// throwing a catchable exception. queueNote is restamped by every
+		// preRecycle() call, so if it no longer matches what we captured at
+		// enqueue time, this Note object isn't our head anymore -- drop the
+		// segment instead of touching it.
+		if (entry.parentNote.queueNote != entry.chain.headQueueNote) return;
+
 		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, entry.chain.lastNote);
 
 		entry.parentNote.tail.push(tailNote);
