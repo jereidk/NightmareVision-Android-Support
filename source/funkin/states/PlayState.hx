@@ -2679,8 +2679,23 @@ class PlayState extends MusicBeatState
 		else
 		{
 			expectedPlayfield.addNote(note);
-			notes.remove(note, true);
-			notes.insert(0, note);
+
+			// This used to be `notes.remove(note, true); notes.insert(0, note);`,
+			// carried over unchanged from the pre-pooling code where `notes`
+			// only ever held currently-alive notes (so re-inserting a brand
+			// new member at the front was cheap). Under pooling `notes` holds
+			// the WHOLE pool (dead members kept as fodder, see disposeNote()),
+			// so `length` is now the pool size, not the alive count -- and
+			// FlxGroup.remove()/insert() are indexOf+splice/indexOf+array.insert,
+			// all O(n) on that array. That's 4 full O(n) passes per note JUST
+			// to move it to index 0, on every single spawn -- a real device
+			// log on a dense song ("Finale") showed noteSpawn costs of
+			// 300-1600ms/frame from exactly this, independent of and on top
+			// of the disposeNote()/notesLoop pooling fix. Dead pool members
+			// are already skipped by both draw() and notesLoop() via
+			// `exists`/`alive`, so there's no correctness need to keep alive
+			// notes clustered at the front -- leave the note wherever
+			// notes.recycle() found it.
 			note.spawned = true;
 			
 			if (!ScriptConstants.stopping(callNoteTypeScript(note.noteType, 'postSpawnNote', _scriptNoteArgs))) scripts.call('onSpawnNotePost', _scriptNoteArgs, false, _scriptNoteTypeExcl);
