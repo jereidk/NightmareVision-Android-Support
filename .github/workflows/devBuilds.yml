@@ -41,12 +41,20 @@ jobs:
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
+      # Shared across all three jobs on purpose -- `lime rebuild android`
+      # (below) builds both .so's unconditionally regardless of which job
+      # runs it (see the ARM64/ARM32 job header comments), so .haxelib/lime
+      # ends up byte-for-byte identical either way. The "-arm64" suffix is
+      # legacy naming from when each job had its own (duplicate, wasteful)
+      # copy -- kept as-is, rather than renamed, so this matches the cache
+      # entry that already exists under that exact key instead of missing
+      # once more just to populate a differently-named one.
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-fat
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -720,12 +728,14 @@ jobs:
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
+      # Shared across all three jobs on purpose -- see the fat job's
+      # identical comment above this same step.
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm32
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
