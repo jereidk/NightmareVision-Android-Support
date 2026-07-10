@@ -1551,7 +1551,17 @@ class PlayState extends MusicBeatState
 			if (qn.tail != null) for (tail in qn.tail) addInterval(tail);
 		}
 
-		edges.sort((a, b) -> a.t < b.t ? -1 : (a.t > b.t ? 1 : 0));
+		// Tie-break same-instant edges with spawns (delta=1) before
+		// despawns (delta=-1). Charts routinely land a note's spawn at the
+		// exact instant a previous note/sustain despawns (e.g. a sustain
+		// ending right where the next note starts) -- if the dispose were
+		// processed first at that tick, the sweep would briefly free a slot
+		// that runtime never actually frees before needing it (spawning
+		// happens before disposing within the same frame, see noteSpawn/
+		// notesLoop order in update()), silently undercounting the true
+		// peak. Sorting spawns first keeps this a guaranteed upper bound
+		// instead of an average-case guess.
+		edges.sort((a, b) -> a.t < b.t ? -1 : (a.t > b.t ? 1 : b.delta - a.delta));
 
 		var concurrent:Int = 0, peakConcurrent:Int = 0;
 		for (e in edges)
