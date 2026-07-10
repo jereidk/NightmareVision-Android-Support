@@ -368,8 +368,22 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		texture = '';
 
 		playAnim(getDefaultAnim(), true);
+
+		// Must run AFTER playAnim() above, not before -- _loadNoteAnims() used
+		// to size the sprite off `width`/`height` right after reassigning
+		// `frames`, which still reflected whatever frame the ATLAS COLLECTION
+		// defaults to (its first frame), not this note's actual direction.
+		// That only ever looked right because every recycle used to reload
+		// twice (see set_texture()'s comment) -- the FIRST reload's playAnim()
+		// left the sprite showing the correct frame, so the SECOND reload's
+		// (now-skipped) sizing pass measured the right thing by accident.
+		// With the redundant second reload gone, sizing has to happen here,
+		// after this function's own playAnim() already picked the right
+		// frame, instead of inside _loadNoteAnims().
+		if (skin != null) setGraphicSize(Std.int(width * skin.noteScale));
+
 		updateHitbox();
-		
+
 		baseScale.copyFrom(scale);
 	}
 	
@@ -493,9 +507,15 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		loadNoteAnims();
 		
 		if (animName != null) playAnim(animName, true);
-		
+
+		// Must run AFTER playAnim() above -- see _resetTexture()'s matching
+		// comment. _loadNoteAnims() used to do this itself, timed BEFORE
+		// playAnim() ever ran, sizing off whatever frame `frames` happened to
+		// default to instead of this note's actual direction.
+		if (skin != null) setGraphicSize(Std.int(width * skin.noteScale));
+
 		if (inEditor && !skipScale) setGraphicSize(ChartEditorState.GRID_SIZE, ChartEditorState.GRID_SIZE);
-		
+
 		baseScale.copyFrom(scale);
 		
 		updateHitbox();
@@ -532,16 +552,19 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		final noteAnims = skin.noteAnims;
 		final directionAnims = noteAnims[noteData % noteAnims.length];
-		
+
 		for (anim in directionAnims)
 		{
 			addAnimByPrefix(anim.anim, '${anim.xmlName}0', anim.fps, true);
 			addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 		}
-		
-		setGraphicSize(Std.int(width * skin.noteScale));
-		
-		baseScale.copyFrom(scale);
+
+		// Sizing intentionally NOT done here -- this runs before the caller
+		// (reloadNote()/_resetTexture()) has actually played this note's
+		// direction-specific animation, so `width`/`height` at this point
+		// still reflect whatever frame `frames` defaulted to (its first
+		// frame), not this note's real shape. Both callers size the sprite
+		// themselves, right after their own playAnim() call.
 	}
 	
 	public function updateColors()
