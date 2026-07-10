@@ -1481,7 +1481,61 @@ class PlayState extends MusicBeatState
 		// at roughly the song's peak concurrent note count and spawns after
 		// that point are real reuses.
 	}
-	
+
+	/**
+	 * Pool reuse (see disposeNote()) means the pool only stops allocating
+	 * once it's grown to the song's peak concurrent note count — until
+	 * then, the first time a dense burst pushes past the previous
+	 * high-water mark, that burst pays for `new Note()` on every note over
+	 * the old peak, synchronously, mid-song (this is exactly what caused
+	 * the fps=15 spike the very first time "Danger"'s densest section hit,
+	 * jumping the pool from 26 to 58 notes in one frame).
+	 *
+	 * Chart data (queueNotes, already fully built and sorted by strumTime
+	 * at this point) is enough to compute that peak up front via a
+	 * sweep-line over each note's [spawn, dispose) lifetime — spawn at the
+	 * same `strumTime - spawnOffset` threshold the real spawn loop uses,
+	 * dispose at the same `strumTime + sustainLength + noteKillOffset`
+	 * threshold notesLoop uses to kill late/finished notes. Creating that
+	 * many Note objects now, during the loading transition before the
+	 * countdown starts, pays the exact same construction cost somewhere
+	 * that doesn't show up as an in-song stutter.
+	 */
+	function prewarmNotePool():Void
+	{
+		final spawnOffset:Float = (spawnTime / songSpeed);
+
+		final edges:Array<{t:Float, delta:Int}> = [];
+
+		inline function addInterval(qn:QueueNote):Void
+		{
+			edges.push({t: qn.strumTime - spawnOffset, delta: 1});
+			edges.push({t: qn.strumTime + qn.sustainLength + noteKillOffset, delta: -1});
+		}
+
+		for (qn in queueNotes)
+		{
+			addInterval(qn);
+			if (qn.tail != null) for (tail in qn.tail) addInterval(tail);
+		}
+
+		edges.sort((a, b) -> a.t < b.t ? -1 : (a.t > b.t ? 1 : 0));
+
+		var concurrent:Int = 0, peakConcurrent:Int = 0;
+		for (e in edges)
+		{
+			concurrent += e.delta;
+			if (concurrent > peakConcurrent) peakConcurrent = concurrent;
+		}
+
+		for (i in notes.length...peakConcurrent)
+		{
+			final n:Note = new Note();
+			n.kill();
+			notes.add(n);
+		}
+	}
+
 	public function clearNotesBefore(time:Float):Void
 	{
 		// Advance the index past notes that are before `time`; compact lazily.
@@ -1829,7 +1883,9 @@ class PlayState extends MusicBeatState
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		_noteSpawnIdx = 0;
 		_eventSpawnIdx = 0;
-		
+
+		prewarmNotePool();
+
 		speedChanges.sort(SortUtil.svSort);
 		
 		#if debug
