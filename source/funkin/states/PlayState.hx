@@ -661,6 +661,24 @@ class PlayState extends MusicBeatState
 	override public function create():Void
 	{
 		trace('[PlayState] ===== CREATE START =====');
+
+		// Real device logs showed LoadingState -> PlayState taking upwards of
+		// 50 SECONDS for dense songs, entirely inside this one synchronous
+		// create() call (no frame renders during it, so it's a genuine
+		// frozen-screen wait for the player, not just a log curiosity).
+		// Phase-timing this is the only way to find out where that time
+		// actually goes instead of guessing -- logged as plain [CreatePhase]
+		// lines so they land in sysmon.log alongside everything else.
+		final _phaseStampStart:Float = haxe.Timer.stamp();
+		var _phaseStamp:Float = _phaseStampStart;
+		function _logPhase(name:String):Void
+		{
+			if (!ClientPrefs.inDevMode) return;
+			final now:Float = haxe.Timer.stamp();
+			Logger.log('[CreatePhase] $name: ${Std.int((now - _phaseStamp) * 1000)}ms (total so far: ${Std.int((now - _phaseStampStart) * 1000)}ms)');
+			_phaseStamp = now;
+		}
+
 		FlxG.sound.music?.stop();
 
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
@@ -757,6 +775,8 @@ class PlayState extends MusicBeatState
 		// the 'expand'-mode edge-of-camera fill color. No-op outside 'expand'.
 		stage.fillExpandModeBackdrop(camGame);
 
+		_logPhase('stage');
+
 		if (isPixelStage) introSoundsSuffix = '-pixel';
 		
 		if (!ScriptConstants.stopping(scripts.call("onAddSpriteGroups")))
@@ -791,6 +811,8 @@ class PlayState extends MusicBeatState
 			trace('[PlayState] Pet loaded OK');
 		}
 
+		_logPhase('pet');
+
 		if (!stage.stageData.hide_girlfriend)
 		{
 			trace('[PlayState] Creating girlfriend...');
@@ -803,6 +825,8 @@ class PlayState extends MusicBeatState
 			trace('[DEBUG] GF Created: visible=${gf.visible}, alpha=${gf.alpha}, x=${gf.x}, y=${gf.y}');
 		}
 
+		_logPhase('girlfriend');
+
 		trace('[PlayState] Creating dad (${SONG.player2})...');
 		dad = new Character(SONG.player2);
 		trace('[PlayState] Dad created, loading animations...');
@@ -812,6 +836,8 @@ class PlayState extends MusicBeatState
 		startCharacterScript(dad.curCharacter, dad);
 		trace('[PlayState] Dad OK');
 
+		_logPhase('dad');
+
 		trace('[PlayState] Creating boyfriend...');
 		boyfriend = new Character((allowBFSkin ? ClientPrefs.equipment.get('playerSkin') : null) ?? SONG.player1, true);
 		trace('[PlayState] BF created, loading animations...');
@@ -820,7 +846,9 @@ class PlayState extends MusicBeatState
 		boyfriendGroup.parent = boyfriend;
 		startCharacterScript(boyfriend.curCharacter, boyfriend);
 		trace('[PlayState] BF OK');
-		
+
+		_logPhase('boyfriend');
+
 		var camPos:FlxPoint = FlxPoint.get(girlfriendCameraOffset[0], girlfriendCameraOffset[1]);
 		if (gf != null)
 		{
@@ -893,6 +921,8 @@ class PlayState extends MusicBeatState
 		addSongScripts('songs/${Paths.sanitize(SONG.song)}/');
 		addSongScripts('songs/${Paths.sanitize(SONG.song)}/scripts/');
 
+		_logPhase('song scripts');
+
 		#if mobile
 		addMobileControls(false, true);
 		if (hitbox != null) hitbox.visible = false;
@@ -915,8 +945,13 @@ class PlayState extends MusicBeatState
 
 		scripts.call('preNoteGeneration', _scriptEmptyArgs);
 		
-		if (genNotesBeforeCountdown) generatePlayfields();
+		if (genNotesBeforeCountdown)
+		{
+			generatePlayfields();
+			_logPhase('playfields');
+		}
 		generateSong(SONG.song);
+		_logPhase('generateSong');
 		
 		if (!ClientPrefs.opponentStrums || ClientPrefs.middleScroll)
 		{
@@ -1989,9 +2024,16 @@ class PlayState extends MusicBeatState
 
 		prewarmNotePool();
 
-		#if android
-		if (ClientPrefs.inDevMode) benchmarkFullNoteConstruction();
-		#end
+		// benchmarkFullNoteConstruction() used to run here automatically
+		// whenever ClientPrefs.inDevMode was on. It already did its job (the
+		// numbers it produced are why we stuck with pooling instead of
+		// migrating to a build-everything-upfront model) and is real,
+		// uncounted cost from then on -- constructing a live Note per chart
+		// note (3928 of them for "Finale", not just the pool's peak-concurrency
+		// count) inside the exact PlayState.create() freeze we're trying to
+		// measure/shrink, on the one device (dev mode) we actually test load
+		// times on. Left callable for future one-off use, just not wired to
+		// fire on every single load anymore.
 
 		speedChanges.sort(SortUtil.svSort);
 		
