@@ -243,11 +243,21 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	
 	private function set_texture(value:String):String
 	{
-		if (texture == value) return texture;
-		
+		// reloadNote() treats an empty value as "fall back to skin.noteTexture"
+		// but never reports that resolved name back here -- this used to always
+		// store the raw (often empty) `value`, so the very next assignment
+		// (identical resolved atlas or not) always looked like a change and paid
+		// a full reload again. _resetTexture()'s forced `texture = ''` followed
+		// moments later by PlayField.addNote()'s `note.texture = _skin.noteTexture`
+		// was reloading the SAME atlas twice on every single note spawn this way
+		// -- resolving the default here first lets that second call's guard
+		// actually catch "nothing changed" instead of always missing.
+		final resolved:String = (value != null && value.length > 0) ? value : (skin?.noteTexture ?? 'NOTE_assets');
+		if (texture == resolved) return texture;
+
 		reloadNote('', value);
-		
-		return (texture = value);
+
+		return (texture = resolved);
 	}
 	
 	private function set_noteType(value:String):String
@@ -349,8 +359,14 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
 
-		prefix = suffix = texture = '';
-		
+		// NOT `prefix = suffix = texture = ''` -- set_texture() now returns the
+		// RESOLVED atlas name (see its own comment), not the raw '' passed in,
+		// so chaining through it here would leave prefix/suffix holding an
+		// atlas path instead of clearing them, corrupting reloadNote()'s next
+		// `this.prefix + arraySkin[lastIndex] + this.suffix` atlas path build.
+		prefix = suffix = '';
+		texture = '';
+
 		playAnim(getDefaultAnim(), true);
 		updateHitbox();
 		
@@ -392,7 +408,18 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			isSustainEnd = queueNote.isSustainEnd;
 			isSustainNote = queueNote.isSustainNote;
 			player = lane = queueNote.playField;
-			
+
+			// Refresh BEFORE _resetTexture() below reloads the atlas, instead of
+			// leaving `skin` stale from whatever field this pooled Note last
+			// belonged to. NoteUtil.getSkinFromID() returns the exact same
+			// NoteSkin instance PlayField.addNote() will apply moments later (both
+			// resolve through the same NoteUtil.noteskins registry by player ID),
+			// so this reload already lands on the correct atlas and
+			// PlayField.addNote()'s own `note.texture = _skin.noteTexture` sees a
+			// match and skips its own reload -- see set_texture()'s comment for
+			// why that guard actually catches it now.
+			skin = NoteUtil.getSkinFromID(player);
+
 			strumTime = queueNote.strumTime;
 			sustainLength = queueNote.sustainLength;
 		}
