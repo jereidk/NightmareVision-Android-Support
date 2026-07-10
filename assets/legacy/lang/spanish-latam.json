@@ -48,6 +48,31 @@
         "loading_tip_tomongus": "¡Supera la semana de Tomongus para desbloquear una nueva canción!",
         "loading_tip_keep": "No quiero deshacerme de esto",
 
+        "loading_tip_awards": "Revisa el menú de Logros para desbloquear logros secretos.",
+        "loading_tip_cosmicube": "El Cosmicubo VS Impostor lleva el registro de cuánto has completado el juego.",
+        "loading_tip_prank": "Consigue 100% de precisión en una canción para lograr el escurridizo rango P.",
+        "loading_tip_sranks": "Conseguir rango S o superior en 5 canciones distintas desbloquea un logro especial.",
+        "loading_tip_mods": "¡Este juego admite mods! Revisa el menú de Mods para ver qué tienes instalado.",
+        "loading_tip_charteditor": "¿Tienes curiosidad de cómo se hacen los charts? ¡Prueba el Editor de Charts incluido!",
+        "loading_tip_languages": "Este juego ha sido traducido a decenas de idiomas por la comunidad.",
+        "loading_tip_whitehiding": "Hay un personaje oculto llamado White en algún lugar del juego... ¿podrás encontrarlo?",
+        "loading_tip_redhanded": "Hay un logro por jugar como Red, contra Red, con una mascota Red.",
+        "loading_tip_skinspets": "Las skins y mascotas cambian el aspecto de tu personaje, pero solo funcionan en el Juego Libre.",
+        "loading_tip_noteoffset": "Si sientes que aciertas temprano o tarde, ajusta el Delay de Notas en Opciones.",
+        "loading_tip_ghosttapping": "Activa el Ghost Tapping en Opciones si las pulsaciones de más te siguen causando fallos.",
+        "loading_tip_downscroll": "¿Prefieres que las notas caigan desde arriba? Activa el Downscroll en Opciones.",
+        "loading_tip_completionist": "Superar todas las canciones desbloquea un logro especial propio.",
+        "loading_tip_polusghosts": "Consigue rango A o superior en todas las canciones de Polus Problems para desbloquear un personaje jugable secreto.",
+        "loading_tip_pretender_grey": "Hay una interacción secreta si te enfrentas a Grey aquí jugando como Pink.",
+        "loading_tip_oversight_revenge": "Jugar como Dead Yellow en esta canción tiene una recompensa secreta.",
+        "loading_tip_tomongustuesday": "Esta canción se siente distinta si la juegas justo un martes.",
+        "loading_tip_identitycrisis_skin": "Prueba usar una skin durante esta canción para una sorpresa.",
+        "loading_tip_doubletrouble_complete": "Terminar esta canción por completo desbloquea su propio logro.",
+        "loading_tip_victory_zero": "Sacar 0% de precisión aquí también cuenta técnicamente como logro...",
+        "loading_tip_saucesmoogus_hungry": "Lleva al Mini Crewmate a la cocina del Chef para un premio.",
+        "loading_tip_monotoneattack_four": "Supera esta canción con los cuatro personajes para una recompensa especial.",
+        "loading_tip_finale_nomiss": "Superarla sin fallar ni una sola nota desbloquea su propio logro.",
+
         // the AWARDS SECTION
         // now properly split off for better organization
         // HINTS are shown if you don't have the achievement, the BIO is the actual method of unlock

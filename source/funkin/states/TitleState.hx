@@ -38,7 +38,40 @@ class TitleState extends MusicBeatState
 		{key: 'loading_tip_doubletrouble', fallback: '"Impostor Trouble? Now it is double."', songs: ['Double Trouble']},
 		{key: 'loading_tip_tomongus', fallback: 'Beat the Tomongus week to unlock a new song!',
 			songs: ['Sussy Bussy', 'Rivals', 'Chewmate']}, // week10
-		{key: 'loading_tip_keep', fallback: 'I don\'t want to get rid of this'} // general
+		{key: 'loading_tip_keep', fallback: 'I don\'t want to get rid of this'}, // general
+
+		// General gameplay/feature tips -- always eligible, no story content,
+		// added alongside the song-specific ones above purely for variety
+		// (most songs had nothing but 2-3 generic tips to draw from).
+		{key: 'loading_tip_awards', fallback: 'Check the Awards menu for secret achievements to unlock!'},
+		{key: 'loading_tip_cosmicube', fallback: 'The VS Impostor Cosmicube tracks how much of the game you\'ve completed.'},
+		{key: 'loading_tip_prank', fallback: 'Score 100% accuracy on a song to earn the elusive P rank!'},
+		{key: 'loading_tip_sranks', fallback: 'Earning an S rank or higher on 5 different songs unlocks a special award.'},
+		{key: 'loading_tip_mods', fallback: 'This game supports mods! Check the Mods menu to see what\'s installed.'},
+		{key: 'loading_tip_charteditor', fallback: 'Curious how charts are made? Try out the built-in Chart Editor!'},
+		{key: 'loading_tip_languages', fallback: 'This game has been translated into dozens of languages by the community!'},
+		{key: 'loading_tip_whitehiding', fallback: 'There\'s a hidden character named White somewhere in the game... can you find them?'},
+		{key: 'loading_tip_redhanded', fallback: 'There\'s an achievement for playing as Red, against Red, with a Red pet.'},
+		{key: 'loading_tip_skinspets', fallback: 'Skins and pets change how your character looks, but only work in Freeplay mode.'},
+		{key: 'loading_tip_noteoffset', fallback: 'If your hits feel early or late, adjust the Note Offset in Options.'},
+		{key: 'loading_tip_ghosttapping', fallback: 'Enable Ghost Tapping in Options if extra key presses keep causing misses.'},
+		{key: 'loading_tip_downscroll', fallback: 'Prefer notes falling from the top? Turn on Downscroll in Options.'},
+		{key: 'loading_tip_completionist', fallback: 'Beating every single song unlocks a special award all its own.'},
+
+		// More song-specific tips, sourced from real achievement descriptions
+		// (see AWARDBIO_* in lang/english.json) so they're vetted-safe
+		// references instead of invented lore.
+		{key: 'loading_tip_polusghosts', fallback: 'Get an A rank or higher on every Polus Problems song to unlock a secret playable character.',
+			songs: ['Sussus Moogus', 'Sabotage', 'Meltdown']}, // week1
+		{key: 'loading_tip_pretender_grey', fallback: 'There\'s a secret interaction if you fight Grey here while playing as Pink.', songs: ['Pretender']},
+		{key: 'loading_tip_oversight_revenge', fallback: 'Playing as Dead Yellow in this song has a secret payoff.', songs: ['Oversight']},
+		{key: 'loading_tip_tomongustuesday', fallback: 'This song hits different if you actually play it on a Tuesday.', songs: ['Tomongus Tuesday']},
+		{key: 'loading_tip_identitycrisis_skin', fallback: 'Try wearing a skin during this song for a surprise.', songs: ['Identity Crisis']},
+		{key: 'loading_tip_doubletrouble_complete', fallback: 'Finishing this song all the way through unlocks its own trophy.', songs: ['Double Trouble']},
+		{key: 'loading_tip_victory_zero', fallback: 'Getting a 0% accuracy here is technically also an achievement...', songs: ['Victory']},
+		{key: 'loading_tip_saucesmoogus_hungry', fallback: 'Bring the Mini Crewmate to the Chef\'s kitchen for a treat.', songs: ['Sauces Moogus']},
+		{key: 'loading_tip_monotoneattack_four', fallback: 'Beat this song as all four characters for a special reward.', songs: ['Monotone Attack']},
+		{key: 'loading_tip_finale_nomiss', fallback: 'Clearing this without missing a single note earns its own award.', songs: ['Finale']}
 	];
 	
 	var skippedIntro:Bool = false;
