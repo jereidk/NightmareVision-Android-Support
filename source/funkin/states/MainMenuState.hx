@@ -82,10 +82,13 @@ class MainMenuState extends MusicBeatState
 	static inline final DEV_CODE:String = 'jereidk';
 	static inline final CODE_TRIGGER_SIZE:Int = 40;
 	static inline final CODE_TRIGGER_MARGIN:Int = 12;
-	static inline final DEV_COL_BG:Int = 0xFF14142A;
-	static inline final DEV_COL_ACCENT:Int = 0xFF9D5CFF;
+	// Warm near-black + the same red FreeplayCard/LoadingState already use as
+	// their selection accent (0xFFFF4444) -- was a cold blue-purple "hacker
+	// tool" palette that matched nothing else the game ever draws.
+	static inline final DEV_COL_BG:Int = 0xFF1A1414;
+	static inline final DEV_COL_ACCENT:Int = 0xFFFF4444;
 	static inline final DEV_COL_DANGER:Int = 0xFF7F1D1D;
-	static inline final DEV_COL_TEXT:Int = 0xFFECE8FF;
+	static inline final DEV_COL_TEXT:Int = 0xFFFFFFFF;
 
 	var devCodeTriggerBg:FlxSprite = null;
 	var devCodeField:FlxInputText = null;
@@ -144,14 +147,16 @@ class MainMenuState extends MusicBeatState
 	// Panel palette (DEV_COL_BG/ACCENT/DANGER/TEXT already declared above,
 	// shared with the code-entry field -- DEV_COL_BG matches the old
 	// hscript's COL_BG_TOP, the panel's own darker body gets its own const).
-	static inline final DEV_PANEL_BG:Int = 0xFF0B0B18;
-	static inline final DEV_COL_SECTION:Int = 0xFF6B6B9E;
-	static inline final DEV_COL_TOGGLE:Int = 0xFF1E1B4B;
-	static inline final DEV_COL_TOGGLE_ON:Int = 0xFF3730A5;
-	static inline final DEV_COL_LOOT:Int = 0xFF4C1D95;
+	// Same warm-dark/red family as DEV_COL_BG/ACCENT above instead of the
+	// old indigo/purple set, so the whole panel reads as one palette.
+	static inline final DEV_PANEL_BG:Int = 0xFF120D0D;
+	static inline final DEV_COL_SECTION:Int = 0xFF9C7A7A;
+	static inline final DEV_COL_TOGGLE:Int = 0xFF332424;
+	static inline final DEV_COL_TOGGLE_ON:Int = 0xFF2E7D32;
+	static inline final DEV_COL_LOOT:Int = 0xFF9C6B1F;
 	static inline final DEV_COL_MONEY:Int = 0xFF14532D;
-	static inline final DEV_COL_DANGER_ARMED:Int = 0xFFB91C1C;
-	static inline final DEV_COL_CLOSE:Int = 0xFF17171F;
+	static inline final DEV_COL_DANGER_ARMED:Int = 0xFFFF4444;
+	static inline final DEV_COL_CLOSE:Int = 0xFF241A1A;
 
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
@@ -840,6 +845,7 @@ class MainMenuState extends MusicBeatState
 		pulseDevCodeTrigger(true);
 
 		devCodeField = new FlxInputText(FlxG.width - 272, 56, 260, '', 20, DEV_COL_TEXT, DEV_COL_BG);
+		devCodeField.font = Paths.font('vcr.ttf');
 		devCodeField.fieldBorderThickness = 2;
 		devCodeField.fieldBorderColor = DEV_COL_ACCENT;
 		devCodeField.alignment = FlxTextAlign.CENTER;
@@ -1099,21 +1105,24 @@ class MainMenuState extends MusicBeatState
 		accent.makeGraphic(6, 46, DEV_COL_ACCENT);
 		reg(accent);
 
-		// Title.
-		var title = new FlxText(px + 40, py + 20, PW - 80, 'DEVELOPER PANEL', 24);
-		title.color = 0xFFECE8FF;
+		// Title -- same AmaticSC-Bold + white + black outline treatment
+		// OptionsState uses for its own header, instead of the plain
+		// unformatted default font every other FlxText in here used to fall
+		// back to.
+		var title = new FlxText(px + 40, py + 16, PW - 80, 'DEVELOPER PANEL', 32);
+		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 32, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 		reg(title);
 
-		var subtitle = new FlxText(px + 40, py + 48, PW - 80, 'you shouldn\'t be here', 12);
-		subtitle.color = 0xFF6B6B9E;
+		var subtitle = new FlxText(px + 42, py + 50, PW - 80, 'you shouldn\'t be here', 14);
+		subtitle.setFormat(Paths.font('vcr.ttf'), 14, DEV_COL_SECTION, LEFT, OUTLINE, FlxColor.BLACK);
 		reg(subtitle);
 
 		var rowY:Int = py + 104;
 
 		function sectionLabel(text:String):Void
 		{
-			var lbl = new FlxText(BX, rowY, BW, text, 13);
-			lbl.color = DEV_COL_SECTION;
+			var lbl = new FlxText(BX, rowY, BW, text, 14);
+			lbl.setFormat(Paths.font('vcr.ttf'), 14, DEV_COL_SECTION, LEFT, OUTLINE, FlxColor.BLACK);
 			reg(lbl);
 			rowY += 24;
 		}
@@ -1124,9 +1133,8 @@ class MainMenuState extends MusicBeatState
 			spr.loadGraphic(cachedDevShape(cacheKey, () -> devRoundedRect(BW, BH, bgColor, 10)));
 			reg(spr);
 
-			var lbl = new FlxText(BX, rowY + 14, BW, label, 16);
-			lbl.alignment = FlxTextAlign.CENTER;
-			lbl.color = 0xFFFFFFFF;
+			var lbl = new FlxText(BX, rowY + 13, BW, label, 18);
+			lbl.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 			reg(lbl);
 
 			devPanelBtns.push({x: BX, y: rowY, w: BW, h: BH, idx: btnIdx});
