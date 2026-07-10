@@ -1,7 +1,7 @@
 package funkin.states;
 
 import flixel.addons.display.FlxBackdrop;
-import flixel.tweens.FlxTweenType;
+import flixel.tweens.FlxTween.FlxTweenType;
 import flixel.util.typeLimit.NextState;
 
 import funkin.backend.Difficulty;
