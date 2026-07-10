@@ -1560,7 +1560,18 @@ class PlayState extends MusicBeatState
 			if (concurrent > peakConcurrent) peakConcurrent = concurrent;
 		}
 
-		for (i in notes.length...peakConcurrent)
+		// The sweep above is a static upper bound on the CHART, but actual
+		// dispose timing at runtime also depends on things no static analysis
+		// sees: hit-timing variance (a late/early hit shifts exactly when a
+		// note leaves the pool) and sustain "coyote time" grace windows. A
+		// real device log confirmed this gap directly -- predicted peak=48 for
+		// one song, actual runtime peak=57 (~19% higher) -- which forced one
+		// live pool-grow mid-song and caused a visible stutter. Padding the
+		// prewarm target absorbs that class of error; the extra Notes cost
+		// nothing but a few constructions during the loading screen.
+		final paddedPeak:Int = Math.ceil(peakConcurrent * 1.25);
+
+		for (i in notes.length...paddedPeak)
 		{
 			final n:Note = new Note();
 			n.kill();
