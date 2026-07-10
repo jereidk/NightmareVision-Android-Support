@@ -278,7 +278,17 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 			final spr:FlxSprite = cast member;
 			if (spr.graphic == null) continue;
 
-			final area:Float = spr.frameWidth * spr.frameHeight;
+			// frameWidth/frameHeight is the RAW, unscaled source texture size
+			// — width/height (post .scale, what updateHitbox() keeps in
+			// sync) is the actual on-screen footprint, which is what
+			// "biggest" is supposed to mean here. A backdrop stretched way
+			// up from a tiny source texture (danger's `sky`, a 10x366
+			// gradient strip blown up to 5000x2196 on screen) has a tiny
+			// frameWidth*frameHeight despite visually dominating the whole
+			// canvas, so the raw-texture metric was picking some unrelated,
+			// smaller-on-screen prop instead (e.g. the airship itself, whose
+			// source texture is comparatively huge) and sampling its color.
+			final area:Float = spr.width * spr.height;
 			if (area > biggestArea)
 			{
 				biggestArea = area;
