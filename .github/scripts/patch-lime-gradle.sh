@@ -7,15 +7,26 @@ set -euo pipefail
 ARCH="${1:-}"
 [ -z "$ARCH" ] && echo "Usage: $0 <arm64|armv7|all>" && exit 1
 
+BUILD_GRADLE=".haxelib/lime/git/templates/android/template/app/build.gradle"
+[ ! -f "$BUILD_GRADLE" ] && echo "Lime template not found" && exit 1
+
+# .haxelib/lime is now one cache shared across all three jobs (fat/arm64/
+# arm32) -- this file gets mutated IN PLACE further down (sed/python write
+# it back), so whichever job last patched-and-saved the cache leaves that
+# same filter baked into what every other job restores afterwards. Reset
+# to Lime's own committed version FIRST, before the arch case below (which
+# for "fat"/"all" exits early applying no filter of its own) -- otherwise
+# "fat" would silently keep whatever a prior arm64/armv7 run's patch left
+# behind, which is exactly what happened: this reset used to run after
+# that early exit, so it never actually executed for the fat job at all.
+git -C .haxelib/lime/git checkout -- templates/android/template/app/build.gradle 2>/dev/null || true
+
 case "$ARCH" in
     arm64)  ABI_FILTER="arm64-v8a";;
     armv7)  ABI_FILTER="armeabi-v7a";;
-    all|fat) echo "No filter for universal APK"; exit 0;;
+    all|fat) echo "No filter for universal APK (template reset to unfiltered)"; exit 0;;
     *)      echo "Unknown arch: $ARCH"; exit 1;;
 esac
-
-BUILD_GRADLE=".haxelib/lime/git/templates/android/template/app/build.gradle"
-[ ! -f "$BUILD_GRADLE" ] && echo "Lime template not found" && exit 1
 
 echo "[INFO] Found: $BUILD_GRADLE"
 

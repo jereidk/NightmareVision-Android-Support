@@ -323,6 +323,18 @@ jobs:
             exit 1
           fi
 
+      # This job never applied an ABI filter of its own, but .haxelib/lime
+      # is now a cache SHARED with the arm64/arm32 jobs, and their own
+      # "Apply Gradle ABI splits" step mutates Lime's build.gradle template
+      # IN PLACE -- whichever of the three jobs last saved the cache leaves
+      # that filter baked in for the others to inherit. This job silently
+      # ended up packaging an arm64-only "fat" APK as a result. Reset the
+      # template back to Lime's own committed version (patch-lime-gradle.sh
+      # does this unconditionally now, before deciding "fat" needs no
+      # filter of its own) so this job always builds genuinely universal.
+      - name: Reset Gradle ABI filter (this is the universal/fat build)
+        run: bash .github/scripts/patch-lime-gradle.sh fat
+
       - name: Cache hxcpp compile cache
         uses: actions/cache@v4
         with:
