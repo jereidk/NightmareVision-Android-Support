@@ -1500,17 +1500,49 @@ class PlayState extends MusicBeatState
 	 * many Note objects now, during the loading transition before the
 	 * countdown starts, pays the exact same construction cost somewhere
 	 * that doesn't show up as an in-song stutter.
+	 *
+	 * Both thresholds depend on `songSpeed`, which a 'Change Scroll Speed'
+	 * event (direct or tweened -- either way its value stays within
+	 * [min(old,new), max(old,new)] the whole time) can change mid-song --
+	 * a slower songSpeed widens both windows, so a chart that starts fast
+	 * and later has a slowdown could have MORE notes in flight at once
+	 * than a peak computed from the chart's starting songSpeed alone would
+	 * predict. Use the smallest songSpeed this chart can ever reach
+	 * (starting value, plus every 'Change Scroll Speed' target) for the
+	 * whole sweep instead, so the estimate stays a safe upper bound
+	 * regardless of when in the song the slowdown actually lands. (A
+	 * script/modchart driving songSpeed directly, outside any chart event,
+	 * is outside what static analysis of the chart can predict -- the pool
+	 * still recovers correctly either way, just via a real allocation the
+	 * one time it happens, same as before this function existed.)
 	 */
 	function prewarmNotePool():Void
 	{
-		final spawnOffset:Float = (spawnTime / songSpeed);
+		var minSongSpeed:Float = songSpeed;
+
+		if (songSpeedType != "constant")
+		{
+			for (event in eventNotes)
+			{
+				if (event.event != 'Change Scroll Speed') continue;
+
+				var val1:Float = Std.parseFloat(event.value1);
+				if (Math.isNaN(val1)) val1 = 1;
+
+				final target:Float = SONG.speed * ClientPrefs.getGameplaySetting('scrollspeed', 1) * val1;
+				if (target < minSongSpeed) minSongSpeed = target;
+			}
+		}
+
+		final safeSpawnOffset:Float = (spawnTime / minSongSpeed);
+		final safeNoteKillOffset:Float = Math.max(Conductor.stepCrotchet, 350 / minSongSpeed * playbackRate);
 
 		final edges:Array<{t:Float, delta:Int}> = [];
 
 		inline function addInterval(qn:QueueNote):Void
 		{
-			edges.push({t: qn.strumTime - spawnOffset, delta: 1});
-			edges.push({t: qn.strumTime + qn.sustainLength + noteKillOffset, delta: -1});
+			edges.push({t: qn.strumTime - safeSpawnOffset, delta: 1});
+			edges.push({t: qn.strumTime + qn.sustainLength + safeNoteKillOffset, delta: -1});
 		}
 
 		for (qn in queueNotes)
