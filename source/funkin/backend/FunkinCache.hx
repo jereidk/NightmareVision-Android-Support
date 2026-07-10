@@ -103,12 +103,29 @@ class FunkinCache
 			}
 		}
 
+		forceGcPass();
+	}
+
+	/**
+	 * Forces an immediate GC pass. Split out of clearUnusedMemory() so states
+	 * can request one on its own -- clearStoredMemory()/clearUnusedMemory()
+	 * only ever run at the START of create(), before that state's own new
+	 * textures/atlases are loaded, so the decode garbage THIS state generates
+	 * never gets swept by that pass. Left to hxcpp's own scheduler, that
+	 * garbage was showing up as a [LARGE-GC] pause a second or two after the
+	 * state had already finished loading and the player was already looking
+	 * at it -- calling this again at the END of a texture-heavy create()
+	 * bundles that same unavoidable pause into the loading transition itself
+	 * instead of leaving it to surface later as a random-feeling stutter.
+	 */
+	public function forceGcPass():Void
+	{
 		openfl.system.System.gc();
 		#if cpp
 		cpp.vm.Gc.compact();
 		#end
 	}
-	
+
 	function new() {}
 	
 	public final currentTrackedGraphics:CacheMap<FlxGraphic> = new CacheMap();

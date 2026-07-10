@@ -282,8 +282,15 @@ class FreeplayState extends AmongUIState
 		
 		scriptGroup.call('onCreatePost', []);
 		changeSection(0, false);
+
+		// This state just loaded ~120 new textures; forcing the GC pass here
+		// (see FunkinCache.forceGcPass()'s own comment) bundles that decode
+		// garbage into the loading transition instead of leaving it to
+		// surface as a [LARGE-GC] stutter a second or two later while the
+		// player is already looking at the song list.
+		FunkinAssets.cache.forceGcPass();
 	}
-	
+
 	function refreshCards()
 	{
 		if (cards == null)

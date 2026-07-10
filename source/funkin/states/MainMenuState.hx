@@ -325,6 +325,13 @@ class MainMenuState extends MusicBeatState
 			buildDevPanel();
 		}
 		#end
+
+		// This state just loaded ~40 new textures; forcing the GC pass here
+		// (see FunkinCache.forceGcPass()'s own comment) bundles that decode
+		// garbage into the loading transition instead of leaving it to
+		// surface as a [LARGE-GC] stutter a second or two later while the
+		// player is already looking at the menu.
+		FunkinAssets.cache.forceGcPass();
 	}
 
 	var backpanel:FlxSprite;
