@@ -33,14 +33,19 @@ REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY must be set}"
 
 echo "[prune-cache] Looking for caches matching prefix '$PREFIX' on ref '$REF' in $REPO"
 
-# -R is explicit on purpose: this repo has a submodule (content/NMV-Base-Game,
-# a DIFFERENT owner/repo) checked out alongside it, and gh api's automatic
-# {owner}/{repo} template resolves from whatever git context it finds in the
-# working tree -- with two .git trees present it was silently resolving to
-# the wrong repo and 404ing on every run, which meant this script never
-# pruned anything and stale caches just piled up until GitHub's own eviction
-# kicked in.
-IDS=$(gh api -R "$REPO" "/repos/{owner}/{repo}/actions/caches" \
+# $REPO is spelled out literally in the path (not the {owner}/{repo}
+# template) on purpose, and NOT via a -R flag -- gh api doesn't actually
+# have one ("unknown shorthand flag: 'R' in -R", confirmed from a real
+# run's log; -R is a global gh flag but apparently isn't wired into this
+# subcommand's own parser). This repo also has a submodule
+# (content/NMV-Base-Game, a DIFFERENT owner/repo) checked out alongside
+# it, and gh api's automatic {owner}/{repo} template resolves from
+# whatever git context it finds in the working tree -- with two .git
+# trees present it was silently resolving to the wrong repo and 404ing on
+# every run, which meant this script never pruned anything and stale
+# caches just piled up until GitHub's own eviction kicked in. Spelling
+# $REPO out directly sidesteps that detection entirely.
+IDS=$(gh api "/repos/$REPO/actions/caches" \
     -f "key=$PREFIX" -f "ref=$REF" -f "per_page=100" \
     --jq '.actions_caches | sort_by(.created_at) | reverse | .[1:] | .[].id' 2>&1)
 STATUS=$?
@@ -59,7 +64,7 @@ fi
 COUNT=0
 while IFS= read -r ID; do
     [ -z "$ID" ] && continue
-    if gh api -R "$REPO" -X DELETE "/repos/{owner}/{repo}/actions/caches/$ID" >/dev/null 2>&1; then
+    if gh api -X DELETE "/repos/$REPO/actions/caches/$ID" >/dev/null 2>&1; then
         echo "[prune-cache] Deleted stale cache id=$ID"
         COUNT=$((COUNT + 1))
     else
