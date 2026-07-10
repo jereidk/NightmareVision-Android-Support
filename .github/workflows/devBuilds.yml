@@ -187,15 +187,23 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      # Shared across all three jobs on purpose -- same reasoning as the
+      # Lime cache above: ~/.gradle/caches and ~/.gradle/wrapper are
+      # Gradle's own global dependency/wrapper caches, identical regardless
+      # of ABI (the abiFilters split happens later, in packaging, via
+      # patch-lime-gradle.sh) -- not a per-job build output. Kept the
+      # existing "-arm64" key literal (confirmed identical content/size to
+      # the fat/arm32 copies already) instead of a new name, so this hits
+      # what's already cached instead of missing once more.
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-android-fat-${{ hashFiles('**/gradle-wrapper.properties') }}
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-android-fat-
+            gradle-android-arm64-
 
       - name: Patch SDL posix process for Android
         run: |
@@ -863,15 +871,17 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
+      # Shared across all three jobs on purpose -- see the fat job's
+      # identical comment above this same step.
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-android-arm32-${{ hashFiles('**/gradle-wrapper.properties') }}
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
           restore-keys: |
-            gradle-android-arm32-
+            gradle-android-arm64-
 
       - name: Patch SDL posix process for Android
         run: |
