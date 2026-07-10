@@ -209,6 +209,12 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public var texture(default, set):String = null;
 	public var prefix:String = '';
 	public var suffix:String = '';
+
+	// What _loadNoteAnims() actually registered animations FOR, last time a
+	// real reload happened -- see set_texture()'s comment for why the guard
+	// needs both of these, not just the texture string.
+	var _lastLoadedSkin:NoteSkin = null;
+	var _lastLoadedNoteData:Int = -1;
 	
 	public var noAnimation:Bool = false;
 	public var noMissAnimation:Bool = false;
@@ -243,11 +249,27 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	
 	private function set_texture(value:String):String
 	{
-		if (texture == value) return texture;
-		
+		// Comparing the resolved texture STRING alone isn't enough:
+		// _loadNoteAnims() (called from inside reloadNote() below) registers
+		// scroll/hold/holdend using `skin.noteAnims[noteData % ...]` -- picked
+		// by NOTEDATA (which of the 4 lane directions), not by texture name.
+		// A pooled Note reused for the SAME skin but a DIFFERENT direction
+		// (extremely common -- notes.recycle() hands back ANY dead member,
+		// not one that was previously this same lane) would otherwise keep
+		// showing its previous life's direction under the "scroll" name,
+		// since the texture string alone shows no change. Must also compare
+		// `skin` (object identity, not just its texture string -- two skins
+		// COULD share a texture name) and `noteData` against what was
+		// actually last loaded.
+		final resolved:String = (value != null && value.length > 0) ? value : (skin?.noteTexture ?? 'NOTE_assets');
+		if (texture == resolved && skin == _lastLoadedSkin && noteData == _lastLoadedNoteData) return texture;
+
 		reloadNote('', value);
-		
-		return (texture = value);
+
+		_lastLoadedSkin = skin;
+		_lastLoadedNoteData = noteData;
+
+		return (texture = resolved);
 	}
 	
 	private function set_noteType(value:String):String
@@ -349,8 +371,20 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
 
-		prefix = suffix = texture = '';
-		
+		prefix = suffix = '';
+
+		// Only force a reload here if this Note has never had one (frames
+		// still null -- true only for a just-constructed object). For a
+		// pooled note being reused, `skin` at this point is still whatever
+		// this Note's PREVIOUS life had (never reset elsewhere), so deciding
+		// whether to reload HERE would be unreliable -- PlayField.addNote(),
+		// called a few lines later in the same spawn (via spawnNote()), sets
+		// `skin` to the correct target field's skin BEFORE reassigning
+		// texture, so it's the only place that can answer this correctly.
+		// Leaving frames/animation stale here is safe: nothing ever renders
+		// between this call and that one.
+		if (frames == null) texture = '';
+
 		playAnim(getDefaultAnim(), true);
 		updateHitbox();
 		
