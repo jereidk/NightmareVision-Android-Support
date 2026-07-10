@@ -123,8 +123,13 @@ class DynamicResolution
 		if (_gl == null || _storageTex == null) return;
 		final gl = _gl;
 		gl.bindTexture(gl.TEXTURE_2D, _storageTex);
+		// copyTexSubImage2D instead of copyTexImage2D: the storage was already
+		// allocated at _createGL() (texImage2D with null data), so re-defining
+		// level 0 every rendered frame made tiled-GPU drivers treat it as a
+		// brand-new texture allocation + full pipeline resolve each time.
+		// SubImage reuses the existing storage and only pays for the copy.
 		// x=0, y=0 reads from bottom-left of the back buffer (GL convention)
-		gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, _winW, _winH, 0);
+		gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, _winW, _winH);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
