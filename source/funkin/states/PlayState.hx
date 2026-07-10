@@ -53,6 +53,18 @@ import funkin.audio.SyncedFlxSoundGroup;
 import funkin.video.FunkinVideoSprite;
 #end
 
+// Shared by every deferred tail segment queued from the same head note (see
+// PlayState._pendingTails) so they can chain prevNote correctly even though
+// they're no longer recycled back-to-back in a single call.
+private typedef PendingTailChain = {lastNote:Note};
+
+private typedef PendingTail =
+{
+	qn:QueueNote,
+	parentNote:Note,
+	chain:PendingTailChain
+};
+
 class PlayState extends MusicBeatState
 {
 	public static var STRUM_X:Float = 42; // redundant
@@ -254,6 +266,23 @@ class PlayState extends MusicBeatState
 	// Index pointers so we advance by pointer rather than O(n) shift().
 	var _noteSpawnIdx:Int = 0;
 	var _eventSpawnIdx:Int = 0;
+
+	// A sustain note's tail segments used to all be recycled the instant
+	// their head spawned -- for a long hold that's dozens of Note objects
+	// built in one synchronous burst. recycleNote() now only builds the
+	// head immediately and queues the rest here, letting them drain a few
+	// at a time as each segment's OWN spawn threshold is actually reached
+	// (see the second noteSpawn while loop in update()). `chain` is shared
+	// by every entry that came from the same head, tracking the most
+	// recently spawned segment so preRecycle()'s prevNote chaining still
+	// links up correctly even though the segments are no longer built
+	// back-to-back in the same call. Not guaranteed globally sorted by
+	// strumTime (two overlapping long holds can interleave), only
+	// per-head order is guaranteed -- acceptable since spawnOffset already
+	// gives a multi-hundred-ms cushion before anything here is actually
+	// needed on screen.
+	var _pendingTails:Array<PendingTail> = [];
+	var _pendingTailIdx:Int = 0;
 
 	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
 	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
@@ -1689,6 +1718,27 @@ class PlayState extends MusicBeatState
 
 			--i;
 		}
+
+		// Same idea for tails still waiting in _pendingTails: any entry
+		// whose own strumTime falls before the skip target would otherwise
+		// sit there until its threshold trips relative to the NEW
+		// songPosition (which is already past it), spawning a sustain
+		// segment for a head that may have just been disposed above. This
+		// is only reachable from a real skip (practice mode's "skip to
+		// time" while already mid-song, see PauseSubState.hx), not the
+		// normal per-frame path, so a plain filter is fine here.
+		if (_pendingTails.length > 0)
+		{
+			final kept:Array<PendingTail> = [];
+			for (i in _pendingTailIdx..._pendingTails.length)
+			{
+				final entry = _pendingTails[i];
+				if (entry.qn.strumTime - 350 < time || entry.parentNote.garbage) continue;
+				kept.push(entry);
+			}
+			_pendingTails = kept;
+			_pendingTailIdx = 0;
+		}
 	}
 	
 	public function setSongTime(time:Float):Void
@@ -2021,6 +2071,8 @@ class PlayState extends MusicBeatState
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		_noteSpawnIdx = 0;
 		_eventSpawnIdx = 0;
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
 
 		prewarmNotePool();
 
@@ -2423,11 +2475,24 @@ class PlayState extends MusicBeatState
 		// _resetTexture() on top of the one preRecycle() already does) plus
 		// a fresh RGBGraphics allocation, none of which "pooling" was
 		// actually avoiding. Both are fixed now (see disposeNote()'s
-		// comment, and NoteUtil.getCurColors()'s `into` param) — keeping
-		// this tag to confirm the improvement on the next real build.
+		// comment, and NoteUtil.getCurColors()'s `into` param).
+		//
+		// A second, separate burst source remained even after that fix: a
+		// sustain note used to recycle EVERY tail segment synchronously
+		// alongside its head, so one long hold could dump dozens of Note
+		// constructions into a single frame. A simulation against a real
+		// chart ("Finale") showed a burst of just 4 simultaneous held
+		// chords building 68 Note objects in one frame this way. recycleNote()
+		// now only builds the head here and queues its tails into
+		// _pendingTails (see enqueuePendingTails()); this second loop drains
+		// them on their OWN schedule instead, spreading that same total work
+		// across many frames.
 		#if android SystemMonitor.profBegin('noteSpawn'); #end
 		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
 			recycleNote(queueNotes[_noteSpawnIdx++]);
+
+		while (_pendingTailIdx < _pendingTails.length && (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
+			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
 		#if android SystemMonitor.profEnd(); #end
 
 		var tempVector = funkin.backend.math.Vector3.get();
@@ -2675,32 +2740,17 @@ class PlayState extends MusicBeatState
 	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
 	{
 		var note:Note = notes.recycle(Note, () -> new Note());
-		
+
 		note.preRecycle(queueNote, parent, prevNote);
-		
+
 		if (parent != null) return note;
-		
+
 		if (queueNote.tail != null)
 		{
 			final note:Note = spawnNote(note);
-			
-			if (note != null)
-			{
-				var prevNote:Note = note;
-				
-				for (tail in queueNote.tail)
-				{
-					final tail:Note = recycleNote(tail, note, prevNote);
-					
-					note.tail.push(tail);
-					
-					prevNote = tail;
-				}
-				
-				for (tail in note.tail)
-					spawnNote(tail);
-			}
-			
+
+			if (note != null) enqueuePendingTails(note, queueNote.tail);
+
 			return note;
 		}
 		else
@@ -2708,7 +2758,45 @@ class PlayState extends MusicBeatState
 			return spawnNote(note);
 		}
 	}
-	
+
+	function enqueuePendingTails(headNote:Note, tails:Array<QueueNote>):Void
+	{
+		final chain:PendingTailChain = {lastNote: headNote};
+		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
+	}
+
+	// Builds one deferred tail segment. Mirrors what the old inline loop in
+	// recycleNote() used to do (recycle against the shared parent/prevNote
+	// chain, append to the parent's tail array, spawn it) -- the only new
+	// part is replaying whatever state the parent note is CURRENTLY in onto
+	// a segment that didn't exist yet when that state was decided.
+	// PlayField's own hit handler (unblocks every existing tail the instant
+	// the head is hit) and miss handler (blocks+dims every existing tail
+	// the instant the head is missed) only ever reach segments that already
+	// existed at that moment; a segment built later needs the same outcome
+	// applied retroactively or it's stuck in its just-constructed default
+	// (blocked, full alpha) regardless of what actually happened to its
+	// own hold.
+	function spawnPendingTail(entry:PendingTail):Void
+	{
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, entry.chain.lastNote);
+
+		entry.parentNote.tail.push(tailNote);
+		entry.chain.lastNote = tailNote;
+
+		if (tailNote.tailState.missed)
+		{
+			tailNote.tooLate = true;
+			tailNote.blockHit = true;
+			tailNote.ignoreNote = true;
+			tailNote.copyAlpha = false;
+			tailNote.alpha = 0.3;
+		}
+		else if (entry.parentNote.wasGoodHit) tailNote.blockHit = false;
+
+		spawnNote(tailNote);
+	}
+
 	inline function spawnNote(note:Note):Null<Note>
 	{
 		note.postRecycle();
@@ -3382,7 +3470,13 @@ class PlayState extends MusicBeatState
 			
 			for (i in _noteSpawnIdx...queueNotes.length)
 				if (queueNotes[i].strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
-				
+
+			// Tails queued but not yet spawned (see _pendingTails) aren't
+			// covered by either loop above -- their heads already left
+			// queueNotes, but they're not "alive" in `notes` yet either.
+			for (i in _pendingTailIdx..._pendingTails.length)
+				if (_pendingTails[i].qn.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
+
 			if (doDeathCheck()) return;
 		}
 		
@@ -3595,6 +3689,8 @@ class PlayState extends MusicBeatState
 		_noteSpawnIdx = 0;
 		_eventSpawnIdx = 0;
 		eventNotes.resize(0);
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
 	}
 	
 	public var totalPlayed:Int = 0;
