@@ -187,38 +187,12 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		skinTop.visible = false;
 		add(skinTop);
 		
-		var maskInsetLeft:Float = 31;
-		var maskInsetRight:Float = 31;
-		var maskInsetTop:Float = 35;
-		var maskInsetBottom:Float = 32;
 		gridCamera = new FlxCamera();
 		gridCamera.bgColor = 0x00000000;
 		gridCamera.antialiasing = ClientPrefs.globalAntialiasing;
-		gridCamera.setPosition(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
-		gridCamera.setSize(Std.int(skinThingBg.width - maskInsetLeft - maskInsetRight), Std.int(skinThingBg.height - maskInsetTop - maskInsetBottom));
-		gridCamera.scroll.set(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
 		FlxG.cameras.add(gridCamera, false);
 		gridCameras = [gridCamera];
-		gridOriginY = (skinThingBg.y + skinThingBg.height * 0.5) - GRID_SPACING_Y;
-
-		// Derive column centering from the panel/camera's own inner region
-		// (same maskInset values used above) instead of FlxG.width. Both
-		// happened to agree in testing, but on some devices/aspect-ratio
-		// settings the grid columns rendered bunched at the panel's right
-		// edge with the rest empty — computing this straight from the
-		// camera's own bounds removes any chance of the two disagreeing.
-		final gridInnerX0:Float = skinThingBg.x + maskInsetLeft;
-		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
-		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
-
-		// Temporary diagnostic: the grid still reportedly renders bunched to
-		// the right on-device despite this being derived from the panel's own
-		// bounds. The origin math above checks out on paper, so the previous
-		// log wasn't enough to tell whether the bug is in this math, in the
-		// per-card placement in setupGridCards(), or in gridCamera's own
-		// scale/transform not matching the rest of the scene. Log all three.
-		funkin.backend.Logger.log('[CosmeticsGridDebug] FlxG.width=${FlxG.width} skinThingBg.x=${skinThingBg.x} skinThingBg.width=${skinThingBg.width} gridInnerX0=$gridInnerX0 gridInnerWidth=$gridInnerWidth gridOriginX=$gridOriginX GRID_SPACING_X=$GRID_SPACING_X GRID_COLS=$GRID_COLS');
-		funkin.backend.Logger.log('[CosmeticsGridCamDebug] cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll.x},${gridCamera.scroll.y} cam.zoom=${gridCamera.zoom} cam.scaleX=${gridCamera.scaleX} cam.scaleY=${gridCamera.scaleY} cam.totalScaleX=${gridCamera.totalScaleX} cam.totalScaleY=${gridCamera.totalScaleY} FlxG.scaleMode.scale=${FlxG.scaleMode.scale.x},${FlxG.scaleMode.scale.y}');
+		refreshGridLayout('create');
 
 		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
@@ -502,6 +476,38 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		updatePreviewCard(2, equipped[2], 'N/A');
 	}
 	
+	/**
+	 * Recomputes skinThingBg/skinTop's centering and gridCamera's crop
+	 * window + gridOriginX/Y from the CURRENT FlxG.width/height and
+	 * gameCutoutSize. Called once in create() and again every time the
+	 * grid opens (mirrors menuBackButton.x/titleText.x below, which
+	 * already re-apply gameCutoutSize.x on every open because 'expand'
+	 * mode's cutout can settle asynchronously after create() runs).
+	 */
+	function refreshGridLayout(source:String):Void
+	{
+		skinThingBg.x = (FlxG.width - skinThingBg.width) * 0.5;
+		skinThingBg.y = (FlxG.height - skinThingBg.height) * 0.5;
+		skinTop.x = (FlxG.width - skinTop.width) * 0.5;
+
+		var maskInsetLeft:Float = 31;
+		var maskInsetRight:Float = 31;
+		var maskInsetTop:Float = 35;
+		var maskInsetBottom:Float = 32;
+		gridCamera.setPosition(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
+		gridCamera.setSize(Std.int(skinThingBg.width - maskInsetLeft - maskInsetRight), Std.int(skinThingBg.height - maskInsetTop - maskInsetBottom));
+		gridCamera.scroll.set(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
+
+		gridOriginY = (skinThingBg.y + skinThingBg.height * 0.5) - GRID_SPACING_Y;
+
+		final gridInnerX0:Float = skinThingBg.x + maskInsetLeft;
+		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
+		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
+
+		funkin.backend.Logger.log('[CosmeticsGridDebug] refreshGridLayout($source): FlxG.width=${FlxG.width} FlxG.height=${FlxG.height} gameCutoutSize=${funkin.backend.FunkinRatioScaleMode.gameCutoutSize} skinThingBg.x=${skinThingBg.x} skinThingBg.y=${skinThingBg.y} gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
+		funkin.backend.Logger.log('[CosmeticsGridCamDebug] refreshGridLayout($source): cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll}');
+	}
+
 	function openGridForCategory(cat:Int):Void
 	{
 		inGrid = true;
@@ -550,6 +556,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.visible = false;
 		randomLabel.active = false;
 		gridItemLabel.visible = true;
+		refreshGridLayout('open');
 		// menuBackButton is hardcoded to align with skinThingBg's default-canvas
 		// position, but skinThingBg.x = (FlxG.width-width)*.5 recenters
 		// dynamically — same half-cutout shift as any element following a
