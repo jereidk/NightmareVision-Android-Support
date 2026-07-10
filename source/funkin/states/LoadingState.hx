@@ -118,7 +118,13 @@ class LoadingState extends MusicBeatState
 
 		FlxTween.tween(titleText.scale, {x: 1.04, y: 1.04}, 0.9, {type: PINGPONG, ease: FlxEase.sineInOut});
 
-		var tipEntry = FlxG.random.getObject(TitleState.funFacts);
+		// Song-specific tips (see TitleState.funFacts) are references/spoilers
+		// for one particular song -- only eligible while THAT song is the one
+		// actually loading, so e.g. Identity Crisis's twist doesn't show up
+		// while loading an unrelated song. Generic tips (songs == null) are
+		// always eligible.
+		var eligibleTips = TitleState.funFacts.filter(t -> t.songs == null || t.songs.contains(songName));
+		var tipEntry = FlxG.random.getObject(eligibleTips);
 		var tip:String = (tipEntry != null) ? Lang.str(tipEntry.key, tipEntry.fallback) : '';
 		var tipText = new FlxText(100, FlxG.height - 140, FlxG.width - 200, tip, 26);
 		tipText.setFormat(Paths.font('vcr.ttf'), 26, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);

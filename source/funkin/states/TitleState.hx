@@ -23,16 +23,22 @@ class TitleState extends MusicBeatState
 	// fallback = the original English text, used if a language file doesn't
 	// have (or hasn't yet translated) that key -- see LoadingState's use of
 	// Lang.str(key, fallback) for why this needs both instead of just text.
-	public static var funFacts:Array<{key:String, fallback:String}> = [
-		{key: 'loading_tip_beans', fallback: 'You need at least 4,870 beans to unlock every song.'}, // its true
-		{key: 'loading_tip_doublekill', fallback: 'Despite its\' name, Double Kill only features one kill.'}, // double kill
-		{key: 'loading_tip_blackimpostor', fallback: 'I\'m the black impostor! I am gonna kill you!'}, // defeat
-		{key: 'loading_tip_airship', fallback: 'The Airship contains many wacky trinkets in i! Try the teleporter today!'}, // henry
-		{key: 'loading_tip_torture', fallback: '"Why don\'t we begin?"'}, // torture
-		{key: 'loading_tip_shapeshifter', fallback: 'The shapeshifter\'s name is Monotone.'}, // doc
-		{key: 'loading_tip_doubletrouble', fallback: '"Impostor Trouble? Now it is double."'}, // double trouble
-		{key: 'loading_tip_tomongus', fallback: 'Beat the Tomongus week to unlock a new song!'},
-		{key: 'loading_tip_keep', fallback: 'I don\'t want to get rid of this'}
+	// songs = if set, this tip is a reference/spoiler for a specific song and
+	// should ONLY be picked while loading exactly that song (matched against
+	// SONG.song, e.g. "Double Kill") -- LoadingState filters on this. Omitted
+	// entirely (null) means the tip is generic and always eligible.
+	public static var funFacts:Array<{key:String, fallback:String, ?songs:Array<String>}> = [
+		{key: 'loading_tip_beans', fallback: 'You need at least 4,870 beans to unlock every song.'}, // its true, general
+		{key: 'loading_tip_doublekill', fallback: 'Despite its\' name, Double Kill only features one kill.', songs: ['Double Kill']},
+		{key: 'loading_tip_blackimpostor', fallback: 'I\'m the black impostor! I am gonna kill you!', songs: ['Defeat']},
+		{key: 'loading_tip_airship', fallback: 'The Airship contains many wacky trinkets in i! Try the teleporter today!',
+			songs: ['Titular', 'Greatest Plan', 'Reinforcements', 'Armed']}, // HENRY week
+		{key: 'loading_tip_torture', fallback: '"Why don\'t we begin?"', songs: ['Torture']},
+		{key: 'loading_tip_shapeshifter', fallback: 'The shapeshifter\'s name is Monotone.', songs: ['Identity Crisis']}, // doc
+		{key: 'loading_tip_doubletrouble', fallback: '"Impostor Trouble? Now it is double."', songs: ['Double Trouble']},
+		{key: 'loading_tip_tomongus', fallback: 'Beat the Tomongus week to unlock a new song!',
+			songs: ['Sussy Bussy', 'Rivals', 'Chewmate']}, // week10
+		{key: 'loading_tip_keep', fallback: 'I don\'t want to get rid of this'} // general
 	];
 	
 	var skippedIntro:Bool = false;
