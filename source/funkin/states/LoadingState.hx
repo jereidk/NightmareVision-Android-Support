@@ -59,7 +59,7 @@ class LoadingState extends MusicBeatState
 		glow.alpha = 0.55;
 		glow.blend = ADD;
 		glow.screenCenter(X);
-		glow.y = 30;
+		glow.y = 120;
 		glow.scrollFactor.set();
 		add(glow);
 
@@ -97,7 +97,7 @@ class LoadingState extends MusicBeatState
 			icon.antialiasing = ClientPrefs.globalAntialiasing;
 			icon.screenCenter(X);
 			icon.x -= 330;
-			icon.y = 60;
+			icon.y = 150;
 			icon.scrollFactor.set();
 			add(icon);
 
@@ -105,7 +105,7 @@ class LoadingState extends MusicBeatState
 				{type: PINGPONG, ease: FlxEase.sineInOut});
 		}
 
-		var loadingLabel = new FlxText(0, 60, FlxG.width, Lang.str('loading_title', 'CARGANDO'), 60);
+		var loadingLabel = new FlxText(0, 150, FlxG.width, Lang.str('loading_title', 'Loading'), 60);
 		loadingLabel.setFormat(Paths.font('vcr.ttf'), 60, ACCENT, CENTER, OUTLINE, FlxColor.BLACK);
 		loadingLabel.scrollFactor.set();
 		add(loadingLabel);
@@ -118,7 +118,8 @@ class LoadingState extends MusicBeatState
 
 		FlxTween.tween(titleText.scale, {x: 1.04, y: 1.04}, 0.9, {type: PINGPONG, ease: FlxEase.sineInOut});
 
-		var tip:String = FlxG.random.getObject(TitleState.funFacts) ?? '';
+		var tipEntry = FlxG.random.getObject(TitleState.funFacts);
+		var tip:String = (tipEntry != null) ? Lang.str(tipEntry.key, tipEntry.fallback) : '';
 		var tipText = new FlxText(100, FlxG.height - 140, FlxG.width - 200, tip, 26);
 		tipText.setFormat(Paths.font('vcr.ttf'), 26, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		tipText.borderSize = 2;

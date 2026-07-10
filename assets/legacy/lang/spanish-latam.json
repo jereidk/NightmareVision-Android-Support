@@ -35,7 +35,19 @@
         "dialogue_grey": "Gris",
         "dialogue_pink": "Rosa",
         "video_skip": "Presiona RETROCESO para saltar",
-        
+
+        // LoadingState (pantalla de carga de canciones)
+        "loading_title": "Cargando",
+        "loading_tip_beans": "Necesitas al menos 4.870 frijoles para desbloquear todas las canciones.",
+        "loading_tip_doublekill": "A pesar de su nombre, Double Kill solo tiene un asesinato.",
+        "loading_tip_blackimpostor": "¡Soy el impostor negro! ¡Te voy a matar!",
+        "loading_tip_airship": "¡El Airship tiene un montón de objetos raros! Prueba el teletransportador hoy.",
+        "loading_tip_torture": "«¿Por qué no empezamos?»",
+        "loading_tip_shapeshifter": "El cambiaformas se llama Monotone.",
+        "loading_tip_doubletrouble": "«¿Problemas de Impostor? Ahora son el doble.»",
+        "loading_tip_tomongus": "¡Supera la semana de Tomongus para desbloquear una nueva canción!",
+        "loading_tip_keep": "No quiero deshacerme de esto",
+
         // the AWARDS SECTION
         // now properly split off for better organization
         // HINTS are shown if you don't have the achievement, the BIO is the actual method of unlock

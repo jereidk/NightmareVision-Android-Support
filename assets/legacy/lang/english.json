@@ -40,7 +40,19 @@
 		"reset_score_question": "Clear highscore for @?",
         "skins_disclaimer":"Skins and pets only work in Freeplay mode.",
         "freeplay_highscore": "High Score", // used in freeplay menu as a replacement for "Score"
-		
+
+        // LoadingState (song loading screen)
+        "loading_title": "Loading",
+        "loading_tip_beans": "You need at least 4,870 beans to unlock every song.",
+        "loading_tip_doublekill": "Despite its' name, Double Kill only features one kill.",
+        "loading_tip_blackimpostor": "I'm the black impostor! I am gonna kill you!",
+        "loading_tip_airship": "The Airship contains many wacky trinkets in i! Try the teleporter today!",
+        "loading_tip_torture": "\"Why don't we begin?\"",
+        "loading_tip_shapeshifter": "The shapeshifter's name is Monotone.",
+        "loading_tip_doubletrouble": "\"Impostor Trouble? Now it is double.\"",
+        "loading_tip_tomongus": "Beat the Tomongus week to unlock a new song!",
+        "loading_tip_keep": "I don't want to get rid of this",
+
 		// the AWARDS SECTION
 		// now properly split off for better organization
 		// HINTS are shown if you don't have the achievement, the BIO is the actual method of unlock

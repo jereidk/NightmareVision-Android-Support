@@ -34,6 +34,19 @@
         "dialogue_grey": "Gris",
         "dialogue_pink": "Fucsia",
         "video_skip": "Pulsa ATRÁS para saltar",
+
+        // LoadingState (pantalla de carga de canciones)
+        "loading_title": "Cargando",
+        "loading_tip_beans": "Necesitas al menos 4.870 alubias para desbloquear todas las canciones.",
+        "loading_tip_doublekill": "A pesar de su nombre, Double Kill solo tiene un asesinato.",
+        "loading_tip_blackimpostor": "¡Soy el impostor negro! ¡Voy a matarte!",
+        "loading_tip_airship": "¡El Airship tiene un montón de trastos raros! Prueba el teletransportador hoy mismo.",
+        "loading_tip_torture": "«¿Por qué no empezamos?»",
+        "loading_tip_shapeshifter": "El cambiaformas se llama Monotone.",
+        "loading_tip_doubletrouble": "«¿Problemas de Impostor? Ahora son el doble.»",
+        "loading_tip_tomongus": "¡Supera la semana de Tomongus para desbloquear una nueva canción!",
+        "loading_tip_keep": "No quiero deshacerme de esto",
+
         "AWARDNAME_week1": "Problema Zanjado",
         "AWARDBIO_week1": "Completa la Semana 1.",
         "AWARDNAME_week2": "MIRA Maniac",

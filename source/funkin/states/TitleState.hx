@@ -19,16 +19,20 @@ class TitleState extends MusicBeatState
 	public static var closedState:Bool = false;
 	
 	// For a potential loading screen but i dont think its necessary
-	public static var funFacts:Array<String> = [
-		'You need at least 4,870 beans to unlock every song.', // its true
-		'Despite its\' name, Double Kill only features one kill.', // double kill
-		'I\'m the black impostor! I am gonna kill you!', // defeat
-		'The Airship contains many wacky trinkets in i! Try the teleporter today!', // henry
-		'"Why don\'t we begin?"', // torture
-		'The shapeshifter\'s name is Monotone.', // doc
-		'"Impostor Trouble? Now it is double."', // double trouble
-		'Beat the Tomongus week to unlock a new song!',
-		'I don\'t want to get rid of this'
+	// key = Lang.hx lookup (see lang/english.json's loading_tip_* entries),
+	// fallback = the original English text, used if a language file doesn't
+	// have (or hasn't yet translated) that key -- see LoadingState's use of
+	// Lang.str(key, fallback) for why this needs both instead of just text.
+	public static var funFacts:Array<{key:String, fallback:String}> = [
+		{key: 'loading_tip_beans', fallback: 'You need at least 4,870 beans to unlock every song.'}, // its true
+		{key: 'loading_tip_doublekill', fallback: 'Despite its\' name, Double Kill only features one kill.'}, // double kill
+		{key: 'loading_tip_blackimpostor', fallback: 'I\'m the black impostor! I am gonna kill you!'}, // defeat
+		{key: 'loading_tip_airship', fallback: 'The Airship contains many wacky trinkets in i! Try the teleporter today!'}, // henry
+		{key: 'loading_tip_torture', fallback: '"Why don\'t we begin?"'}, // torture
+		{key: 'loading_tip_shapeshifter', fallback: 'The shapeshifter\'s name is Monotone.'}, // doc
+		{key: 'loading_tip_doubletrouble', fallback: '"Impostor Trouble? Now it is double."'}, // double trouble
+		{key: 'loading_tip_tomongus', fallback: 'Beat the Tomongus week to unlock a new song!'},
+		{key: 'loading_tip_keep', fallback: 'I don\'t want to get rid of this'}
 	];
 	
 	var skippedIntro:Bool = false;
