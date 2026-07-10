@@ -2844,6 +2844,18 @@ class PlayState extends MusicBeatState
 		// segment instead of touching it.
 		if (entry.parentNote.queueNote != entry.chain.headQueueNote) return;
 
+		// The queueNote identity check above only catches a head that was
+		// already REUSED for another note -- a head that's merely dead in the
+		// pool (disposed, not yet handed back out) still passes it, since
+		// nothing restamps queueNote until the next preRecycle(). Spawning a
+		// segment onto a dead head is never useful (the hold is over: fully
+		// consumed or missed+expired, so the segment would arrive
+		// instantly-late and attached to nothing) and, worse, leaves this
+		// entry's parentNote eligible for notes.recycle() to hand back as
+		// this very segment's own Note object -- a self-parented note. Drop
+		// the segment instead.
+		if (!entry.parentNote.alive || !entry.parentNote.exists) return;
+
 		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, entry.chain.lastNote);
 
 		entry.parentNote.tail.push(tailNote);

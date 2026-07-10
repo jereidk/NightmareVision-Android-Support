@@ -407,7 +407,13 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			tailState.splash = null;
 		}
 		
-		if (prevNote != null)
+		// prevNote != this: with deferred tail spawning, a long hold's earlier
+		// segment can be consumed+disposed before its next segment drains from
+		// the pending queue -- and notes.recycle() (first dead member) can then
+		// hand that exact object back as the NEXT segment, arriving here with
+		// prevNote pointing at ourselves. Linking would create a self-loop
+		// (this.prevNote == this.nextNote == this) that corrupts the chain.
+		if (prevNote != null && prevNote != this)
 		{
 			this.prevNote = prevNote;
 			prevNote.nextNote = this;

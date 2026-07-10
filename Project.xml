@@ -99,18 +99,26 @@
         <haxedef name="absolute-paths"/>
     </section>
 
-    <!--Generational GC: device logs show gameplay allocating up to ~43MB of
-        short-lived heap garbage per second (dense note sections), and every
-        ~0.8s the full-heap Immix collection that cleans it pauses the world
-        for 100-270ms — those pauses ARE the periodic gameplay stutters, and
-        were even caught landing inside note-hit dispatch. Generational mode
-        sweeps short-lived garbage in cheap minor collections instead of
-        paying a full mark each time. NOTE: this is an experimental hxcpp
-        mode (base-game Funkin' only reports its state on a debug screen,
-        labeled "Exp" -- it does NOT ship with it enabled). Treat builds
-        with this as test builds; revert this define if instability shows
-        up that release builds without it don't have.-->
+    <!--Generational GC: REVERTED (was enabled to cheapen the frequent
+        collections caused by ~43MB/s of short-lived gameplay garbage).
+        This is an experimental hxcpp mode (base-game Funkin' does NOT ship
+        with it), and the enable-commit's own note said to revert it if
+        instability showed up that release builds don't have. It did: two
+        hard SILENT process deaths mid-song on a real device (no crash
+        screen, no crash.log, sysmon.log cut mid-line) with HXCPP_CHECK_POINTER
+        active, meaning the fault was NATIVE, not a Haxe-side null/index
+        error, and a SIGSEGV inside the experimental collector's own
+        marking/write-barrier machinery is the only component in that build
+        matching the profile (both deaths followed windows of heavy GC
+        churn; game-side metrics were completely healthy at crash time).
     <haxedef name="HXCPP_GC_GENERATIONAL"/>
+    -->
+    <!--The stutter problem the generational mode was meant to solve should
+        instead keep shrinking at the source: per-frame allocation fixes
+        (reused arg arrays, RGBGraphics reuse, staggered tail spawning) have
+        already cut alloc pressure substantially; keep attacking remaining
+        allocation sources rather than re-enabling the experimental GC.-->
+
 
     <!--Enable for better crash handling/reporting-->
     <haxedef name="CRASH_HANDLER"/>
