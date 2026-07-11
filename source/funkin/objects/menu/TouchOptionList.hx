@@ -58,11 +58,23 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	var w:Float;
 	var maxVisible:Int;
 
+	var _rowHiBorder:Array<FlxSprite> = [];
 	var _rowHi:Array<FlxSprite> = [];
+	var _rowAccent:Array<FlxSprite> = [];
 	var _rowLabel:Array<FlxText> = [];
+	var _rowSectionRule:Array<FlxSprite> = [];
 	var _rowValue:Array<FlxText> = [];
 	var _rowLeft:Array<FlxText> = [];
+	var _rowLeftBg:Array<FlxSprite> = [];
 	var _rowRight:Array<FlxText> = [];
+	var _rowRightBg:Array<FlxSprite> = [];
+
+	// Reserved strip at the row's right edge for the ◄/► adjust buttons --
+	// value text stops short of it, and it in turn stops short of the
+	// scrollbar (x0+w+10) instead of the two crowding each other.
+	static inline var ARROW_W:Float = 46;
+	static inline var ARROW_GAP:Float = 10;
+	static inline var ARROW_EDGE_MARGIN:Float = 16;
 
 	var _selVisual:Float = 0;
 	var _scrollOffset:Float = 0; // in rows
@@ -95,36 +107,72 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		w = width;
 		this.maxVisible = maxVisible;
 
+		final rA_x = x0 + w - ARROW_EDGE_MARGIN - ARROW_W;
+		final lA_x = rA_x - ARROW_GAP - ARROW_W;
+		final valueRight = lA_x - 14;
+		final valueLeft = x0 + w * 0.55;
+
 		for (i in 0...maxVisible)
 		{
 			final rowY = y0 + i * ROW_H;
 
-			final hi = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(Std.int(w + 12), Std.int(ROW_H - 6), 0xFF3A3A4A);
+			// Border sits behind the fill, 2px larger on every side, so only a
+			// thin bright ring shows around the selected row instead of a flat
+			// single-tone block.
+			final hiBorder = new FlxSprite(x0 - 8, rowY - 5).makeGraphic(Std.int(w + 16), Std.int(ROW_H - 2), 0xFFFFD700);
+			hiBorder.alpha = 0;
+			add(hiBorder);
+			_rowHiBorder.push(hiBorder);
+
+			final hi = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(Std.int(w + 12), Std.int(ROW_H - 6), 0xFF3A3A50);
 			hi.alpha = 0;
 			add(hi);
 			_rowHi.push(hi);
 
-			final lbl = new FlxText(x0 + 20, rowY + 8, w * 0.55, '');
+			final accent = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(5, Std.int(ROW_H - 6), 0xFFFFD700);
+			accent.alpha = 0;
+			add(accent);
+			_rowAccent.push(accent);
+
+			final rule = new FlxSprite(x0, rowY + ROW_H - 6).makeGraphic(Std.int(w), 2, 0xFF555570);
+			rule.visible = false;
+			add(rule);
+			_rowSectionRule.push(rule);
+
+			final lbl = new FlxText(x0 + 20, rowY + 8, w * 0.55 - 20, '');
 			lbl.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			add(lbl);
 			_rowLabel.push(lbl);
 
-			final val = new FlxText(x0 + w * 0.55, rowY + 8, w * 0.45 - 90, '');
+			final val = new FlxText(valueLeft, rowY + 8, valueRight - valueLeft, '');
 			val.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFD700, FlxTextAlign.RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			val.borderSize = 1.5;
 			add(val);
 			_rowValue.push(val);
 
-			final lA = new FlxText(x0 + w - 68, rowY + 6, 44, '◄');
-			lA.setFormat(Paths.font('vcr.ttf'), 24, 0xFF00D9FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			lA.borderSize = 1.5;
+			// White base so runtime `.color` tinting (selected/unselected in
+			// refreshRows()) actually produces that exact color, instead of
+			// multiplying against a pre-baked non-white makeGraphic() fill.
+			final lBg = new FlxSprite(lA_x - 3, rowY + 4).makeGraphic(Std.int(ARROW_W + 6), Std.int(ROW_H - 14), FlxColor.WHITE);
+			lBg.color = 0xFF2E2E44;
+			add(lBg);
+			_rowLeftBg.push(lBg);
+
+			final lA = new FlxText(lA_x, rowY + 6, ARROW_W, '◄');
+			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lA.borderSize = 2;
 			add(lA);
 			_rowLeft.push(lA);
 
-			final rA = new FlxText(x0 + w - 24, rowY + 6, 44, '►');
-			rA.setFormat(Paths.font('vcr.ttf'), 24, 0xFF00D9FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			rA.borderSize = 1.5;
+			final rBg = new FlxSprite(rA_x - 3, rowY + 4).makeGraphic(Std.int(ARROW_W + 6), Std.int(ROW_H - 14), FlxColor.WHITE);
+			rBg.color = 0xFF2E2E44;
+			add(rBg);
+			_rowRightBg.push(rBg);
+
+			final rA = new FlxText(rA_x, rowY + 6, ARROW_W, '►');
+			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			rA.borderSize = 2;
 			add(rA);
 			_rowRight.push(rA);
 		}
@@ -445,14 +493,28 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			final selected = show && (optIndex == curSelected);
 			final hovered = show && (optIndex == hoveredRow);
 
-			_rowHi[i].y = show ? y0 + i * ROW_H - 3 : -9999;
-			_rowHi[i].alpha = selected ? 0.9 : (hovered ? 0.4 : 0);
-			if (selected) _rowHi[i].y = highlightY;
+			final rowTopY = show ? y0 + i * ROW_H - 3 : -9999;
+			_rowHi[i].y = rowTopY;
+			_rowHi[i].alpha = selected ? 0.92 : (hovered ? 0.4 : 0);
+			_rowHiBorder[i].y = rowTopY - 2;
+			_rowHiBorder[i].alpha = selected ? 0.8 : 0;
+			_rowAccent[i].y = rowTopY;
+			_rowAccent[i].alpha = selected ? 1 : 0;
+			if (selected)
+			{
+				_rowHi[i].y = highlightY;
+				_rowHiBorder[i].y = highlightY - 2;
+				_rowAccent[i].y = highlightY;
+			}
 
 			_rowLabel[i].visible = show;
 			_rowValue[i].visible = show && opt.type != 'label';
-			_rowLeft[i].visible = show && isAdjustable(opt);
-			_rowRight[i].visible = show && isAdjustable(opt);
+			final showArrows = show && isAdjustable(opt);
+			_rowLeft[i].visible = showArrows;
+			_rowRight[i].visible = showArrows;
+			_rowLeftBg[i].visible = showArrows;
+			_rowRightBg[i].visible = showArrows;
+			_rowSectionRule[i].visible = show && opt.type == 'label' && opt.name != '';
 
 			if (!show) continue;
 
@@ -460,20 +522,27 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			_rowValue[i].y = _rowLabel[i].y;
 			_rowLeft[i].y = y0 + i * ROW_H + 6;
 			_rowRight[i].y = _rowLeft[i].y;
+			_rowLeftBg[i].y = y0 + i * ROW_H + 4;
+			_rowRightBg[i].y = _rowLeftBg[i].y;
+			_rowSectionRule[i].y = y0 + i * ROW_H + ROW_H - 8;
 
 			final isLabel = (opt.type == 'label');
 			_rowLabel[i].text = opt.name;
-			_rowLabel[i].color = isLabel ? 0xFFAAAAAA : (selected ? 0xFFFFE066 : FlxColor.WHITE);
-			_rowLabel[i].size = isLabel ? 20 : 22;
+			_rowLabel[i].color = isLabel ? 0xFF7FD9E8 : (selected ? 0xFFFFE066 : FlxColor.WHITE);
+			_rowLabel[i].size = isLabel ? 19 : 22;
+			_rowLabel[i].bold = isLabel;
 
 			if (isLabel) continue;
 
 			_rowValue[i].text = displayValue(opt);
 			_rowValue[i].color = selected ? 0xFFFFE066 : 0xFFCCCCCC;
 
-			final arrowColor = selected ? 0xFF00FFFF : 0xFF6699CC;
+			final arrowColor = selected ? 0xFF3DE0FF : 0xFF9FCBE8;
 			_rowLeft[i].color = arrowColor;
 			_rowRight[i].color = arrowColor;
+			final bgColor = selected ? 0xFF3A4A5A : 0xFF2E2E44;
+			_rowLeftBg[i].color = bgColor;
+			_rowRightBg[i].color = bgColor;
 		}
 
 		_scrollBar.visible = optionsArray.length > maxVisible;

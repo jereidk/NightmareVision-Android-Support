@@ -80,8 +80,11 @@ class OptionsState extends MusicBeatState
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
 	static final TAB_Y:Float = 90;
-	static final TAB_H:Float = 60;
-	static final LIST_Y:Float = 168;
+	// Generous enough for a 2-line wrapped label at fitTabLabel()'s largest
+	// font size in any language -- was 60, which a long translated category
+	// name (e.g. "Visuals and UI") could overflow past the bottom of.
+	static final TAB_H:Float = 74;
+	static final LIST_Y:Float = 182;
 	static final LIST_MAX_VISIBLE:Int = 8;
 
 	// Same left-edge clearance the Virtual Pad's LEFT_FULL layout needs
