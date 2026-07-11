@@ -2904,7 +2904,7 @@ class PlayState extends MusicBeatState
 
 		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
 		trail.setupTrail(headNote, field);
-		headNote.tailState.trail = trail;
+		headNote.sustainTrail = trail;
 	}
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in

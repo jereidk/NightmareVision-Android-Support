@@ -79,22 +79,13 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 {
 	public function new(parent:Note)
 	{
-		this = [parent, [], null, false, null];
+		this = [parent, [], null, false];
 	}
 
 	public var parent(get, set):Note;
 	public var tail(get, set):Array<Note>;
 	public var splash(get, set):Null<SustainSplash>;
 	public var missed(get, set):Bool;
-	// Single-sprite hold rendering (see SustainTrail.hx). Always spawned
-	// alongside the head -- whether it's actually SHOWN (vs. falling back to
-	// the per-segment chain) is re-checked every frame in PlayState, not
-	// decided once here, because ModManager.activeMods can change mid-hold
-	// (DLC/scripts push modifiers via EaseEvents and scripted setValue/
-	// setPercent calls at arbitrary chart timing, not just a static
-	// session-level toggle -- confirmed in ModManager.setValue()'s own
-	// comment about running every frame during an EaseEvent).
-	public var trail(get, set):Null<SustainTrail>;
 
 	function get_parent():Note return this[0];
 
@@ -104,8 +95,6 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 
 	function get_missed():Bool return this[3];
 
-	function get_trail():Null<SustainTrail> return this[4];
-
 	function set_parent(v:Note):Note return this[0] = v;
 
 	function set_tail(v:Array<Note>):Array<Note> return this[1] = v; // well this one is useless
@@ -113,8 +102,6 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 	function set_splash(v:Null<SustainSplash>):Null<SustainSplash> return this[2] = v;
 
 	function set_missed(v:Bool):Bool return this[3] = v;
-
-	function set_trail(v:Null<SustainTrail>):Null<SustainTrail> return this[4] = v;
 }
 
 @:allow(funkin.states.PlayState)
@@ -243,6 +230,16 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public var playField(default, set):PlayField = null;
 	public var sustainSplash:SustainSplash = null;
 	public var noteSplash:NoteSplash = null;
+	// Single-sprite hold rendering (see SustainTrail.hx). Only ever set on
+	// the HEAD note (parent == null), never on tail segments -- unlike
+	// tailState.splash, this doesn't need to be shared across segments.
+	// Always spawned alongside the head; whether it's actually SHOWN (vs.
+	// falling back to the per-segment chain) is re-checked every frame in
+	// PlayState.isModchartActive(), not decided once here, because
+	// ModManager.activeMods can change mid-hold (DLC/scripts push
+	// modifiers via EaseEvents and scripted setValue/setPercent calls at
+	// arbitrary chart timing, not just a static session-level toggle).
+	public var sustainTrail:SustainTrail = null;
 	public var strum:StrumNote = null;
 	
 	public var skin:NoteSkin;
@@ -371,6 +368,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		color = FlxColor.WHITE;
 		sustainSplash = null;
 		noteSplash = null;
+		sustainTrail = null;
 		clipRect = null;
 		alpha = 1;
 	}
@@ -449,16 +447,6 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		{
 			tailState.missed = false;
 			tailState.splash = null;
-
-			// A head note can be disposed before its tail ever spawns a single
-			// segment (tail.length stays 0 forever), which is what routes here
-			// instead of the fresh-tailState branch above -- but a trail (see
-			// SustainTrail.hx) is spawned right when the HEAD appears, before
-			// any tail segment exists. Without this, a reused tailState could
-			// carry a stale, already-orphaned trail reference into this note's
-			// next life.
-			tailState.trail?.kill();
-			tailState.trail = null;
 		}
 		
 		// prevNote != this: with deferred tail spawning (PlayState._pendingTails),
