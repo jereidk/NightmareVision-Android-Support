@@ -30,15 +30,8 @@ class WeekPickerSubstate extends MusicBeatSubstate
 	var otherTitleText:FlxText;
 	
 	var bubl:FlxSpriteGroup;
-	// Icon size/grid step bumped ~40% (71px -> 100px) -- were noticeably
-	// small for how prominent this "which category am I in" picker is.
-	// CIRC_WRAP dropped from 7 (8 per row) to 4 (5 per row) so the bigger
-	// icons still fit inside cubeCamera's 620px width (5 * GRID_STEP = 550)
-	// -- with 9 sections today that's 2 rows, comfortably inside the 234px
-	// camera height too.
-	static inline final GRID_STEP:Float = 110;
-	var CIRCLE_PADDING:Float = 16;
-	var CIRC_WRAP = 4;
+	var CIRCLE_PADDING:Float = 12;
+	var CIRC_WRAP = 7;
 	var curSelection:Int = 0;
 	var WEEKS_WRAP = 0;
 	var lockMovement:Bool = true;  // Upstream feature: prevents interaction during animation
@@ -106,10 +99,10 @@ class WeekPickerSubstate extends MusicBeatSubstate
 			Mods.currentModDirectory = weeks[i].mod;
 			
 			var w:String = weeks[i].section;
-			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * GRID_STEP)).loadGraphic(Paths.image('menu/freeplay/sections/$w'));
-			circ.setGraphicSize(-1, 100);
+			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * 78)).loadGraphic(Paths.image('menu/freeplay/sections/$w'));
+			circ.setGraphicSize(-1, 71);
 			circ.updateHitbox();
-			circ.x = iX * GRID_STEP; // Std.int(FlxMath.remapToRange(iX, 0, CIRC_WRAP - 1, 0, Math.min((CIRC_WRAP - 1) * (100 + CIRCLE_PADDING), 1110)) - circ.width);
+			circ.x = iX * 78; // Std.int(FlxMath.remapToRange(iX, 0, CIRC_WRAP - 1, 0, Math.min((CIRC_WRAP - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width);
 			circ.ID = i;
 			bubl.add(circ);
 			
