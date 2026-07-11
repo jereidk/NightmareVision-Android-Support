@@ -6,7 +6,11 @@ import funkin.game.shaders.RGBShader;
 /**
  * A single stretched sprite representing an entire hold, replacing the old
  * per-step chain of individual `Note` tail segments for the common case
- * (no modchart actively curving this hold's path).
+ * (no modchart actively curving this hold's path). Spawned for every hold
+ * unconditionally; PlayState re-checks every frame (PlayState.
+ * isModchartActive()) whether to actually show this or fall back to the
+ * segment chain, since a DLC/script-driven modifier can activate or clear
+ * mid-hold, not just at song/section boundaries.
  *
  * Modeled after FunkinCrew/Funkin's VSlice `SustainTrail` (source/funkin/
  * play/notes/SustainTrail.hx) -- one object per hold instead of N segment

@@ -79,21 +79,22 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 {
 	public function new(parent:Note)
 	{
-		this = [parent, [], null, false, null, false];
+		this = [parent, [], null, false, null];
 	}
 
 	public var parent(get, set):Note;
 	public var tail(get, set):Array<Note>;
 	public var splash(get, set):Null<SustainSplash>;
 	public var missed(get, set):Bool;
-	// Single-sprite hold rendering (see SustainTrail.hx). `useTrail` is
-	// decided once, when the head spawns (no active modchart for this
-	// player at that moment) -- locked in for the hold's whole lifetime
-	// rather than re-checked every frame, so a mod toggling mid-hold can't
-	// cause a rendering-mode flip partway through. `trail` is the actual
-	// pooled sprite, null until spawned (or if useTrail is false).
+	// Single-sprite hold rendering (see SustainTrail.hx). Always spawned
+	// alongside the head -- whether it's actually SHOWN (vs. falling back to
+	// the per-segment chain) is re-checked every frame in PlayState, not
+	// decided once here, because ModManager.activeMods can change mid-hold
+	// (DLC/scripts push modifiers via EaseEvents and scripted setValue/
+	// setPercent calls at arbitrary chart timing, not just a static
+	// session-level toggle -- confirmed in ModManager.setValue()'s own
+	// comment about running every frame during an EaseEvent).
 	public var trail(get, set):Null<SustainTrail>;
-	public var useTrail(get, set):Bool;
 
 	function get_parent():Note return this[0];
 
@@ -105,8 +106,6 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 
 	function get_trail():Null<SustainTrail> return this[4];
 
-	function get_useTrail():Bool return this[5];
-
 	function set_parent(v:Note):Note return this[0] = v;
 
 	function set_tail(v:Array<Note>):Array<Note> return this[1] = v; // well this one is useless
@@ -116,8 +115,6 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 	function set_missed(v:Bool):Bool return this[3] = v;
 
 	function set_trail(v:Null<SustainTrail>):Null<SustainTrail> return this[4] = v;
-
-	function set_useTrail(v:Bool):Bool return this[5] = v;
 }
 
 @:allow(funkin.states.PlayState)
@@ -462,7 +459,6 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			// next life.
 			tailState.trail?.kill();
 			tailState.trail = null;
-			tailState.useTrail = false;
 		}
 		
 		// prevNote != this: with deferred tail spawning (PlayState._pendingTails),

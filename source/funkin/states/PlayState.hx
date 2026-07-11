@@ -2603,16 +2603,17 @@ class PlayState extends MusicBeatState
 					continue;
 				}
 
-				// Intermediate segments of a trail-mode hold are pure bookkeeping
-				// now -- the SustainTrail sprite (updated separately, once per
-				// hold, right after this loop) handles all their visible
-				// rendering in one shot. Skip the position/modchart/clip work
-				// entirely: keyShit()'s hit/hold logic and scoring never read
-				// position (verified against the current code, not assumed),
-				// and the only position-derived thing that fed disposal timing
-				// (isSustainEnd's clipRect check above) only applies to the one
-				// segment this deliberately leaves untouched.
-				if (daNote.isSustainNote && !daNote.isSustainEnd && daNote.tailState.useTrail)
+				// Intermediate segments of a hold currently being rendered by its
+				// SustainTrail (updated separately, once per hold, right after
+				// this loop) are pure bookkeeping -- skip the position/modchart/
+				// clip work entirely: keyShit()'s hit/hold logic and scoring
+				// never read position (verified against the current code, not
+				// assumed), and the only position-derived thing that fed
+				// disposal timing (isSustainEnd's clipRect check above) only
+				// applies to the one segment this deliberately leaves untouched.
+				// Re-checked every frame, not cached -- see isModchartActive()'s
+				// comment for why this can flip mid-hold.
+				if (daNote.isSustainNote && !daNote.isSustainEnd && !isModchartActive(daNote.player))
 				{
 					daNote.visible = false;
 					continue;
@@ -2673,8 +2674,11 @@ class PlayState extends MusicBeatState
 			// One position update per ACTIVE HOLD instead of per intermediate
 			// segment (was 2x modManager.getPos() + atan2/sqrt/pow PER SEGMENT
 			// PER FRAME above) -- see SustainTrail.hx's class doc for the full
-			// reasoning. Only holds spawned with tailState.useTrail=true reach
-			// this; modcharted holds keep rendering via the segment chain above.
+			// reasoning. Every hold has a trail (see setupSustainTrail()), but
+			// it only actually renders while isModchartActive() is false for
+			// that player -- otherwise it hides and the segment chain above
+			// (which just resumed normal per-frame positioning this same
+			// frame) takes over instead.
 			#if android SystemMonitor.profBegin('susTrails'); #end
 			for (trail in susTrails.members)
 			{
@@ -2684,6 +2688,21 @@ class PlayState extends MusicBeatState
 				if (headNote == null || !headNote.alive)
 				{
 					trail.kill();
+					continue;
+				}
+
+				// A modifier can activate mid-hold (see isModchartActive()'s
+				// comment) -- when that happens, the intermediate segments
+				// above resume normal per-segment rendering on their own on
+				// this same frame (their skip-check re-checks live too), so
+				// just get out of their way instead of drawing a straight
+				// trail on top of/behind a now-curved chain. Don't kill it,
+				// though -- the mod could clear again before this hold ends,
+				// and killing+respawning every toggle is wasteful for
+				// something like an oscillating EaseEvent.
+				if (isModchartActive(headNote.player))
+				{
+					trail.visible = false;
 					continue;
 				}
 
@@ -2869,21 +2888,19 @@ class PlayState extends MusicBeatState
 		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
 	}
 
-	// Decides, once, whether this hold renders as a single stretched
-	// SustainTrail (the common case) or falls back to the old per-segment
-	// Note chain (only when a modchart is actively affecting this player's
-	// note positions -- a straight trail can't represent a curved/modcharted
-	// path, but the individually-positioned tail segments already can).
-	// Locked in at spawn time rather than re-checked every frame so a mod
-	// toggling mid-hold can't flip rendering modes partway through.
+	// Always spawns a trail alongside the head. Whether it actually RENDERS
+	// (vs. the hold falling back to the old per-segment chain) is decided
+	// fresh every frame in notesLoop()/the trail-update pass below, not
+	// here -- ModManager.activeMods can change mid-hold (DLC/scripts push
+	// modifiers via EaseEvents and scripted setValue/setPercent calls at
+	// arbitrary chart timing), so a hold that starts with no mods active
+	// still needs to be able to fall back correctly if one activates
+	// partway through, and vice versa.
+	inline function isModchartActive(player:Int):Bool return (modManager.activeMods[player]?.length ?? 0) > 0;
+
 	function setupSustainTrail(headNote:Note, field:Null<PlayField>):Void
 	{
 		if (field == null) return;
-
-		final hasActiveMods:Bool = (modManager.activeMods[headNote.player]?.length ?? 0) > 0;
-		headNote.tailState.useTrail = !hasActiveMods;
-
-		if (!headNote.tailState.useTrail) return;
 
 		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
 		trail.setupTrail(headNote, field);
