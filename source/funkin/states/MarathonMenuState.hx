@@ -46,7 +46,13 @@ class MarathonMenuState extends AmongUIState
 	override function create()
 	{
 		initStateScript();
-		
+
+		// This whole detective-office composition is a set of fixed-position
+		// pieces authored for the 1280-wide design canvas -- same re-centering
+		// gap as AmongUIState's own upperBar (see its comment above), just on
+		// this state's own scene sprites instead of the shared HUD bar.
+		final officeShift:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+
 		detective = new FlxAnimate();
 		detective.frames = FlxAnimateFrames.fromAnimate(Paths.getPath('images/${ext}detective/base', NORMAL));
 		
@@ -55,7 +61,7 @@ class MarathonMenuState extends AmongUIState
 		
 		if (detective.anim.exists('idle')) detective.anim.play('idle', true);
 		detective.antialiasing = ClientPrefs.globalAntialiasing;
-		detective.setPosition(200, 280);
+		detective.setPosition(200 + officeShift, 280);
 		detective.scale.set(0.7, 0.7);
 		detective.updateHitbox();
 		add(detective);
@@ -69,7 +75,7 @@ class MarathonMenuState extends AmongUIState
 		detectiveHands.anim.addByFrameLabel('4', '4', 24, false);
 		if (detectiveHands.anim.exists('idle')) detectiveHands.anim.play('idle', true);
 		detectiveHands.antialiasing = ClientPrefs.globalAntialiasing;
-		detectiveHands.setPosition(145, 290);
+		detectiveHands.setPosition(145 + officeShift, 290);
 		detectiveHands.scale.set(0.7, 0.7);
 		detectiveHands.updateHitbox();
 		
@@ -79,12 +85,12 @@ class MarathonMenuState extends AmongUIState
 		peekers.anim.addByFrameLabel('gray', 'gray', 24, false);
 		peekers.anim.addByFrameLabel('yellow', 'yellow', 24, false);
 		peekers.antialiasing = ClientPrefs.globalAntialiasing;
-		peekers.setPosition(-425, 50);
+		peekers.setPosition(-425 + officeShift, 50);
 		peekers.scale.set(0.7, 0.7);
 		peekers.updateHitbox();
 		peekers.visible = false;
 		
-		button = new FlxSprite(200, 200).loadGraphic(Paths.image(ext + 'button'));
+		button = new FlxSprite(200 + officeShift, 200).loadGraphic(Paths.image(ext + 'button'));
 		// add(button);
 		
 		weeks = addWeeks();
@@ -93,11 +99,11 @@ class MarathonMenuState extends AmongUIState
 		
 		super.create();
 		
-		wallBro2 = new FlxSprite(250, -185).loadGraphic(Paths.image(ext + 'wall bro 2'));
+		wallBro2 = new FlxSprite(250 + officeShift, -185).loadGraphic(Paths.image(ext + 'wall bro 2'));
 		wallBro2.scale.set(0.7, 0.7);
 		add(wallBro2);
 		
-		wallBro = new FlxSprite(-150, -250).loadGraphic(Paths.image(ext + 'wall bro'));
+		wallBro = new FlxSprite(-150 + officeShift, -250).loadGraphic(Paths.image(ext + 'wall bro'));
 		wallBro.scale.set(0.7, 0.7);
 		add(wallBro);
 		
@@ -107,14 +113,14 @@ class MarathonMenuState extends AmongUIState
 		remove(detective, true);
 		add(detective);
 		
-		deskBro = new FlxSprite(-185, 470).loadGraphic(Paths.image(ext + 'desk bro'));
+		deskBro = new FlxSprite(-185 + officeShift, 470).loadGraphic(Paths.image(ext + 'desk bro'));
 		deskBro.scale.set(0.7, 0.7);
 		add(deskBro);
 		
 		remove(detectiveHands, true);
 		add(detectiveHands);
 		
-		addThing = new FlxSprite(-50, -60).loadGraphic(Paths.image(ext + 'add'));
+		addThing = new FlxSprite(-50 + officeShift, -60).loadGraphic(Paths.image(ext + 'add'));
 		addThing.scale.set(0.7, 0.7);
 		addThing.updateHitbox();
 		addThing.blend = ADD;

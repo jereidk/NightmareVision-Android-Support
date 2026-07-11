@@ -3954,7 +3954,18 @@ class ChartingOptionsSubmenuOLDv1 extends MusicBeatSubstate
 		var bg:FlxSprite = new FlxSprite().makeGraphic(1280, 720, FlxColor.BLACK);
 		bg.scrollFactor.set();
 		bg.alpha = 0.6;
+		// Fixed 1280x720 dimmer -- on a wide 'expand'-mode screen this left the
+		// newly revealed strip(s) on the side(s) completely undimmed instead of
+		// covering the full camera. Same stretch-then-recenter fix as
+		// CreditsState.hx's bg (gated on gameCutoutSize.x so 'fit'/'stretch'
+		// mode is untouched).
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		add(bg);
+		bg.screenCenter();
 		
 		grpMenuShit = new FlxTypedGroup<Alphabet>();
 		add(grpMenuShit);
