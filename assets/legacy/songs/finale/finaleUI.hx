@@ -83,9 +83,13 @@ public function finaleUIOn()
 function onUpdate(elapsed)
 {
 	if (!finaleUIActive) return;
-	
-	var newPercent:Null<Float> = FlxMath.remapToRange(FlxMath.bound(newBar.valueFunction(), newBar.bounds.min, newBar.bounds.max), newBar.bounds.min, newBar.bounds.max, 0, 100);
-	newBar.percent = (newPercent != null ? newPercent : 0);
+
+	// newBar is a Bar (source/funkin/objects/Bar.hx), whose own native
+	// update() already recomputes percent from valueFunction every frame
+	// (see Bar.update()) -- redoing that same remap/bound here in
+	// interpreted hscript was pure duplicate work, and was the single
+	// largest recurring script cost for the whole song (measured via
+	// ScriptGroup.timingEnabled: ~1-4ms/call, every frame, for ~160s).
 	updateParasiteIcon((100 - playHUD.healthBar.percent) * 0.01);
 }
 
