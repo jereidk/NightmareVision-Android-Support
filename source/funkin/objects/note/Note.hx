@@ -364,7 +364,17 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	
 	inline function get_tail():Array<Note> return tailState.tail;
 	
-	inline function _resetTexture():Void
+	// skipHitbox: preRecycle() (the pooling/gameplay path) is ALWAYS followed,
+	// later in the same spawn, by PlayField.addNote()'s own
+	// baseScale.copyFrom(scale)+updateHitbox() (or reloadNote()'s identical
+	// pair, if `texture`'s setter decides a real reload is needed) -- both use
+	// `skin`/`frames` that are still stale here (addNote() hasn't set the
+	// correct skin yet), so this call's result is guaranteed to be overwritten
+	// before the note is ever drawn. Confirmed via every current caller: the
+	// only exception is ChartEditorState.refreshNote(), which calls
+	// _resetTexture() directly with nothing after it -- that caller (and
+	// the constructor) keep the default `false` so their result stays final.
+	inline function _resetTexture(skipHitbox:Bool = false):Void
 	{
 		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
 
@@ -400,9 +410,12 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		if (frames == null) texture = '';
 
 		playAnim(getDefaultAnim(), true);
-		updateHitbox();
-		
-		baseScale.copyFrom(scale);
+
+		if (!skipHitbox)
+		{
+			updateHitbox();
+			baseScale.copyFrom(scale);
+		}
 	}
 	
 	public function preRecycle(?queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Void
@@ -449,8 +462,11 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		blockHit = isSustainNote;
 		
 		hitsoundDisabled = isSustainNote;
-		
-		_resetTexture();
+
+		// addNote() (or reloadNote(), via the texture setter it triggers)
+		// redoes updateHitbox()/baseScale further down this same spawn once the
+		// correct skin is in place -- see _resetTexture()'s comment.
+		_resetTexture(true);
 		
 		if (queueNote != null) noteType = queueNote.noteType;
 		
