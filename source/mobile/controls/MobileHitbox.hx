@@ -284,7 +284,7 @@ class MobileHitbox extends TouchInputManager
 	 */
 	function buildNoteTap():Void
 	{
-		final size:Int = funkin.objects.note.StrumNote.STRUMLINE_SIZE;
+		final size:Int = Std.int(funkin.objects.note.StrumNote.STRUMLINE_SIZE * funkin.objects.note.StrumNote.VSLICE_PLAYER_SIZE_SCALE);
 		final w:Int = size + Std.int(NOTE_TAP_PAD_X * 2);
 		final h:Int = size + Std.int(NOTE_TAP_PAD_Y * 2);
 		final y:Float = funkin.objects.note.StrumNote.getVSliceBaseY() - NOTE_TAP_PAD_Y;
@@ -298,7 +298,7 @@ class MobileHitbox extends TouchInputManager
 
 		for (direction in 0...4)
 		{
-			final x:Float = funkin.objects.note.StrumNote.getCenteredXPos(direction) - NOTE_TAP_PAD_X;
+			final x:Float = funkin.objects.note.StrumNote.getCenteredXPos(direction, true, funkin.objects.note.StrumNote.VSLICE_PLAYER_SPACING_MULT) - NOTE_TAP_PAD_X;
 			var btn = createHint(x, y, w, h, getArrowColor(direction), ids[direction]);
 			add(btn);
 			buttons.push(btn);

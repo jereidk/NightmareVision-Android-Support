@@ -233,7 +233,7 @@ class ModManager implements IFlxDestroyable
 		{
 			final isPlayerLane = (player == 0);
 			return funkin.objects.note.StrumNote.getCenteredXPos(direction, isPlayerLane,
-				isPlayerLane ? 1.0 : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE);
+				isPlayerLane ? funkin.objects.note.StrumNote.VSLICE_PLAYER_SPACING_MULT : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE);
 		}
 		
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
@@ -316,8 +316,8 @@ class ModManager implements IFlxDestroyable
 			// diff (visPos) is the visual distance - positive means approaching
 			final isPlayerLane = (player == 0);
 			final baseY = isPlayerLane ? vsliceBaseY : vsliceOpponentBaseY;
-			final laneScale = isPlayerLane ? 1.0 : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE;
-			pos.y = baseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE * laneScale / 2 + diff;
+			final sizeScale = isPlayerLane ? funkin.objects.note.StrumNote.VSLICE_PLAYER_SIZE_SCALE : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE;
+			pos.y = baseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE * sizeScale / 2 + diff;
 		}
 		else
 		{

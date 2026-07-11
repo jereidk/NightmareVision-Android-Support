@@ -39,6 +39,15 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static final VSLICE_OPPONENT_SCALE:Float = 0.5;
 
 	/**
+	 * Player-lane tuning, adjusted by ear/eye against reference footage --
+	 * unlike VSLICE_OPPONENT_SCALE these two are independent: the 4 lanes
+	 * spread out MORE (spacing > 1) while the receptor/note art itself
+	 * renders slightly SMALLER (size < 1).
+	 */
+	public static final VSLICE_PLAYER_SPACING_MULT:Float = 1.3;
+	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.85;
+
+	/**
 	 * Runtime multiplier applied to NOTE_SPACING/STRUMLINE_SIZE in getCenteredXPos().
 	 * FunkinCrew/Funkin's own mobile touch mode (PlayState.initNoteHitbox()) spreads
 	 * VSlice notes out much further than the 112px desktop spacing so they line up
@@ -185,7 +194,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		if (ClientPrefs.noteLayout == 'VSlice')
 		{
 			final isPlayerLane = parent?.isPlayer ?? true;
-			x = getCenteredXPos(noteData, isPlayerLane, isPlayerLane ? 1.0 : VSLICE_OPPONENT_SCALE);
+			x = getCenteredXPos(noteData, isPlayerLane, isPlayerLane ? VSLICE_PLAYER_SPACING_MULT : VSLICE_OPPONENT_SCALE);
 		}
 		else
 		{
@@ -214,14 +223,14 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * midpoint) -- NOT a single strumline centered across the full width.
 	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
 	 * @param isPlayerLane Whether this receptor belongs to the player's own strumline (right half) or the opponent's (left edge)
-	 * @param laneScale Extra multiplier on top of spacingScale -- used to shrink the
-	 * opponent's compact top strumline's spacing to match its VSLICE_OPPONENT_SCALE size.
+	 * @param spacingMult Extra multiplier on top of spacingScale -- VSLICE_PLAYER_SPACING_MULT
+	 * spreads the player's 4 lanes out further, VSLICE_OPPONENT_SCALE shrinks the opponent's together.
 	 * @return The X position
 	 */
-	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, laneScale:Float = 1.0):Float
+	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
 	{
 		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : STRUMLINE_X_OFFSET;
-		return baseX + direction * NOTE_SPACING * spacingScale * laneScale;
+		return baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
 	}
 
 	/**
@@ -248,7 +257,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		#end
 
 		return ClientPrefs.downScroll
-			? (FlxG.height - safeBottom - STRUMLINE_SIZE - STRUMLINE_Y_OFFSET)
+			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET)
 			: (safeTop + STRUMLINE_Y_OFFSET);
 	}
 

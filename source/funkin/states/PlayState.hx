@@ -1291,8 +1291,12 @@ class PlayState extends MusicBeatState
 			// right half, opponent flush left) -- see StrumNote.getCenteredXPos()'s
 			// comment. getCenteredXPos already applies spacingScale.
 			final isOpponentLane = (lane == 1);
-			final laneScale = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : 1.0;
-			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0, laneScale) : 0;
+			// Spacing between the 4 lanes and the receptor/note art's own size are
+			// tuned independently for the player (spread out MORE, render SMALLER)
+			// -- the opponent's compact strumline shrinks both together instead.
+			final spacingMult = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : funkin.objects.note.StrumNote.VSLICE_PLAYER_SPACING_MULT;
+			final sizeScale = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : funkin.objects.note.StrumNote.VSLICE_PLAYER_SIZE_SCALE;
+			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0, spacingMult) : 0;
 			var baseY:Float = _isVSlice ? (isOpponentLane ? modManager.vsliceOpponentBaseY : modManager.vsliceBaseY) : 0;
 
 			var strums = new PlayField(baseX, baseY, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
@@ -1304,9 +1308,10 @@ class PlayState extends MusicBeatState
 				// Applies to both the player (lane 0) and opponent (lane 1) strumlines --
 				// both are real, visible VSlice receptors now, not just the player's. The
 				// opponent's strumline is additionally shrunk to match real mobile VSlice's
-				// small, always-top-anchored compact strumline (VSLICE_OPPONENT_SCALE).
-				strums._skin.receptorScale = laneScale;
-				strums._skin.noteScale = laneScale;
+				// small, always-top-anchored compact strumline (VSLICE_OPPONENT_SCALE); the
+				// player's is independently tuned via VSLICE_PLAYER_SIZE_SCALE.
+				strums._skin.receptorScale = sizeScale;
+				strums._skin.noteScale = sizeScale;
 			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
