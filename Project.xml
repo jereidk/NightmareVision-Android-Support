@@ -99,25 +99,36 @@
         <haxedef name="absolute-paths"/>
     </section>
 
-    <!--Generational GC: REVERTED (was enabled to cheapen the frequent
-        collections caused by ~43MB/s of short-lived gameplay garbage).
-        This is an experimental hxcpp mode (base-game Funkin' does NOT ship
-        with it), and the enable-commit's own note said to revert it if
-        instability showed up that release builds don't have. It did: two
-        hard SILENT process deaths mid-song on a real device (no crash
-        screen, no crash.log, sysmon.log cut mid-line) with HXCPP_CHECK_POINTER
-        active, meaning the fault was NATIVE, not a Haxe-side null/index
-        error, and a SIGSEGV inside the experimental collector's own
-        marking/write-barrier machinery is the only component in that build
-        matching the profile (both deaths followed windows of heavy GC
-        churn; game-side metrics were completely healthy at crash time).
+    <!--Generational GC: RE-ENABLED after a deeper audit -- the first
+        revert was based on circumstantial evidence (timing correlation +
+        "it's experimental") and turned out to be too hasty. What actually
+        matters is the EXACT dependency this project builds against:
+        .hxpkg pins "hxcpp" to https://github.com/FunkinCrew/hxcpp at
+        commit 5932340d095a7eea8635fe4d1355f1c0efd0b3c2 (confirmed identical
+        to what CI's `haxelib run hxpkg install --force` step resolves, via
+        that commit's own build log: the actual compile command references
+        `.haxelib/hxcpp/git/include`, and the compiler flags list both
+        -DHXCPP_GC_GENERATIONAL(haxe) entries). Auditing THAT exact commit's
+        history (not hxcpp's changelog in the abstract):
+          - The historical "crash with generational GC when old objects
+            come back to life" bug (fixed in hxcpp 4.1.15, in Changes.md) --
+            the one that would matter most for OUR pooling-heavy code --
+            is a confirmed ancestor of 5932340d (git merge-base
+            --is-ancestor), so it's long since fixed here.
+          - The most recent generational-GC-touching commit reachable from
+            5932340d is af8afd6a "fixes multithread marking (#1240)"
+            (2025-07-10), already included; nothing generational-specific
+            has needed fixing since, across several months of upstream
+            history leading up to the pinned commit.
+        No evidence of an actual open bug in the exact build we ship. The
+        two silent crashes are better explained by the real, now-fixed
+        note-texture/skin bug from the same work session (a pooled Note
+        recycled for the wrong skin/direction could feed a degenerate
+        scale into native tile-rendering) than by an unproven GC fault.
+        Re-enabling to keep the ~43MB/s allocation-churn stutter fix; watch
+        the next device log closely regardless, since this isn't a
+        100%-certain exoneration, just the best evidence available.-->
     <haxedef name="HXCPP_GC_GENERATIONAL"/>
-    -->
-    <!--The stutter problem the generational mode was meant to solve should
-        instead keep shrinking at the source: per-frame allocation fixes
-        (reused arg arrays, RGBGraphics reuse, staggered tail spawning) have
-        already cut alloc pressure substantially; keep attacking remaining
-        allocation sources rather than re-enabling the experimental GC.-->
 
 
     <!--Enable for better crash handling/reporting-->
