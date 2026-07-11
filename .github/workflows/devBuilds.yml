@@ -2,6 +2,25 @@ name: Impostor Legacy - Dev Builds
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which build(s) to run'
+        required: false
+        type: choice
+        default: arm64
+        options:
+          - arm64
+          - arm32
+          - fat
+          - all
+      buildMode:
+        description: 'Build configuration'
+        required: false
+        type: choice
+        default: release
+        options:
+          - release
+          - debug
   workflow_call:
     inputs:
       buildFlags:
@@ -13,6 +32,12 @@ jobs:
   # ── Fat APK (arm64 + armv7 in one build).
   Android:
     name: Build Android
+    # workflow_call (e.g. a release workflow invoking this one) always runs
+    # every job, same as before this input existed -- only a manual
+    # workflow_dispatch respects `target`, defaulting to arm64-only so an
+    # unattended "Run workflow" click doesn't burn CI minutes on ABIs nobody
+    # asked for.
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'fat' || inputs.target == 'all'
     runs-on: ubuntu-latest
     # actions: write is only used by the cache-pruning steps below (gh api
     # DELETE on stale Actions caches); contents: read is what checkout needs.
@@ -339,9 +364,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
-          key: hxcpp-cache-android-fat-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-cache-android-fat-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-cache-android-fat-v2-${{ runner.os }}-
+            hxcpp-cache-android-fat-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-
 
       # v2 bump (was hxcpp-cache-android-fat-): restore-keys seeds
       # HXCPP_COMPILE_CACHE from the closest OLD entry under the prefix,
@@ -356,31 +381,37 @@ jobs:
       # from a genuinely clean ~/.hxcpp_cache instead of warm-seeding from
       # them. Revert this bump once confirmed stable, or bump again if a
       # future haxedef toggle reproduces the same symptom.
+      #
+      # buildMode is folded into the key for the same reason: debug and
+      # release compile with different haxedefs (FLX_NO_DEBUG, CRASH_HANDLER
+      # section, etc.), so seeding a debug compile from a release-built cache
+      # (or vice versa) risks the exact same poisoned-object-cache failure.
       - name: Prune stale hxcpp compile caches
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v2-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
           HXCPP_CACHE_MB: "4000"
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D $BUILD_FLAGS
+            haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release
+            haxelib run lime build android $BUILD_MODE_FLAG
           fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android)
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
 
   # ───────────────────────────────────────────────────────────────────────────────
@@ -393,6 +424,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
     name: Build Android (ARM64)
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'arm64' || inputs.target == 'all'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -686,39 +718,41 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            export/release/android/obj
-            export/release/android/haxe
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm64-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-v2-${{ runner.os }}-
+            hxcpp-android-arm64-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
       # staleness, caused the exact same __string_hash_set/etc. link failures
-      # on this job's own compile.
+      # on this job's own compile. buildMode is folded into the key for the
+      # same debug-vs-release object-cache-poisoning reason.
       - name: Prune stale hxcpp build-artifact caches (ARM64)
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v2-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY
           fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android ARM64)
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
 
   # ───────────────────────────────────────────────────────────────────────────────
@@ -732,6 +766,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
     name: Build Android (ARM32)
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'arm32' || inputs.target == 'all'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1031,37 +1066,39 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            export/release/android/obj
-            export/release/android/haxe
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm32-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm32-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm32-v2-${{ runner.os }}-
+            hxcpp-android-arm32-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
       # staleness, caused the exact same __string_hash_set/etc. link failures
-      # on this job's own compile.
+      # on this job's own compile. buildMode is folded into the key for the
+      # same debug-vs-release object-cache-poisoning reason.
       - name: Prune stale hxcpp build-artifact caches (ARM32)
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v2-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v2-${{ runner.os }}-${{ inputs.buildMode || 'release' }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release -D ANDROID_ARM32_ONLY
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY
           fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android ARM32)
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
