@@ -55,17 +55,6 @@ class Paths
 	 */
 	public static inline final MODS_DIRECTORY = #if ASSET_REDIRECT trail + 'content' #else 'content' #end;
 	
-	/**
-	 * Default font used by the game for most things.
-	 * 
-	 * Can be changed
-	 */
-	public static var DEFAULT_FONT:String = font('vcr.ttf', false);
-	
-	@:allow(funkin.backend.FunkinCache)
-	@:allow(funkin.objects.FunkinSprite)
-	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
-
 	// Caches the RESOLVED path for a given (mode, file) pair. getPath() is the
 	// single choke point every atlas/sound/data lookup goes through, and its
 	// #if MODS_ALLOWED branch does real sys.FileSystem.exists() disk syscalls
@@ -76,7 +65,7 @@ class Paths
 	// (re)loaded at boot (Init.hx) and on entering ModsState/a new state
 	// (MusicBeatState.hx), DLC installs require an explicit restart
 	// (DLCManager.hx), and this cache is cleared in lockstep with the sibling
-	// tempAtlasFramesCache above -- see FunkinCache.clearStoredMemory(), which
+	// tempAtlasFramesCache below -- see FunkinCache.clearStoredMemory(), which
 	// already runs on every state's create(). So this never outlives the mod
 	// state it was resolved under.
 	// This specifically targets note-texture reloads: a burst of sustain-tail
@@ -85,8 +74,27 @@ class Paths
 	// SAME handful of atlas keys (one per skin in play) -- profiling a dense
 	// song showed this paying the same disk-check chain dozens of times per
 	// frame for a result that never changes within the song.
+	// MUST be declared (and therefore initialized) before DEFAULT_FONT below --
+	// Haxe runs static field initializers in textual declaration order, and
+	// DEFAULT_FONT's own initializer calls font() -> findFileWithExts() ->
+	// getPath() immediately, at Paths' class-init time. With this cache
+	// declared AFTER DEFAULT_FONT, that very first getPath() call hit
+	// _resolvedPathCache.get(...) while it was still null -- a crash on boot,
+	// before any song/gameplay code ever ran. Confirmed via a real device
+	// test after this shipped.
 	@:allow(funkin.backend.FunkinCache)
 	static var _resolvedPathCache:Map<String, String> = [];
+
+	/**
+	 * Default font used by the game for most things.
+	 *
+	 * Can be changed
+	 */
+	public static var DEFAULT_FONT:String = font('vcr.ttf', false);
+
+	@:allow(funkin.backend.FunkinCache)
+	@:allow(funkin.objects.FunkinSprite)
+	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
 
 	/**
 	 * Primary function used for pathing.
