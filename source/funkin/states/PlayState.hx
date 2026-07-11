@@ -1275,15 +1275,19 @@ class PlayState extends MusicBeatState
 
 			final auto = (lane != 0 || cpuControlled);
 
-			// For VSlice, center the receptors on screen (getCenteredXPos already applies spacingScale)
-			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0) : 0;
+			// Real VSlice shows BOTH strumlines at once, side by side (player on the
+			// right half, opponent flush left) -- see StrumNote.getCenteredXPos()'s
+			// comment. getCenteredXPos already applies spacingScale.
+			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0) : 0;
 
 			var strums = new PlayField(baseX, _isVSlice ? modManager.vsliceBaseY : 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
-			if (_isVSlice && lane == 0)
+			if (_isVSlice && lane <= 1)
 			{
 				// noteScale defaults to 0.7 (our engine-wide default), leaving falling notes
 				// visually smaller than the 104px VSlice receptor they're meant to match.
+				// Applies to both the player (lane 0) and opponent (lane 1) strumlines --
+				// both are real, visible VSlice receptors now, not just the player's.
 				strums._skin.receptorScale = 1.0;
 				strums._skin.noteScale = 1.0;
 			}
@@ -1291,9 +1295,11 @@ class PlayState extends MusicBeatState
 			strums.generateReceptors();
 			strums.ID = lane;
 
-			// In VSlice, only show player lanes (like Funkin original)
-			// Opponent notes are hidden to avoid visual clutter
-			if (_isVSlice && lane != 0)
+			// Real VSlice has exactly two strumlines (player + opponent), both
+			// visible at once. This engine's "lane" concept can go beyond that
+			// (extra characters/multiplayer) -- VSlice has no equivalent for
+			// those, so keep anything past the opponent lane hidden.
+			if (_isVSlice && lane > 1)
 			{
 				strums.visible = false;
 				strums.underlay.visible = false;

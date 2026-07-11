@@ -19,6 +19,15 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	static final INITIAL_OFFSET:Float = -0.275 * STRUMLINE_SIZE; // -28.6
 	static final NUDGE:Float = 2.0;
 
+	// FunkinCrew/Funkin's real Constants.STRUMLINE_X_OFFSET/STRUMLINE_Y_OFFSET
+	// (source/funkin/util/Constants.hx). Real VSlice shows BOTH strumlines at
+	// once, side by side -- opponent flush to the left edge, player starting
+	// at the screen's horizontal midpoint -- not one strumline centered
+	// across the full width. STRUMLINE_Y_OFFSET anchors near the TOP for
+	// upscroll (the default) and near the bottom only for downscroll.
+	public static final STRUMLINE_X_OFFSET:Float = 48;
+	public static final STRUMLINE_Y_OFFSET:Float = 24;
+
 	/**
 	 * Runtime multiplier applied to NOTE_SPACING/STRUMLINE_SIZE in getCenteredXPos().
 	 * FunkinCrew/Funkin's own mobile touch mode (PlayState.initNoteHitbox()) spreads
@@ -165,7 +174,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		// This replicates the exact receptor positions from FunkinCrew/Funkin
 		if (ClientPrefs.noteLayout == 'VSlice')
 		{
-			x = getCenteredXPos(noteData);
+			x = getCenteredXPos(noteData, parent?.isPlayer ?? true);
 		}
 		else
 		{
@@ -187,15 +196,19 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	}
 
 	/**
-	 * Get the centered X position for VSlice receptors.
-	 * Centers all 4 receptors on screen: span = 3*NOTE_SPACING + STRUMLINE_SIZE.
+	 * Get the X position for a VSlice receptor. Real VSlice shows both
+	 * strumlines side by side (funkin/play/PlayState.hx's initStrumlines()):
+	 * opponentStrumline.x = STRUMLINE_X_OFFSET (flush left), playerStrumline.x
+	 * = FlxG.width / 2 + STRUMLINE_X_OFFSET (starts at the horizontal
+	 * midpoint) -- NOT a single strumline centered across the full width.
 	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
-	 * @return The centered X position
+	 * @param isPlayerLane Whether this receptor belongs to the player's own strumline (right half) or the opponent's (left edge)
+	 * @return The X position
 	 */
-	public static function getCenteredXPos(direction:Int):Float
+	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true):Float
 	{
-		final receptorGroupWidth:Float = (3 * NOTE_SPACING + STRUMLINE_SIZE) * spacingScale; // 440 * scale
-		return (FlxG.width - receptorGroupWidth) / 2 + direction * NOTE_SPACING * spacingScale;
+		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : STRUMLINE_X_OFFSET;
+		return baseX + direction * NOTE_SPACING * spacingScale;
 	}
 
 	/**
@@ -208,11 +221,22 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 */
 	public static function getVSliceBaseY():Float
 	{
+		// Real VSlice: playerStrumline.y = downscroll
+		//   ? FlxG.height - strumline.height - STRUMLINE_Y_OFFSET
+		//   : STRUMLINE_Y_OFFSET
+		// i.e. flush near the TOP by default, and only near the bottom in
+		// downscroll -- same Y for both strumlines, only X differs between them.
 		var safeTop:Float = 0;
+		var safeBottom:Float = 0;
 		#if mobile
-		safeTop = mobile.backend.ScreenUtil.safeArea().top;
+		final safe = mobile.backend.ScreenUtil.safeArea();
+		safeTop = safe.top;
+		safeBottom = safe.bottom;
 		#end
-		return FlxG.height - safeTop - STRUMLINE_SIZE * 3 - 50;
+
+		return ClientPrefs.downScroll
+			? (FlxG.height - safeBottom - STRUMLINE_SIZE - STRUMLINE_Y_OFFSET)
+			: (safeTop + STRUMLINE_Y_OFFSET);
 	}
 	
 	override function update(elapsed:Float)
