@@ -306,6 +306,13 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
+      - name: Patch hscript-iris Iris.call() to reuse an empty args array
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-args.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
       - name: Patch Lime SDL for Android render-scale support
         run: |
           echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
@@ -666,6 +673,13 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
+      - name: Patch hscript-iris Iris.call() to reuse an empty args array
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-args.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
       - name: Patch Lime SDL for Android render-scale support
         run: |
           echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
@@ -1012,6 +1026,13 @@ jobs:
           while IFS= read -r IRIS_FILE; do
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse an empty args array
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-args.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
       - name: Patch Lime SDL for Android render-scale support
