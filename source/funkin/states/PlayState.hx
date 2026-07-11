@@ -2736,7 +2736,12 @@ class PlayState extends MusicBeatState
 	// (matching notes.recycle()'s own getFirstAvailable() behavior exactly)
 	// so this is never worse than what was already there, even when no
 	// compatible member exists yet.
-	inline function recycleCompatibleNote(targetSkin:NoteSkin, targetNoteData:Int):Note
+	// Not `inline`: this has multiple return points (an early return inside
+	// the loop), and Haxe's inliner can't flatten that into the ternary
+	// expression at the call site above ("Cannot inline a not final return").
+	// The loop itself is where all the actual cost is, so losing inlining
+	// here is not a meaningful perf concern.
+	function recycleCompatibleNote(targetSkin:NoteSkin, targetNoteData:Int):Note
 	{
 		var fallback:Note = null;
 
