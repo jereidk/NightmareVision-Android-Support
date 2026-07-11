@@ -13,24 +13,27 @@ import funkin.objects.menu.AmongControls;
 import funkin.objects.menu.TouchOptionList;
 
 /**
- * Categories used to be a vertical sidebar list, each opening its own full
- * sub-state -- that sidebar sat exactly where the Virtual Pad's LEFT_FULL
- * D-pad lives (see MobileVirtualPad.hx), so the pad ended up drawn on top of
- * the category labels for the (default!) Virtual Pad navigation mode.
+ * Categories used to be a single vertical sidebar list, each opening its own
+ * full sub-state -- that sidebar sat exactly where the Virtual Pad's
+ * LEFT_FULL D-pad lives (see MobileVirtualPad.hx), so the pad ended up drawn
+ * on top of the category labels for the (default!) Virtual Pad navigation
+ * mode.
  *
- * Redesigned as a horizontal tab strip up top (clear of the pad entirely)
- * plus one TouchOptionList below it. The five simple, data-only categories
- * (Language/Gameplay/Graphics/Visuals and UI/Misc) swap the list's dataset
- * live when their tab is picked, no sub-state transition at all. The other
- * four (Adjust Delay, Mobile, DLC Manager, Credits) still navigate away like
- * before -- their content (calibration UI, a live control preview, a
- * download list, a credits roll) doesn't fit "just a list of options".
+ * Now split into two genuinely different things instead of one mixed list:
+ *   - Tabs (Language/Gameplay/Graphics/Visuals and UI/Misc): a horizontal
+ *     strip that swaps TouchOptionList's dataset live, no transition.
+ *   - Action buttons (Adjust Delay/Mobile/DLC Manager/Credits): a small
+ *     header row of real buttons that navigate straight to their own screen
+ *     the moment you tap them -- their content (calibration UI, a live
+ *     control preview, a download list, a credits roll) never fit "just a
+ *     list of options" in the first place, so they don't pretend to be tabs
+ *     of the same list anymore.
  */
 class OptionsState extends MusicBeatState
 {
 	public static var onPlayState:Bool = false;
 
-	static final INLINE_BUILDERS:Map<String, Void->Array<Option>> = [
+	static final TAB_BUILDERS:Map<String, Void->Array<Option>> = [
 		'language' => LanguageOptions.build,
 		'gameplay' => GameplayOptions.build,
 		'graphics' => () -> GraphicsOptions.build(refreshSceneAntialiasing),
@@ -38,27 +41,10 @@ class OptionsState extends MusicBeatState
 		'misc' => MiscOptions.build,
 	];
 
-	/**
-	 * The four categories that still navigate to their own screen instead of
-	 * swapping the shared list -- their tab gets a small "opens elsewhere"
-	 * marker, and selecting them shows a preview card (blurb + "tap to open")
-	 * in the content area instead of leaving it blank, which is what happened
-	 * before for 'adjustdelay' specifically (the default startup tab).
-	 */
-	static final SUBSTATE_META:Map<String, String> = [
-		'adjustdelay' => 'Calibrate your input/audio offset so your hits land exactly on time.',
-		'mobile' => 'Configure touch controls: navigation mode, gameplay input scheme, and pad layout.',
-		'dlc' => 'Browse, download, and manage add-on content.',
-		'credits' => 'Everyone who made this game possible.',
-	];
+	var tabs:Array<String> = ['language', 'gameplay', 'graphics', 'visualsui', 'misc'];
 
-	var options:Array<String> = [
+	var actionButtons:Array<String> = [
 		'adjustdelay',
-		'language',
-		'gameplay',
-		'graphics',
-		'visualsui',
-		'misc',
 		#if mobile
 		'mobile',
 		'dlc',
@@ -66,13 +52,14 @@ class OptionsState extends MusicBeatState
 		'credits'
 	];
 
-	private static var curSelected:Int = 0;
+	private static var curTab:Int = 0;
+	private static var curButton:Int = 0;
 
-	// 'tabs': LEFT/RIGHT cycle tabs, ACCEPT/DOWN either enters the list (inline
-	// tabs) or navigates away (the other four). 'list': input goes to
-	// optionList instead; BACK steps focus back to 'tabs' rather than
-	// exiting the whole screen.
-	var focusOnList:Bool = false;
+	// 'tabs': LEFT/RIGHT cycle tabs, UP moves to 'buttons', DOWN/ACCEPT enters
+	// the list. 'buttons': LEFT/RIGHT cycle action buttons, ACCEPT opens the
+	// selected one, DOWN returns to 'tabs'. 'list': input goes to optionList;
+	// BACK there steps back to 'tabs' instead of exiting the whole screen.
+	var focus:String = 'tabs';
 
 	var blockAllInput:Bool = false;
 	var blockInput:Bool = false;
@@ -84,25 +71,25 @@ class OptionsState extends MusicBeatState
 	var tabBg:Array<FlxSprite> = [];
 	var tabLabels:Array<FlxText> = [];
 
+	var btnBg:Array<FlxSprite> = [];
+	var btnLabels:Array<FlxText> = [];
+
 	var optionList:TouchOptionList;
 	var descText:FlxText;
 	var descBg:FlxSprite;
 
-	var actionCard:FlxSprite;
-	var actionIcon:FlxText;
-	var actionTitle:FlxText;
-	var actionDesc:FlxText;
-	var actionHint:FlxText;
-
 	var mouseControlActive:Bool = true;
-	var hoveredOption:Int = -1;
+	var hoveredTab:Int = -1;
+	var hoveredButton:Int = -1;
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
+	static final HEADER_Y:Float = 20;
+	static final BTN_H:Float = 46;
 	static final TAB_Y:Float = 90;
-	// Generous enough for a 2-line wrapped label at fitTabLabel()'s largest
-	// font size in any language -- was 60, which a long translated category
-	// name (e.g. "Visuals and UI") could overflow past the bottom of.
+	// Generous enough for a 2-line wrapped label at fitLabel()'s largest font
+	// size in any language -- a long translated category name (e.g. "Visuals
+	// and UI") needs the headroom.
 	static final TAB_H:Float = 74;
 	static final LIST_Y:Float = 182;
 	static final LIST_MAX_VISIBLE:Int = 8;
@@ -192,12 +179,14 @@ class OptionsState extends MusicBeatState
 			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 			add(menuBackButton);
 
+			buildActionButtons(cutout);
 			buildTabs(cutout);
 
 			final listW = (1160 + cutout) - LIST_X;
 			optionList = new TouchOptionList(LIST_X, LIST_Y, listW, LIST_MAX_VISIBLE);
 			add(optionList);
 			optionList.onSelect = onOptionSelected;
+			optionList.onDatasetChanged = (opt) -> descText.text = opt.description;
 			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
 			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6).makeGraphic(Std.int(listW + 12), 74, 0x88000000);
@@ -209,8 +198,6 @@ class OptionsState extends MusicBeatState
 			descText.wordWrap = true;
 			add(descText);
 
-			buildActionCard(listW);
-
 			#if !mobile
 			bottomControls = new AmongControls([
 				['arrow', 'select'], // select
@@ -221,7 +208,8 @@ class OptionsState extends MusicBeatState
 			add(bottomControls);
 			#end
 
-			changeSelection();
+			curButton = Std.int(Math.min(Math.max(curButton, 0), actionButtons.length - 1));
+			changeTab(Std.int(Math.min(Math.max(curTab, 0), tabs.length - 1)));
 		}
 
 		super.create();
@@ -234,12 +222,55 @@ class OptionsState extends MusicBeatState
 		#end
 	}
 
+	/**
+	 * Small pill buttons in the header, between the title and the close
+	 * button -- tapping one navigates straight to its screen, no selection
+	 * step. Only reachable by keyboard/D-pad via the 'buttons' focus state
+	 * (UP from the tab row), since there's no separate touch affordance for
+	 * "select without opening" that would make sense for these.
+	 */
+	function buildActionButtons(cutout:Float):Void
+	{
+		final areaStart = 340 + cutout * 0.5;
+		final areaEnd = 1090 + cutout;
+		final gap = 10.0;
+		final btnW = (areaEnd - areaStart - gap * (actionButtons.length - 1)) / actionButtons.length;
+
+		for (i in 0...actionButtons.length)
+		{
+			final bx = areaStart + (btnW + gap) * i;
+
+			final bg = new FlxSprite(bx, HEADER_Y).makeGraphic(Std.int(btnW), Std.int(BTN_H), 0xFF35354F);
+			add(bg);
+			btnBg.push(bg);
+
+			final lbl = new FlxText(bx + 4, HEADER_Y, btnW - 8, '');
+			lbl.setFormat(Paths.font('vcr.ttf'), 15, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lbl.borderSize = 1.3;
+			lbl.antialiasing = ClientPrefs.globalAntialiasing;
+			lbl.wordWrap = true;
+			lbl.ID = i;
+			add(lbl);
+			btnLabels.push(lbl);
+		}
+		refreshActionButtonText();
+	}
+
+	function refreshActionButtonText():Void
+	{
+		for (lbl in btnLabels)
+		{
+			lbl.text = Lang.str('opt_category_' + actionButtons[lbl.ID]);
+			fitLabel(lbl, btnBg[lbl.ID].width - 8, BTN_H, HEADER_Y, 15);
+		}
+	}
+
 	function buildTabs(cutout:Float):Void
 	{
 		final totalW = (1160 + cutout) - 40;
-		final tabW = totalW / options.length;
+		final tabW = totalW / tabs.length;
 
-		for (i in 0...options.length)
+		for (i in 0...tabs.length)
 		{
 			final tx = 40 + cutout * 0.5 + tabW * i;
 
@@ -247,73 +278,35 @@ class OptionsState extends MusicBeatState
 			add(bg);
 			tabBg.push(bg);
 
-			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, tabLabelText(options[i]));
+			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, Lang.str('opt_category_' + tabs[i]));
 			lbl.setFormat(Paths.font('vcr.ttf'), 17, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.antialiasing = ClientPrefs.globalAntialiasing;
 			lbl.wordWrap = true;
 			lbl.ID = i;
-			fitTabLabel(lbl, tabW);
+			fitLabel(lbl, tabW - 12, TAB_H, TAB_Y, 17);
 			add(lbl);
 			tabLabels.push(lbl);
 		}
 	}
 
-	// A small trailing mark on categories that navigate to their own screen
-	// instead of swapping the shared list in place, so it's clear before you
-	// even select them that they behave differently from the rest.
-	inline function tabLabelText(label:String):String
-		return Lang.str('opt_category_' + label) + (SUBSTATE_META.exists(label) ? ' ▸' : '');
-
-	function buildActionCard(listW:Float):Void
+	function fitLabel(txt:FlxText, fieldW:Float, boxH:Float, boxY:Float, maxSize:Int):Void
 	{
-		final cardH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H;
-
-		actionCard = new FlxSprite(LIST_X, LIST_Y).makeGraphic(Std.int(listW), Std.int(cardH), FlxColor.WHITE);
-		actionCard.color = 0xFF20202E;
-		add(actionCard);
-
-		// Same glyph as the tab marker/hint arrows below (already proven to
-		// render fine in this font) rather than an emoji glyph -- vcr.ttf is a
-		// small custom pixel font that almost certainly doesn't cover the
-		// Unicode ranges emoji live in.
-		actionIcon = new FlxText(LIST_X, LIST_Y + 40, listW, '▸ ▸ ▸');
-		actionIcon.setFormat(Paths.font('vcr.ttf'), 48, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		actionIcon.borderSize = 2;
-		add(actionIcon);
-
-		actionTitle = new FlxText(LIST_X, LIST_Y + 140, listW, '');
-		actionTitle.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, 0xFFFFE066, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		actionTitle.borderSize = 2;
-		add(actionTitle);
-
-		actionDesc = new FlxText(LIST_X + listW * 0.15, LIST_Y + 195, listW * 0.7, '');
-		actionDesc.setFormat(Paths.font('vcr.ttf'), 19, 0xFFCCCCCC, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		actionDesc.borderSize = 1.2;
-		actionDesc.wordWrap = true;
-		add(actionDesc);
-
-		actionHint = new FlxText(LIST_X, LIST_Y + cardH - 60, listW, '▸  ENTER  /  tap here to open  ▸');
-		actionHint.setFormat(Paths.font('vcr.ttf'), 18, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		actionHint.borderSize = 1.5;
-		add(actionHint);
-	}
-
-	function fitTabLabel(txt:FlxText, tabW:Float):Void
-	{
-		var size = 17;
-		while (size > 10 && txt.textField.numLines > 2)
+		var size = maxSize;
+		txt.fieldWidth = fieldW;
+		txt.wordWrap = true;
+		while (size > 9 && txt.textField.numLines > 2)
 		{
 			size--;
 			txt.setFormat(Paths.font('vcr.ttf'), size, txt.color, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			txt.borderSize = 1.5;
+			txt.borderSize = 1.3;
 		}
-		txt.y = TAB_Y + Math.max(0, (TAB_H - txt.height) * 0.5);
+		txt.y = boxY + Math.max(0, (boxH - txt.height) * 0.5);
 	}
 
 	function onOptionSelected(opt:Option):Void
 	{
-		focusOnList = true;
+		focus = 'list';
 		descText.text = opt.description;
 	}
 
@@ -371,42 +364,30 @@ class OptionsState extends MusicBeatState
 
 		for (lbl in tabLabels)
 		{
-			lbl.text = tabLabelText(options[lbl.ID]);
-			fitTabLabel(lbl, tabBg[lbl.ID].width + 4);
+			lbl.text = Lang.str('opt_category_' + tabs[lbl.ID]);
+			fitLabel(lbl, tabBg[lbl.ID].width - 8, TAB_H, TAB_Y, 17);
 		}
+		refreshActionButtonText();
 
 		scriptGroup.call('onRefreshLang', []);
-		refreshOptionVisuals();
-
-		showCategory(options[curSelected]);
+		refreshVisuals();
+		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
 	}
 
-	inline function isInlineCategory(label:String):Bool
-		return INLINE_BUILDERS.exists(label);
-
-	function showCategory(label:String):Void
-	{
-		final builder = INLINE_BUILDERS.get(label);
-		optionList.visible = descBg.visible = descText.visible = (builder != null);
-		actionCard.visible = actionIcon.visible = actionTitle.visible = actionDesc.visible = actionHint.visible = (builder == null);
-
-		if (builder != null)
-		{
-			optionList.setOptions(builder());
-			return;
-		}
-
-		actionTitle.text = Lang.str('opt_category_' + label);
-		actionDesc.text = SUBSTATE_META.get(label) ?? '';
-	}
-
-	function refreshOptionVisuals():Void
+	function refreshVisuals():Void
 	{
 		if (blockAllInput) return;
 		for (i in 0...tabBg.length)
 		{
-			tabBg[i].color = (i == curSelected) ? 0xFF4A4A6A : (i == hoveredOption ? 0xFF35354A : 0xFF2A2A3A);
-			tabLabels[i].color = (i == curSelected) ? 0xFFFFE066 : FlxColor.WHITE;
+			final isSel = (i == curTab) && (focus != 'buttons');
+			tabBg[i].color = isSel ? 0xFF4A4A6A : (i == hoveredTab ? 0xFF35354A : 0xFF2A2A3A);
+			tabLabels[i].color = isSel ? 0xFFFFE066 : FlxColor.WHITE;
+		}
+		for (i in 0...btnBg.length)
+		{
+			final isSel = (i == curButton) && (focus == 'buttons');
+			btnBg[i].color = isSel ? 0xFF5A5A7A : (i == hoveredButton ? 0xFF45455F : 0xFF35354F);
+			btnLabels[i].color = isSel ? 0xFFFFE066 : FlxColor.WHITE;
 		}
 	}
 
@@ -416,9 +397,10 @@ class OptionsState extends MusicBeatState
 
 		if (!isHardcodedState()) return;
 
-		optionList.keyboardEnabled = focusOnList && !blockInput && !blockAllInput;
+		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
 
-		hoveredOption = -1;
+		hoveredTab = -1;
+		hoveredButton = -1;
 
 		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
@@ -443,47 +425,62 @@ class OptionsState extends MusicBeatState
 			for (i in 0...tabBg.length)
 			{
 				if (!FlxG.mouse.overlaps(tabBg[i])) continue;
-				hoveredOption = i;
-				if (FlxG.mouse.justPressed)
-				{
-					if (i != curSelected)
-					{
-						curSelected = i;
-						changeSelection(0, true);
-					}
-					activateSelectedTab();
-				}
+				hoveredTab = i;
+				if (FlxG.mouse.justPressed && i != curTab) changeTab(i);
 				break;
 			}
 
-			if (actionCard.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(actionCard))
+			for (i in 0...btnBg.length)
 			{
-				activateSelectedTab();
+				if (!FlxG.mouse.overlaps(btnBg[i])) continue;
+				hoveredButton = i;
+				if (FlxG.mouse.justPressed)
+				{
+					curButton = i;
+					openSelectedSubstate(actionButtons[i]);
+				}
+				break;
 			}
 		}
 
-		refreshOptionVisuals();
+		refreshVisuals();
 
-		if (!blockInput && !blockAllInput && !focusOnList)
+		switch (focus)
 		{
-			if (controls.UI_LEFT_P) changeSelection(-1);
-			if (controls.UI_RIGHT_P) changeSelection(1);
+			case 'tabs':
+				if (!blockInput && !blockAllInput)
+				{
+					if (controls.UI_LEFT_P) changeTab(curTab <= 0 ? tabs.length - 1 : curTab - 1);
+					if (controls.UI_RIGHT_P) changeTab(curTab >= tabs.length - 1 ? 0 : curTab + 1);
+					if (controls.UI_UP_P) focus = 'buttons';
+					if (controls.ACCEPT || controls.UI_DOWN_P) focus = 'list';
 
-			if (controls.BACK)
-			{
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				exitToParent();
-			}
+					if (controls.BACK)
+					{
+						FlxG.sound.play(Paths.sound('cancelMenu'));
+						exitToParent();
+					}
+				}
+			case 'buttons':
+				if (!blockInput && !blockAllInput)
+				{
+					if (controls.UI_LEFT_P) curButton = (curButton <= 0 ? actionButtons.length - 1 : curButton - 1);
+					if (controls.UI_RIGHT_P) curButton = (curButton >= actionButtons.length - 1 ? 0 : curButton + 1);
+					if (controls.UI_DOWN_P) focus = 'tabs';
+					if (controls.ACCEPT) openSelectedSubstate(actionButtons[curButton]);
 
-			if (controls.ACCEPT || controls.UI_DOWN_P) activateSelectedTab();
-		}
-		else if (!blockInput && !blockAllInput && focusOnList)
-		{
-			if (controls.BACK)
-			{
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				focusOnList = false;
-			}
+					if (controls.BACK)
+					{
+						FlxG.sound.play(Paths.sound('cancelMenu'));
+						exitToParent();
+					}
+				}
+			case 'list':
+				if (!blockInput && !blockAllInput && controls.BACK)
+				{
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					focus = 'tabs';
+				}
 		}
 	}
 
@@ -498,30 +495,13 @@ class OptionsState extends MusicBeatState
 		else FlxG.switchState(MainMenuState.new);
 	}
 
-	function activateSelectedTab():Void
+	function changeTab(index:Int):Void
 	{
-		final label = options[curSelected];
-		if (isInlineCategory(label))
-		{
-			focusOnList = true;
-			return;
-		}
+		curTab = index;
+		focus = 'tabs';
+		refreshVisuals();
+		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
 
-		if (blockInput) return;
-
-		openSelectedSubstate(label);
-	}
-
-	function changeSelection(change:Int = 0, ?fromMouse:Bool = false):Void
-	{
-		curSelected += change;
-		if (curSelected < 0) curSelected = options.length - 1;
-		if (curSelected >= options.length) curSelected = 0;
-		focusOnList = false;
-		refreshOptionVisuals();
-		showCategory(options[curSelected]);
-
-		var snd = fromMouse ? 'scrollMenu' : 'hover';
-		FlxG.sound.play(Paths.sound(snd), fromMouse ? 1 : 0.5);
+		FlxG.sound.play(Paths.sound('hover'), 0.5);
 	}
 }

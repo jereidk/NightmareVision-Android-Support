@@ -34,8 +34,17 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	public var optionsArray:Array<Option> = [];
 	public var curSelected(default, null):Int = 0;
 
-	/** Fired whenever the selected option's description should be shown/refreshed. */
+	/**
+	 * Fired when the user actively moves the selection (keyboard nav or a
+	 * touch tap) -- NOT when `setOptions()` just repopulated the list with a
+	 * fresh dataset. Screens that hand D-pad focus back and forth between
+	 * this list and their own UI (e.g. a tab bar above it) use this specific
+	 * signal to know a real interaction happened, as opposed to `setOptions()`
+	 * merely resetting the selection back to the first row.
+	 */
 	public var onSelect:Option->Void;
+	/** Fired whenever the selected option's description should be shown/refreshed -- both on a real onSelect and after setOptions(). */
+	public var onDatasetChanged:Option->Void;
 	/** Fired after any option's value changes (selection, toggle, adjust, or reset-all). */
 	public var onChange:Void->Void;
 
@@ -191,7 +200,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		_scrollOffset = 0;
 		_scrollOffsetVisual = 0;
 		_scrollBar.setMetrics(maxVisible, opts.length);
-		if (onSelect != null && curSelected >= 0 && curSelected < opts.length) onSelect(opts[curSelected]);
+		if (onDatasetChanged != null && curSelected >= 0 && curSelected < opts.length) onDatasetChanged(opts[curSelected]);
 	}
 
 	function firstSelectable():Int
@@ -227,7 +236,14 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	function select(idx:Int):Void
 	{
 		if (idx < 0 || idx >= optionsArray.length || optionsArray[idx].type == 'label') return;
-		if (curSelected == idx) return;
+		if (curSelected == idx)
+		{
+			// Already the selected row -- still a real interaction (e.g. a
+			// tap landed on the row that's already selected), so the owning
+			// screen still needs to know to hand this list keyboard focus.
+			if (onSelect != null) onSelect(optionsArray[curSelected]);
+			return;
+		}
 
 		curSelected = idx;
 		FunkinSound.play(Paths.sound('hover'), 0.5);
@@ -445,7 +461,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 
 			if (nextAccept > 0) return;
 
-			if (curSelected != optIndex) select(optIndex);
+			select(optIndex);
 
 			switch (opt.type)
 			{
