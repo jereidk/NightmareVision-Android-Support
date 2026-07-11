@@ -113,12 +113,20 @@ class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 	}
 	
 	var __parent:Note;
+	// The specific NoteSharedTailState __parent had when this splash was
+	// created. Note.preRecycle() always allocates a FRESH tailState when a
+	// head note's pool slot gets reused for a different hold -- comparing
+	// against this lets watchTail() detect "my parent isn't my hold's head
+	// anymore" instead of silently re-resolving __tail against whatever
+	// unrelated hold __parent now represents (see watchTail()'s comment).
+	var __parentTailState:NoteSharedTailState;
 	var __tail:Note;
 	var __isPlayer:Bool = false;
 
 	function findTail(note:Null<Note>)
 	{
 		__parent = note;
+		__parentTailState = note?.tailState;
 		__tail = note;
 		if (__tail != null && __tail.tail.length > 0)
 		{
@@ -143,16 +151,27 @@ class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 		// isn't necessarily the sustain's TRUE final segment yet for a long
 		// enough hold. Keep tracking forward as later segments come into
 		// existence instead of completing early against a still-growing tail.
-		if (__parent != null && __parent.tail.length > 0) __tail = __parent.tail[__parent.tail.length - 1];
+		//
+		// BUT: __parent's pool slot can get reused for a completely
+		// different hold once THIS hold is over (confirmed regression --
+		// a stuck/never-disappearing glow on device). If that happened,
+		// __parent.tail now belongs to that unrelated hold and would keep
+		// looking "alive" for as long as ITS tail keeps staggered-spawning,
+		// making this splash silently track someone else's hold forever
+		// instead of completing. Detect it via tailState identity (always
+		// reallocated on reuse, see Note.preRecycle()) and just let the
+		// existing "no tail" path below finish this splash instead.
+		if (__parent != null && __parent.tailState != __parentTailState) __tail = null;
+		else if (__parent != null && __parent.tail.length > 0) __tail = __parent.tail[__parent.tail.length - 1];
 
 		if (__tail == null)
 		{
 			kill(); // die dont even splash jsut die
 			return;
 		}
-		
+
 		if (__tail.wasGoodHit) completed = true;
-		
+
 		if (!__tail.alive && !getAnimName().startsWith('end'))
 		{
 			completed = true;
