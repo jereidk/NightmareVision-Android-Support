@@ -53,6 +53,20 @@ import funkin.audio.SyncedFlxSoundGroup;
 import funkin.video.FunkinVideoSprite;
 #end
 
+// Shared by every deferred tail segment queued from the same head note (see
+// PlayState._pendingTails) so they can chain prevNote correctly even though
+// they're no longer recycled back-to-back in a single call. `headQueueNote`
+// lets a deferred entry detect that its head's pool slot has since been
+// reused for a different note (see spawnPendingTail()).
+private typedef PendingTailChain = {lastNote:Note, headQueueNote:QueueNote};
+
+private typedef PendingTail =
+{
+	qn:QueueNote,
+	parentNote:Note,
+	chain:PendingTailChain
+};
+
 class PlayState extends MusicBeatState
 {
 	public static var STRUM_X:Float = 42; // redundant
@@ -254,6 +268,23 @@ class PlayState extends MusicBeatState
 	// Index pointers so we advance by pointer rather than O(n) shift().
 	var _noteSpawnIdx:Int = 0;
 	var _eventSpawnIdx:Int = 0;
+
+	// A sustain note's tail segments used to all be recycled synchronously
+	// the instant their head spawned -- for a long hold that's dozens of
+	// Note constructions dumped into a single frame. recycleNote() now only
+	// builds the head immediately and queues the rest here, letting them
+	// drain a few at a time (see the second noteSpawn loop in update()) as
+	// each segment's OWN strumTime actually earns it. `chain` is shared by
+	// every entry queued from the same head so they keep chaining prevNote
+	// correctly even though they're no longer built back-to-back; it also
+	// carries `headQueueNote`, the QueueNote the head was originally
+	// recycled against -- preRecycle() always re-stamps `note.queueNote` on
+	// every recycle, so comparing that back against this lets a deferred
+	// entry detect "my head's pool slot became a different note" instead of
+	// corrupting a stranger's state (see spawnPendingTail()).
+	static inline final MAX_NOTE_SPAWNS_PER_FRAME:Int = 12;
+	var _pendingTails:Array<PendingTail> = [];
+	var _pendingTailIdx:Int = 0;
 
 	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
 	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
@@ -2021,6 +2052,8 @@ class PlayState extends MusicBeatState
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		_noteSpawnIdx = 0;
 		_eventSpawnIdx = 0;
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
 
 		prewarmNotePool();
 
@@ -2423,11 +2456,36 @@ class PlayState extends MusicBeatState
 		// _resetTexture() on top of the one preRecycle() already does) plus
 		// a fresh RGBGraphics allocation, none of which "pooling" was
 		// actually avoiding. Both are fixed now (see disposeNote()'s
-		// comment, and NoteUtil.getCurColors()'s `into` param) — keeping
-		// this tag to confirm the improvement on the next real build.
+		// comment, and NoteUtil.getCurColors()'s `into` param).
+		//
+		// A second, separate burst source remains: a sustain used to recycle
+		// EVERY tail segment synchronously alongside its head, so one long
+		// hold could dump dozens of Note constructions into a single frame.
+		// recycleNote() now only builds the head here and queues its tails
+		// into _pendingTails (see enqueuePendingTails()); the second loop
+		// below drains them on their OWN schedule instead. Both loops cap
+		// how many notes they'll spawn in a single frame (MAX_NOTE_SPAWNS_PER_FRAME)
+		// -- Conductor.songPosition tracks real audio time, not render frame
+		// count, so an uncapped loop lets one slow frame hand the NEXT frame
+		// an even bigger backlog crossed at once, a self-feeding spiral.
+		// Notes that miss a frame's cap simply spawn next frame, a few ms
+		// later than their ideal threshold at worst.
 		#if android SystemMonitor.profBegin('noteSpawn'); #end
-		while (_noteSpawnIdx < queueNotes.length && (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+		var _headsSpawnedThisFrame:Int = 0;
+		while (_headsSpawnedThisFrame < MAX_NOTE_SPAWNS_PER_FRAME && _noteSpawnIdx < queueNotes.length
+			&& (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+		{
 			recycleNote(queueNotes[_noteSpawnIdx++]);
+			_headsSpawnedThisFrame++;
+		}
+
+		var _pendingTailsDrained:Int = 0;
+		while (_pendingTailsDrained < MAX_NOTE_SPAWNS_PER_FRAME && _pendingTailIdx < _pendingTails.length
+			&& (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
+		{
+			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
+			_pendingTailsDrained++;
+		}
 		#if android SystemMonitor.profEnd(); #end
 
 		var tempVector = funkin.backend.math.Vector3.get();
@@ -2687,24 +2745,9 @@ class PlayState extends MusicBeatState
 		if (queueNote.tail != null)
 		{
 			final note:Note = spawnNote(note);
-			
-			if (note != null)
-			{
-				var prevNote:Note = note;
-				
-				for (tail in queueNote.tail)
-				{
-					final tail:Note = recycleNote(tail, note, prevNote);
-					
-					note.tail.push(tail);
-					
-					prevNote = tail;
-				}
-				
-				for (tail in note.tail)
-					spawnNote(tail);
-			}
-			
+
+			if (note != null) enqueuePendingTails(note, queueNote, queueNote.tail);
+
 			return note;
 		}
 		else
@@ -2712,7 +2755,65 @@ class PlayState extends MusicBeatState
 			return spawnNote(note);
 		}
 	}
-	
+
+	function enqueuePendingTails(headNote:Note, headQueueNote:QueueNote, tails:Array<QueueNote>):Void
+	{
+		final chain:PendingTailChain = {lastNote: headNote, headQueueNote: headQueueNote};
+		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
+	}
+
+	// Builds one deferred tail segment. Mirrors what the old inline loop in
+	// recycleNote() used to do (recycle against the shared parent/prevNote
+	// chain, append to the parent's tail array, spawn it), with three guards
+	// verified against the CURRENT code (not assumed from history):
+	function spawnPendingTail(entry:PendingTail):Void
+	{
+		// Guard 1: the head's pool slot has been reused for a totally
+		// different note since this entry was queued (preRecycle() always
+		// re-stamps `note.queueNote` on every recycle).
+		if (entry.parentNote.queueNote != entry.chain.headQueueNote) return;
+
+		// Guard 2: the head is dead but hasn't been reused YET -- the
+		// identity check above can't catch this case (nothing re-stamps
+		// queueNote until the next preRecycle()). Building onto a dead head
+		// is useless (its hold is already fully over) and risks
+		// notes.recycle()/recycleCompatibleNote() handing it right back out
+		// as THIS very segment's own Note object.
+		if (!entry.parentNote.exists) return;
+
+		// Guard 3: this segment's own natural despawn window (the same
+		// threshold notesLoop() uses to dispose a missed/expired note) has
+		// already elapsed -- either a severe lag backlog, or
+		// Conductor.songPosition jumped forward from a practice-mode time
+		// skip (clearNotesBefore()). Building it now would show something
+		// that should already be gone; drop it silently instead, visually
+		// identical to it never having lagged.
+		if (entry.qn.strumTime + entry.qn.sustainLength + noteKillOffset < Conductor.songPosition) return;
+
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, entry.chain.lastNote);
+
+		entry.parentNote.tail.push(tailNote);
+		entry.chain.lastNote = tailNote;
+
+		// Replay whatever state the parent is CURRENTLY in onto a segment
+		// that didn't exist yet when that state was decided -- mirrors
+		// PlayField.noteHit()'s existing-tail loop (only touches
+		// sustain.blockHit) and noteMiss()'s (tooLate/blockHit/ignoreNote/
+		// copyAlpha/alpha), which only ever reach segments that already
+		// existed at that moment.
+		if (tailNote.tailState.missed)
+		{
+			tailNote.tooLate = true;
+			tailNote.blockHit = true;
+			tailNote.ignoreNote = true;
+			tailNote.copyAlpha = false;
+			tailNote.alpha = 0.3;
+		}
+		else if (entry.parentNote.wasGoodHit) tailNote.blockHit = false;
+
+		spawnNote(tailNote);
+	}
+
 	// Prefers reusing a pooled Note whose PREVIOUS life already had the exact
 	// skin+direction this spawn needs, so Note.set_texture()'s fast path (skin
 	// == _lastLoadedSkin && noteData == _lastLoadedNoteData, in Note.hx) can
@@ -3440,7 +3541,13 @@ class PlayState extends MusicBeatState
 			
 			for (i in _noteSpawnIdx...queueNotes.length)
 				if (queueNotes[i].strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
-				
+
+			// Tails queued but not yet spawned (see _pendingTails) aren't
+			// covered by either check above -- their heads already left
+			// queueNotes, but they're not "alive" in `notes` yet either.
+			for (i in _pendingTailIdx..._pendingTails.length)
+				if (_pendingTails[i].qn.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
+
 			if (doDeathCheck()) return;
 		}
 		
@@ -3653,6 +3760,8 @@ class PlayState extends MusicBeatState
 		_noteSpawnIdx = 0;
 		_eventSpawnIdx = 0;
 		eventNotes.resize(0);
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
 	}
 	
 	public var totalPlayed:Int = 0;
