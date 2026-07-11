@@ -192,20 +192,23 @@ class OptionsState extends MusicBeatState
 				optionTexts.add(txt);
 			}
 			
-			// right panel stuff
-			artImage = new FlxSprite(500, 275 + 100).loadGraphic(Paths.image(ext + 'art'));
+			// right panel stuff. Same gameCutoutSize.x*0.5 re-centering as the
+			// panel/close-button above -- these three need to shift together
+			// or the title/version text drift out of alignment with the art.
+			final rightPanelShift:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+			artImage = new FlxSprite(500 + rightPanelShift, 275 + 100).loadGraphic(Paths.image(ext + 'art'));
 			artImage.antialiasing = ClientPrefs.globalAntialiasing;
 			artImage.y -= Math.round(artImage.height * .5);
 			add(artImage);
-			
-			titleText = new FlxText(480, artImage.y, 700, 'VS IMPOSTOR: LEGACY');
+
+			titleText = new FlxText(480 + rightPanelShift, artImage.y, 700, 'VS IMPOSTOR: LEGACY');
 			titleText.setFormat(Paths.font("vcr"), 42, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			titleText.y -= (titleText.height + 16);
 			titleText.borderSize = 2;
 			titleText.antialiasing = ClientPrefs.globalAntialiasing;
 			add(titleText);
-			
-			versionText = new FlxText(480, artImage.y + artImage.height + 20, 700, Main.LEGACY_VERSION);
+
+			versionText = new FlxText(480 + rightPanelShift, artImage.y + artImage.height + 20, 700, Main.LEGACY_VERSION);
 			versionText.setFormat(Paths.font("vcr"), 28, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			versionText.borderSize = 1.5;
 			versionText.antialiasing = ClientPrefs.globalAntialiasing;
