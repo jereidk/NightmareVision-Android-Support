@@ -3,6 +3,7 @@ import flixel.util.FlxSort;
 
 import funkin.utils.SortUtil;
 import funkin.game.shaders.RGBPalette;
+import funkin.backend.FunkinRatioScaleMode;
 import String; // yea. ok. whatever.
 
 var finaleUIActive:Bool = false;
@@ -54,7 +55,11 @@ function onCreatePost()
 		newBar.rightBar.shader = rgbShader.shader;
 	}
 	
-	blackPIcon = new FlxSprite(45, ClientPrefs.downScroll ? -125 : 390);
+	// gameCutoutSize.x is 0 outside 'expand' mode, same convention used
+	// elsewhere (e.g. assets/legacy/scripts/dialogue.hx) to keep a fixed-position
+	// element visually centered on the original 1280-wide layout instead of
+	// drifting toward the left edge on a wider-than-16:9 expanded screen.
+	blackPIcon = new FlxSprite(45 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5, ClientPrefs.downScroll ? -125 : 390);
 	blackPIcon.frames = Paths.getSparrowAtlas('icons/icon-blackFinale');
 	blackPIcon.scale.set(0.8, 0.8);
 	blackPIcon.updateHitbox();
