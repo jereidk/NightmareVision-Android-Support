@@ -163,12 +163,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				grpTexts.add(valueText);
 				optionsArray[i].setChild(valueText);
 				
-				var leftBox:AddBox = new AddBox(1118 - 30, optionY, false);
+				// Same panelX-anchored 1118 (= panelX(480) + 638) the checkbox
+				// above already uses -- this pair was missed when that one got
+				// fixed, so it stayed a raw hardcoded 1118 and drifted out from
+				// under the rest of the panel in 'expand' mode.
+				var leftBox:AddBox = new AddBox(panelX + 638 - 30, optionY, false);
 				leftBox.sprTracker = optionText;
 				leftBox.ID = i;
 				addGroup.add(leftBox);
-				
-				var rightBox:AddBox = new AddBox(1118, optionY, true);
+
+				var rightBox:AddBox = new AddBox(panelX + 638, optionY, true);
 				rightBox.sprTracker = optionText;
 				rightBox.ID = i;
 				addGroup.add(rightBox);
