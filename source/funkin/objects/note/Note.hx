@@ -367,9 +367,23 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	inline function _resetTexture():Void
 	{
 		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
-		
+
 		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
+
+		// Undo any leftover sustain-hold stretch from this Note's PREVIOUS
+		// life before deciding (below) whether a real reload is even needed.
+		// PlayState.notesLoop() scales a hold segment's `scale.y`/`baseScale.y`
+		// independently of `scale.x` every frame to make it visually span the
+		// hold's length -- it never touches `scale.x`, so `scale.x` is always
+		// this Note's last genuinely correct uniform noteScale. A note
+		// recycled for the same skin+direction as before (the common case,
+		// see set_texture()'s guard) now skips reloadNote() entirely, which
+		// used to be the only place that re-squared scale.y back to scale.x
+		// -- without this, a former hold segment reused as a head (or a
+		// shorter hold) kept rendering stretched tall/short from its old
+		// life. Re-square first so a skipped reload still starts clean.
+		scale.y = scale.x;
 
 		prefix = suffix = '';
 
