@@ -28,7 +28,18 @@ class FreeplayCard extends FlxSpriteGroup
 	public var accString:String = 'F';
 	
 	public var meta:SongInformation;
-	
+
+	// Deferred icon loading: initCard() runs for every song in a section
+	// (potentially dozens), but only ~9 cards are ever visible around the
+	// selection at once (see FreeplayState.moveCard()'s alpha falloff).
+	// Loading every icon up front turned every section change into a
+	// synchronous decode+GPU-upload burst (measured: up to 12 icons /
+	// 855ms on a real device). Instead, initCard() just marks the icon as
+	// stale and hides it; FreeplayState.moveCard() calls loadIconIfNeeded()
+	// once this card is within LAZY_ICON_LOAD_DIST of the selection, so the
+	// cost spreads across scroll steps instead of landing all at once.
+	var iconLoaded:Bool = false;
+
 	var shuffleLetters:Array<String>;
 	
 	var shuffleTimer:FlxTimer = null;
@@ -107,8 +118,11 @@ class FreeplayCard extends FlxSpriteGroup
 		name.setPosition(card.x + 110, card.y - 5);
 		name.text = songName;
 		
-		icon.changeIcon(song.icon);
-		icon.setGraphicSize(Std.int(icon.frameWidth * 0.6));
+		// Real texture swap deferred to loadIconIfNeeded() -- keep whatever
+		// this recycled card's icon last showed hidden so it doesn't flash
+		// a stale, unrelated song's icon until it's actually near-visible.
+		iconLoaded = false;
+		icon.visible = false;
 		
 		if (locked)
 		{
@@ -173,7 +187,22 @@ class FreeplayCard extends FlxSpriteGroup
 		credit.visible = !locked;
 		icon.setPosition(card.x - 13, card.y - 23);
 	}
-	
+
+	/**
+	 * Loads this card's real icon texture if it hasn't been already for the
+	 * current song. Cheap to call every frame -- `HealthIcon.changeIcon()`
+	 * itself early-returns once the right character is already loaded.
+	 */
+	public function loadIconIfNeeded():Void
+	{
+		if (iconLoaded || meta == null) return;
+		iconLoaded = true;
+
+		icon.changeIcon(meta.icon);
+		icon.setGraphicSize(Std.int(icon.frameWidth * 0.6));
+		icon.visible = true;
+	}
+
 	public function unlockCard()
 	{
 		bean.visible = false;

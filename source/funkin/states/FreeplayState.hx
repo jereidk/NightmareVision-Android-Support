@@ -154,8 +154,13 @@ class FreeplayState extends AmongUIState
 	var CARD_DISTANCE:Float = 117;
 	var CARD_X_SHIFT:Float = -70;
 	var CARD_FADE:Float = .25;
-	
+
 	var CARD_LERP = .25;
+
+	// Cards fully fade out at dist=4 (1/CARD_FADE). Load icons one step
+	// past that so a card's icon is already resolved by the time it fades
+	// back in as the player scrolls, instead of popping in a frame late.
+	var LAZY_ICON_LOAD_DIST:Float = 5;
 	
 	var animateCards:Array<FreeplayCard> = [];
 	var unlockTimer:FlxTimer = null;
@@ -455,6 +460,8 @@ class FreeplayState extends AmongUIState
 		if (c == null) return;
 
 		final dist:Float = (c.ID - selection);
+
+		if (Math.abs(dist) <= LAZY_ICON_LOAD_DIST) c.loadIconIfNeeded();
 
 		final centerShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * CARD_EXPAND_CENTER_FACTOR
