@@ -45,7 +45,17 @@ echo "[prune-cache] Looking for caches matching prefix '$PREFIX' on ref '$REF' i
 # every run, which meant this script never pruned anything and stale
 # caches just piled up until GitHub's own eviction kicked in. Spelling
 # $REPO out directly sidesteps that detection entirely.
-IDS=$(gh api "/repos/$REPO/actions/caches" \
+
+# --method GET is not optional here: `gh api` silently defaults to POST
+# whenever any -f/-F field is present (its "there's a request body -> POST"
+# heuristic), and this list-caches endpoint only accepts GET. Without this
+# flag every call 404s ("Not Found") -- which the block below correctly
+# treats as a non-fatal, silently-swallowed failure, so this ran on every
+# single build all session and never once actually pruned anything. That's
+# exactly why 5+ generations of hxcpp-*-Linux-<hash> caches piled up instead
+# of the intended "keep only the newest" behavior, chewing through most of
+# the repo's 10GB Actions cache budget.
+IDS=$(gh api --method GET "/repos/$REPO/actions/caches" \
     -f "key=$PREFIX" -f "ref=$REF" -f "per_page=100" \
     --jq '.actions_caches | sort_by(.created_at) | reverse | .[1:] | .[].id' 2>&1)
 STATUS=$?
