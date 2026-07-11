@@ -38,6 +38,20 @@ class OptionsState extends MusicBeatState
 		'misc' => MiscOptions.build,
 	];
 
+	/**
+	 * The four categories that still navigate to their own screen instead of
+	 * swapping the shared list -- their tab gets a small "opens elsewhere"
+	 * marker, and selecting them shows a preview card (blurb + "tap to open")
+	 * in the content area instead of leaving it blank, which is what happened
+	 * before for 'adjustdelay' specifically (the default startup tab).
+	 */
+	static final SUBSTATE_META:Map<String, String> = [
+		'adjustdelay' => 'Calibrate your input/audio offset so your hits land exactly on time.',
+		'mobile' => 'Configure touch controls: navigation mode, gameplay input scheme, and pad layout.',
+		'dlc' => 'Browse, download, and manage add-on content.',
+		'credits' => 'Everyone who made this game possible.',
+	];
+
 	var options:Array<String> = [
 		'adjustdelay',
 		'language',
@@ -73,6 +87,12 @@ class OptionsState extends MusicBeatState
 	var optionList:TouchOptionList;
 	var descText:FlxText;
 	var descBg:FlxSprite;
+
+	var actionCard:FlxSprite;
+	var actionIcon:FlxText;
+	var actionTitle:FlxText;
+	var actionDesc:FlxText;
+	var actionHint:FlxText;
 
 	var mouseControlActive:Bool = true;
 	var hoveredOption:Int = -1;
@@ -189,6 +209,8 @@ class OptionsState extends MusicBeatState
 			descText.wordWrap = true;
 			add(descText);
 
+			buildActionCard(listW);
+
 			#if !mobile
 			bottomControls = new AmongControls([
 				['arrow', 'select'], // select
@@ -225,7 +247,7 @@ class OptionsState extends MusicBeatState
 			add(bg);
 			tabBg.push(bg);
 
-			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, Lang.str('opt_category_' + options[i]));
+			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, tabLabelText(options[i]));
 			lbl.setFormat(Paths.font('vcr.ttf'), 17, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.antialiasing = ClientPrefs.globalAntialiasing;
@@ -235,6 +257,46 @@ class OptionsState extends MusicBeatState
 			add(lbl);
 			tabLabels.push(lbl);
 		}
+	}
+
+	// A small trailing mark on categories that navigate to their own screen
+	// instead of swapping the shared list in place, so it's clear before you
+	// even select them that they behave differently from the rest.
+	inline function tabLabelText(label:String):String
+		return Lang.str('opt_category_' + label) + (SUBSTATE_META.exists(label) ? ' ▸' : '');
+
+	function buildActionCard(listW:Float):Void
+	{
+		final cardH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H;
+
+		actionCard = new FlxSprite(LIST_X, LIST_Y).makeGraphic(Std.int(listW), Std.int(cardH), FlxColor.WHITE);
+		actionCard.color = 0xFF20202E;
+		add(actionCard);
+
+		// Same glyph as the tab marker/hint arrows below (already proven to
+		// render fine in this font) rather than an emoji glyph -- vcr.ttf is a
+		// small custom pixel font that almost certainly doesn't cover the
+		// Unicode ranges emoji live in.
+		actionIcon = new FlxText(LIST_X, LIST_Y + 40, listW, '▸ ▸ ▸');
+		actionIcon.setFormat(Paths.font('vcr.ttf'), 48, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		actionIcon.borderSize = 2;
+		add(actionIcon);
+
+		actionTitle = new FlxText(LIST_X, LIST_Y + 140, listW, '');
+		actionTitle.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, 0xFFFFE066, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		actionTitle.borderSize = 2;
+		add(actionTitle);
+
+		actionDesc = new FlxText(LIST_X + listW * 0.15, LIST_Y + 195, listW * 0.7, '');
+		actionDesc.setFormat(Paths.font('vcr.ttf'), 19, 0xFFCCCCCC, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		actionDesc.borderSize = 1.2;
+		actionDesc.wordWrap = true;
+		add(actionDesc);
+
+		actionHint = new FlxText(LIST_X, LIST_Y + cardH - 60, listW, '▸  ENTER  /  tap here to open  ▸');
+		actionHint.setFormat(Paths.font('vcr.ttf'), 18, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		actionHint.borderSize = 1.5;
+		add(actionHint);
 	}
 
 	function fitTabLabel(txt:FlxText, tabW:Float):Void
@@ -309,14 +371,14 @@ class OptionsState extends MusicBeatState
 
 		for (lbl in tabLabels)
 		{
-			lbl.text = Lang.str('opt_category_' + options[lbl.ID]);
+			lbl.text = tabLabelText(options[lbl.ID]);
 			fitTabLabel(lbl, tabBg[lbl.ID].width + 4);
 		}
 
 		scriptGroup.call('onRefreshLang', []);
 		refreshOptionVisuals();
 
-		if (isInlineCategory(options[curSelected])) showCategory(options[curSelected]);
+		showCategory(options[curSelected]);
 	}
 
 	inline function isInlineCategory(label:String):Bool
@@ -326,9 +388,16 @@ class OptionsState extends MusicBeatState
 	{
 		final builder = INLINE_BUILDERS.get(label);
 		optionList.visible = descBg.visible = descText.visible = (builder != null);
-		if (builder == null) return;
+		actionCard.visible = actionIcon.visible = actionTitle.visible = actionDesc.visible = actionHint.visible = (builder == null);
 
-		optionList.setOptions(builder());
+		if (builder != null)
+		{
+			optionList.setOptions(builder());
+			return;
+		}
+
+		actionTitle.text = Lang.str('opt_category_' + label);
+		actionDesc.text = SUBSTATE_META.get(label) ?? '';
 	}
 
 	function refreshOptionVisuals():Void
@@ -385,6 +454,11 @@ class OptionsState extends MusicBeatState
 					activateSelectedTab();
 				}
 				break;
+			}
+
+			if (actionCard.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(actionCard))
+			{
+				activateSelectedTab();
 			}
 		}
 
