@@ -2674,8 +2674,12 @@ class PlayState extends MusicBeatState
 	
 	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
 	{
-		var note:Note = notes.recycle(Note, () -> new Note());
-		
+		final targetField:Null<PlayField> = getFieldFromID(queueNote.playField);
+
+		var note:Note = (targetField != null)
+			? recycleCompatibleNote(targetField._skin, queueNote.noteData)
+			: notes.recycle(Note, () -> new Note());
+
 		note.preRecycle(queueNote, parent, prevNote);
 		
 		if (parent != null) return note;
@@ -2709,6 +2713,55 @@ class PlayState extends MusicBeatState
 		}
 	}
 	
+	// Prefers reusing a pooled Note whose PREVIOUS life already had the exact
+	// skin+direction this spawn needs, so Note.set_texture()'s fast path (skin
+	// == _lastLoadedSkin && noteData == _lastLoadedNoteData, in Note.hx) can
+	// skip reloadNote() entirely instead of paying loadNoteAnims()'s
+	// per-instance animation registration. Plain notes.recycle()
+	// (FlxGroup.getFirstAvailable()) just grabs the FIRST dead member in
+	// array order regardless of what it was last loaded as -- with only a
+	// handful of distinct (skin, noteData) combinations possible all song
+	// (one per lane per player), and the pool having almost certainly cycled
+	// through every one of them within the first few seconds, that's usually
+	// a wasted reload during a sustain-tail burst (this function building
+	// many segments of the SAME hold, all wanting the SAME skin+noteData, in
+	// one frame).
+	// This can only ever pick a DIFFERENT dead member to reuse -- it never
+	// changes WHETHER a reload happens, that correctness-critical decision
+	// still lives entirely in Note.set_texture()'s own guard (which also
+	// checks `texture == resolved`, one condition this doesn't replicate), so
+	// a miss here just falls through to a real reload exactly like before,
+	// never a wrong render.
+	// Single pass: remembers the first dead member seen as a fallback
+	// (matching notes.recycle()'s own getFirstAvailable() behavior exactly)
+	// so this is never worse than what was already there, even when no
+	// compatible member exists yet.
+	inline function recycleCompatibleNote(targetSkin:NoteSkin, targetNoteData:Int):Note
+	{
+		var fallback:Note = null;
+
+		for (member in notes.members)
+		{
+			if (member == null || member.exists) continue;
+
+			if (fallback == null) fallback = member;
+
+			if (member._lastLoadedSkin == targetSkin && member._lastLoadedNoteData == targetNoteData)
+			{
+				member.revive();
+				return member;
+			}
+		}
+
+		if (fallback != null)
+		{
+			fallback.revive();
+			return fallback;
+		}
+
+		return notes.add(new Note());
+	}
+
 	inline function spawnNote(note:Note):Null<Note>
 	{
 		note.postRecycle();
