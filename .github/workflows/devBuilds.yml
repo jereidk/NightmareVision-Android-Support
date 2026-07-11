@@ -339,22 +339,28 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
-          key: hxcpp-cache-android-fat-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-cache-android-fat-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-cache-android-fat-${{ runner.os }}-
+            hxcpp-cache-android-fat-v2-${{ runner.os }}-
 
-      # This cache's key includes a source-tree hash, so it changes on every
-      # commit that touches .hx files -- restore-keys lets the step above
-      # seed from the closest old entry, but actions/cache always saves a
-      # fresh full copy afterwards regardless, leaving the old one as dead
-      # weight (see commit 15913508 for what that eventually caused). Prune
-      # it down to just the entry that was already restored this run, kept
-      # as a fallback in case this run's own save never happens.
+      # v2 bump (was hxcpp-cache-android-fat-): restore-keys seeds
+      # HXCPP_COMPILE_CACHE from the closest OLD entry under the prefix,
+      # whatever commit it was built from -- hxcpp's own internal object-cache
+      # keying didn't fully account for a Project.xml haxedef toggle
+      # (HXCPP_GC_GENERATIONAL on -> off), so a run seeded from a cache built
+      # under the other setting linked with some hxcpp runtime objects
+      # (Hash.cpp/Anon.cpp, providing __string_hash_set and friends) left over
+      # from that different config, producing mass "undefined symbol" link
+      # failures despite every .hx file compiling cleanly. Renaming the prefix
+      # orphans every cache poisoned by that toggle so the next run starts
+      # from a genuinely clean ~/.hxcpp_cache instead of warm-seeding from
+      # them. Revert this bump once confirmed stable, or bump again if a
+      # future haxedef toggle reproduces the same symptom.
       - name: Prune stale hxcpp compile caches
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v2-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -683,17 +689,19 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm64-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-${{ runner.os }}-
+            hxcpp-android-arm64-v2-${{ runner.os }}-
 
-      # See the matching comment on "Prune stale hxcpp compile caches" in the
-      # fat build job above -- same source-hash-keyed cache, same growth problem.
+      # v2 bump: see the matching comment on "Prune stale hxcpp compile
+      # caches" in the fat build job above -- same restore-keys-seeded
+      # staleness, caused the exact same __string_hash_set/etc. link failures
+      # on this job's own compile.
       - name: Prune stale hxcpp build-artifact caches (ARM64)
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v2-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1026,17 +1034,19 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm32-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm32-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm32-${{ runner.os }}-
+            hxcpp-android-arm32-v2-${{ runner.os }}-
 
-      # See the matching comment on "Prune stale hxcpp compile caches" in the
-      # fat build job above -- same source-hash-keyed cache, same growth problem.
+      # v2 bump: see the matching comment on "Prune stale hxcpp compile
+      # caches" in the fat build job above -- same restore-keys-seeded
+      # staleness, caused the exact same __string_hash_set/etc. link failures
+      # on this job's own compile.
       - name: Prune stale hxcpp build-artifact caches (ARM32)
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v2-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
