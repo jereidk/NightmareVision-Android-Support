@@ -79,29 +79,45 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 {
 	public function new(parent:Note)
 	{
-		this = [parent, [], null, false];
+		this = [parent, [], null, false, null, false];
 	}
-	
+
 	public var parent(get, set):Note;
 	public var tail(get, set):Array<Note>;
 	public var splash(get, set):Null<SustainSplash>;
 	public var missed(get, set):Bool;
-	
+	// Single-sprite hold rendering (see SustainTrail.hx). `useTrail` is
+	// decided once, when the head spawns (no active modchart for this
+	// player at that moment) -- locked in for the hold's whole lifetime
+	// rather than re-checked every frame, so a mod toggling mid-hold can't
+	// cause a rendering-mode flip partway through. `trail` is the actual
+	// pooled sprite, null until spawned (or if useTrail is false).
+	public var trail(get, set):Null<SustainTrail>;
+	public var useTrail(get, set):Bool;
+
 	function get_parent():Note return this[0];
-	
+
 	function get_tail():Array<Note> return this[1];
-	
+
 	function get_splash():Null<SustainSplash> return this[2];
-	
+
 	function get_missed():Bool return this[3];
-	
+
+	function get_trail():Null<SustainTrail> return this[4];
+
+	function get_useTrail():Bool return this[5];
+
 	function set_parent(v:Note):Note return this[0] = v;
-	
+
 	function set_tail(v:Array<Note>):Array<Note> return this[1] = v; // well this one is useless
-	
+
 	function set_splash(v:Null<SustainSplash>):Null<SustainSplash> return this[2] = v;
-	
+
 	function set_missed(v:Bool):Bool return this[3] = v;
+
+	function set_trail(v:Null<SustainTrail>):Null<SustainTrail> return this[4] = v;
+
+	function set_useTrail(v:Bool):Bool return this[5] = v;
 }
 
 @:allow(funkin.states.PlayState)
@@ -436,6 +452,17 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		{
 			tailState.missed = false;
 			tailState.splash = null;
+
+			// A head note can be disposed before its tail ever spawns a single
+			// segment (tail.length stays 0 forever), which is what routes here
+			// instead of the fresh-tailState branch above -- but a trail (see
+			// SustainTrail.hx) is spawned right when the HEAD appears, before
+			// any tail segment exists. Without this, a reused tailState could
+			// carry a stale, already-orphaned trail reference into this note's
+			// next life.
+			tailState.trail?.kill();
+			tailState.trail = null;
+			tailState.useTrail = false;
 		}
 		
 		// prevNote != this: with deferred tail spawning (PlayState._pendingTails),

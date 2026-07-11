@@ -263,6 +263,9 @@ class PlayState extends MusicBeatState
 	public var audio:PlayableSong;
 	
 	public var notes:FlxTypedGroup<Note>;
+	// Single-sprite hold trails (see SustainTrail.hx) -- deliberately a
+	// separate group from `notes`, never touched by keyShit()/scoring.
+	public var susTrails:FlxTypedGroup<funkin.objects.note.SustainTrail>;
 	public var queueNotes:Array<QueueNote> = [];
 	public var eventNotes:Array<EventNote> = [];
 	// Index pointers so we advance by pointer rather than O(n) shift().
@@ -906,6 +909,12 @@ class PlayState extends MusicBeatState
 		playFields = new FlxTypedGroup<PlayField>();
 		add(playFields);
 		
+		// Added before `notes` so heads/holdend caps (real Note sprites) draw
+		// on top of the plain trail body, matching how the old segment chain
+		// visually stacked (later-spawned segments/caps over earlier ones).
+		susTrails = new FlxTypedGroup<funkin.objects.note.SustainTrail>();
+		add(susTrails);
+
 		notes = new FlxTypedGroup<Note>();
 		add(notes);
 		
@@ -2060,6 +2069,7 @@ class PlayState extends MusicBeatState
 		_eventSpawnIdx = 0;
 		_pendingTails.resize(0);
 		_pendingTailIdx = 0;
+		susTrails?.forEachAlive(t -> t.kill());
 
 		prewarmNotePool();
 
@@ -2587,9 +2597,24 @@ class PlayState extends MusicBeatState
 				if ((daNote.tooLate && Conductor.songPosition >= noteKillOffset + daNote.strumTime + daNote.sustainLength)
 					|| (daNote.wasGoodHit && (Conductor.songPosition >= daNote.strumTime + daNote.sustainLength
 						|| (daNote.isSustainEnd && daNote.clipRect != null && daNote.clipRect.height <= 0)))) field.disposeNote(daNote);
-						
+
 				if (!canUpdateModchart || !daNote.alive || !daNote.exists) {
 					i --;
+					continue;
+				}
+
+				// Intermediate segments of a trail-mode hold are pure bookkeeping
+				// now -- the SustainTrail sprite (updated separately, once per
+				// hold, right after this loop) handles all their visible
+				// rendering in one shot. Skip the position/modchart/clip work
+				// entirely: keyShit()'s hit/hold logic and scoring never read
+				// position (verified against the current code, not assumed),
+				// and the only position-derived thing that fed disposal timing
+				// (isSustainEnd's clipRect check above) only applies to the one
+				// segment this deliberately leaves untouched.
+				if (daNote.isSustainNote && !daNote.isSustainEnd && daNote.tailState.useTrail)
+				{
+					daNote.visible = false;
 					continue;
 				}
 				
@@ -2642,6 +2667,78 @@ class PlayState extends MusicBeatState
 					
 					nextPos.put();
 				}
+			}
+			#if android SystemMonitor.profEnd(); #end
+
+			// One position update per ACTIVE HOLD instead of per intermediate
+			// segment (was 2x modManager.getPos() + atan2/sqrt/pow PER SEGMENT
+			// PER FRAME above) -- see SustainTrail.hx's class doc for the full
+			// reasoning. Only holds spawned with tailState.useTrail=true reach
+			// this; modcharted holds keep rendering via the segment chain above.
+			#if android SystemMonitor.profBegin('susTrails'); #end
+			for (trail in susTrails.members)
+			{
+				if (trail == null || !trail.alive) continue;
+
+				final headNote = trail.headNote;
+				if (headNote == null || !headNote.alive)
+				{
+					trail.kill();
+					continue;
+				}
+
+				trail.visible = (trail.field?.visible ?? true);
+
+				if (!canUpdateModchart) continue;
+
+				// Before being hit: the whole hold (head included) scrolls as
+				// one unbroken piece toward the strum. Once hit and held: the
+				// part already past the strum is being "consumed" (mirrors how
+				// intermediate segments individually dispose themselves via the
+				// tooLate/wasGoodHit conditions above as songPosition passes
+				// each one's own tiny strumTime window) -- so the trail's front
+				// edge sticks at Conductor.songPosition instead of continuing
+				// to scroll past the receptor.
+				final frontTime:Float = headNote.wasGoodHit ? Math.max(headNote.strumTime, Conductor.songPosition) : headNote.strumTime;
+				final backTime:Float = (headNote.strumTime + headNote.sustainLength);
+
+				if (frontTime >= backTime)
+				{
+					trail.kill();
+					continue;
+				}
+
+				final frontBeat = Conductor.getBeat(frontTime);
+				final frontVisPos = ((getNoteInitialTime(frontTime) - Conductor.visualPosition) * songSpeed);
+				final frontDiff = (frontTime - Conductor.songPosition);
+				final frontPos = modManager.getPos(frontTime, frontVisPos, frontDiff, frontBeat, headNote.noteData, headNote.lane, headNote, tempVector);
+
+				final backBeat = Conductor.getBeat(backTime);
+				final backVisPos = ((getNoteInitialTime(backTime) - Conductor.visualPosition) * songSpeed);
+				final backDiff = (backTime - Conductor.songPosition);
+				final backPos = modManager.getPos(backTime, backVisPos, backDiff, backBeat, headNote.noteData, headNote.lane, headNote);
+
+				final skin = trail.skin;
+
+				// Mirrors modManager.updateObject()'s isSustainNote-specific
+				// convention (note.y = pos.y directly, not pos.y - height*.5)
+				// -- calling updateObject() itself here would take the WRONG,
+				// non-sustain branch since `trail` isn't a Note.
+				trail.x = (frontPos.x - trail.width * .5);
+				trail.y = frontPos.y;
+
+				trail.spriteOffset.x = (skin.noteOffsets[headNote.noteData].x + headNote.typeOffsetX + skin.sustainOffsets[headNote.noteData].x);
+				trail.spriteOffset.y = (skin.noteOffsets[headNote.noteData].y + headNote.typeOffsetY + skin.sustainOffsets[headNote.noteData].y);
+
+				final rad = Math.atan2(backPos.y - frontPos.y, backPos.x - frontPos.x);
+				trail.angle = (rad * 180 / Math.PI) - 90;
+
+				final dist:Float = Math.sqrt(Math.pow(frontPos.y - backPos.y, 2) + Math.pow(frontPos.x - backPos.x, 2));
+				trail.scale.y = trail.baseScale.y = (dist / (trail.frameHeight - (trail.antialiasing ? 1 : 0)));
+
+				trail.alpha = headNote.tailState.missed ? 0.3 : 1;
+
+				backPos.put();
 			}
 			#if android SystemMonitor.profEnd(); #end
 		}
@@ -2752,7 +2849,11 @@ class PlayState extends MusicBeatState
 		{
 			final note:Note = spawnNote(note);
 
-			if (note != null) enqueuePendingTails(note, queueNote, queueNote.tail);
+			if (note != null)
+			{
+				enqueuePendingTails(note, queueNote, queueNote.tail);
+				setupSustainTrail(note, targetField);
+			}
 
 			return note;
 		}
@@ -2766,6 +2867,27 @@ class PlayState extends MusicBeatState
 	{
 		final chain:PendingTailChain = {lastNote: headNote, headQueueNote: headQueueNote};
 		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
+	}
+
+	// Decides, once, whether this hold renders as a single stretched
+	// SustainTrail (the common case) or falls back to the old per-segment
+	// Note chain (only when a modchart is actively affecting this player's
+	// note positions -- a straight trail can't represent a curved/modcharted
+	// path, but the individually-positioned tail segments already can).
+	// Locked in at spawn time rather than re-checked every frame so a mod
+	// toggling mid-hold can't flip rendering modes partway through.
+	function setupSustainTrail(headNote:Note, field:Null<PlayField>):Void
+	{
+		if (field == null) return;
+
+		final hasActiveMods:Bool = (modManager.activeMods[headNote.player]?.length ?? 0) > 0;
+		headNote.tailState.useTrail = !hasActiveMods;
+
+		if (!headNote.tailState.useTrail) return;
+
+		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
+		trail.setupTrail(headNote, field);
+		headNote.tailState.trail = trail;
 	}
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in
@@ -3761,6 +3883,10 @@ class PlayState extends MusicBeatState
 		for (note in notes.members)
 			if (note != null) note.kill();
 		notes.clear();
+
+		for (trail in susTrails.members)
+			if (trail != null) trail.kill();
+		susTrails.clear();
 
 		queueNotes.resize(0);
 		_noteSpawnIdx = 0;
