@@ -645,9 +645,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'game', kind: 'string',
 			label: '◆ ' + Lang.str('opt_gameinput', 'Gameplay Input'),
-			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. VSlice controls: tap the notes directly (requires VSlice Note Layout).'),
-			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_vslice', 'VSlice controls')],
-			stored:  ['Hitbox', 'Virtual Pad', 'VSlice controls']
+			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones (this is what VSlice\'s own mobile app actually uses). Virtual Pad: D-pad buttons. Note Tap: tap the note receptors directly (requires VSlice Note Layout).'),
+			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_notetap', 'Note Tap')],
+			stored:  ['Hitbox', 'Virtual Pad', 'Note Tap']
 		});
 
 		_opts.push({
@@ -698,7 +698,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				});
 			}
 		}
-		// VSlice controls: no pad/hitbox specific options here
+		// Note Tap: no pad/hitbox specific options here
 
 		#if mobile
 		_opts.push({
@@ -868,10 +868,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_buildPadPreview();
 			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
 		}
-		else if (ClientPrefs.gameInputMode == 'VSlice controls')
+		else if (ClientPrefs.gameInputMode == 'Note Tap')
 		{
 			_buildArrowsPreview();
-			_modeText.text = Lang.str('preview_mode_vslice', 'VSlice controls');
+			_modeText.text = Lang.str('preview_mode_notetap', 'Note Tap');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
 		{

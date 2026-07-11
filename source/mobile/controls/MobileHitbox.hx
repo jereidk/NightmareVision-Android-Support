@@ -37,13 +37,18 @@ enum HitboxLayout
 	 */
 	TRIANGLE;
 	/**
-	 * Invisible zones positioned/sized to exactly match the 4 VSlice note-layout
-	 * receptor sprites (see StrumNote.getCenteredXPos()/getVSliceBaseY()) — for
-	 * the "VSlice controls" gameplay input mode, where you tap the actual note
-	 * on screen instead of a separate fixed-position zone. Not a user-selectable
-	 * Hitbox Layout choice; only used when gameInputMode is 'VSlice controls'.
+	 * Invisible zones positioned/sized to match the 4 VSlice note-layout
+	 * receptor sprites (see StrumNote.getCenteredXPos()/getVSliceBaseY()), with
+	 * a small forgiveness margin around each — for the "Note Tap" gameplay
+	 * input mode, where you tap the actual receptor on screen instead of a
+	 * separate fixed-position zone. Despite the underlying formulas coming
+	 * from VSlice's receptor layout, this isn't "VSlice controls" — real
+	 * VSlice's own mobile port uses a plain 4-column full-height hitbox
+	 * (confirmed against FunkinDroidTeam/Funkin's FunkinHitbox.hx), not a
+	 * tap-the-note scheme. Not a user-selectable Hitbox Layout choice; only
+	 * used when gameInputMode is 'Note Tap'.
 	 */
-	VSLICE_MATCH;
+	NOTE_TAP;
 }
 
 /**
@@ -78,7 +83,7 @@ class MobileHitbox extends TouchInputManager
 			case DPAD:         buildDPad(safe);
 			case ARROWS:       buildArrows(safe);
 			case TRIANGLE:     buildTriangle(safe);
-			case VSLICE_MATCH: buildVSliceMatch();
+			case NOTE_TAP:     buildNoteTap();
 		}
 
 		scrollFactor.set();
@@ -259,16 +264,30 @@ class MobileHitbox extends TouchInputManager
 	}
 
 	/**
-	 * Builds invisible zones positioned/sized to exactly match the 4 VSlice
-	 * receptor sprites (funkin.objects.note.StrumNote's getCenteredXPos()/
-	 * getVSliceBaseY(), the same formulas PlayState.generatePlayfields() uses
-	 * to place the real receptors). Tapping the note you actually see is what
-	 * registers input here — no separate arrow graphic flickering in nearby.
+	 * Extra forgiveness margin added around each tap zone, beyond the exact
+	 * receptor bounds. Kept asymmetric: real VSlice receptors sit only
+	 * NOTE_SPACING - STRUMLINE_SIZE = 8px apart horizontally, so padding more
+	 * than half that per side would make adjacent zones overlap (an errant
+	 * tap near the border could register on the wrong lane). There's no such
+	 * neighbor above/below, so vertical padding can be much more generous.
 	 */
-	function buildVSliceMatch():Void
+	static final NOTE_TAP_PAD_X:Float = 3;
+	static final NOTE_TAP_PAD_Y:Float = 18;
+
+	/**
+	 * Builds invisible zones positioned/sized to match the 4 VSlice receptor
+	 * sprites (funkin.objects.note.StrumNote's getCenteredXPos()/
+	 * getVSliceBaseY(), the same formulas PlayState.generatePlayfields() uses
+	 * to place the real receptors), padded by NOTE_TAP_PAD_X/Y for a more
+	 * forgiving real-world tap target. Tapping the note you actually see is
+	 * what registers input here — no separate arrow graphic flickering nearby.
+	 */
+	function buildNoteTap():Void
 	{
 		final size:Int = funkin.objects.note.StrumNote.STRUMLINE_SIZE;
-		final y:Float = funkin.objects.note.StrumNote.getVSliceBaseY();
+		final w:Int = size + Std.int(NOTE_TAP_PAD_X * 2);
+		final h:Int = size + Std.int(NOTE_TAP_PAD_Y * 2);
+		final y:Float = funkin.objects.note.StrumNote.getVSliceBaseY() - NOTE_TAP_PAD_Y;
 
 		var ids:Array<Array<FlxMobileInputID>> = [
 			[FlxMobileInputID.hitboxLEFT,  FlxMobileInputID.noteLEFT],
@@ -279,8 +298,8 @@ class MobileHitbox extends TouchInputManager
 
 		for (direction in 0...4)
 		{
-			final x:Float = funkin.objects.note.StrumNote.getCenteredXPos(direction);
-			var btn = createHint(x, y, size, size, getArrowColor(direction), ids[direction]);
+			final x:Float = funkin.objects.note.StrumNote.getCenteredXPos(direction) - NOTE_TAP_PAD_X;
+			var btn = createHint(x, y, w, h, getArrowColor(direction), ids[direction]);
 			add(btn);
 			buttons.push(btn);
 		}
@@ -619,9 +638,10 @@ class MobileHitbox extends TouchInputManager
 		// whenever Note Layout was VSlice, but that scheme's own visible arrow
 		// sprites (which fade in/out on tap at their own fixed position) had
 		// nothing to do with the actual VSlice receptors on screen. Touch input
-		// for VSlice note layout is handled separately via VSLICE_MATCH, which
-		// is only ever selected explicitly by 'VSlice controls' gameInputMode
-		// (see MusicBeatState.addMobileControls()), never through this switch.
+		// for tapping the receptors directly is handled separately via
+		// NOTE_TAP, which is only ever selected explicitly by 'Note Tap'
+		// gameInputMode (see MusicBeatState.addMobileControls()), never
+		// through this switch.
 		return switch (funkin.data.ClientPrefs.hitboxLayout)
 		{
 			case 'Two Thumb': TWO_THUMB;

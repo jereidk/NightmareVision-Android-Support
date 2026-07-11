@@ -1263,7 +1263,7 @@ class PlayState extends MusicBeatState
 		if (_isVSlice)
 		{
 			Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE; // 104
-			// Shared with MobileHitbox's VSLICE_MATCH layout so the touch zones it
+			// Shared with MobileHitbox's NOTE_TAP layout so the touch zones it
 			// builds (before these playfields even exist) land exactly here.
 			modManager.vsliceBaseY = funkin.objects.note.StrumNote.getVSliceBaseY();
 		}

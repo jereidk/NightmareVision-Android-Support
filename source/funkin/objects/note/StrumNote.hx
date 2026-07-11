@@ -214,7 +214,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	/**
 	 * Y position (top edge) of the VSlice receptor row. Shared by
 	 * PlayState.generatePlayfields() (which positions the real receptors) and
-	 * MobileHitbox's VSLICE_MATCH layout (which builds invisible touch zones
+	 * MobileHitbox's NOTE_TAP layout (which builds invisible touch zones
 	 * matching them) — MobileHitbox is constructed before the playfields exist
 	 * each song, so it can't just read a live receptor's position and needs
 	 * this computed independently, but identically.

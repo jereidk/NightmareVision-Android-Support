@@ -89,12 +89,12 @@ class MusicBeatSubstate extends FlxSubState
 				return;
 			}
 
-			// VSlice controls: tap the actual VSlice receptor sprites directly —
-			// invisible zones matching their real position/size (VSLICE_MATCH),
+			// Note Tap: tap the actual VSlice receptor sprites directly —
+			// invisible zones matching their real position/size (NOTE_TAP),
 			// not the separate Arrows scheme's own fixed-position flicker sprites.
-			if (funkin.data.ClientPrefs.gameInputMode == 'VSlice controls')
+			if (funkin.data.ClientPrefs.gameInputMode == 'Note Tap')
 			{
-				hitbox = new MobileHitbox(VSLICE_MATCH);
+				hitbox = new MobileHitbox(NOTE_TAP);
 				hitboxCam = new FlxCamera();
 				hitboxCam.bgColor.alpha = 0;
 				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);

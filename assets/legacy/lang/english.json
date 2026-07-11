@@ -744,10 +744,10 @@
 		"choice_navinput_pad": "Virtual Pad",
 
 		"opt_gameinput": "Gameplay Input",
-		"opt_gameinput_desc": "How you hit notes in-game.\nHitbox: split-screen zones. Virtual Pad: D-pad buttons. VSlice controls: static arrow receptors.",
+		"opt_gameinput_desc": "How you hit notes in-game.\nHitbox: split-screen zones (this is what VSlice's own mobile app actually uses). Virtual Pad: D-pad buttons. Note Tap: tap the note receptors directly (requires VSlice Note Layout).",
 		"choice_gameinput_hitbox": "Hitbox",
 		"choice_gameinput_pad": "Virtual Pad",
-		"choice_gameinput_vslice": "VSlice controls",
+		"choice_gameinput_notetap": "Note Tap",
 
 		"opt_notelayout": "Note Layout",
 		"opt_notelayout_desc": "Visual arrangement of notes.\nNormal: standard FNF layout.\nVSlice: centered, wider spacing, bigger arrows.",
@@ -784,7 +784,7 @@
 		"opt_opendatafolder_desc": "Opens the game data folder in your file manager.\nUse this to install mods or access save files.",
 
 		"preview_mode_vpad": "Virtual Pad",
-		"preview_mode_vslice": "VSlice controls",
+		"preview_mode_notetap": "Note Tap",
 		"mobile_controls_help": "◄ ►  change   ·   tap a zone to test it   ·   B  back",
 		"mobile_controls_help_touch": "tap a zone to test it   ·   BACK to exit"
 	}
