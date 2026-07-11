@@ -1275,6 +1275,9 @@ class PlayState extends MusicBeatState
 			// Shared with MobileHitbox's NOTE_TAP layout so the touch zones it
 			// builds (before these playfields even exist) land exactly here.
 			modManager.vsliceBaseY = funkin.objects.note.StrumNote.getVSliceBaseY();
+			// Real mobile VSlice pins the opponent's strumline near the top,
+			// small, regardless of downscroll -- see getVSliceOpponentBaseY().
+			modManager.vsliceOpponentBaseY = funkin.objects.note.StrumNote.getVSliceOpponentBaseY();
 		}
 
 		for (lane in 0...SONG.lanes)
@@ -1287,18 +1290,23 @@ class PlayState extends MusicBeatState
 			// Real VSlice shows BOTH strumlines at once, side by side (player on the
 			// right half, opponent flush left) -- see StrumNote.getCenteredXPos()'s
 			// comment. getCenteredXPos already applies spacingScale.
-			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0) : 0;
+			final isOpponentLane = (lane == 1);
+			final laneScale = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : 1.0;
+			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0, laneScale) : 0;
+			var baseY:Float = _isVSlice ? (isOpponentLane ? modManager.vsliceOpponentBaseY : modManager.vsliceBaseY) : 0;
 
-			var strums = new PlayField(baseX, _isVSlice ? modManager.vsliceBaseY : 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
+			var strums = new PlayField(baseX, baseY, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
 			if (_isVSlice && lane <= 1)
 			{
 				// noteScale defaults to 0.7 (our engine-wide default), leaving falling notes
 				// visually smaller than the 104px VSlice receptor they're meant to match.
 				// Applies to both the player (lane 0) and opponent (lane 1) strumlines --
-				// both are real, visible VSlice receptors now, not just the player's.
-				strums._skin.receptorScale = 1.0;
-				strums._skin.noteScale = 1.0;
+				// both are real, visible VSlice receptors now, not just the player's. The
+				// opponent's strumline is additionally shrunk to match real mobile VSlice's
+				// small, always-top-anchored compact strumline (VSLICE_OPPONENT_SCALE).
+				strums._skin.receptorScale = laneScale;
+				strums._skin.noteScale = laneScale;
 			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();

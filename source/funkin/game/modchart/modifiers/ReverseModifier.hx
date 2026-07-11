@@ -56,7 +56,7 @@ class ReverseModifier extends NoteModifier
 
 		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
 		{
-			pos.y = modMgr.vsliceBaseY + (visualDiff * mult);
+			pos.y = (player == 0 ? modMgr.vsliceBaseY : modMgr.vsliceOpponentBaseY) + (visualDiff * mult);
 			return pos;
 		}
 

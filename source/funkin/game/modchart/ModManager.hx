@@ -84,7 +84,10 @@ class ModManager implements IFlxDestroyable
 	public var activeMods:Array<Array<String>> = [[], []]; // by player
 
 	public var vsliceBaseY:Float = 0;
-	
+	// Opponent's compact top strumline on mobile has its own, always-top-anchored
+	// Y -- see StrumNote.getVSliceOpponentBaseY()/VSLICE_OPPONENT_SCALE.
+	public var vsliceOpponentBaseY:Float = 0;
+
 	inline public function quickRegister(mod:Modifier) registerMod(mod.getName(), mod);
 	
 	public function registerMod(modName:String, mod:Modifier, registerSubmods:Bool = true)
@@ -228,7 +231,9 @@ class ModManager implements IFlxDestroyable
 		// comment) -- player (lane 0) on the right half, opponent (lane 1) flush left.
 		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
 		{
-			return funkin.objects.note.StrumNote.getCenteredXPos(direction, player == 0);
+			final isPlayerLane = (player == 0);
+			return funkin.objects.note.StrumNote.getCenteredXPos(direction, isPlayerLane,
+				isPlayerLane ? 1.0 : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE);
 		}
 		
 		var x:Float = (FlxG.width * 0.5) + Note.swagWidth * (direction - (keys / 2) + .5) - 3;
@@ -305,11 +310,14 @@ class ModManager implements IFlxDestroyable
 		// VSlice uses centered Y position (like Funkin original)
 		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
 		{
-			// Notes fall from above toward the receptor at vsliceBaseY
+			// Notes fall from above toward the receptor at vsliceBaseY/vsliceOpponentBaseY
 			// pos.y is the CENTER of the note/receptor
-			// Receptor center is at vsliceBaseY + STRUMLINE_SIZE/2
+			// Receptor center is at baseY + (scaled) STRUMLINE_SIZE/2
 			// diff (visPos) is the visual distance - positive means approaching
-			pos.y = vsliceBaseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE / 2 + diff;
+			final isPlayerLane = (player == 0);
+			final baseY = isPlayerLane ? vsliceBaseY : vsliceOpponentBaseY;
+			final laneScale = isPlayerLane ? 1.0 : funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE;
+			pos.y = baseY + funkin.objects.note.StrumNote.STRUMLINE_SIZE * laneScale / 2 + diff;
 		}
 		else
 		{
