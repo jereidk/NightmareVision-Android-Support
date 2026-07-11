@@ -58,6 +58,8 @@ function onLoad()
 	
 	var fan:FlxSprite = new FlxSprite(2285.4, 102);
 	fan.frames = Paths.getSparrowAtlas('stages/airship/danger/airshipFan');
+	fan.scale.set(2, 2); // airshipFan resized 50%, compensate with 2x scale
+	fan.updateHitbox();
 	fan.animation.addByPrefix('idle', 'ala avion instance 1', 24, true);
 	fan.animation.play('idle');
 	fan.scrollFactor.set(0.27, 0.27);
