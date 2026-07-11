@@ -3,6 +3,7 @@ package funkin.objects.note;
 import funkin.data.*;
 import funkin.objects.Bopper;
 import funkin.game.shaders.RGBShader;
+import funkin.objects.note.Note.NoteSharedTailState;
 
 class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 {
