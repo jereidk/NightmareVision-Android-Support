@@ -320,6 +320,14 @@ class OptionsState extends MusicBeatState
 				(cast spr : FlxSprite).antialiasing = ClientPrefs.globalAntialiasing;
 			}
 		}
+		// optionList's row sprites (e.g. the bool checkbox icon) live inside its
+		// own group, one level below instance.members, so the loop above never
+		// reaches them.
+		if (instance.optionList != null)
+		{
+			for (spr in instance.optionList.members)
+				if (spr != null && !(spr is FlxText)) spr.antialiasing = ClientPrefs.globalAntialiasing;
+		}
 		FlxSprite.defaultAntialiasing = ClientPrefs.globalAntialiasing;
 	}
 

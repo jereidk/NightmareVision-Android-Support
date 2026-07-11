@@ -9,6 +9,7 @@ import flixel.FlxSprite;
 
 import funkin.states.options.Option;
 import funkin.input.Controls;
+import funkin.data.ClientPrefs;
 
 /**
  * Reusable, touch-first option list: one `Array<Option>` (the same data model
@@ -73,6 +74,11 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	var _rowLabel:Array<FlxText> = [];
 	var _rowSectionRule:Array<FlxSprite> = [];
 	var _rowValue:Array<FlxText> = [];
+	// A real checkbox sprite (menu/options/impastacheckbox, the same asset
+	// CheckboxThingie/GameplayChangersSubstate already use elsewhere) for
+	// 'bool' rows instead of plain "ON"/"OFF" text -- swapped in over
+	// _rowValue for that row, same pooled-by-slot approach as everything else.
+	var _rowCheckbox:Array<FlxSprite> = [];
 	var _rowLeft:Array<FlxText> = [];
 	var _rowLeftBg:Array<FlxSprite> = [];
 	var _rowRight:Array<FlxText> = [];
@@ -159,6 +165,16 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			val.borderSize = 1.5;
 			add(val);
 			_rowValue.push(val);
+
+			final chk = new FlxSprite().loadGraphic(Paths.image('menu/options/impastacheckbox'), true, 30, 30);
+			chk.animation.add('unchecked', [0], 24, false);
+			chk.animation.add('checked', [1], 24, false);
+			chk.antialiasing = ClientPrefs.globalAntialiasing;
+			chk.setGraphicSize(0, Std.int(ROW_H - 22));
+			chk.updateHitbox();
+			chk.visible = false;
+			add(chk);
+			_rowCheckbox.push(chk);
 
 			// White base so runtime `.color` tinting (selected/unselected in
 			// refreshRows()) actually produces that exact color, instead of
@@ -524,7 +540,9 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			}
 
 			_rowLabel[i].visible = show;
-			_rowValue[i].visible = show && opt.type != 'label';
+			final isBool = show && opt.type == 'bool';
+			_rowValue[i].visible = show && opt.type != 'label' && !isBool;
+			_rowCheckbox[i].visible = isBool;
 			final showArrows = show && isAdjustable(opt);
 			_rowLeft[i].visible = showArrows;
 			_rowRight[i].visible = showArrows;
@@ -552,6 +570,16 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 
 			_rowValue[i].text = displayValue(opt);
 			_rowValue[i].color = selected ? 0xFFFFE066 : 0xFFCCCCCC;
+
+			if (isBool)
+			{
+				final chk = _rowCheckbox[i];
+				chk.x = _rowValue[i].x + _rowValue[i].fieldWidth - chk.width;
+				chk.y = y0 + i * ROW_H + (ROW_H - chk.height) * 0.5;
+				chk.alpha = selected ? 1 : 0.85;
+				final wantAnim = (opt.getValue() == true) ? 'checked' : 'unchecked';
+				if (chk.animation.name != wantAnim) chk.animation.play(wantAnim, true);
+			}
 
 			final arrowColor = selected ? 0xFF3DE0FF : 0xFF9FCBE8;
 			_rowLeft[i].color = arrowColor;
