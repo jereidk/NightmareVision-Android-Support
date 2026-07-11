@@ -52,14 +52,29 @@ function onLoad()
 	pinkVignette.alpha = 0.0001;
 	pinkVignette.antialiasing = true;
 	pinkVignette.blend = BlendMode.ADD;
-	
+
 	pinkVignette2 = new FlxSprite(0, 0).loadGraphic(Paths.image(ext + 'vignette2'));
 	pinkVignette2.cameras = camHUD;
 	pinkVignette2.antialiasing = true;
 	pinkVignette2.alpha = 0.0001;
-	
+
+	// Both vignettes are exact 1280x720 camHUD-locked overlays with zero
+	// overhang -- on a wide 'expand'-mode screen they'd leave a hard unblended
+	// seam at both edges once tweened opaque. Stretch to cover the full
+	// (possibly wider) camera, then recenter, same as CreditsState.hx's bg.
+	if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+	{
+		pinkVignette.setGraphicSize(Std.int(pinkVignette.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(pinkVignette.height));
+		pinkVignette.updateHitbox();
+		pinkVignette2.setGraphicSize(Std.int(pinkVignette2.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(pinkVignette2.height));
+		pinkVignette2.updateHitbox();
+	}
+
 	add(pinkVignette2);
 	add(pinkVignette);
+
+	pinkVignette.screenCenter(FlxAxes.X);
+	pinkVignette2.screenCenter(FlxAxes.X);
 	
 	heartsImage = new FlxSprite(-25, 0);
 	heartsImage.cameras = [camOther];

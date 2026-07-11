@@ -97,14 +97,32 @@ function onCreatePost()
 		simpleVignette.scrollFactor.set();
 		simpleVignette.blend = 9;
 		simpleVignette.visible = false;
+		// The -80/-40 offset already centers this 1440x810 (320x180 * 4.5)
+		// screen-locked overlay on the 1280x720 design canvas, with 80px of
+		// overhang per side -- not enough on an extreme ultra-wide 'expand'
+		// screen (gameCutoutSize.x can exceed 160px/side there). Grow to
+		// cover the full camera, then recenter with the same math this
+		// sprite was already hand-centered with.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			simpleVignette.setGraphicSize(Std.int(simpleVignette.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(simpleVignette.height));
+			simpleVignette.updateHitbox();
+			simpleVignette.screenCenter(FlxAxes.X);
+		}
 	}
-	
+
 	add(vignette = new FlxSprite(-80, -40, Paths.image(ext + 'vignetteMultiply')));
 	vignette.scale.set(4.5, 4.5);
 	vignette.updateHitbox();
 	vignette.scrollFactor.set();
 	vignette.blend = 9;
 	vignette.visible = false;
+	if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+	{
+		vignette.setGraphicSize(Std.int(vignette.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(vignette.height));
+		vignette.updateHitbox();
+		vignette.screenCenter(FlxAxes.X);
+	}
 	
 	if (boyfriend.gameoverLoopDeathSound == null) boyfriend.gameoverLoopDeathSound = 'Jorsawsee_Loop';
 	if (boyfriend.gameoverConfirmDeathSound == null) boyfriend.gameoverConfirmDeathSound = 'Jorsawsee_End';
