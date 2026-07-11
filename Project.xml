@@ -99,36 +99,55 @@
         <haxedef name="absolute-paths"/>
     </section>
 
-    <!--Generational GC: RE-ENABLED after a deeper audit -- the first
-        revert was based on circumstantial evidence (timing correlation +
-        "it's experimental") and turned out to be too hasty. What actually
-        matters is the EXACT dependency this project builds against:
-        .hxpkg pins "hxcpp" to https://github.com/FunkinCrew/hxcpp at
-        commit 5932340d095a7eea8635fe4d1355f1c0efd0b3c2 (confirmed identical
-        to what CI's `haxelib run hxpkg install --force` step resolves, via
-        that commit's own build log: the actual compile command references
-        `.haxelib/hxcpp/git/include`, and the compiler flags list both
-        -DHXCPP_GC_GENERATIONAL(haxe) entries). Auditing THAT exact commit's
-        history (not hxcpp's changelog in the abstract):
-          - The historical "crash with generational GC when old objects
-            come back to life" bug (fixed in hxcpp 4.1.15, in Changes.md) --
-            the one that would matter most for OUR pooling-heavy code --
-            is a confirmed ancestor of 5932340d (git merge-base
-            --is-ancestor), so it's long since fixed here.
-          - The most recent generational-GC-touching commit reachable from
-            5932340d is af8afd6a "fixes multithread marking (#1240)"
-            (2025-07-10), already included; nothing generational-specific
-            has needed fixing since, across several months of upstream
-            history leading up to the pinned commit.
-        No evidence of an actual open bug in the exact build we ship. The
-        two silent crashes are better explained by the real, now-fixed
-        note-texture/skin bug from the same work session (a pooled Note
-        recycled for the wrong skin/direction could feed a degenerate
-        scale into native tile-rendering) than by an unproven GC fault.
-        Re-enabling to keep the ~43MB/s allocation-churn stutter fix; watch
-        the next device log closely regardless, since this isn't a
-        100%-certain exoneration, just the best evidence available.-->
-    <haxedef name="HXCPP_GC_GENERATIONAL"/>
+    <!--Generational GC: RE-REVERTED, this time with an actual bug pinned
+        down in hxcpp's own source, not just circumstantial timing.
+
+        A silent crash (no crash screen, no crash.log, sysmon.log cut
+        mid-line -- process just vanishes) recurred while holding a
+        sustain, after the sustain-tail staggering work landed. Same
+        surface symptom as the FIRST time this project chased this exact
+        correlation and blamed staggering -- back then the real cause was
+        this same define. HXCPP_CHECK_POINTER is active in this build, so
+        a real Haxe-level bug (null deref, bad index) in the staggering
+        code would throw a catchable exception and land in CrashHandler's
+        FallbackState with a callstack -- a silent death instead points at
+        a NATIVE fault, outside anything our own .hx code can cause
+        directly.
+
+        Audited hxcpp's own source at the exact pinned commit
+        (5932340d095a7eea8635fe4d1355f1c0efd0b3c2, github.com/FunkinCrew/hxcpp)
+        and found a real bug in the generational collector's object-
+        promotion path (src/hx/gc/Immix.cpp, MoveSurvivors()), specifically
+        in its interaction with HXCPP_ALIGN_ALLOC -- which upstream hxcpp
+        changed from opt-in to unconditionally-on just 2 days before our
+        pin (commit daffb7b5), so this exact combination has had very
+        little real-world mileage on it:
+          - ALIGN_PADDING(x) computes how much padding an object needs at
+            address x to land aligned once GC compaction copies it. The
+            loop that hunts for a free "hole" big enough for a moved
+            object checks the CORRECT padding (ALIGN_PADDING(destPos)) to
+            decide whether to keep looping, but checks a HARDCODED
+            ALIGN_PADDING(0) (always 4, the worst case) to decide whether
+            to advance to the next hole. For a hole exactly on the
+            boundary of these two answers, neither check can be
+            satisfied and neither advances destPos/destHole -- the loop
+            spins without making progress. On Android that reads as
+            "frozen, then gone" rather than a clean crash, depending on
+            how aggressively the OS reaps a stuck process.
+          - A stray, context-free `printf("Move!\n");` sits right in the
+            middle of that same function (right after the hole-search
+            loop, right before the object copy) -- looks exactly like a
+            debug leftover from whoever wrote this, and is the kind of
+            thing that doesn't survive a careful review.
+        Checked FunkinCrew/hxcpp's latest commit (2e969d01, 2026-05-10,
+        62 commits ahead of our pin): both the printf and the
+        ALIGN_PADDING(0) inconsistency are STILL there, untouched.
+        Updating the pin would not have fixed this.
+        Reverting is the only real fix available short of patching hxcpp
+        itself. Not 100% certain without an actual repro + debugger, but
+        this is a specific, plausible, evidenced mechanism -- not a guess
+        from timing alone.-->
+    <!-- <haxedef name="HXCPP_GC_GENERATIONAL"/> -->
 
 
     <!--Enable for better crash handling/reporting-->
