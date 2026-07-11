@@ -1,6 +1,5 @@
 package funkin.states.options;
 
-import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.addons.display.FlxBackdrop;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
@@ -11,11 +10,34 @@ import funkin.data.*;
 import funkin.states.*;
 import funkin.objects.*;
 import funkin.objects.menu.AmongControls;
+import funkin.objects.menu.TouchOptionList;
 
+/**
+ * Categories used to be a vertical sidebar list, each opening its own full
+ * sub-state -- that sidebar sat exactly where the Virtual Pad's LEFT_FULL
+ * D-pad lives (see MobileVirtualPad.hx), so the pad ended up drawn on top of
+ * the category labels for the (default!) Virtual Pad navigation mode.
+ *
+ * Redesigned as a horizontal tab strip up top (clear of the pad entirely)
+ * plus one TouchOptionList below it. The five simple, data-only categories
+ * (Language/Gameplay/Graphics/Visuals and UI/Misc) swap the list's dataset
+ * live when their tab is picked, no sub-state transition at all. The other
+ * four (Adjust Delay, Mobile, DLC Manager, Credits) still navigate away like
+ * before -- their content (calibration UI, a live control preview, a
+ * download list, a credits roll) doesn't fit "just a list of options".
+ */
 class OptionsState extends MusicBeatState
 {
 	public static var onPlayState:Bool = false;
-	
+
+	static final INLINE_BUILDERS:Map<String, Void->Array<Option>> = [
+		'language' => LanguageOptions.build,
+		'gameplay' => GameplayOptions.build,
+		'graphics' => () -> GraphicsOptions.build(refreshSceneAntialiasing),
+		'visualsui' => VisualsUIOptions.build,
+		'misc' => MiscOptions.build,
+	];
+
 	var options:Array<String> = [
 		'adjustdelay',
 		'language',
@@ -29,75 +51,63 @@ class OptionsState extends MusicBeatState
 		#end
 		'credits'
 	];
-	
-	var __openedOption:Null<String> = null;
-	
-	var optionTexts:FlxTypedGroup<FlxText>;
-	
+
 	private static var curSelected:Int = 0;
-	public static var menuBG:FlxSprite;
-	
-	// For blocking everything
+
+	// 'tabs': LEFT/RIGHT cycle tabs, ACCEPT/DOWN either enters the list (inline
+	// tabs) or navigates away (the other four). 'list': input goes to
+	// optionList instead; BACK steps focus back to 'tabs' rather than
+	// exiting the whole screen.
+	var focusOnList:Bool = false;
+
 	var blockAllInput:Bool = false;
-	
 	var blockInput:Bool = false;
-	var pendingSubstate:Null<String> = null;
-	var titleText:FlxText;
-	var versionText:FlxText;
-	var artImage:FlxSprite;
+	var __openedOption:Null<String> = null;
+
 	var optionsHeader:FlxText;
 	var menuBackButton:FlxSprite;
+
+	var tabBg:Array<FlxSprite> = [];
+	var tabLabels:Array<FlxText> = [];
+
+	var optionList:TouchOptionList;
+	var descText:FlxText;
+	var descBg:FlxSprite;
+
 	var mouseControlActive:Bool = true;
 	var hoveredOption:Int = -1;
 
-	// Leak fix mirrored from TitleState/FreeplayState/PlayState/MainMenuState:
-	// dynamically-rendered bitmaps this state creates (option labels, the DLC
-	// list, etc.) otherwise outlive the state and accumulate on every visit.
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
-	static final OPTION_LABEL_BASE_SIZE:Int = 26;
-	static final OPTION_LABEL_MIN_SIZE:Int = 14;
-	static final OPTION_LABEL_MAX_LINES:Int = 2;
-	
-	function byeByeHomePanel(visible:Bool):Void
-	{
-		titleText.visible = visible;
-		versionText.visible = visible;
-		artImage.visible = visible;
-	}
-	
-	// left panel button layout
-	var buttonBaseX:Float = 95;
-	var buttonBaseY:Float = 112;
-	var buttonSpacing:Float = 65;
-	
+	static final TAB_Y:Float = 90;
+	static final TAB_H:Float = 60;
+	static final LIST_Y:Float = 168;
+	static final LIST_MAX_VISIBLE:Int = 8;
+
+	// Same left-edge clearance the Virtual Pad's LEFT_FULL layout needs
+	// (buttons span roughly x:0-339, see MobileVirtualPad.hx) -- this is the
+	// whole reason for this redesign, so keeping the list clear of it is the
+	// one non-negotiable measurement here.
+	static final LIST_X:Float = 360;
+
 	var bottomControls:Null<AmongControls>;
 
-	public function openSelectedSubstate(label:String)
+	static var instance:OptionsState;
+
+	public function openSelectedSubstate(label:String):Void
 	{
 		if (label == 'adjustdelay')
 		{
 			FlxG.switchState(funkin.states.options.NoteOffsetState.new);
 			return;
 		}
-		
-		byeByeHomePanel(false);
+
 		blockInput = true;
-		
+
 		scriptGroup.call('onOptionsSubmenu', [label]);
-		
+
 		switch (label)
 		{
-			case 'graphics':
-				openSubState(new funkin.states.options.GraphicsSettingsSubState());
-			case 'visualsui':
-				openSubState(new funkin.states.options.VisualsUISubState());
-			case 'gameplay':
-				openSubState(new funkin.states.options.GameplaySettingsSubState());
-			case 'language':
-				openSubState(new funkin.states.options.LanguageSubState());
-			case 'misc':
-				openSubState(new funkin.states.options.MiscSubState());
 			#if mobile
 			case 'mobile':
 				openSubState(new funkin.states.options.MobileSettingsSubState());
@@ -108,9 +118,8 @@ class OptionsState extends MusicBeatState
 				openSubState(new funkin.states.substates.CreditsRollSubState(true, resumeMenuMusic, resumeMenuMusic));
 		}
 		__openedOption = label;
-		pendingSubstate = null;
 	}
-	
+
 	function resumeMenuMusic():Void
 	{
 		FunkinSound.playMusic(Paths.music('freakyMenu'));
@@ -118,6 +127,8 @@ class OptionsState extends MusicBeatState
 
 	override function create()
 	{
+		instance = this;
+
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
 
 		FunkinAssets.cache.clearStoredMemory();
@@ -127,93 +138,54 @@ class OptionsState extends MusicBeatState
 
 		initStateScript();
 		persistentUpdate = true;
-		
+
 		if (isHardcodedState())
 		{
-			var ext:String = 'menu/options/';
-			
-			// scrolling stars
 			var starsBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
 			starsBG.scrollFactor.set();
 			starsBG.velocity.x = -4.5;
 			starsBG.zIndex = -2;
 			add(starsBG);
-			
+
 			var starsFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
 			starsFG.scrollFactor.set();
 			starsFG.velocity.x = -9;
 			starsFG.zIndex = -1;
 			add(starsFG);
-			
-			var thingy:FlxSprite = new FlxSprite(50, 30).loadGraphic(Paths.image(ext + 'thingy'));
-			thingy.antialiasing = ClientPrefs.globalAntialiasing;
-			// Panel background is a fixed-width image (1126px) sized for the
-			// 1280 base canvas — on a wide 'expand'-mode screen it left the
-			// whole right side of the screen as bare black instead of covering
-			// it. Gated strictly on gameCutoutSize.x > 0 (zero in 'fit'/
-			// 'stretch' mode, i.e. every other user) rather than comparing
-			// against thingy's native size, so this can never fire outside
-			// 'expand' mode regardless of how the asset's own dimensions
-			// happen to compare to the design width.
-			if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
-			{
-				thingy.setGraphicSize(Std.int(thingy.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(thingy.height));
-				thingy.updateHitbox();
-			}
-			add(thingy);
-			
-			var optionsHeaderY:Float = 30 + (ClientPrefs.language == 'arabic' ? -20 : 0);
-			optionsHeader = new FlxText(75, optionsHeaderY, 0, Lang.str('options'), 62);
-			optionsHeader.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+
+			final cutout = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+
+			var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xAA0A0A14);
+			add(dim);
+
+			var optionsHeaderY:Float = 18 + (ClientPrefs.language == 'arabic' ? -10 : 0);
+			optionsHeader = new FlxText(40 + cutout * 0.5, optionsHeaderY, 0, Lang.str('options'), 62);
+			optionsHeader.setFormat(Paths.font('AmaticSC-Bold.ttf'), 42, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			optionsHeader.borderSize = 2;
 			optionsHeader.antialiasing = ClientPrefs.globalAntialiasing;
 			add(optionsHeader);
-			
-			// Close button hugs the panel's right edge — shift it along with the
-			// panel stretch above so it doesn't end up stranded mid-screen.
-			menuBackButton = new FlxSprite(1100 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x, 30).loadGraphic(Paths.image('menu/common/menuBack'));
+
+			menuBackButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
 			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 			add(menuBackButton);
-			
-			// left panel options
-			buttonSpacing = Math.min(65, Math.floor((FlxG.height - buttonBaseY - 60) / options.length));
-			optionTexts = new FlxTypedGroup<FlxText>();
-			add(optionTexts);
 
-			for (i in 0...options.length)
-			{
-				var txt:FlxText = new FlxText(buttonBaseX, buttonBaseY + (buttonSpacing * i), 320, Lang.str('opt_category_' + options[i]));
-				txt.setFormat(Paths.font("vcr.ttf"), OPTION_LABEL_BASE_SIZE, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-				txt.borderSize = 2;
-				txt.antialiasing = ClientPrefs.globalAntialiasing;
-				@:privateAccess txt._defaultFormat.leading = -6;
-				txt.ID = i;
-				fitLeftOptionLabel(txt);
-				optionTexts.add(txt);
-			}
-			
-			// right panel stuff. Same gameCutoutSize.x*0.5 re-centering as the
-			// panel/close-button above -- these three need to shift together
-			// or the title/version text drift out of alignment with the art.
-			final rightPanelShift:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
-			artImage = new FlxSprite(500 + rightPanelShift, 275 + 100).loadGraphic(Paths.image(ext + 'art'));
-			artImage.antialiasing = ClientPrefs.globalAntialiasing;
-			artImage.y -= Math.round(artImage.height * .5);
-			add(artImage);
+			buildTabs(cutout);
 
-			titleText = new FlxText(480 + rightPanelShift, artImage.y, 700, 'VS IMPOSTOR: LEGACY');
-			titleText.setFormat(Paths.font("vcr"), 42, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			titleText.y -= (titleText.height + 16);
-			titleText.borderSize = 2;
-			titleText.antialiasing = ClientPrefs.globalAntialiasing;
-			add(titleText);
+			final listW = (1160 + cutout) - LIST_X;
+			optionList = new TouchOptionList(LIST_X, LIST_Y, listW, LIST_MAX_VISIBLE);
+			add(optionList);
+			optionList.onSelect = onOptionSelected;
+			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
-			versionText = new FlxText(480 + rightPanelShift, artImage.y + artImage.height + 20, 700, Main.LEGACY_VERSION);
-			versionText.setFormat(Paths.font("vcr"), 28, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			versionText.borderSize = 1.5;
-			versionText.antialiasing = ClientPrefs.globalAntialiasing;
-			add(versionText);
-			
+			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6).makeGraphic(Std.int(listW + 12), 74, 0x88000000);
+			add(descBg);
+
+			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 12, listW - 16, '');
+			descText.setFormat(Paths.font('vcr.ttf'), 18, 0xFFB0B0B0, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			descText.borderSize = 1.2;
+			descText.wordWrap = true;
+			add(descText);
+
 			#if !mobile
 			bottomControls = new AmongControls([
 				['arrow', 'select'], // select
@@ -225,10 +197,8 @@ class OptionsState extends MusicBeatState
 			#end
 
 			changeSelection();
-			refreshOptionFonts();
-			byeByeHomePanel(true);
 		}
-		
+
 		super.create();
 
 		scriptGroup.call('onCreatePost', []);
@@ -239,29 +209,84 @@ class OptionsState extends MusicBeatState
 		#end
 	}
 
+	function buildTabs(cutout:Float):Void
+	{
+		final totalW = (1160 + cutout) - 40;
+		final tabW = totalW / options.length;
+
+		for (i in 0...options.length)
+		{
+			final tx = 40 + cutout * 0.5 + tabW * i;
+
+			final bg = new FlxSprite(tx, TAB_Y).makeGraphic(Std.int(tabW - 4), Std.int(TAB_H), 0xFF2A2A3A);
+			add(bg);
+			tabBg.push(bg);
+
+			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, Lang.str('opt_category_' + options[i]));
+			lbl.setFormat(Paths.font('vcr.ttf'), 17, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lbl.borderSize = 1.5;
+			lbl.antialiasing = ClientPrefs.globalAntialiasing;
+			lbl.wordWrap = true;
+			lbl.ID = i;
+			fitTabLabel(lbl, tabW);
+			add(lbl);
+			tabLabels.push(lbl);
+		}
+	}
+
+	function fitTabLabel(txt:FlxText, tabW:Float):Void
+	{
+		var size = 17;
+		while (size > 10 && txt.textField.numLines > 2)
+		{
+			size--;
+			txt.setFormat(Paths.font('vcr.ttf'), size, txt.color, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			txt.borderSize = 1.5;
+		}
+		txt.y = TAB_Y + Math.max(0, (TAB_H - txt.height) * 0.5);
+	}
+
+	function onOptionSelected(opt:Option):Void
+	{
+		focusOnList = true;
+		descText.text = opt.description;
+	}
+
+	static function refreshSceneAntialiasing():Void
+	{
+		if (instance == null) return;
+		for (spr in instance.members)
+		{
+			if (spr != null && (spr is FlxSprite) && !(spr is FlxText))
+			{
+				(cast spr : FlxSprite).antialiasing = ClientPrefs.globalAntialiasing;
+			}
+		}
+		FlxSprite.defaultAntialiasing = ClientPrefs.globalAntialiasing;
+	}
+
 	override function closeSubState()
 	{
 		if (subState is funkin.backend.BaseTransitionState)
 		{
 			super.closeSubState();
-			
 			return;
 		}
-		
+
 		__openedOption = null;
 		blockInput = false;
 		refreshOptionFonts();
 
-		if (pendingSubstate == null) byeByeHomePanel(true);
-		
 		super.closeSubState();
 	}
-	
+
 	override function destroy():Void
 	{
 		ClientPrefs.flush();
-		ClientPrefs.reloadControls(); // lets just reload the controls here
+		ClientPrefs.reloadControls();
 		super.destroy();
+
+		if (instance == this) instance = null;
 
 		if (_bitmapSnapshotAtCreate != null)
 		{
@@ -269,179 +294,156 @@ class OptionsState extends MusicBeatState
 			_bitmapSnapshotAtCreate = null;
 		}
 	}
-	
-	/**
-	 * Reloads everything that has to do with language
-	**/
-	function refreshOptionFonts()
+
+	function refreshOptionFonts():Void
 	{
 		optionsHeader.text = Lang.str('options');
 		optionsHeader.font = Paths.font('AmaticSC-Bold.ttf');
-		optionsHeader.y = (38 + Math.round((optionsHeader.size - optionsHeader.height) * .5));
-		
+
 		#if !mobile
 		@:privateAccess bottomControls?.refreshBar();
 		#end
-		
-		for (txt in optionTexts.members)
+
+		for (lbl in tabLabels)
 		{
-			txt.text = Lang.str('opt_category_' + options[txt.ID]);
-			fitLeftOptionLabel(txt);
+			lbl.text = Lang.str('opt_category_' + options[lbl.ID]);
+			fitTabLabel(lbl, tabBg[lbl.ID].width + 4);
 		}
-		
+
 		scriptGroup.call('onRefreshLang', []);
 		refreshOptionVisuals();
+
+		if (isInlineCategory(options[curSelected])) showCategory(options[curSelected]);
 	}
-	
-	function fitLeftOptionLabel(txt:FlxText):Void
+
+	inline function isInlineCategory(label:String):Bool
+		return INLINE_BUILDERS.exists(label);
+
+	function showCategory(label:String):Void
 	{
-		var size:Int = OPTION_LABEL_BASE_SIZE;
-		txt.fieldWidth = 300;
-		txt.setFormat(Paths.font('vcr.ttf'), size, txt.color, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		txt.borderSize = 2;
-		txt.textField.wordWrap = true;
-		txt.textField.multiline = true;
-		
-		while (size > OPTION_LABEL_MIN_SIZE && txt.textField.numLines > OPTION_LABEL_MAX_LINES)
-		{
-			size--;
-			txt.setFormat(Paths.font('vcr.ttf'), size, txt.color, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			txt.borderSize = 2;
-			txt.textField.wordWrap = true;
-			txt.textField.multiline = true;
-		}
-		
-		if (txt.textField.numLines > OPTION_LABEL_MAX_LINES)
-		{
-			var baseText:String = txt.text;
-			while (baseText.length > 1 && txt.textField.numLines > OPTION_LABEL_MAX_LINES)
-			{
-				var cut:Int = baseText.lastIndexOf(' ');
-				baseText = (cut > 0 ? baseText.substring(0, cut) : baseText.substring(0, baseText.length - 1));
-				txt.text = baseText + '...';
-			}
-		}
-		
-		var slotY:Float = buttonBaseY + (buttonSpacing * txt.ID);
-		txt.y = Math.round(slotY + Math.max(0, (buttonSpacing - txt.height) * 0.5));
+		final builder = INLINE_BUILDERS.get(label);
+		optionList.visible = descBg.visible = descText.visible = (builder != null);
+		if (builder == null) return;
+
+		optionList.setOptions(builder());
 	}
-	
-	function refreshOptionVisuals()
+
+	function refreshOptionVisuals():Void
 	{
 		if (blockAllInput) return;
-		for (txt in optionTexts.members)
+		for (i in 0...tabBg.length)
 		{
-			txt.alpha = 1;
-			txt.color = 0xFFC9C9C9;
-			
-			if (txt.ID == hoveredOption && txt.ID != curSelected)
-			{
-				txt.color = FlxColor.WHITE;
-			}
-			if (txt.ID == curSelected)
-			{
-				txt.color = 0xFFFFE066;
-			}
+			tabBg[i].color = (i == curSelected) ? 0xFF4A4A6A : (i == hoveredOption ? 0xFF35354A : 0xFF2A2A3A);
+			tabLabels[i].color = (i == curSelected) ? 0xFFFFE066 : FlxColor.WHITE;
 		}
 	}
-	
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		
-		if (isHardcodedState())
+
+		if (!isHardcodedState()) return;
+
+		optionList.keyboardEnabled = focusOnList && !blockInput && !blockAllInput;
+
+		hoveredOption = -1;
+
+		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
-			hoveredOption = -1;
-			
-			if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
+			mouseControlActive = true;
+		}
+		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.ACCEPT || controls.BACK)
+		{
+			mouseControlActive = false;
+		}
+
+		if (subState != null && subState is funkin.states.substates.CreditsRollSubState) mouseControlActive = false;
+
+		if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput)
+		{
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			exitToParent();
+			return;
+		}
+
+		if (mouseControlActive && !blockAllInput && !blockInput)
+		{
+			for (i in 0...tabBg.length)
 			{
-				mouseControlActive = true;
+				if (!FlxG.mouse.overlaps(tabBg[i])) continue;
+				hoveredOption = i;
+				if (FlxG.mouse.justPressed)
+				{
+					if (i != curSelected)
+					{
+						curSelected = i;
+						changeSelection(0, true);
+					}
+					activateSelectedTab();
+				}
+				break;
 			}
-			if (controls.UI_UP_P || controls.UI_DOWN_P || controls.ACCEPT || controls.BACK)
-			{
-				mouseControlActive = false;
-			}
-			
-			if (subState != null && subState is funkin.states.substates.CreditsRollSubState) mouseControlActive = false;
-			
-			if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput)
+		}
+
+		refreshOptionVisuals();
+
+		if (!blockInput && !blockAllInput && !focusOnList)
+		{
+			if (controls.UI_LEFT_P) changeSelection(-1);
+			if (controls.UI_RIGHT_P) changeSelection(1);
+
+			if (controls.BACK)
 			{
 				FlxG.sound.play(Paths.sound('cancelMenu'));
-				if (onPlayState)
-				{
-					FlxG.switchState(PlayState.new);
-					FlxG.sound.music.volume = 0;
-					onPlayState = false;
-				}
-				else FlxG.switchState(MainMenuState.new);
-				return;
+				exitToParent();
 			}
 
-			if (mouseControlActive && !blockAllInput && !blockInput)
+			if (controls.ACCEPT || controls.UI_DOWN_P) activateSelectedTab();
+		}
+		else if (!blockInput && !blockAllInput && focusOnList)
+		{
+			if (controls.BACK)
 			{
-				// left bar mouse
-				var themouseshit2 = FlxG.mouse;
-				for (txt in optionTexts.members)
-				{
-					if (!themouseshit2.overlaps(txt)) continue;
-					hoveredOption = txt.ID;
-					if (themouseshit2.justPressed)
-					{
-						if (txt.ID != curSelected)
-						{
-							curSelected = txt.ID;
-							changeSelection(0, true);
-						}
-						if (blockInput)
-						{
-							if (options[curSelected] == 'adjustdelay') FlxG.switchState(funkin.states.options.NoteOffsetState.new);
-							else if (__openedOption != null && __openedOption != options[curSelected])
-							{
-								pendingSubstate = options[curSelected];
-								refreshOptionFonts();
-								openSelectedSubstate(options[curSelected]);
-							}
-						}
-						else openSelectedSubstate(options[curSelected]);
-					}
-					break;
-				}
-			}
-			
-			refreshOptionVisuals();
-			
-			if (!blockInput && !blockAllInput)
-			{
-				if (controls.UI_UP_P) changeSelection(-1);
-				if (controls.UI_DOWN_P) changeSelection(1);
-				
-				if (controls.BACK)
-				{
-					FlxG.sound.play(Paths.sound('cancelMenu'));
-					if (onPlayState)
-					{
-						FlxG.switchState(PlayState.new);
-						FlxG.sound.music.volume = 0;
-						onPlayState = false;
-					}
-					else FlxG.switchState(MainMenuState.new);
-				}
-				
-				if (controls.ACCEPT)
-				{
-					openSelectedSubstate(options[curSelected]);
-				}
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				focusOnList = false;
 			}
 		}
 	}
-	
-	function changeSelection(change:Int = 0, ?fromMouse:Bool = false)
+
+	function exitToParent():Void
+	{
+		if (onPlayState)
+		{
+			FlxG.switchState(PlayState.new);
+			FlxG.sound.music.volume = 0;
+			onPlayState = false;
+		}
+		else FlxG.switchState(MainMenuState.new);
+	}
+
+	function activateSelectedTab():Void
+	{
+		final label = options[curSelected];
+		if (isInlineCategory(label))
+		{
+			focusOnList = true;
+			return;
+		}
+
+		if (blockInput) return;
+
+		openSelectedSubstate(label);
+	}
+
+	function changeSelection(change:Int = 0, ?fromMouse:Bool = false):Void
 	{
 		curSelected += change;
 		if (curSelected < 0) curSelected = options.length - 1;
 		if (curSelected >= options.length) curSelected = 0;
+		focusOnList = false;
 		refreshOptionVisuals();
-		
+		showCategory(options[curSelected]);
+
 		var snd = fromMouse ? 'scrollMenu' : 'hover';
 		FlxG.sound.play(Paths.sound(snd), fromMouse ? 1 : 0.5);
 	}

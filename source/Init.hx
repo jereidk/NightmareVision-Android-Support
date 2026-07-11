@@ -156,7 +156,7 @@ class Init extends FlxState
 
 		// Applied here (after load, not next to DynamicResolution.init() above)
 		// since it needs the saved value, and reapplied whenever the setting
-		// changes live from GraphicsSettingsSubState. A no-op at 1.0 (default).
+		// changes live from the Graphics options category. A no-op at 1.0 (default).
 		#if (android && cpp)
 		if (ClientPrefs.renderScale < 0.999) mobile.backend.RenderScale.apply(ClientPrefs.renderScale);
 		#end
