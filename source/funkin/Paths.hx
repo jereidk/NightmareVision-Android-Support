@@ -55,47 +55,17 @@ class Paths
 	 */
 	public static inline final MODS_DIRECTORY = #if ASSET_REDIRECT trail + 'content' #else 'content' #end;
 	
-	// Caches the RESOLVED path for a given (mode, file) pair. getPath() is the
-	// single choke point every atlas/sound/data lookup goes through, and its
-	// #if MODS_ALLOWED branch does real sys.FileSystem.exists() disk syscalls
-	// (modFolders() checks content/ + each enabled mod, then getPath() itself
-	// re-checks the result) -- all of that just to resolve a path string that,
-	// for a given mode+file, can only change if the installed/enabled mod set
-	// changes. Confirmed that never happens mid-session: mods are only
-	// (re)loaded at boot (Init.hx) and on entering ModsState/a new state
-	// (MusicBeatState.hx), DLC installs require an explicit restart
-	// (DLCManager.hx), and this cache is cleared in lockstep with the sibling
-	// tempAtlasFramesCache below -- see FunkinCache.clearStoredMemory(), which
-	// already runs on every state's create(). So this never outlives the mod
-	// state it was resolved under.
-	// This specifically targets note-texture reloads: a burst of sustain-tail
-	// segments spawning in one frame (PlayState.recycleNote()) calls
-	// getSparrowAtlas() -> getPath() once per segment, nearly always for the
-	// SAME handful of atlas keys (one per skin in play) -- profiling a dense
-	// song showed this paying the same disk-check chain dozens of times per
-	// frame for a result that never changes within the song.
-	// MUST be declared (and therefore initialized) before DEFAULT_FONT below --
-	// Haxe runs static field initializers in textual declaration order, and
-	// DEFAULT_FONT's own initializer calls font() -> findFileWithExts() ->
-	// getPath() immediately, at Paths' class-init time. With this cache
-	// declared AFTER DEFAULT_FONT, that very first getPath() call hit
-	// _resolvedPathCache.get(...) while it was still null -- a crash on boot,
-	// before any song/gameplay code ever ran. Confirmed via a real device
-	// test after this shipped.
-	@:allow(funkin.backend.FunkinCache)
-	static var _resolvedPathCache:Map<String, String> = [];
-
 	/**
 	 * Default font used by the game for most things.
-	 *
+	 * 
 	 * Can be changed
 	 */
 	public static var DEFAULT_FONT:String = font('vcr.ttf', false);
-
+	
 	@:allow(funkin.backend.FunkinCache)
 	@:allow(funkin.objects.FunkinSprite)
 	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
-
+	
 	/**
 	 * Primary function used for pathing.
 	 * @param file The Path to the file. extension included.
@@ -106,36 +76,22 @@ class Paths
 	public static function getPath(file:String, ?parentFolder:String, mode:PathsTestMode = NONE):String
 	{
 		if (parentFolder != null) file = '$parentFolder/$file';
-
-		final cacheKey = '$mode:$file';
-		final cachedPath = _resolvedPathCache.get(cacheKey);
-		if (cachedPath != null) return cachedPath;
-
+		
 		#if MODS_ALLOWED
 		if (mode != NONE)
 		{
 			final modPath:String = modFolders(file, mode);
-
-			if (FileSystem.exists(modPath))
-			{
-				_resolvedPathCache.set(cacheKey, modPath);
-				return modPath;
-			}
+			
+			if (FileSystem.exists(modPath)) return modPath;
 		}
 		#end
-
+		
 		#if ASSET_REDIRECT
 		final embedPath = '${trail}assets/embeds/$file';
-		if (FunkinAssets.exists(embedPath))
-		{
-			_resolvedPathCache.set(cacheKey, embedPath);
-			return embedPath;
-		}
+		if (FunkinAssets.exists(embedPath)) return embedPath;
 		#end
-
-		final corePath = getCorePath(file);
-		_resolvedPathCache.set(cacheKey, corePath);
-		return corePath;
+		
+		return getCorePath(file);
 	}
 	
 	/**
