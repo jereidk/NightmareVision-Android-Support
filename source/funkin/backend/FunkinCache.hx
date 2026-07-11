@@ -52,6 +52,7 @@ class FunkinCache
 	public function clearStoredMemory() // maybe rename
 	{
 		Paths.tempAtlasFramesCache.clear();
+		Paths._resolvedPathCache.clear();
 
 		// clear all sounds that are cached
 		final soundKeys = [for (k in currentTrackedSounds.keys()) k];
