@@ -2,6 +2,30 @@ package funkin.game.shaders;
 
 class ExtraDropShadowShader extends flixel.system.FlxAssets.FlxShader
 {
+	// FlxAssets.FlxShader is a typedef for FlxGraphicsShader -- the same base
+	// funkin.backend.FunkinShader already wraps with this exact try/catch to
+	// survive GLSL compile failures on mobile GL drivers instead of taking the
+	// whole app down with them. This class never got that same protection,
+	// despite being the one shader stages stack the most instances of at once
+	// (up to 4 simultaneously, e.g. doubletrouble.hx's bfShader/gfShader/
+	// petShader/greenShader), which multiplies the odds of hitting whatever
+	// compile edge case a given device's driver chokes on.
+	override function __createGLProgram(vertexSource:String, fragmentSource:String):lime.graphics.opengl.GLProgram
+	{
+		try
+		{
+			return super.__createGLProgram(vertexSource, fragmentSource);
+		}
+		catch (error)
+		{
+			Logger.log('Shader Crashed! check the console or crash_dump/shader_error for more information', ERROR, true);
+			Logger.log('Crash Log ->: "${error.toString()}"', ERROR);
+			Logger.writeDump(error.toString(), 'crash_dump', 'shader_error');
+
+			return super.__createGLProgram(vertexSource, funkin.backend.FunkinShader._templateFrag);
+		}
+	}
+
 	public var antialiasing(get, set):Bool;
 	public var operation(default, set):LayerOperation = REPLACE;
 	public var hollowColorMatrix(get, set):Array<Float>;
