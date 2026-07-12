@@ -44,8 +44,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	var saveBtn:FlxSprite;
 	var resetBtn:FlxSprite;
-	var saveLabel:FlxText;
-	var resetLabel:FlxText;
 	var statusText:FlxText;
 
 	var dragIdx:Int = -1;
@@ -75,7 +73,11 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		add(topBar);
 
 		// ── Title ──
-		var title = new FlxText(0, 14, FlxG.width, 'CUSTOMIZE VIRTUAL PAD');
+		// Every other options screen routes its text through Lang.str() (which
+		// falls back to the given English default until a translation exists,
+		// same as any brand-new string added there) -- this whole screen had
+		// been hardcoded English only, unlike its siblings.
+		var title = new FlxText(0, 14, FlxG.width, Lang.str('vpadcustomizer_title', 'CUSTOMIZE VIRTUAL PAD'));
 		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		title.borderSize = 2;
 		title.antialiasing = ClientPrefs.globalAntialiasing;
@@ -83,13 +85,15 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 		// ── Layout label ──
 		var layoutName = ClientPrefs.virtualPadLayout;
-		var layoutLabel = new FlxText(0, 62, FlxG.width, 'Current layout: ' + layoutName);
+		// '@' is this codebase's established placeholder token for Lang.str()
+		// (see AwardsState.hx/MissCounterSubstate.hx/CosmicubeCard.hx), not '%s'.
+		var layoutLabel = new FlxText(0, 62, FlxG.width, Lang.str('vpadcustomizer_layout', 'Current layout: @').replace('@', layoutName));
 		layoutLabel.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 200, 255), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		layoutLabel.antialiasing = ClientPrefs.globalAntialiasing;
 		add(layoutLabel);
 
 		// ── Status / hint (below header bar) ──
-		statusText = new FlxText(0, 148, FlxG.width, 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults');
+		statusText = new FlxText(0, 148, FlxG.width, Lang.str('vpadcustomizer_hint', 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults'));
 		statusText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 180, 180), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		statusText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(statusText);
@@ -126,8 +130,8 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		}
 
 		// ── Save & Reset buttons (just below the header bar) ──
-		saveBtn  = _makeButton(FlxG.width / 2 - 180, 95, 'SAVE & EXIT', 0xFF4488FF);
-		resetBtn = _makeButton(FlxG.width / 2 + 20,  95, 'RESET',       0xFFCC4444);
+		saveBtn  = _makeButton(FlxG.width / 2 - 180, 95, Lang.str('vpadcustomizer_save', 'SAVE & EXIT'), 0xFF4488FF);
+		resetBtn = _makeButton(FlxG.width / 2 + 20,  95, Lang.str('reset', 'RESET'), 0xFFCC4444);
 
 		super.create();
 
@@ -347,7 +351,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			_boundsList[i].x = pos[0] - MIN_GAP;
 			_boundsList[i].y = pos[1] - MIN_GAP;
 		}
-		statusText.text = 'Positions reset to defaults';
+		statusText.text = Lang.str('vpadcustomizer_reset_done', 'Positions reset to defaults');
 		statusText.color = FlxColor.fromRGB(255, 200, 100);
 	}
 

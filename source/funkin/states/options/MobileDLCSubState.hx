@@ -373,8 +373,25 @@ class MobileDLCSubState extends MusicBeatSubstate
         _updateProgressBar();
         _updateStatusLine();
 
-        // BACK is always available — player must never be fully trapped
-        if (controls.BACK) { close(); return; }
+        // BACK is always available — player must never be fully trapped.
+        // If a destructive confirmation is armed (uninstall/reinstall),
+        // BACK cancels just that instead of closing the whole screen --
+        // previously the only way to back out of an accidental "Confirm
+        // uninstall!" without actually confirming was to nudge the
+        // selection with UP/DOWN and back, since that's what clears the
+        // pending state; a player reaching for BACK (the obvious "get me
+        // out of this" input) got the entire DLC manager closed instead.
+        if (controls.BACK) {
+            if (_pendingUninstallId != null || _pendingReinstallId != null) {
+                _pendingUninstallId = null;
+                _pendingReinstallId = null;
+                FunkinSound.play(Paths.sound('cancelMenu'));
+                _updateRows();
+                return;
+            }
+            close();
+            return;
+        }
 
         if (!_blockInput)
             _handleInput();
@@ -437,9 +454,15 @@ class MobileDLCSubState extends MusicBeatSubstate
         var mx = FlxG.mouse.x;
         var my = FlxG.mouse.y;
 
-        // Tabs
+        // Tabs -- hit-tested against the same 176x36 region _tabPill fills
+        // (matching what's visually shown as "the tab"), not just the text
+        // glyphs' own tight bounding box. A short word like "Browse" at this
+        // font size has a noticeably smaller/less forgiving tap target than
+        // every other touch zone in this app (option rows, DLC rows below,
+        // etc. all use a full padded row/card, not raw text bounds).
         for (i in 0..._tabLabels.length) {
-            if (i != _tab && FlxG.mouse.overlaps(_tabLabels[i])) {
+            final tabHit = (mx >= _tabTargetX[i] && mx <= _tabTargetX[i] + 176 && my >= 60 && my <= 96);
+            if (i != _tab && tabHit) {
                 _pendingUninstallId = null; _pendingReinstallId = null;
                 _tab    = i;
                 _sel    = 0;
