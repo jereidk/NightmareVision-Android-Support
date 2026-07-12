@@ -30,6 +30,16 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static final STRUMLINE_Y_OFFSET:Float = 24;
 
 	/**
+	 * Player strumline sat 11px too high in downscroll (the mode actually
+	 * confirmed by testing/screenshots) -- found by overlaying a real device
+	 * screenshot directly on the reference and reading off the offset (Ibis
+	 * Paint layer alignment). Added only to the downscroll branch of
+	 * getVSliceBaseY(): upscroll was never separately confirmed, so it's left
+	 * alone rather than guessing the same nudge applies there too.
+	 */
+	public static final VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL:Float = 11;
+
+	/**
 	 * Real mobile VSlice (FunkinDroid) doesn't actually reuse desktop
 	 * Strumline.hx's positioning for the opponent -- it renders a small,
 	 * always-top-anchored strumline for the opponent instead of a full-size
@@ -43,8 +53,13 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * reference's ~45.75x46.25px at the same 1600x720 resolution, i.e. ours
 	 * renders ~15.8% too big on both axes (uniform, not distorted). Rescaled
 	 * from 0.5 by that factor: 0.5 / 1.158 = 0.43.
+	 *
+	 * Still ~20% too big after that fix, confirmed by directly overlaying a
+	 * real device screenshot on the reference (Ibis Paint layer alignment,
+	 * not pixel-measured this time, but a direct visual overlay comparison).
+	 * Rescaled again: 0.43 * 0.8 = 0.344.
 	 */
-	public static final VSLICE_OPPONENT_SCALE:Float = 0.43;
+	public static final VSLICE_OPPONENT_SCALE:Float = 0.34;
 
 	/**
 	 * Player-lane tuning -- unlike VSLICE_OPPONENT_SCALE these two are
@@ -364,7 +379,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		#end
 
 		return ClientPrefs.downScroll
-			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET)
+			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET + VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL)
 			: (safeTop + STRUMLINE_Y_OFFSET);
 	}
 
