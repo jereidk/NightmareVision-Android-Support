@@ -20,7 +20,7 @@ class JavaCrashHandler
 	 * Call once at app startup, passing the path where crash.log should be written.
 	 */
 	public static function install(crashLogPath:String):Void
-		_install([crashLogPath]);
+		_install(crashLogPath);
 
 	/**
 	 * Read Android's ApplicationExitInfo (API 30+) for the previous session.
@@ -28,6 +28,6 @@ class JavaCrashHandler
 	 * crash, native signal, ANR or OOM; returns null otherwise.
 	 */
 	public static function readPreviousNativeCrash():Null<String>
-		return _readPreviousNativeCrash([]);
+		return _readPreviousNativeCrash();
 }
 #end

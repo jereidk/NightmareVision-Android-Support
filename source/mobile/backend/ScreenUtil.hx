@@ -46,10 +46,10 @@ class ScreenUtil
 			{
 				var scaleH = flixel.FlxG.height / stageH;
 				var scaleW = flixel.FlxG.width  / stageW;
-				top    = (_getTop([])    : Int) * scaleH;
-				bottom = (_getBottom([]) : Int) * scaleH;
-				left   = (_getLeft([])   : Int) * scaleW;
-				right  = (_getRight([])  : Int) * scaleW;
+				top    = (_getTop()    : Int) * scaleH;
+				bottom = (_getBottom() : Int) * scaleH;
+				left   = (_getLeft()   : Int) * scaleW;
+				right  = (_getRight()  : Int) * scaleW;
 			}
 		}
 		catch (e:Dynamic) { Logger.log('ScreenUtil: Failed to get safe area insets: $e', WARN); }
@@ -71,7 +71,7 @@ class ScreenUtil
 		#if android
 		try
 		{
-			var rawArray:Dynamic = _getCutoutDimensions([]);
+			var rawArray:Dynamic = _getCutoutDimensions();
 			if (rawArray != null)
 			{
 				for (i in 0...Std.downcast(rawArray, Array).length)

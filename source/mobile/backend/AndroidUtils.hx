@@ -13,7 +13,20 @@ class AndroidUtils
 	static var _getMaxRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getMaxRefreshRate", "()F");
 	static var _requestHighRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "requestHighRefreshRate", "()V");
 
-	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn([enable]);
+	// JNI.createStaticMethod() defaults useArray to false, which returns the
+	// method wrapped via Reflect.makeVarArgs -- meant to be called with plain
+	// positional arguments (varargs collects them into the array the native
+	// side expects). Calling it with a single Array argument instead (as
+	// every method below used to) makes varargs collect THAT array into a
+	// second, outer one, so the native JNI call received a nested array
+	// instead of the flat one it needed. Harmless for zero-arg calls (nothing
+	// to marshal either way), but for anything taking a real argument, the
+	// param the native side extracted from that nested array was never the
+	// value being passed -- e.g. openDataFolder(String) actually received
+	// something so wrong the "folder doesn't exist" toast printed a single
+	// "$" instead of the real path, since it was never really getting a
+	// String parameter at all.
+	public static inline function keepScreenOn(enable:Bool):Void _keepScreenOn(enable);
 
 	/**
 	 * Sets fullscreen/immersive mode.
@@ -21,7 +34,7 @@ class AndroidUtils
 	 */
 	public static function setFullscreen(mode:Int):Void
 	{
-		try { _setFullscreen([mode]); }
+		try { _setFullscreen(mode); }
 		catch (e:Dynamic) { trace("setFullscreen error: " + e); }
 	}
 
@@ -31,7 +44,7 @@ class AndroidUtils
 	 */
 	public static function getFullscreen():Int
 	{
-		try { return _getFullscreen([]); }
+		try { return _getFullscreen(); }
 		catch (e:Dynamic) { return 0; }
 	}
 
@@ -40,7 +53,7 @@ class AndroidUtils
 	 */
 	public static function toggleFullscreen():Void
 	{
-		try { _toggleFullscreen([]); }
+		try { _toggleFullscreen(); }
 		catch (e:Dynamic) { trace("toggleFullscreen error: " + e); }
 	}
 
@@ -52,7 +65,7 @@ class AndroidUtils
 	public static function scanModFolder():Void
 	{
 		var folderPath = StorageSystem.getDirectory();
-		try { _scanFolder([folderPath]); }
+		try { _scanFolder(folderPath); }
 		catch (e:Dynamic) { trace("scanModFolder error: " + e); }
 	}
 
@@ -64,7 +77,7 @@ class AndroidUtils
 	public static function openDataFolder():Void
 	{
 		var folderPath = StorageSystem.getDirectory();
-		try { _openDataFolder([folderPath]); }
+		try { _openDataFolder(folderPath); }
 		catch (e:Dynamic) { trace("openDataFolder error: " + e); }
 	}
 
@@ -76,7 +89,7 @@ class AndroidUtils
 	 */
 	public static inline function setGameplayState(inGameplay:Bool):Void
 	{
-		try { _setGameplayState([inGameplay]); }
+		try { _setGameplayState(inGameplay); }
 		catch (e:Dynamic) {}
 	}
 
@@ -89,7 +102,7 @@ class AndroidUtils
 	 */
 	public static function getMaxRefreshRate():Float
 	{
-		try { return _getMaxRefreshRate([]); }
+		try { return _getMaxRefreshRate(); }
 		catch (e:Dynamic) { return 60.0; }
 	}
 
@@ -100,7 +113,7 @@ class AndroidUtils
 	 */
 	public static function requestHighRefreshRate():Void
 	{
-		try { _requestHighRefreshRate([]); }
+		try { _requestHighRefreshRate(); }
 		catch (e:Dynamic) {}
 	}
 }

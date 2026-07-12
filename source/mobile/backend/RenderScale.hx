@@ -48,7 +48,7 @@ class RenderScale
 		{
 			if (scale >= 0.999)
 			{
-				_resetBufferSize([]);
+				_resetBufferSize();
 				currentScale = 1.0;
 				Logger.log('[RenderScale] Reset to native 1:1', NOTICE);
 			}
@@ -56,7 +56,7 @@ class RenderScale
 			{
 				final w = Std.int(flixel.FlxG.stage.window.width * scale);
 				final h = Std.int(flixel.FlxG.stage.window.height * scale);
-				_setBufferSize([w, h]);
+				_setBufferSize(w, h);
 				currentScale = scale;
 				Logger.log('[RenderScale] Set to ${Std.int(scale * 100)}% (${w}x${h})', NOTICE);
 			}
@@ -82,13 +82,13 @@ class RenderScale
 	{
 		try
 		{
-			final bufW = (_getBufferWidth([]) : Int);
-			final bufH = (_getBufferHeight([]) : Int);
-			final callCount = (_getSurfaceChangedCallCount([]) : Int);
-			final lastW = (_getLastSurfaceChangedWidth([]) : Int);
-			final lastH = (_getLastSurfaceChangedHeight([]) : Int);
-			final layoutW = (_getSurfaceViewLayoutWidth([]) : Int);
-			final layoutH = (_getSurfaceViewLayoutHeight([]) : Int);
+			final bufW = (_getBufferWidth() : Int);
+			final bufH = (_getBufferHeight() : Int);
+			final callCount = (_getSurfaceChangedCallCount() : Int);
+			final lastW = (_getLastSurfaceChangedWidth() : Int);
+			final lastH = (_getLastSurfaceChangedHeight() : Int);
+			final layoutW = (_getSurfaceViewLayoutWidth() : Int);
+			final layoutH = (_getSurfaceViewLayoutHeight() : Int);
 			Logger.log('[RenderScale][$when] surfaceBuffer=${bufW}x${bufH} '
 				+ 'surfaceChangedCalls=$callCount lastReported=${lastW}x${lastH} '
 				+ 'viewLayout=${layoutW}x${layoutH} '
