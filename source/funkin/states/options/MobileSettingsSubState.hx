@@ -91,7 +91,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// screen used before, which read more like a generic dev-tool palette
 	// than FNF's own (MainMenuState's actual reds/pinks/golds).
 	static final COLOR_ACCENT:Int     = 0xFFFF6B9D;
-	static final COLOR_ACCENT_DIM:Int = 0xFF8C5062;
+	// 0x8C5062 measured at only ~3.2:1 against this screen's dark background
+	// and worse (2.16:1, fails WCAG's 3:1 large-text minimum) against
+	// TouchOptionList's arrow-pill background -- lightened so both clear it.
+	static final COLOR_ACCENT_DIM:Int = 0xFFAB6C7F;
 
 	// ── UI: preview ──────────────────────────────────────────────────────────
 	var _canvasBg:FlxSprite;
@@ -133,6 +136,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	var _demoTimer:Float = 0.0;
 	var _demoIdx:Int = 0;
+
+	// Hold-to-repeat timer for 'percent' rows -- see _handleInput().
+	var _holdTime:Float = 0.0;
 	var _touchingZone:Bool = false;
 
 	// Animation state
@@ -367,7 +373,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			return;
 		}
 
-		_handleInput();
+		_handleInput(elapsed);
 		#if mobile
 		_handleTouch();
 		#end
@@ -386,7 +392,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	// ── Input ────────────────────────────────────────────────────────────────
 
-	function _handleInput():Void
+	function _handleInput(elapsed:Float):Void
 	{
 		if (_opts.length == 0) return;
 
@@ -408,12 +414,45 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (controls.UI_LEFT_P)  _changeSelected(-1);
 		if (controls.UI_RIGHT_P) _changeSelected(1);
 
+		// Hold-to-repeat for 'percent' rows (hitboxAlpha/padAlpha) -- without
+		// this, LEFT/RIGHT only ever moved the value 5% per press (see
+		// _changeSelected()'s 'percent' case), so sliding from e.g. 10% to
+		// 90% took 16 individual presses with no way to just hold the key.
+		// TouchOptionList already supports this for its own sliders; 'string'
+		// rows are excluded here the same way TouchOptionList excludes them
+		// (cycling through discrete named choices shouldn't auto-repeat).
+		final held = _opts[_sel];
+		if (held != null && held.kind == 'percent' && (controls.UI_LEFT || controls.UI_RIGHT) && !controls.UI_LEFT_P && !controls.UI_RIGHT_P)
+		{
+			_holdTime += elapsed;
+			if (_holdTime > 0.4)
+			{
+				final dir = controls.UI_LEFT ? -1 : 1;
+				var v = _getFloat(held.id) + dir * 0.35 * elapsed;
+				v = FlxMath.bound(v, 0, 1);
+				v = Math.round(v * 100) / 100;
+				_setFloat(held.id, v);
+			}
+		}
+		else
+		{
+			_holdTime = 0;
+		}
+
 		if (controls.ACCEPT)
 		{
 			final opt = _opts[_sel];
 			if (opt != null && opt.kind == 'bool') _changeSelected(1);
 			else if (opt != null && opt.kind == 'customize' && opt.id == 'vpadCustomize')
 				openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
+			// 'button' kind (currently just 'openDataFolder') had no ACCEPT
+			// handling at all -- keyboard/gamepad could only reach it via
+			// UI_LEFT_P/UI_RIGHT_P below (_changeSelected() ignores 'kind' for
+			// its id-based side effects), which doesn't make sense for a row
+			// that isn't an adjustable value. TouchOptionList already treats
+			// ACCEPT as the "activate" input for its own 'button' rows; this
+			// matches that instead of leaving ACCEPT do nothing here.
+			else if (opt != null && opt.kind == 'button') _changeSelected(1);
 		}
 	}
 
@@ -902,12 +941,16 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_scrollThumb.y = thumbY;
 		}
 
-		// Show/hide description based on scroll position
+		// Was previously gated on "_scrollOffsetVisual < OPT_H" -- the
+		// description box sits at a fixed position below all MAX_OPT row
+		// slots regardless of scroll (nothing ever reflows to overlap it),
+		// so that condition just meant the description permanently
+		// disappeared as soon as you scrolled past the first row and never
+		// came back, even at rest with a perfectly valid option selected.
+		// It should just track whether there's a selected option to describe.
 		if (_descBg != null && _descText != null)
 		{
-			final descAreaTop = OPT_Y0 + MAX_OPT * OPT_H;
-			final scrollDelta = _scrollOffsetVisual;
-			final descVisible = scrollDelta < OPT_H; // Show desc if not scrolled too far
+			final descVisible = (sel != null);
 			_descBg.visible = descVisible;
 			_descText.visible = descVisible;
 		}

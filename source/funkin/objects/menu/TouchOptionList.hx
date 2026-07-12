@@ -38,7 +38,11 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	// a neon cyan (0xFF3DE0FF/0xFF9FCBE8) here, same "generic dev tool" clash
 	// fixed in those two screens.
 	static inline var COLOR_ACCENT:Int     = 0xFFFF6B9D;
-	static inline var COLOR_ACCENT_DIM:Int = 0xFF8C5062;
+	// 0x8C5062 measured at only 2.16:1 contrast against the arrow-pill
+	// background (0x2E2E44) -- fails WCAG's 3:1 minimum for large text.
+	// This is lightened to clear ~3.3:1 there (and ~4.9:1 against the plain
+	// dark screen background MobileSettingsSubState uses it on).
+	static inline var COLOR_ACCENT_DIM:Int = 0xFFAB6C7F;
 
 	public var optionsArray:Array<Option> = [];
 	public var curSelected(default, null):Int = 0;
