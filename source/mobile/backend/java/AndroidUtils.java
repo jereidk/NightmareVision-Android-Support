@@ -226,10 +226,24 @@ public class AndroidUtils extends Extension {
                     try { canonicalPath = folder.getCanonicalPath(); }
                     catch (IOException e) { canonicalPath = folder.getAbsolutePath(); }
 
-                    // Jump straight into this app's own DocumentsProvider root
-                    // (ModFolderDocumentsProvider, registered in AndroidManifest).
+                    // EXTRA_INITIAL_URI for ACTION_OPEN_DOCUMENT_TREE has to be a
+                    // document URI under the SYSTEM's own external-storage provider
+                    // (com.android.externalstorage.documents, document ID
+                    // "primary:<path relative to the storage root>") -- that's the
+                    // provider DocumentsUI's tree picker actually knows how to
+                    // navigate to. This used to build the URI under this app's OWN
+                    // DocumentsProvider authority (com.motorfrog.impostor.documents,
+                    // registered for the now-abandoned direct-ACTION_VIEW/BROWSE
+                    // approach above) -- the picker didn't recognize that authority
+                    // as a navigable root, so it silently ignored the hint and
+                    // opened at its own default location (Download) instead.
+                    String storageRoot = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+                    String relativePath = canonicalPath.startsWith(storageRoot)
+                        ? canonicalPath.substring(storageRoot.length())
+                        : canonicalPath;
+                    if (relativePath.startsWith("/")) relativePath = relativePath.substring(1);
                     android.net.Uri docUri = android.provider.DocumentsContract.buildDocumentUri(
-                        "com.motorfrog.impostor.documents", canonicalPath);
+                        "com.android.externalstorage.documents", "primary:" + relativePath);
 
                     // ModFolderDocumentsProvider is declared with
                     // android:permission="android.permission.MANAGE_DOCUMENTS" (the
