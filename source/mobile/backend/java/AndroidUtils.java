@@ -221,53 +221,28 @@ public class AndroidUtils extends Extension {
 
                     // Jump straight into this app's own DocumentsProvider root
                     // (ModFolderDocumentsProvider, registered in AndroidManifest).
-                    // The previous approach used Uri.fromFile() with ACTION_VIEW, which
-                    // throws FileUriExposedException on Android 7+ when handed to
-                    // another app — that was the file:// URI's fault, not ACTION_VIEW
-                    // itself, so it's tried again below with the proper content:// URI.
                     android.net.Uri docUri = android.provider.DocumentsContract.buildDocumentUri(
                         "com.motorfrog.impostor.documents", canonicalPath);
 
-                    // Three attempts, best (most direct) to worst (always works):
-                    //   1. ACTION_VIEW — what most third-party file managers register
-                    //      for a directory content:// URI.
-                    //   2. ACTION_BROWSE ("android.provider.action.BROWSE") — @hide in
-                    //      AOSP, never exposed as a public SDK field so it's referenced
-                    //      by its literal string, but it's what the stock Google Files
-                    //      app specifically implements.
-                    //   3. The standard SAF tree picker, guaranteed to resolve on every
-                    //      device — handed EXTRA_INITIAL_URI so it opens AT the mod
-                    //      folder instead of dumping the user at the storage root to
-                    //      dig through manually.
-                    // Neither 1 nor 2 has a registered handler on plenty of real
-                    // devices (MIUI, older Samsung skins, etc), throwing
-                    // ActivityNotFoundException — that's expected, not an error.
-                    boolean opened = false;
-                    for (String action : new String[] { android.content.Intent.ACTION_VIEW, "android.provider.action.BROWSE" }) {
-                        try {
-                            android.content.Intent intent = new android.content.Intent(action);
-                            intent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
-                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            activity.startActivity(intent);
-                            opened = true;
-                            break;
-                        } catch (Exception e1) {
-                            android.util.Log.w("AndroidUtils", action + " has no handler, trying next: " + e1);
-                        }
-                    }
-
-                    if (!opened) {
-                        android.content.Intent fallback = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
-                        fallback.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                        // Intent.EXTRA_INITIAL_URI is API 26+ and isn't exposed by this
-                        // project's compileSdk stub jar ("cannot find symbol" — same
-                        // situation as ACTION_BROWSE above), so it's referenced by its
-                        // literal Bundle key instead. The key itself works on any OS
-                        // version; older ones that don't understand it just ignore it.
-                        fallback.putExtra("android.provider.extra.INITIAL_URI", docUri);
-                        activity.startActivity(fallback);
-                    }
+                    // ModFolderDocumentsProvider is declared with
+                    // android:permission="android.permission.MANAGE_DOCUMENTS" (the
+                    // correct, standard way to expose a DocumentsProvider) — but that
+                    // permission is signature-only and no third-party app can ever hold
+                    // it. So ACTION_VIEW/ACTION_BROWSE handed straight to this content://
+                    // URI can only ever reach an app that will hit a SecurityException
+                    // the moment it actually queries the provider, which isn't
+                    // detectable from here (startActivity succeeds either way). The
+                    // system's own SAF tree picker is the only caller that holds
+                    // MANAGE_DOCUMENTS, so it's the only guaranteed-working path.
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    // Intent.EXTRA_INITIAL_URI is API 26+ and isn't exposed by this
+                    // project's compileSdk stub jar ("cannot find symbol"), so it's
+                    // referenced by its literal Bundle key instead. The key itself works
+                    // on any OS version; older ones that don't understand it just
+                    // ignore it and open at the default root.
+                    intent.putExtra("android.provider.extra.INITIAL_URI", docUri);
+                    activity.startActivity(intent);
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());
                 }
