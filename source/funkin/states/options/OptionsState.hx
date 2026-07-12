@@ -465,6 +465,12 @@ class OptionsState extends MusicBeatState
 		hoveredButton = -1;
 		hoveredReset = false;
 
+		// Virtual Pad nav mode suppresses every direct touch/mouse interaction
+		// on screen (tabs, action buttons, reset, the close button) -- only the
+		// virtual pad's own buttons should respond, same contract TouchOptionList
+		// already follows for its rows via this same helper.
+		final pointerNavAllowed = mobile.utils.MobileNavUtil.allowPointerNav();
+
 		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			mouseControlActive = true;
@@ -476,14 +482,14 @@ class OptionsState extends MusicBeatState
 
 		if (subState != null && subState is funkin.states.substates.CreditsRollSubState) mouseControlActive = false;
 
-		if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput)
+		if (pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput)
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			exitToParent();
 			return;
 		}
 
-		if (mouseControlActive && !blockAllInput && !blockInput)
+		if (mouseControlActive && pointerNavAllowed && !blockAllInput && !blockInput)
 		{
 			for (i in 0...tabBg.length)
 			{
