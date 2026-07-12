@@ -550,7 +550,7 @@ class NoteUtil
 		};
 	}
 
-	static function shiftColorHSV(color:FlxColor, hsv:Array<Int>):FlxColor
+	static function shiftColorHSV(color:Null<FlxColor>, hsv:Array<Int>):Null<FlxColor>
 	{
 		if (color == null) return color;
 
