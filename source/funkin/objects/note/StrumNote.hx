@@ -20,11 +20,12 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	static final NUDGE:Float = 2.0;
 
 	// FunkinCrew/Funkin's real Constants.STRUMLINE_X_OFFSET/STRUMLINE_Y_OFFSET
-	// (source/funkin/util/Constants.hx). Real VSlice shows BOTH strumlines at
-	// once, side by side -- opponent flush to the left edge, player starting
-	// at the screen's horizontal midpoint -- not one strumline centered
-	// across the full width. STRUMLINE_Y_OFFSET anchors near the TOP for
-	// upscroll (the default) and near the bottom only for downscroll.
+	// (source/funkin/util/Constants.hx) -- desktop VSlice's own formula, kept
+	// here for reference/comparison. Mobile VSlice follows neither: X_OFFSET
+	// is unused now (see VSLICE_OPPONENT_X_OFFSET/VSLICE_PLAYER_X_OFFSET,
+	// both fixed, measured values instead of FlxG.width-relative math);
+	// Y_OFFSET is still used below -- anchors near the TOP for upscroll (the
+	// default) and near the bottom only for downscroll.
 	public static final STRUMLINE_X_OFFSET:Float = 48;
 	public static final STRUMLINE_Y_OFFSET:Float = 24;
 
@@ -62,6 +63,20 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * extra, added only between direction indices 1 and 2.
 	 */
 	public static final VSLICE_PLAYER_SPLIT_GAP:Float = 136;
+
+	/**
+	 * Absolute X for the player's LEFT receptor -- like VSLICE_OPPONENT_X_OFFSET,
+	 * this replaces (FlxG.width / 2 + STRUMLINE_X_OFFSET), which put the whole
+	 * player strumline much too far right (LEFT-arrow center measured at 846
+	 * on a 1600-wide screenshot, vs. 416 in the reference at the same
+	 * resolution). Same root cause as the opponent strumline already not
+	 * following desktop VSlice's formula: mobile VSlice doesn't actually
+	 * anchor the player strumline to the screen's horizontal midpoint either
+	 * -- it sits at a fixed position instead. All 4 lane centers matched the
+	 * reference within ~1px using this single absolute value plus
+	 * VSLICE_PLAYER_SPACING_MULT/VSLICE_PLAYER_SPLIT_GAP above.
+	 */
+	public static final VSLICE_PLAYER_X_OFFSET:Float = 416;
 
 	/**
 	 * Extra inset for the opponent's compact corner strumline, separate from
@@ -246,11 +261,12 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	}
 
 	/**
-	 * Get the X position for a VSlice receptor. Real VSlice shows both
-	 * strumlines side by side (funkin/play/PlayState.hx's initStrumlines()):
-	 * opponentStrumline.x = STRUMLINE_X_OFFSET (flush left), playerStrumline.x
-	 * = FlxG.width / 2 + STRUMLINE_X_OFFSET (starts at the horizontal
-	 * midpoint) -- NOT a single strumline centered across the full width.
+	 * Get the X position for a VSlice receptor. Desktop VSlice shows both
+	 * strumlines side by side, opponent flush left and player starting at the
+	 * screen's horizontal midpoint -- but real mobile VSlice follows neither
+	 * strumline's desktop formula (see VSLICE_OPPONENT_X_OFFSET/
+	 * VSLICE_PLAYER_X_OFFSET), so both use their own fixed, measured offset
+	 * instead of FlxG.width-relative math.
 	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
 	 * @param isPlayerLane Whether this receptor belongs to the player's own strumline (right half) or the opponent's (left edge)
 	 * @param spacingMult Extra multiplier on top of spacingScale -- VSLICE_PLAYER_SPACING_MULT
@@ -259,7 +275,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 */
 	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
 	{
-		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : VSLICE_OPPONENT_X_OFFSET;
+		final baseX:Float = isPlayerLane ? VSLICE_PLAYER_X_OFFSET : VSLICE_OPPONENT_X_OFFSET;
 		var x = baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
 		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP.
 		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP * spacingScale;
