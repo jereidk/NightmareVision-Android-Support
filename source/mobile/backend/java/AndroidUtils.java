@@ -3,6 +3,7 @@ package mobile.backend.java;
 import android.app.Activity;
 import android.app.GameManager;
 import android.app.GameState;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
@@ -245,17 +246,31 @@ public class AndroidUtils extends Extension {
                     android.net.Uri docUri = android.provider.DocumentsContract.buildDocumentUri(
                         "com.android.externalstorage.documents", "primary:" + relativePath);
 
-                    // ModFolderDocumentsProvider is declared with
-                    // android:permission="android.permission.MANAGE_DOCUMENTS" (the
-                    // correct, standard way to expose a DocumentsProvider) — but that
-                    // permission is signature-only and no third-party app can ever hold
-                    // it. There is also no universal "open this exact folder" intent
-                    // that arbitrary file manager apps support (confirmed against real
-                    // reports, e.g. github.com/syncthing/syncthing-android/issues/838),
-                    // so ACTION_VIEW/ACTION_BROWSE straight to a random file manager
-                    // isn't reliable either. The system's own SAF tree picker
-                    // (DocumentsUI) is the one caller guaranteed to hold MANAGE_DOCUMENTS
-                    // on every device, so it's the only reliably-working path.
+                    // ACTION_OPEN_DOCUMENT_TREE (below, as a fallback) is a PERMISSION
+                    // picker -- its "Use this folder" button only grants this app a
+                    // persistable URI grant, it was never meant to let the user
+                    // actually browse/edit files there. What "Open Data Folder"
+                    // actually wants is a normal file-manager browsing session, which
+                    // is what ACTION_VIEW on a directory document URI gives on any
+                    // file manager that registers for it (most do, since this is the
+                    // same URI shape/authority as a real "browse to this folder" tap
+                    // from within the Files app itself). Try that FIRST; only fall
+                    // back to the tree picker if no app resolves ACTION_VIEW at all
+                    // (its worse UX -- a permission grant, not real browsing -- beats
+                    // silently doing nothing).
+                    try {
+                        Intent viewIntent = new Intent(Intent.ACTION_VIEW);
+                        viewIntent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
+                        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        activity.startActivity(viewIntent);
+                        return;
+                    } catch (ActivityNotFoundException e) {
+                        android.util.Log.w("AndroidUtils", "ACTION_VIEW has no handler, falling back to the SAF tree picker: " + e);
+                    }
+
+                    // Fallback: the system's own SAF tree picker (DocumentsUI), which
+                    // is guaranteed to hold MANAGE_DOCUMENTS on every device -- worse
+                    // UX (a permission grant, not real file browsing) but always works.
                     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                     // Intent.EXTRA_INITIAL_URI is API 26+ and isn't exposed by this
                     // project's compileSdk stub jar ("cannot find symbol"), so it's
