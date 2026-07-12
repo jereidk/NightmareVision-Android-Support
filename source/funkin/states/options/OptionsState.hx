@@ -483,7 +483,15 @@ class OptionsState extends MusicBeatState
 
 		scriptGroup.call('onRefreshLang', []);
 		refreshVisuals();
-		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
+		// This runs after ANY substate closes (Mobile/DLC/Credits/Language
+		// Picker), not just on a real tab switch (changeTab(), which SHOULD
+		// reset scroll/selection for a genuinely different category) -- without
+		// preserving curSelected here, returning from e.g. Credits threw the
+		// player back to the top of whatever tab they were on, discarding
+		// their scroll position for no reason related to what actually changed.
+		// setOptions()'s initialIndex param already exists for exactly this
+		// "keep the thing you already have" case (see its own doc comment).
+		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])(), optionList.curSelected);
 	}
 
 	function refreshVisuals():Void
