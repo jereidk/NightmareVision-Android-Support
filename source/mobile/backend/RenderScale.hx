@@ -37,6 +37,18 @@ class RenderScale
 
 	public static var currentScale(default, null):Float = 1.0;
 
+	// Captured once, ever, the first time apply() runs -- window.width/height
+	// only reliably reflects the device's true native resolution before any
+	// scale has actually taken hold. Now that setRenderBufferSize() actually
+	// resizes the buffer (and Flixel picks up the new window size once
+	// surfaceChanged() fires), computing each new scale as a percentage of
+	// the CURRENT (already-shrunk) window.width/height compounded every
+	// repeated call onto whatever the previous one left behind -- 55% then
+	// 60% then 55% collapsed the buffer to a sliver within a few slider
+	// drags instead of ever landing on 60%/55% of the real native size.
+	static var _nativeWidth:Int = 0;
+	static var _nativeHeight:Int = 0;
+
 	/**
 	 * Applies a render scale factor (e.g. 0.75 for 75%). 1.0 reverts to native
 	 * 1:1 rendering. Safe to call repeatedly (e.g. on every settings change).
@@ -46,6 +58,12 @@ class RenderScale
 		#if android
 		try
 		{
+			if (_nativeWidth <= 0)
+			{
+				_nativeWidth = Std.int(flixel.FlxG.stage.window.width);
+				_nativeHeight = Std.int(flixel.FlxG.stage.window.height);
+			}
+
 			if (scale >= 0.999)
 			{
 				_resetBufferSize();
@@ -54,8 +72,8 @@ class RenderScale
 			}
 			else
 			{
-				final w = Std.int(flixel.FlxG.stage.window.width * scale);
-				final h = Std.int(flixel.FlxG.stage.window.height * scale);
+				final w = Std.int(_nativeWidth * scale);
+				final h = Std.int(_nativeHeight * scale);
 				_setBufferSize(w, h);
 				currentScale = scale;
 				Logger.log('[RenderScale] Set to ${Std.int(scale * 100)}% (${w}x${h})', NOTICE);
