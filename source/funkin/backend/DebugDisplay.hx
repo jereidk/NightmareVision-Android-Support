@@ -234,26 +234,29 @@ class DebugDisplay extends Sprite
 			final rss = taskMemory;
 			final heap = gcMemory;
 			final pct = rss > 0 ? Std.int(heap / rss * 100) : 0;
-			str += '\n╔══ MEMORY ════════════════════════╗';
-			str += '\n║  GC Heap   : ${_pad(FlxStringUtil.formatBytes(heap), 12)}  ${pct}% of RSS';
-			str += '\n║  GC Rsvd   : ${FlxStringUtil.formatBytes(gcReserved)}';
-			str += '\n║  Large Pool: ${FlxStringUtil.formatBytes(gcLargePool)}';
-			str += '\n║  RSS (proc): ${FlxStringUtil.formatBytes(rss)}';
-			str += '\n║  Textures  : $cachedGraphics cached';
+			// Plain ASCII instead of box-drawing/geometric-shape characters --
+			// none of them are in aller.ttf's glyph set (confirmed via
+			// fonttools cmap), so they risked rendering as blank boxes.
+			str += '\n+-- MEMORY --------------------------+';
+			str += '\n|  GC Heap   : ${_pad(FlxStringUtil.formatBytes(heap), 12)}  ${pct}% of RSS';
+			str += '\n|  GC Rsvd   : ${FlxStringUtil.formatBytes(gcReserved)}';
+			str += '\n|  Large Pool: ${FlxStringUtil.formatBytes(gcLargePool)}';
+			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(rss)}';
+			str += '\n|  Textures  : $cachedGraphics cached';
 			#if android
-			str += '\n║  DRS       : ${mobile.backend.DynamicResolution.active ? "▶ active" : "■ idle"}';
+			str += '\n|  DRS       : ${mobile.backend.DynamicResolution.active ? "active" : "idle"}';
 			#end
-			str += '\n╚══════════════════════════════════╝';
+			str += '\n+--------------------------------------+';
 			#elseif mobile
-			str += '\n╔══ MEMORY ════════════════════════╗';
-			str += '\n║  Textures  : $cachedGraphics cached';
-			str += '\n║  RSS (proc): ${FlxStringUtil.formatBytes(taskMemory)}';
+			str += '\n+-- MEMORY --------------------------+';
+			str += '\n|  Textures  : $cachedGraphics cached';
+			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(taskMemory)}';
 			#if android
-			str += '\n║  DRS       : ${mobile.backend.DynamicResolution.active ? "▶ active" : "■ idle"}';
+			str += '\n|  DRS       : ${mobile.backend.DynamicResolution.active ? "active" : "idle"}';
 			#end
-			str += '\n╚══════════════════════════════════╝';
+			str += '\n+--------------------------------------+';
 			#else
-			str += '\n│ Textures: $cachedGraphics cached';
+			str += '\n| Textures: $cachedGraphics cached';
 			#end
 		}
 
@@ -273,7 +276,7 @@ class DebugDisplay extends Sprite
 				className = parts[parts.length - 1];
 			}
 
-			str += '\n─────────────────────────────────';
+			str += '\n-----------------------------------';
 			str += '\nState  : $className';
 
 			if (FlxG.state.subState != null)
@@ -284,10 +287,10 @@ class DebugDisplay extends Sprite
 			}
 
 			#if android
-			str += '\nDRS    : ${mobile.backend.DynamicResolution.active ? "▶ ON" : "■ off"} | Tex: $cachedGraphics';
+			str += '\nDRS    : ${mobile.backend.DynamicResolution.active ? "ON" : "off"} | Tex: $cachedGraphics';
 			final winW = FlxG.stage.window.width;
 			final winH = FlxG.stage.window.height;
-			str += '\nDevice : ${winW}×${winH} → game ${FlxG.width}×${FlxG.height}';
+			str += '\nDevice : ${winW}×${winH} -> game ${FlxG.width}×${FlxG.height}';
 			#else
 			str += '\nTex: $cachedGraphics cached';
 			#end

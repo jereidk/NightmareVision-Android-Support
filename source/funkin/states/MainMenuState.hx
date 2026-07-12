@@ -1147,8 +1147,8 @@ class MainMenuState extends MusicBeatState
 			ClientPrefs.forceUnlock ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
 		devLblUnlockReq = addRow(devUnlockReqLabel(), ClientPrefs.forceUnlockReq ? DEV_COL_TOGGLE_ON : DEV_COL_TOGGLE, 1,
 			ClientPrefs.forceUnlockReq ? 'devpanel_toggle_on' : 'devpanel_toggle_off');
-		addRow('◆  Unlock All Cosmetics', DEV_COL_LOOT, 2, 'devpanel_loot');
-		addRow('★  Grant All Achievements', DEV_COL_LOOT, 3, 'devpanel_loot');
+		addRow('Unlock All Cosmetics', DEV_COL_LOOT, 2, 'devpanel_loot');
+		addRow('Grant All Achievements', DEV_COL_LOOT, 3, 'devpanel_loot');
 
 		rowY += 6;
 		sectionLabel('ECONOMY');
@@ -1157,22 +1157,25 @@ class MainMenuState extends MusicBeatState
 		rowY += 6;
 		sectionLabel('DANGER ZONE');
 		devResetBtnSpr = null;
-		devLblReset = addRow('⚠  Reset Money & Cosmetics', DEV_COL_DANGER, 5, 'devpanel_danger');
+		devLblReset = addRow('!  Reset Money & Cosmetics', DEV_COL_DANGER, 5, 'devpanel_danger');
 		// grab the sprite behind the label we just added (last-1 in devPanelAll before the label)
 		devResetBtnSpr = devPanelAll[devPanelAll.length - 2];
 
 		rowY += 8;
-		addRow('✕  Close', DEV_COL_CLOSE, 6, 'devpanel_close');
+		addRow('X  Close', DEV_COL_CLOSE, 6, 'devpanel_close');
 	}
 
+	// No leading check/cross/warning glyphs -- vcr.ttf has no glyph for any of
+	// them (confirmed via fonttools cmap), so they rendered as blank boxes on
+	// a real device. The ON/OFF text already says which state it's in.
 	function devUnlockLabel():String
-		return (ClientPrefs.forceUnlock ? '✓  Unlock Everything  ON' : '✗  Unlock Everything  OFF');
+		return (ClientPrefs.forceUnlock ? 'Unlock Everything  ON' : 'Unlock Everything  OFF');
 
 	function devUnlockReqLabel():String
-		return (ClientPrefs.forceUnlockReq ? '✓  Bypass Requirements  ON' : '✗  Bypass Requirements  OFF');
+		return (ClientPrefs.forceUnlockReq ? 'Bypass Requirements  ON' : 'Bypass Requirements  OFF');
 
 	function devResetLabel():String
-		return (devResetArmed ? '⚠  TAP AGAIN TO CONFIRM' : '⚠  Reset Money & Cosmetics');
+		return (devResetArmed ? '!  TAP AGAIN TO CONFIRM' : '!  Reset Money & Cosmetics');
 
 	function openDevPanel():Void
 	{
