@@ -23,6 +23,22 @@ class LanguageOptions
 			displayNames, codes);
 		opts.push(langOption);
 
+		// Cycling one arrow-tap at a time through 30+ languages is painful --
+		// this opens a scrollable, alphabetical, tap-to-pick list instead.
+		final findLangOption = new Option(Lang.str('opt_language_find', 'Find Your Language...'),
+			Lang.str('opt_language_find_desc', "Browse every installed language and pick yours directly, instead of cycling through them one by one."), '', 'button');
+		findLangOption.callback = () -> {
+			if (OptionsState.instance != null)
+			{
+				OptionsState.instance.openSubState(new LanguagePickerSubState(codes, displayNames, (pickedCode) -> {
+					langOption.curOption = codes.indexOf(pickedCode);
+					langOption.setValue(pickedCode);
+					langOption.change();
+				}));
+			}
+		};
+		opts.push(findLangOption);
+
 		final creditsOption = new Option('', '', '', 'label');
 		opts.push(creditsOption);
 
