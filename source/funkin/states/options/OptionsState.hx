@@ -528,7 +528,16 @@ class OptionsState extends MusicBeatState
 		// rather than leave a dead, untappable icon sitting in the corner.
 		resetIcon.visible = resetLabel.visible = pointerNavAllowed;
 
-		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
+		// The navInputMode check only makes sense on mobile (Virtual Pad users
+		// shouldn't have a stray touch re-enable mouse hover) -- on desktop
+		// there's no screen to ever change navInputMode away from its default
+		// ('Virtual Pad'), so gating this on it there meant mouseControlActive
+		// could never flip back to true once any keyboard/gamepad press
+		// cleared it below: a keyboard-then-mouse desktop user would lose all
+		// mouse interaction with the tabs/buttons/reset icon for the rest of
+		// that visit to this screen. CosmeticsSubstate's equivalent mouseMode
+		// field already gets this right by only checking navInputMode #if mobile.
+		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) #if mobile && ClientPrefs.navInputMode != 'Virtual Pad' #end)
 		{
 			mouseControlActive = true;
 		}
@@ -539,7 +548,15 @@ class OptionsState extends MusicBeatState
 
 		if (subState != null && subState is funkin.states.substates.CreditsRollSubState) mouseControlActive = false;
 
-		if (pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput)
+		// Was missing !blockInput, unlike every other interactive element below
+		// (tabs, action buttons, reset icon) -- OptionsState keeps updating
+		// underneath any open substate (persistentUpdate = true), so this
+		// stayed clickable the whole time Mobile Settings/DLC/Credits/the
+		// Language Picker covered the screen. A tap meant for that substate
+		// landing on this exact spot would exitToParent(), switching away
+		// from the entire Options screen (and destroying whatever substate
+		// was open) with no visible cause.
+		if (pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput && !blockInput)
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			exitToParent();
