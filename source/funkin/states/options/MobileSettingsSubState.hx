@@ -173,18 +173,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
 		add(bg);
 
-		// Faint decorative splash of the game's actual cast (menu/options/art) in
-		// the bottom-right corner -- low alpha so it reads as background texture,
-		// not a foreground element competing with the option rows.
-		var artSplash = new FlxSprite();
-		artSplash.loadGraphic(Paths.image('menu/options/art'));
-		artSplash.setGraphicSize(420, Std.int(420 * artSplash.height / artSplash.width));
-		artSplash.updateHitbox();
-		artSplash.setPosition(FlxG.width - artSplash.width, FlxG.height - artSplash.height);
-		artSplash.alpha = 0.16;
-		artSplash.antialiasing = ClientPrefs.globalAntialiasing;
-		add(artSplash);
-
 		// Header bar behind the title.
 		var topBar = new FlxSprite(0, 0);
 		topBar.loadGraphic(Paths.image('menu/common/topBar'));
@@ -222,7 +210,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 			// Highlight background for selected row
 			var hi = new FlxSprite(OPT_X - 6, rowY - 2);
-			hi.loadGraphic(Paths.image('menu/freeplay/card'));
+			hi.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
 			hi.setGraphicSize(OPT_W + 12, Std.int(OPT_H - 4));
 			hi.updateHitbox();
 			hi.antialiasing = ClientPrefs.globalAntialiasing;
@@ -285,7 +273,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// makeGraphic() rect, so every panel on this screen reads as the
 		// same UI language.
 		_descBg = new FlxSprite(OPT_X - 6, OPT_Y0 + MAX_OPT * OPT_H + 4);
-		_descBg.loadGraphic(Paths.image('menu/freeplay/card'));
+		_descBg.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
 		_descBg.setGraphicSize(OPT_W + 12, 70);
 		_descBg.updateHitbox();
 		_descBg.color = 0xFF1A1A2E;
@@ -322,7 +310,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Touch-mode back button — only visible when navInputMode is Touch.
 		final backBtnY:Float = OPT_Y0 + MAX_OPT * OPT_H + 80;
 		_backBtn = new FlxSprite(OPT_X, backBtnY);
-		_backBtn.loadGraphic(Paths.image('menu/freeplay/card'));
+		_backBtn.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
 		_backBtn.setGraphicSize(160, 42);
 		_backBtn.updateHitbox();
 		_backBtn.antialiasing = ClientPrefs.globalAntialiasing;
@@ -988,8 +976,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		final hi = _rowHi[slot];
 		FlxTween.cancelTweensOf(hi.scale);
-		hi.origin.set(hi.width / 2, hi.height / 2);
 		hi.scale.set(1, 1);
+		// frameWidth/frameHeight (not width/height, which report the CURRENTLY
+		// scaled size) -- computing origin from a mid-tween scale left it
+		// slightly off-center, and since nothing else ever recenters it, rapid
+		// presses (key-repeat retriggering this before the previous pulse's
+		// shrink-back finished) compounded that drift further off-center each
+		// time instead of settling back to true center.
+		hi.origin.set(hi.frameWidth / 2, hi.frameHeight / 2);
 		FlxTween.tween(hi.scale, {x: 1.05, y: 1.12}, 0.08, {
 			ease: FlxEase.quadOut,
 			onComplete: (_) -> FlxTween.tween(hi.scale, {x: 1, y: 1}, 0.14, {ease: FlxEase.quadIn})
