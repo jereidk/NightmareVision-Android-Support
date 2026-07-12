@@ -17,11 +17,15 @@ import openfl.display.BitmapData;
 typedef MobileOpt =
 {
 	id:String,        // 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha' | 'openDataFolder'
-	kind:String,      // 'string' | 'percent' | 'button'
+	kind:String,      // 'string' | 'percent' | 'button' | 'customize'
 	label:String,
 	desc:String,
 	?choices:Array<String>, // display strings (string kind)
-	?stored:Array<String>   // values saved to ClientPrefs (string kind)
+	?stored:Array<String>,  // values saved to ClientPrefs (string kind)
+	// ClientPrefs' own default for this row's value (String for 'string',
+	// Float for 'percent') -- used by the reset button. Omitted for
+	// 'button'/'customize' rows, which don't have a value to reset.
+	?defaultVal:Dynamic
 }
 
 /** A single tap zone drawn on the preview canvas. */
@@ -75,6 +79,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	static final OPT_W:Int    = 580;
 	static final MAX_OPT:Int  = 6;
 
+	// Strip reserved at the description box's right edge for the reset-to-
+	// default button, same layout OptionsState.hx already uses for its own
+	// reset button (menu/common/reset).
+	static final RESET_W:Float = 90;
+
 	// L D U R — matches MobileHitbox / MobileVirtualPad colours (improved).
 	static final ZONE_COLORS = [0xFFFF6B9D, 0xFF00D9FF, 0xFF00FF88, 0xFFFFB84D];
 	static final ZONE_LABELS = ["LEFT", "DOWN", "UP", "RIGHT"];
@@ -114,6 +123,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _helpText:FlxText;
 	var _backBtn:FlxSprite;
 	var _backBtnLabel:FlxText;
+	var _resetIcon:FlxSprite;
+	var _resetLabel:FlxText;
 
 	// ── State ────────────────────────────────────────────────────────────────
 	var _opts:Array<MobileOpt> = [];
@@ -278,11 +289,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_descBg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_descBg);
 
-		_descText = new FlxText(OPT_X + 8, OPT_Y0 + MAX_OPT * OPT_H + 8, OPT_W - 16, '');
+		_descText = new FlxText(OPT_X + 8, OPT_Y0 + MAX_OPT * OPT_H + 8, OPT_W - 16 - RESET_W, '');
 		_descText.setFormat(Paths.font('vcr.ttf'), 17, COLOR_DESC, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		_descText.borderSize = 1.2;
 		_descText.wordWrap = true;
 		add(_descText);
+
+		_buildResetButton();
 
 		// Scrollbar (only visible when there are more options than fit on screen)
 		final scrollBarX = OPT_X + OPT_W + 8;
@@ -322,7 +335,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if mobile
 		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
-			addVirtualPad(LEFT_FULL, A_B);
+			addVirtualPad(LEFT_FULL, A_B_C);
 			addVirtualPadCamera();
 		}
 		#end
@@ -331,6 +344,71 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_rebuildPreview();
 		_updateRows();
 		_updateNavModeUI();
+	}
+
+	/**
+	 * Touch-first reset-to-default button -- OptionsState.hx has one of these
+	 * (RESET keybind + tap icon + Virtual Pad's C button) but this screen had
+	 * none at all, so a mis-tuned hitbox/pad opacity or an accidentally-picked
+	 * layout had no quick way back to default short of quitting and manually
+	 * undoing each row. Same menu/common/reset icon, same layout math.
+	 */
+	function _buildResetButton():Void
+	{
+		final iconH = 30.0;
+		final iconScale = iconH / 175; // reset.png is a 165x175 source image
+		final iconW = 165 * iconScale;
+		final stripX = _descBg.x + _descBg.width - RESET_W;
+		final contentH = iconH + 2 + 16;
+		final topY = _descBg.y + (_descBg.height - contentH) * 0.5;
+
+		_resetIcon = new FlxSprite(stripX + (RESET_W - iconW) * 0.5, topY).loadGraphic(Paths.image('menu/common/reset'));
+		_resetIcon.antialiasing = ClientPrefs.globalAntialiasing;
+		_resetIcon.setGraphicSize(0, Std.int(iconH));
+		_resetIcon.updateHitbox();
+		add(_resetIcon);
+
+		_resetLabel = new FlxText(stripX, topY + iconH + 2, RESET_W, Lang.str('reset', 'RESET'));
+		_resetLabel.setFormat(Paths.font('vcr.ttf'), 13, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_resetLabel.borderSize = 1.2;
+		_resetLabel.antialiasing = ClientPrefs.globalAntialiasing;
+		add(_resetLabel);
+	}
+
+	/**
+	 * Resets every ClientPrefs value this screen exposes back to its default
+	 * (skips 'button'/'customize' rows, which don't have a value). Mirrors
+	 * TouchOptionList.resetAllToDefault(), just against ClientPrefs directly
+	 * instead of an Option array, since MobileOpt has no setValue() of its own.
+	 */
+	function _resetToDefault():Void
+	{
+		for (opt in _opts)
+		{
+			if (opt.defaultVal == null) continue;
+			switch (opt.kind)
+			{
+				case 'string': _setStr(opt.id, cast opt.defaultVal);
+				case 'percent': _setFloat(opt.id, cast opt.defaultVal);
+			}
+		}
+
+		FunkinSound.play(Paths.sound('cancelMenu'));
+
+		#if mobile
+		removeVirtualPad();
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, A_B_C);
+			addVirtualPadCamera();
+		}
+		_updateNavModeUI();
+		#end
+
+		// _rebuildOptions() already re-clamps _sel to the new list length.
+		_rebuildOptions();
+		_rebuildPreview();
+		_updateRows();
 	}
 
 	// ── Update ───────────────────────────────────────────────────────────────
@@ -372,6 +450,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			close();
 			return;
 		}
+
+		// Virtual Pad nav mode has no mouse/touch overlap to tap _resetIcon
+		// with -- its own dedicated C button is the equivalent affordance
+		// instead, same convention OptionsState.hx already uses for its own
+		// reset button.
+		#if mobile
+		if (virtualPad?.buttonC?.justPressed == true) _resetToDefault();
+		#end
 
 		_handleInput(elapsed);
 		#if mobile
@@ -454,6 +540,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// matches that instead of leaving ACCEPT do nothing here.
 			else if (opt != null && opt.kind == 'button') _changeSelected(1);
 		}
+
+		if (controls.RESET) _resetToDefault();
 	}
 
 	/** Update scroll offset so selected option stays visible */
@@ -499,6 +587,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			FunkinSound.play(Paths.sound('cancelMenu'));
 			close();
+			return;
+		}
+
+		// Touch-mode reset button
+		if (_resetIcon.visible && FlxG.mouse.overlaps(_resetIcon))
+		{
+			_resetToDefault();
 			return;
 		}
 
@@ -631,7 +726,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			removeVirtualPad();
 			if (ClientPrefs.navInputMode == 'Virtual Pad')
 			{
-				addVirtualPad(LEFT_FULL, A_B);
+				addVirtualPad(LEFT_FULL, A_B_C);
 				addVirtualPadCamera();
 			}
 			_updateNavModeUI();
@@ -668,6 +763,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		final touchMode = (ClientPrefs.navInputMode == 'Touch');
 		_backBtn.visible      = touchMode;
 		_backBtnLabel.visible = touchMode;
+		// Same reasoning as the back button -- the tap-to-reset icon is a
+		// Touch-mode-only affordance, Virtual Pad mode resets via the pad's
+		// own C button instead (see the buttonC check in update()).
+		_resetIcon.visible  = touchMode;
+		_resetLabel.visible = touchMode;
 		_helpText.text = touchMode
 			? Lang.str('mobile_controls_help_touch', 'tap a zone to test it   ·   BACK to exit')
 			: Lang.str('mobile_controls_help', '<  >  change   ·   tap a zone to test it   ·   B  back');
@@ -721,66 +821,77 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	{
 		_opts = [];
 
+		// None of these rows have an icon prefix any more -- every single one
+		// (≡ ◆ ◈ ◇ ◉ ✦ ⚙ ▭) was confirmed missing from vcr.ttf via fonttools
+		// cmap, same invisible-glyph issue fixed repeatedly elsewhere this
+		// session. Each label text already says what the row does.
 		_opts.push({
 			id: 'nav', kind: 'string',
-			label: '≡ ' + Lang.str('opt_navinput', 'Navigation Input'),
+			label: Lang.str('opt_navinput', 'Navigation Input'),
 			desc:  Lang.str('opt_navinput_desc', 'How you interact with menus and UI.\nTouch uses native screen taps. Virtual Pad shows on-screen buttons.'),
 			choices: [Lang.str('choice_navinput_touch', 'Touch'), Lang.str('choice_navinput_pad', 'Virtual Pad')],
-			stored:  ['Touch', 'Virtual Pad']
+			stored:  ['Touch', 'Virtual Pad'],
+			defaultVal: 'Virtual Pad'
 		});
 
 		_opts.push({
 			id: 'game', kind: 'string',
-			label: '◆ ' + Lang.str('opt_gameinput', 'Gameplay Input'),
+			label: Lang.str('opt_gameinput', 'Gameplay Input'),
 			desc:  Lang.str('opt_gameinput_desc', 'How you hit notes in-game.\nHitbox: split-screen zones (this is what VSlice\'s own mobile app actually uses). Virtual Pad: D-pad buttons. Note Tap: tap the note receptors directly (requires VSlice Note Layout).'),
 			choices: [Lang.str('choice_gameinput_hitbox', 'Hitbox'), Lang.str('choice_gameinput_pad', 'Virtual Pad'), Lang.str('choice_gameinput_notetap', 'Note Tap')],
-			stored:  ['Hitbox', 'Virtual Pad', 'Note Tap']
+			stored:  ['Hitbox', 'Virtual Pad', 'Note Tap'],
+			defaultVal: 'Hitbox'
 		});
 
 		_opts.push({
 			id: 'noteLayout', kind: 'string',
-			label: '◈ ' + Lang.str('opt_notelayout', 'Note Layout'),
+			label: Lang.str('opt_notelayout', 'Note Layout'),
 			desc:  Lang.str('opt_notelayout_desc', 'Visual arrangement of notes.\nNormal: standard FNF layout.\nVSlice: centered, wider spacing, bigger arrows.'),
 			choices: [Lang.str('choice_notelayout_normal', 'Normal'), Lang.str('choice_notelayout_vslice', 'VSlice')],
-			stored:  ['Normal', 'VSlice']
+			stored:  ['Normal', 'VSlice'],
+			defaultVal: 'Normal'
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')
 		{
 			_opts.push({
 				id: 'layout', kind: 'string',
-				label: '◇ ' + Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
+				label: Lang.str('opt_hitboxlayout', 'Hitbox Layout'),
 				desc:  Lang.str('opt_hitboxlayout_desc', 'Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.'),
 				choices: [Lang.str('choice_hitboxlayout_4l', 'Four Lanes'), Lang.str('choice_hitboxlayout_2t', 'Two Thumb'), Lang.str('choice_hitboxlayout_dpad', 'DPad'), Lang.str('choice_hitboxlayout_arrows', 'Arrows'), Lang.str('choice_hitboxlayout_triangle', 'Triangle')],
-				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle']
+				stored:  ['Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'],
+				defaultVal: 'Four Lanes'
 			});
 			_opts.push({
 				id: 'hitboxAlpha', kind: 'percent',
-				label: '◉ ' + Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),
-				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.')
+				label: Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),
+				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.'),
+				defaultVal: 0.2
 			});
 		}
 		else if (ClientPrefs.gameInputMode == 'Virtual Pad')
 		{
 			_opts.push({
 				id: 'padAlpha', kind: 'percent',
-				label: '◉ ' + Lang.str('opt_padopacity', 'Pad Opacity'),
-				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.')
+				label: Lang.str('opt_padopacity', 'Pad Opacity'),
+				desc:  Lang.str('opt_padopacity_desc', 'How visible the virtual pad buttons appear.'),
+				defaultVal: 0.5
 			});
 
 			_opts.push({
 				id: 'vpadLayout', kind: 'string',
-				label: '✦ ' + Lang.str('opt_vpadlayout', 'Pad Layout'),
+				label: Lang.str('opt_vpadlayout', 'Pad Layout'),
 				desc:  Lang.str('opt_vpadlayout_desc', 'Arrangement of the virtual pad buttons.\nLeftFull: left side diamond. RightFull: right side diamond. Custom: user-defined positions.'),
 				choices: [Lang.str('choice_vpad_leftfull', 'Left Side'), Lang.str('choice_vpad_rightfull', 'Right Side'), Lang.str('choice_vpad_custom', 'Custom')],
-				stored:  ['LeftFull', 'RightFull', 'Custom']
+				stored:  ['LeftFull', 'RightFull', 'Custom'],
+				defaultVal: 'LeftFull'
 			});
 
 			if (ClientPrefs.virtualPadLayout == 'Custom')
 			{
 				_opts.push({
 					id: 'vpadCustomize', kind: 'customize',
-					label: '⚙ ' + Lang.str('opt_vpadcustomize', 'Customize Pad'),
+					label: Lang.str('opt_vpadcustomize', 'Customize Pad'),
 					desc:  Lang.str('opt_vpadcustomize_desc', 'Open the pad customizer to drag buttons to new positions.')
 				});
 			}
@@ -790,16 +901,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if mobile
 		_opts.push({
 			id: 'aspectRatio', kind: 'string',
-			label: '▭ ' + Lang.str('opt_aspectratio', 'Screen Fit'),
+			label: Lang.str('opt_aspectratio', 'Screen Fit'),
 			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort). Expand: shows more of the background on wide screens, no distortion.'),
                         choices: [Lang.str('choice_aspect_fit', 'Fit (16:9)'), Lang.str('choice_aspect_stretch', 'Stretch'), Lang.str('choice_aspect_expand', 'Expand')],
-                        stored:  ['fit', 'stretch', 'expand']
+                        stored:  ['fit', 'stretch', 'expand'],
+			defaultVal: 'fit'
 		});
 
 		_opts.push({
-			// No folder emoji prefix -- confirmed missing from vcr.ttf (fonttools
-			// cmap), same invisible-glyph issue fixed elsewhere this session. The
-			// label text already says what it does.
 			id: 'openDataFolder', kind: 'button',
 			label: Lang.str('opt_opendatafolder', 'Open Data Folder'),
 			desc:  Lang.str('opt_opendatafolder_desc', 'Opens the game data folder in your file manager.\nUse this to install mods or access save files.')
