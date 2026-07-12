@@ -44,6 +44,22 @@ class VisualsUIOptions
 		opts.push(new Option(Lang.str('opt_quants', 'Quants Enabled'), Lang.str('opt_quants_desc', 'Colors notes in-game based on their step value. Helpful for timing your note hits.'),
 			'quants', 'bool', false));
 
+		// NotesSubState/QuantNotesSubState had no menu entry point anywhere in
+		// the codebase -- these two buttons are the only way to reach them.
+		final noteColorsOption = new Option(Lang.str('opt_notecolors', 'Note Colors...'),
+			Lang.str('opt_notecolors_desc', "Customize the hue, saturation, and brightness of each of the four notes."), '', 'button');
+		noteColorsOption.callback = () -> {
+			if (OptionsState.instance != null) OptionsState.instance.openSubState(new NotesSubState());
+		};
+		opts.push(noteColorsOption);
+
+		final quantColorsOption = new Option(Lang.str('opt_quantcolors', 'Quant Colors...'),
+			Lang.str('opt_quantcolors_desc', "Customize note colors per timing quantization. Only visible in-game while Quants Enabled is on."), '', 'button');
+		quantColorsOption.callback = () -> {
+			if (OptionsState.instance != null) OptionsState.instance.openSubState(new QuantNotesSubState());
+		};
+		opts.push(quantColorsOption);
+
 		opts.push(new Option(Lang.str('opt_notesplashes', 'Note Splashes'), Lang.str('opt_notesplashes_desc', "If unchecked, hitting \"Sick!\" or \"Kutty!\" notes won't show particles."),
 			'noteSplashes', 'bool', true));
 

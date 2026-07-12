@@ -105,7 +105,11 @@ class NotesSubState extends MusicBeatSubstate
 
 		#if mobile
 		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B_C);
+		// forceShow: true -- unlike the list-based options screens, every
+		// interaction here (selection, value adjustment) is D-pad/button
+		// driven with no touch-tap equivalent, so a 'Touch' nav mode user
+		// would otherwise have no way to use this screen at all.
+		addVirtualPad(LEFT_FULL, A_B_C, true);
 		addVirtualPadCamera();
 		#end
 	}
