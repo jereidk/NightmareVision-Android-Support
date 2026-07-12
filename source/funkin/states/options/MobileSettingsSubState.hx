@@ -405,7 +405,19 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_updateNavModeUI();
 		#end
 
-		// _rebuildOptions() already re-clamps _sel to the new list length.
+		// Resetting 'game' (Gameplay Input) back to its default changes which
+		// conditional rows _rebuildOptions() below produces -- Hitbox, Virtual
+		// Pad, and Note Tap each show a different number/kind of extra rows
+		// (Note Tap shows none at all; Virtual Pad can show a 3rd 'Custom pad'
+		// row). _rebuildOptions()'s own clamp only guards against _sel landing
+		// out of bounds, not against it landing on a now-unrelated row that
+		// just happens to still be a valid index -- e.g. resetting away from
+		// Virtual Pad's 'padAlpha'/'vpadLayout' rows while sitting on one of
+		// them could leave the highlight on Hitbox's 'layout'/'hitboxAlpha'
+		// rows instead, which have nothing to do with where the player was.
+		// Since Reset changes every value on this screen at once, snapping
+		// back to the top is the only position guaranteed to still make sense.
+		_sel = 0;
 		_rebuildOptions();
 		_rebuildPreview();
 		_updateRows();
