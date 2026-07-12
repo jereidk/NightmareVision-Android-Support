@@ -735,6 +735,30 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 		else if (opt.id == 'game')
 		{
+			// Note Tap's real hitbox zones (MobileHitbox.buildNoteTap()) are built
+			// from StrumNote.getCenteredXPos()/getVSliceBaseY() -- the exact
+			// VSlice receptor formulas, not a generic one. This row's own
+			// description already says "(requires VSlice Note Layout)", but
+			// nothing enforced it: picking Note Tap while Note Layout was still
+			// 'Normal' left the real in-game tap zones positioned for receptors
+			// that aren't where the actual (Normal-layout) notes render at all.
+			if (ClientPrefs.gameInputMode == 'Note Tap' && ClientPrefs.noteLayout != 'VSlice')
+			{
+				ClientPrefs.noteLayout = 'VSlice';
+			}
+			_rebuildOptions();
+			_rebuildPreview();
+		}
+		else if (opt.id == 'noteLayout')
+		{
+			// Same coupling, the other direction: Note Tap only makes sense
+			// paired with VSlice, so switching Note Layout away from VSlice
+			// while Note Tap is still selected would silently reintroduce the
+			// exact misalignment the 'game' branch above prevents.
+			if (ClientPrefs.noteLayout != 'VSlice' && ClientPrefs.gameInputMode == 'Note Tap')
+			{
+				ClientPrefs.gameInputMode = 'Hitbox';
+			}
 			_rebuildOptions();
 			_rebuildPreview();
 		}
@@ -1123,7 +1147,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 		else if (ClientPrefs.gameInputMode == 'Note Tap')
 		{
-			_buildArrowsPreview();
+			_buildNoteTapPreview();
 			_modeText.text = Lang.str('preview_mode_notetap', 'Note Tap');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
@@ -1253,6 +1277,35 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			var x = startX + i * (arrowW + spacing);
 			_addZone(x, y, arrowW, arrowH, i);
+		}
+	}
+
+	/**
+	 * Note Tap's real hitbox zones (MobileHitbox.buildNoteTap()) are built
+	 * from StrumNote.getCenteredXPos()/getVSliceBaseY() -- the exact VSlice
+	 * receptor formulas -- which split LEFT+DOWN from UP+RIGHT with a gap
+	 * instead of sitting in one flat row. Reusing _buildArrowsPreview() made
+	 * this preview look identical to the Arrows Hitbox layout, even though
+	 * the two are positioned completely differently and behave completely
+	 * differently in-game (Note Tap has no visible sprite at all in real
+	 * gameplay; this canvas still shows a faint zone purely so the preview
+	 * itself isn't blank, same as every other layout here).
+	 */
+	function _buildNoteTapPreview():Void
+	{
+		final zoneW = 46.0;
+		final zoneH = 36.0;
+		final withinPairGap = 10.0;
+		final pairGap = 60.0; // gap between the LEFT+DOWN pair and the UP+RIGHT pair
+		final totalW = zoneW * 4 + withinPairGap * 2 + pairGap;
+		final startX = CANVAS_X + (CANVAS_W - totalW) / 2;
+		final y = CANVAS_Y + (CANVAS_H - zoneH) / 2;
+
+		var x = startX;
+		for (i in 0...4)
+		{
+			_addZone(x, y, zoneW, zoneH, i);
+			x += zoneW + (i == 1 ? pairGap : withinPairGap);
 		}
 	}
 
