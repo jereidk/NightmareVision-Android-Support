@@ -16,7 +16,11 @@ import openfl.display.BitmapData;
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
 {
-	id:String,        // 'nav' | 'game' | 'layout' | 'hitboxAlpha' | 'padAlpha' | 'openDataFolder'
+	// 'nav' | 'game' | 'noteLayout' | 'layout' | 'hitboxAlpha' | 'padAlpha' |
+	// 'vpadLayout' | 'vpadCustomize' | 'aspectRatio' | 'openDataFolder' --
+	// kept out of sync with _rebuildOptions() as rows were added over time,
+	// see _getStr()/_setStr()/_getFloat()/_setFloat() for the actual set.
+	id:String,
 	kind:String,      // 'string' | 'percent' | 'button' | 'customize'
 	label:String,
 	desc:String,
@@ -333,17 +337,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		super.create();
 
 		#if mobile
-		if (ClientPrefs.navInputMode == 'Virtual Pad')
-		{
-			addVirtualPad(LEFT_FULL, A_B_C);
-			addVirtualPadCamera();
-		}
+		// Same pad-setup-plus-help-text refresh _resetToDefault() and
+		// _changeSelected()'s 'nav' branch both need whenever navInputMode
+		// might have changed -- this initial call is the one difference (no
+		// existing pad to remove yet), but removeVirtualPad() is a safe no-op
+		// on a null pad, so the shared helper covers this case too.
+		_refreshVirtualPadForNavMode();
 		#end
 
 		_rebuildOptions();
 		_rebuildPreview();
 		_updateRows();
-		_updateNavModeUI();
 	}
 
 	/**
@@ -396,13 +400,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		FunkinSound.play(Paths.sound('cancelMenu'));
 
 		#if mobile
-		removeVirtualPad();
-		if (ClientPrefs.navInputMode == 'Virtual Pad')
-		{
-			addVirtualPad(LEFT_FULL, A_B_C);
-			addVirtualPadCamera();
-		}
-		_updateNavModeUI();
+		_refreshVirtualPadForNavMode();
 		#end
 
 		// Resetting 'game' (Gameplay Input) back to its default changes which
@@ -732,13 +730,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (opt.id == 'nav')
 		{
 			#if mobile
-			removeVirtualPad();
-			if (ClientPrefs.navInputMode == 'Virtual Pad')
-			{
-				addVirtualPad(LEFT_FULL, A_B_C);
-				addVirtualPadCamera();
-			}
-			_updateNavModeUI();
+			_refreshVirtualPadForNavMode();
 			#end
 		}
 		else if (opt.id == 'game')
@@ -781,6 +773,29 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			? Lang.str('mobile_controls_help_touch', 'tap a zone to test it   ·   BACK to exit')
 			: Lang.str('mobile_controls_help', '<  >  change   ·   tap a zone to test it   ·   B  back');
 	}
+
+	#if mobile
+	/**
+	 * Rebuilds this screen's own virtual pad to match the current
+	 * navInputMode and refreshes the touch-mode UI to match. Was three
+	 * separately hand-written copies of the same "removeVirtualPad(); if
+	 * Virtual Pad mode, add it back; refresh nav-mode UI" sequence (create(),
+	 * _resetToDefault(), and _changeSelected()'s 'nav' branch) -- the same
+	 * duplicated-logic risk already fixed elsewhere this session, where
+	 * editing one copy without the others would let this screen's own pad
+	 * silently drift out of sync with the rest.
+	 */
+	function _refreshVirtualPadForNavMode():Void
+	{
+		removeVirtualPad();
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, A_B_C);
+			addVirtualPadCamera();
+		}
+		_updateNavModeUI();
+	}
+	#end
 
 	// ── ClientPrefs accessors ──────────────────────────────────────────────────
 
