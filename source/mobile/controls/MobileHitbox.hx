@@ -190,10 +190,21 @@ class MobileHitbox extends TouchInputManager
 			[FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]
 		];
 
-		// Two thumb zones: 0=left side, 1=right side
+		// Two thumb zones: 0=left side (LEFT+DOWN), 1=right side (UP+RIGHT).
+		// Was `for (i in 0...4)` regardless of thumb -- every direction got
+		// built TWICE, once positioned in each zone, so e.g. tapping the
+		// RIGHT-side zone could also register as LEFT or DOWN (the extra
+		// buttons still got added/pushed, just never assigned to the named
+		// buttonLeft/buttonDown/buttonUp/buttonRight fields below, so nothing
+		// caught them). 8 overlapping-purpose zones instead of the intended 4
+		// -- confirmed against this exact function's own comment two lines
+		// below ("left zone: 0=LEFT, 1=DOWN; right zone: 2=UP, 3=RIGHT") and
+		// against MobileSettingsSubState._buildDPadPreview(), which already
+		// only shows 2 directions per zone.
 		for (thumb in 0...2)
 		{
-			for (i in 0...4)
+			final dirsForThumb = (thumb == 0) ? [0, 1] : [2, 3];
+			for (i in dirsForThumb)
 			{
 				// Calculate base X position (left zone starts at safeLeft, right zone starts near right edge)
 				var baseX:Float = (thumb == 0) ? safeLeft + hintSize * 2 : FlxG.width - safeRight - hintSize * 4;
