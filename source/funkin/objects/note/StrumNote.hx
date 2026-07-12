@@ -36,8 +36,15 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * one sharing the player's downscroll-aware Y (confirmed against
 	 * reference screenshots; nothing in the desktop source does this, so
 	 * there's no formula to port here, only the observed proportions).
+	 *
+	 * Size re-measured via connected-component bounding boxes (exact
+	 * arrow-gray fill color, not by eye) across a range of color tolerances
+	 * to rule out measurement noise: ours averaged ~53x53.5px vs the
+	 * reference's ~45.75x46.25px at the same 1600x720 resolution, i.e. ours
+	 * renders ~15.8% too big on both axes (uniform, not distorted). Rescaled
+	 * from 0.5 by that factor: 0.5 / 1.158 = 0.43.
 	 */
-	public static final VSLICE_OPPONENT_SCALE:Float = 0.5;
+	public static final VSLICE_OPPONENT_SCALE:Float = 0.43;
 
 	/**
 	 * Player-lane tuning -- unlike VSLICE_OPPONENT_SCALE these two are
@@ -52,7 +59,23 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * between DOWN and UP. 198/112 = 1.7679, rounded here.
 	 */
 	public static final VSLICE_PLAYER_SPACING_MULT:Float = 1.77;
-	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.85;
+
+	/**
+	 * Size re-measured the same way as VSLICE_OPPONENT_SCALE (connected-component
+	 * bounding boxes on the arrow-gray fill, checked across several color
+	 * tolerances). Excludes the reference screenshot's RIGHT arrow (clipped by
+	 * the screen edge in that capture) from the average: ours came out to
+	 * ~107.7x109.7px vs the reference's ~101.25x101.5px, i.e. ours renders
+	 * ~7.2% too big on both axes (uniform, not distorted). Rescaled from 0.85
+	 * by that factor: 0.85 / 1.072 = 0.79.
+	 *
+	 * FunkinCrew/Funkin's own mobile formula (PlayState.initNoteHitbox()) gives
+	 * a strumlineScale around 1.10 here instead -- bigger, not smaller -- but
+	 * that depends on noteStyle.getStrumlineScale(), a per-notestyle baseline
+	 * that isn't confirmed to match this project's own note assets, so it
+	 * can't be trusted over a direct pixel measurement.
+	 */
+	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.79;
 
 	/**
 	 * Real mobile VSlice's player strumline visually splits into two pairs
