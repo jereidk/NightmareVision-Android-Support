@@ -209,6 +209,7 @@ public class AndroidUtils extends Extension {
                     File folder = new File(folderPath);
                     if (!folder.exists()) {
                         android.util.Log.w("AndroidUtils", "Data folder does not exist: " + folderPath);
+                        Toast.makeText(activity, "Data folder does not exist: " + folderPath, Toast.LENGTH_LONG).show();
                         return;
                     }
                     
@@ -256,7 +257,12 @@ public class AndroidUtils extends Extension {
                     // instance, not a bare Application/Service Context.
                     activity.startActivityForResult(intent, OPEN_DATA_FOLDER_CODE);
                 } catch (Exception e) {
+                    // Surfaced as a Toast (not just Log.e) so this is visible without
+                    // logcat/adb -- a silent catch here is indistinguishable from the
+                    // button doing nothing at all, which is exactly the bug being
+                    // debugged when this fires.
                     android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());
+                    Toast.makeText(activity, "Open Data Folder failed: " + e, Toast.LENGTH_LONG).show();
                 }
             }
         });
