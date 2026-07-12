@@ -110,7 +110,7 @@ class OptionsState extends MusicBeatState
 
 	var bottomControls:Null<AmongControls>;
 
-	static var instance:OptionsState;
+	public static var instance:OptionsState;
 
 	public function openSelectedSubstate(label:String):Void
 	{
