@@ -48,6 +48,20 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.85;
 
 	/**
+	 * Extra inset for the opponent's compact corner strumline, separate from
+	 * STRUMLINE_X_OFFSET/STRUMLINE_Y_OFFSET (shared with the player's
+	 * strumline) -- the FPS/GC debug overlay (funkin.backend.DebugDisplay) is
+	 * visible BY DEFAULT (ClientPrefs.fpsDisplayType defaults to 'Simple', not
+	 * a hidden dev-only toggle) and sits flush in that same top-left corner,
+	 * so the shared 48/24 offset put the opponent's receptors directly under
+	 * it. Also nudges the strumline closer to the reference's own placement,
+	 * which sits noticeably inset from the literal corner rather than flush
+	 * against it.
+	 */
+	public static final VSLICE_OPPONENT_X_OFFSET:Float = 140;
+	public static final VSLICE_OPPONENT_Y_OFFSET:Float = 56;
+
+	/**
 	 * Runtime multiplier applied to NOTE_SPACING/STRUMLINE_SIZE in getCenteredXPos().
 	 * FunkinCrew/Funkin's own mobile touch mode (PlayState.initNoteHitbox()) spreads
 	 * VSlice notes out much further than the 112px desktop spacing so they line up
@@ -229,7 +243,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 */
 	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
 	{
-		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : STRUMLINE_X_OFFSET;
+		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : VSLICE_OPPONENT_X_OFFSET;
 		return baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
 	}
 
@@ -272,7 +286,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		safeTop = mobile.backend.ScreenUtil.safeArea().top;
 		#end
 
-		return safeTop + STRUMLINE_Y_OFFSET;
+		return safeTop + VSLICE_OPPONENT_Y_OFFSET;
 	}
 
 	override function update(elapsed:Float)
