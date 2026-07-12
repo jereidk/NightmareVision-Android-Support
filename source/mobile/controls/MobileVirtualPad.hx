@@ -103,6 +103,16 @@ class MobileVirtualPad extends TouchInputManager
 		var dPad2_X = safeLeft + 420; // Move para os lados (maior = mais para a direita)
 		var dPad2_Y = baseY - 620; // Move para cima/baixo (maior = mais para cima) só para mim n esquecer sempre q for mexer
 		
+		// Custom/RightFull gameplay layouts replace the D-pad buttons entirely
+		// (see _loadCustomPositions()/_rightSideLayout() below) -- this used to
+		// build the default LEFT_FULL positions here regardless, then build a
+		// SECOND full set of 4 buttons on top via those functions without ever
+		// removing the first set, since createButton() unconditionally adds
+		// and pushes every button it makes. That left two full D-pads active
+		// and receiving touches at once for anyone using Custom or RightFull.
+		// Skip building the default set at all when we know it'll be replaced.
+		final dPadOverridden = forGameplay && (ClientPrefs.virtualPadLayout == 'Custom' || ClientPrefs.virtualPadLayout == 'RightFull');
+		if (!dPadOverridden)
 		switch (DPad)
 		{
 			case UP_DOWN:
@@ -123,7 +133,7 @@ class MobileVirtualPad extends TouchInputManager
 			case CHART_EDITOR:
                 buttonUp = add(createButton(dPad_X + 305, baseY - 345, 'up', 0x00FF00, [UP, noteUP]));
 				buttonLeft = add(createButton(dPad_X + 200, baseY - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-				buttonRight = add(createButton(dPad_X + 407, baseY - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));		
+				buttonRight = add(createButton(dPad_X + 407, baseY - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
 				buttonDown = add(createButton(dPad_X + 305, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 			case NONE:
 				// lmao
