@@ -237,7 +237,10 @@ class OptionsState extends MusicBeatState
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, A_B);
+		// A_B_C instead of A_B -- the extra C button is this screen's reset
+		// shortcut for Virtual Pad nav mode (see the buttonC check in update()),
+		// same convention CosmeticsSubstate already uses for its own reset button.
+		addVirtualPad(LEFT_FULL, A_B_C);
 		addVirtualPadCamera();
 		#end
 	}
@@ -508,6 +511,14 @@ class OptionsState extends MusicBeatState
 				if (FlxG.mouse.justPressed) optionList.resetAllToDefault();
 			}
 		}
+
+		// Virtual Pad nav mode has no mouse/touch overlap to tap resetIcon with
+		// (see MobileNavUtil.allowPointerNav()) -- its own dedicated C button is
+		// the equivalent affordance instead, same convention CosmeticsSubstate
+		// already uses for its own reset button.
+		#if mobile
+		if (!blockAllInput && !blockInput && virtualPad?.buttonC?.justPressed == true) optionList.resetAllToDefault();
+		#end
 
 		refreshVisuals();
 
