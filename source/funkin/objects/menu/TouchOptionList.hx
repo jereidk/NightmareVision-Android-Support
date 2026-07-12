@@ -6,6 +6,8 @@ import flixel.math.FlxMath;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.FlxSprite;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 
 import funkin.states.options.Option;
 import funkin.input.Controls;
@@ -31,6 +33,12 @@ import funkin.data.ClientPrefs;
 class TouchOptionList extends FlxTypedGroup<FlxSprite>
 {
 	public static inline var ROW_H:Float = 56;
+
+	// Same accent pink as MobileSettingsSubState/OptionsState now use -- was
+	// a neon cyan (0xFF3DE0FF/0xFF9FCBE8) here, same "generic dev tool" clash
+	// fixed in those two screens.
+	static inline var COLOR_ACCENT:Int     = 0xFFFF6B9D;
+	static inline var COLOR_ACCENT_DIM:Int = 0xFF8C5062;
 
 	public var optionsArray:Array<Option> = [];
 	public var curSelected(default, null):Int = 0;
@@ -190,7 +198,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			// in earlier screenshots (a different UI element's marker, removed
 			// since). Plain ASCII is guaranteed to be in any font.
 			final lA = new FlxText(lA_x, rowY + 6, ARROW_W, '<');
-			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lA.setFormat(Paths.font('vcr.ttf'), 26, COLOR_ACCENT, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lA.borderSize = 2;
 			add(lA);
 			_rowLeft.push(lA);
@@ -201,13 +209,24 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			_rowRightBg.push(rBg);
 
 			final rA = new FlxText(rA_x, rowY + 6, ARROW_W, '>');
-			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			rA.setFormat(Paths.font('vcr.ttf'), 26, COLOR_ACCENT, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			rA.borderSize = 2;
 			add(rA);
 			_rowRight.push(rA);
+
+			// Staggered cascade entrance, same style as MobileSettingsSubState's
+			// option rows. Only .x is safe to tween here -- refreshRows() (called
+			// every frame) reassigns .y on all of these, which would fight a Y
+			// tween, but never touches .x for any of them.
+			for (spr in [lbl, val, lA, rA, lBg, rBg, rule])
+			{
+				final targetX = spr.x;
+				spr.x = targetX + 60;
+				FlxTween.tween(spr, {x: targetX}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.04});
+			}
 		}
 
-		_scrollBar = new ScrollBar(x0 + w + 10, y0, 8, Std.int(maxVisible * ROW_H), 0xFF2C3F3F, 0xFFFFFFFF);
+		_scrollBar = new ScrollBar(x0 + w + 10, y0, 8, Std.int(maxVisible * ROW_H), 0xFF2C3F3F, COLOR_ACCENT);
 		_scrollBar.minThumbHeight = 40;
 		_scrollBar.onScroll.add((scroll, _) -> _scrollOffset = scroll * getMaxScrollRows());
 		add(_scrollBar);
@@ -286,7 +305,32 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		else if (curSelected > _scrollOffset + maxVisible - 1) _scrollOffset = curSelected - maxVisible + 1;
 		_scrollOffset = FlxMath.bound(_scrollOffset, 0, maxScroll);
 
+		_pulseRow();
+
 		if (onSelect != null) onSelect(optionsArray[curSelected]);
+	}
+
+	/**
+	 * Small scale punch on the highlight fill/border of whichever slot
+	 * curSelected currently maps to -- same feedback pattern as
+	 * MobileSettingsSubState's _pulseSelection(). .scale is never touched by
+	 * refreshRows() (only .y/.alpha are), so it's safe to tween independently.
+	 */
+	function _pulseRow():Void
+	{
+		final slot = curSelected - Std.int(_scrollOffset);
+		if (slot < 0 || slot >= maxVisible) return;
+
+		for (spr in [_rowHi[slot], _rowHiBorder[slot]])
+		{
+			FlxTween.cancelTweensOf(spr.scale);
+			spr.origin.set(spr.width / 2, spr.height / 2);
+			spr.scale.set(1, 1);
+			FlxTween.tween(spr.scale, {x: 1.04, y: 1.1}, 0.08, {
+				ease: FlxEase.quadOut,
+				onComplete: (_) -> FlxTween.tween(spr.scale, {x: 1, y: 1}, 0.14, {ease: FlxEase.quadIn})
+			});
+		}
 	}
 
 	function adjustValue(dir:Int, held:Bool):Void
@@ -513,7 +557,10 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		return switch (opt.type)
 		{
 			case 'bool': (opt.getValue() == true) ? 'ON' : 'OFF';
-			case 'button': '▶';
+			// Was '▶' -- confirmed missing from vcr.ttf (fonttools cmap), same
+			// invisible-glyph issue fixed elsewhere this session. Matches the
+			// same '[ TAP ]' MobileSettingsSubState uses for its own button row.
+			case 'button': '[ TAP ]';
 			case 'label': '';
 			case 'string':
 				if (opt.storedValues != null)
@@ -579,7 +626,10 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 
 			final isLabel = (opt.type == 'label');
 			_rowLabel[i].text = opt.name;
-			_rowLabel[i].color = isLabel ? 0xFF7FD9E8 : (selected ? 0xFFFFE066 : FlxColor.WHITE);
+			// Section headers: warm amber instead of the old cyan, matching
+			// the same accent family (gold selected-state, pink interactive
+			// accent) instead of a third, unrelated hue.
+			_rowLabel[i].color = isLabel ? 0xFFFFB84D : (selected ? 0xFFFFE066 : FlxColor.WHITE);
 			_rowLabel[i].size = isLabel ? 19 : 22;
 			_rowLabel[i].bold = isLabel;
 
@@ -598,7 +648,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 				if (chk.animation.name != wantAnim) chk.animation.play(wantAnim, true);
 			}
 
-			final arrowColor = selected ? 0xFF3DE0FF : 0xFF9FCBE8;
+			final arrowColor = selected ? COLOR_ACCENT : COLOR_ACCENT_DIM;
 			_rowLeft[i].color = arrowColor;
 			_rowRight[i].color = arrowColor;
 			final bgColor = selected ? 0xFF3A4A5A : 0xFF2E2E44;
