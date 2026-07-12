@@ -357,9 +357,18 @@ class MobileVirtualPad extends TouchInputManager
 	{
 		super.update(elapsed);
 
-		// Auto-hide gameplay pad in menus when navInputMode = 'Touch'
-		// This allows native touch navigation in menus without interference
-		if (forGameplay && ClientPrefs.navInputMode == 'Touch')
+		// Auto-hide gameplay pad in menus (e.g. the pause overlay, which
+		// keeps PlayState -- and this pad -- ticking underneath it via
+		// persistentUpdate) when navInputMode = 'Touch', so native touch
+		// navigation there isn't blocked by the pad's own buttons.
+		// Was missing the FlxG.state.subState != null check, so this also
+		// fired during ordinary, unpaused gameplay: any player who picked
+		// gameInputMode = 'Virtual Pad' (taps the pad to hit notes) together
+		// with navInputMode = 'Touch' (an independent, unrelated menu-nav
+		// preference) had their note-hitting pad hidden and deactivated the
+		// instant a song started, with no keyboard/gamepad to press to bring
+		// it back -- a full softlock for that valid settings combination.
+		if (forGameplay && ClientPrefs.navInputMode == 'Touch' && FlxG.state.subState != null)
 		{
 			if (this.visible)
 			{
