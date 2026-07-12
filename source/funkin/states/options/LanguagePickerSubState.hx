@@ -6,6 +6,7 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 
 import funkin.objects.menu.TouchOptionList;
+import mobile.utils.MobileNavUtil;
 
 /**
  * Cycling the Language option one arrow-tap at a time gets painful once
@@ -105,8 +106,15 @@ class LanguagePickerSubState extends MusicBeatSubstate
 		list.setOptions(opts, currentIndex >= 0 ? currentIndex : null);
 
 		#if mobile
-		addVirtualPad(LEFT_FULL, B);
-		addVirtualPadCamera();
+		// Was unconditional -- every other options screen only shows the
+		// virtual pad when the user's own nav mode preference is 'Virtual
+		// Pad' (see MobileSettingsSubState/OptionsState/etc.); this one
+		// popped it up regardless, so a 'Touch' user picked it up here too.
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, B);
+			addVirtualPadCamera();
+		}
 		#end
 
 		super.create();
@@ -118,7 +126,12 @@ class LanguagePickerSubState extends MusicBeatSubstate
 
 		list.keyboardEnabled = true;
 
-		if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
+		// Virtual Pad nav mode suppresses direct touch/mouse interaction on
+		// every other options screen (see MobileSettingsSubState/OptionsState)
+		// -- this button wasn't gated at all, so on a touchscreen device
+		// (where taps ARE mouse events) an accidental tap near it while using
+		// the pad would still instantly close the screen underneath it.
+		if (MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			close();

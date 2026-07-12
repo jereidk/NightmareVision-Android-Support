@@ -54,7 +54,8 @@ class LanguageOptions
 		};
 		refreshCredits();
 
-		opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'), Lang.str('opt_subtitles_desc', "it ubtitle"), 'subtitles', 'bool', true));
+		// Was "it ubtitle" -- garbled leftover placeholder text, not an actual description.
+		opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'), Lang.str('opt_subtitles_desc', "Show subtitles for songs that have them."), 'subtitles', 'bool', true));
 
 		return opts;
 	}

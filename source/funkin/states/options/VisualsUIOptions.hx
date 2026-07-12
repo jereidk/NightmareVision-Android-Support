@@ -58,11 +58,17 @@ class VisualsUIOptions
 		laneUnderlayOption.decimals = 1;
 		opts.push(laneUnderlayOption);
 
-		opts.push(new Option(Lang.str('opt_laneUnderlayStyle'), Lang.str('opt_laneUnderlayStyle_desc'), 'laneUnderlayStyle', 'string', 'A', [
-				Lang.str('choice_laneUnderlayStyle_a'), Lang.str('choice_laneUnderlayStyle_b'), Lang.str('choice_laneUnderlayStyle_c'), Lang.str('choice_laneUnderlayStyle_d')
+		// These 6 keys were called without the English fallback default every
+		// other Option in this codebase provides -- Lang.str() renders
+		// '<MISSING_key>' literally on screen if a key is ever missing from
+		// both the current and fallback language files (see Lang.hx), so this
+		// silently relied on english.json never losing these specific
+		// entries instead of being self-contained like everything else.
+		opts.push(new Option(Lang.str('opt_laneUnderlayStyle', 'Lane Underlay Style'), Lang.str('opt_laneUnderlayStyle_desc', 'Changes the appearance or layering of the lane underlay(s).'), 'laneUnderlayStyle', 'string', 'A', [
+				Lang.str('choice_laneUnderlayStyle_a', 'Over Score Text'), Lang.str('choice_laneUnderlayStyle_b', 'Behind Score Text'), Lang.str('choice_laneUnderlayStyle_c', 'Behind Health Bar'), Lang.str('choice_laneUnderlayStyle_d', 'Fade')
 			], ['A', 'B', 'C', 'D']));
 
-		opts.push(new Option(Lang.str('opt_opponentLaneUnderlay'), Lang.str('opt_opponentLaneUnderlay_desc'), 'opponentLaneUnderlay', 'bool', true));
+		opts.push(new Option(Lang.str('opt_opponentLaneUnderlay', 'Opponent Lane Underlay'), Lang.str('opt_opponentLaneUnderlay_desc', "Shows the lane underlay behind the opponent's notes."), 'opponentLaneUnderlay', 'bool', true));
 
 		return opts;
 	}
