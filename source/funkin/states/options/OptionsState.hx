@@ -186,13 +186,17 @@ class OptionsState extends MusicBeatState
 			var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xAA0A0A14);
 			add(dim);
 
-			// Same header panel MobileSettingsSubState/VirtualPadCustomizerSubState
-			// already use for their own top bar -- ties this screen visually to the
-			// sub-states it opens, instead of the title/buttons/tabs floating
-			// directly over the starfield with nothing behind them.
-			var topBar = new FlxSprite(0, 0).loadGraphic(Paths.image('menu/common/topBar'));
+			// Upstream's glossy header-strip texture (cropped from thingy.png at
+			// its native 64px height -- no vertical stretch, so the diagonal
+			// highlight streaks keep their real proportions) behind the title/
+			// close-button/action-buttons row, instead of the generic topBar
+			// every other mobile screen uses. Tabs get their own matching strip
+			// below (see tabsPanelBg, right before buildTabs()) rather than one
+			// bar stretched to cover both rows -- stretching thingy's short
+			// strip that tall looked crude.
+			var topBar = new FlxSprite(0, 0).loadGraphic(Paths.image('menu/options/headerStrip'));
 			topBar.antialiasing = ClientPrefs.globalAntialiasing;
-			topBar.setGraphicSize(Std.int(FlxG.width), Std.int(LIST_Y - 10));
+			topBar.setGraphicSize(Std.int(FlxG.width), 64);
 			topBar.updateHitbox();
 			add(topBar);
 
@@ -208,9 +212,43 @@ class OptionsState extends MusicBeatState
 			add(menuBackButton);
 
 			buildActionButtons(cutout);
+
+			// Same thingy.png-derived gradient as artPanelBg below (the "options"
+			// panel), cropped to a short strip instead -- unifies tabs with the
+			// rest of this screen's thingy-restructured look instead of the tab
+			// pills floating directly over the dim/starfield with nothing behind
+			// their own row, the way action buttons above (still on topBar/the
+			// header row, not this) and everything below already have.
+			final tabsPanelX = 40 + cutout * 0.5 - 8;
+			final tabsPanelW = ((1160 + cutout) - 40) + 16;
+			var tabsPanelBg = new FlxSprite(tabsPanelX, TAB_Y - 8).loadGraphic(Paths.image('menu/options/tabsPanel'));
+			tabsPanelBg.antialiasing = ClientPrefs.globalAntialiasing;
+			tabsPanelBg.setGraphicSize(Std.int(tabsPanelW), Std.int(TAB_H + 16));
+			tabsPanelBg.updateHitbox();
+			add(tabsPanelBg);
+
 			buildTabs(cutout);
 
 			final listW = (1160 + cutout) - LIST_X;
+
+			// Shared backdrop for the whole options column below the tabs --
+			// upstream's thingy.png-derived gradient (same source as
+			// tabsPanelBg above), built and added before optionList/descBg/the
+			// art+title+version below so all of them draw on TOP of it. Always
+			// visible regardless of focus: it's the one constant "window" this
+			// area sits in, only its CONTENT (option list vs. hero art) swaps
+			// between "choosing a section" and "editing its options" -- see the
+			// focus-based toggle in update().
+			final panelX = LIST_X - 6;
+			final panelY = LIST_Y - 6;
+			final panelH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6 + 74;
+
+			artPanelBg = new FlxSprite(panelX, panelY).loadGraphic(Paths.image('menu/options/artPanel'));
+			artPanelBg.setGraphicSize(Std.int(listW + 12), Std.int(panelH));
+			artPanelBg.updateHitbox();
+			artPanelBg.antialiasing = ClientPrefs.globalAntialiasing;
+			add(artPanelBg);
+
 			optionList = new TouchOptionList(LIST_X, LIST_Y, listW, LIST_MAX_VISIBLE);
 			add(optionList);
 			optionList.onSelect = onOptionSelected;
@@ -236,23 +274,13 @@ class OptionsState extends MusicBeatState
 			// panel on its own dedicated category-picker screen, swapped out
 			// entirely once a category opened its own full substate over it. This
 			// tab-based redesign has no separate picker screen to swap away from,
-			// so the panel takes over the option list's own footprint instead --
-			// see the focus-based toggle in update() for when each one shows.
-			// Built (and thus z-ordered) before buildResetButton() so the reset
-			// icon/label -- which stay visible/functional regardless of focus,
-			// see the RESET keybind handling below -- always render on top of
-			// whichever of these two panels is currently showing, instead of
-			// getting covered by the art panel whenever it's up.
-			final panelX = LIST_X - 6;
-			final panelY = LIST_Y - 6;
-			final panelH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6 + 74;
-
-			artPanelBg = new FlxSprite(panelX, panelY).loadGraphic(Paths.image('menu/options/artPanel'));
-			artPanelBg.setGraphicSize(Std.int(listW + 12), Std.int(panelH));
-			artPanelBg.updateHitbox();
-			artPanelBg.antialiasing = ClientPrefs.globalAntialiasing;
-			add(artPanelBg);
-
+			// so this content takes over the option list's own footprint instead
+			// (on the SAME artPanelBg backdrop built above) -- see the
+			// focus-based toggle in update() for when each one shows. Built
+			// before buildResetButton() so the reset icon/label -- which stay
+			// visible/functional regardless of focus, see the RESET keybind
+			// handling below -- always render on top of whichever content is
+			// currently showing on the panel.
 			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY');
 			titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 36, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			titleText.borderSize = 2;
@@ -592,13 +620,17 @@ class OptionsState extends MusicBeatState
 
 		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
 
-		// Swap the option list for the hero-art panel while still choosing a
-		// section -- active=false (not just visible=false) so a tap landing on
-		// the now-hidden list doesn't still register on one of its rows.
+		// Swap the option list for the hero art/title/version while still
+		// choosing a section -- active=false (not just visible=false) so a tap
+		// landing on the now-hidden list doesn't still register on one of its
+		// rows. artPanelBg itself is NOT part of this toggle: it's the shared
+		// backdrop for both the list and the art (same as tabsPanelBg is for
+		// the tab row), so it stays visible either way -- only its CONTENT
+		// (list rows vs. hero art) swaps on top of it.
 		final showList = (focus == 'list');
 		optionList.visible = optionList.active = showList;
 		descBg.visible = descText.visible = showList;
-		artPanelBg.visible = artImage.visible = titleText.visible = versionText.visible = !showList;
+		artImage.visible = titleText.visible = versionText.visible = !showList;
 
 		hoveredTab = -1;
 		hoveredButton = -1;
