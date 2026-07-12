@@ -471,6 +471,11 @@ class OptionsState extends MusicBeatState
 		// already follows for its rows via this same helper.
 		final pointerNavAllowed = mobile.utils.MobileNavUtil.allowPointerNav();
 
+		// The tap-to-reset icon is a Touch-mode-only affordance (Virtual Pad
+		// mode resets via the pad's own C button instead, see below) -- hide it
+		// rather than leave a dead, untappable icon sitting in the corner.
+		resetIcon.visible = resetLabel.visible = pointerNavAllowed;
+
 		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
 			mouseControlActive = true;

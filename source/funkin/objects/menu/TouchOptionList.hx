@@ -84,7 +84,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 	var _rowRight:Array<FlxText> = [];
 	var _rowRightBg:Array<FlxSprite> = [];
 
-	// Reserved strip at the row's right edge for the ◄/► adjust buttons --
+	// Reserved strip at the row's right edge for the </> adjust buttons --
 	// value text stops short of it, and it in turn stops short of the
 	// scrollbar (x0+w+10) instead of the two crowding each other.
 	static inline var ARROW_W:Float = 46;
@@ -184,7 +184,12 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			add(lBg);
 			_rowLeftBg.push(lBg);
 
-			final lA = new FlxText(lA_x, rowY + 6, ARROW_W, '◄');
+			// '<'/'>' instead of '◄'/'►' -- vcr.ttf has no glyph for the
+			// geometric-shapes-block arrows (confirmed via fonttools cmap), so
+			// they rendered as blank boxes on a real device despite looking fine
+			// in earlier screenshots (a different UI element's marker, removed
+			// since). Plain ASCII is guaranteed to be in any font.
+			final lA = new FlxText(lA_x, rowY + 6, ARROW_W, '<');
 			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lA.borderSize = 2;
 			add(lA);
@@ -195,7 +200,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			add(rBg);
 			_rowRightBg.push(rBg);
 
-			final rA = new FlxText(rA_x, rowY + 6, ARROW_W, '►');
+			final rA = new FlxText(rA_x, rowY + 6, ARROW_W, '>');
 			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF3DE0FF, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			rA.borderSize = 2;
 			add(rA);
