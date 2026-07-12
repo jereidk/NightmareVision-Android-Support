@@ -56,9 +56,24 @@ class LanguagePickerSubState extends MusicBeatSubstate
 		final entries = [for (i in 0...codes.length) {code: codes[i], name: displayNames[i]}];
 		entries.sort((a, b) -> a.name.toLowerCase() < b.name.toLowerCase() ? -1 : (a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0));
 
+		// A/B/C... section headers (reuses TouchOptionList's existing 'label'
+		// row + divider rule, same as every other tab's section breaks) so a
+		// flat wall of 30+ names is actually scannable instead of just a long
+		// uniform scroll.
 		final opts:Array<Option> = [];
+		var lastLetter = '';
+		var currentIndex = -1;
 		for (entry in entries)
 		{
+			final letter = entry.name.substr(0, 1).toUpperCase();
+			if (letter != lastLetter)
+			{
+				opts.push(new Option(letter, '', '', 'label'));
+				lastLetter = letter;
+			}
+
+			if (entry.code == ClientPrefs.language) currentIndex = opts.length;
+
 			final opt = new Option(entry.name, '', '', 'button');
 			opt.callback = () -> {
 				onPicked(entry.code);
@@ -66,7 +81,11 @@ class LanguagePickerSubState extends MusicBeatSubstate
 			};
 			opts.push(opt);
 		}
-		list.setOptions(opts);
+
+		// Land already scrolled to (and with) your current language selected
+		// -- so re-opening this to double check what's active doesn't mean
+		// scrolling past everything before it every time.
+		list.setOptions(opts, currentIndex >= 0 ? currentIndex : null);
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, B);

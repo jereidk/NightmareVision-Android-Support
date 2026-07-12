@@ -213,14 +213,26 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		add(_scrollBar);
 	}
 
-	public function setOptions(opts:Array<Option>):Void
+	/**
+	 * @param initialIndex Row to land on already selected and scrolled into
+	 * view, no animation -- for lists where "the thing you already have"
+	 * matters (e.g. the language picker opening on your current language
+	 * instead of always dumping you at the top of an alphabetical list).
+	 * Defaults to the first selectable row, same as before this param existed.
+	 */
+	public function setOptions(opts:Array<Option>, ?initialIndex:Int):Void
 	{
 		optionsArray = opts;
-		curSelected = firstSelectable();
+		curSelected = (initialIndex != null && initialIndex >= 0 && initialIndex < opts.length && opts[initialIndex].type != 'label') ?
+			initialIndex : firstSelectable();
 		_selVisual = curSelected;
-		_scrollOffset = 0;
-		_scrollOffsetVisual = 0;
+
+		final maxScroll = getMaxScrollRows();
+		_scrollOffset = FlxMath.bound(curSelected - Std.int(maxVisible / 2), 0, maxScroll);
+		_scrollOffsetVisual = _scrollOffset;
+
 		_scrollBar.setMetrics(maxVisible, opts.length);
+		_scrollBar.setProgress(maxScroll > 0 ? _scrollOffset / maxScroll : 0);
 		if (onDatasetChanged != null && curSelected >= 0 && curSelected < opts.length) onDatasetChanged(opts[curSelected]);
 	}
 
