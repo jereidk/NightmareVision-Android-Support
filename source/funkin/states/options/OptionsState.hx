@@ -607,6 +607,16 @@ class OptionsState extends MusicBeatState
 		if (!blockAllInput && !blockInput && virtualPad?.buttonC?.justPressed == true) optionList.resetAllToDefault();
 		#end
 
+		// controls.RESET (keyboard/gamepad) already resets while focus == 'list'
+		// (see TouchOptionList.handleInput(), which only runs there since
+		// optionList.keyboardEnabled is false otherwise) -- but the touch reset
+		// icon above and the Virtual Pad's C button both work from ANY focus on
+		// this screen, since resetAllToDefault() always acts on the current
+		// tab's options regardless of which row/area is selected. Extend the
+		// keybind the same way for 'tabs'/'buttons' focus; 'list' is excluded
+		// here so this doesn't double-fire alongside TouchOptionList's own check.
+		if (!blockAllInput && !blockInput && focus != 'list' && controls.RESET) optionList.resetAllToDefault();
+
 		refreshVisuals();
 
 		switch (focus)
