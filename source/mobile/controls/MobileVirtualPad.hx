@@ -84,12 +84,65 @@ class MobileVirtualPad extends TouchInputManager
 	/** If true, this pad is for gameplay (not navigation) */
 	public var forGameplay(default, null):Bool = false;
 	
+	/** Config this pad was last built with, pushed here each time reconfigure() borrows it for a substate. */
+	var _configStack:Array<{dpad:MobileDPadMode, action:MobileActionMode, forGameplay:Bool}> = [];
+	public var currentDPad(default, null):MobileDPadMode;
+	public var currentAction(default, null):MobileActionMode;
+
 	public function new(DPad:MobileDPadMode, Action:MobileActionMode, ?forGameplay:Bool = false)
 	{
 		super();
-		
+		_build(DPad, Action, forGameplay);
+	}
+
+	/**
+	 * Rebuilds this pad's buttons in place for a new DPad/Action combination,
+	 * remembering the current one so restorePrevious() can bring it back --
+	 * lets a substate borrow and reshape an ancestor's already-existing pad
+	 * instead of creating (and the ancestor's hiding) a second one. See
+	 * MusicBeatSubstate.addVirtualPad()/removeVirtualPad() for the borrowing
+	 * side of this.
+	 */
+	public function reconfigure(DPad:MobileDPadMode, Action:MobileActionMode, ?forGameplay:Bool):Void
+	{
+		_configStack.push({dpad: currentDPad, action: currentAction, forGameplay: this.forGameplay});
+		_clearButtons();
+		_build(DPad, Action, forGameplay ?? false);
+	}
+
+	/**
+	 * Undoes the most recent reconfigure(), restoring this pad's previous
+	 * button layout. Returns false (no-op) if there was nothing to restore --
+	 * callers should fall back to their own cleanup in that case.
+	 */
+	public function restorePrevious():Bool
+	{
+		if (_configStack.length == 0) return false;
+		final prev = _configStack.pop();
+		_clearButtons();
+		_build(prev.dpad, prev.action, prev.forGameplay);
+		return true;
+	}
+
+	/** Destroys every current button/reference without destroying this pad itself. */
+	function _clearButtons():Void
+	{
+		for (btn in buttons)
+			FlxDestroyUtil.destroy(btn);
+		buttons = [];
+
+		buttonLeft = buttonUp = buttonRight = buttonDown = null;
+		buttonLeft2 = buttonUp2 = buttonRight2 = buttonDown2 = null;
+		buttonA = buttonB = buttonC = buttonD = buttonE = null;
+		buttonR = buttonV = buttonX = buttonY = buttonZ = buttonS = null;
+	}
+
+	function _build(DPad:MobileDPadMode, Action:MobileActionMode, forGameplay:Bool):Void
+	{
 		this.forGameplay = forGameplay;
-		
+		currentDPad = DPad;
+		currentAction = Action;
+
 		var screenW = FlxG.width;
 		var screenH = FlxG.height;
 		var safe = ScreenUtil.safeArea();
