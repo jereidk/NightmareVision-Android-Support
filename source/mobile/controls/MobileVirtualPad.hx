@@ -367,18 +367,25 @@ class MobileVirtualPad extends TouchInputManager
 	{
 		super.update(elapsed);
 
-		// Auto-hide gameplay pad in menus (e.g. the pause overlay, which
-		// keeps PlayState -- and this pad -- ticking underneath it via
-		// persistentUpdate) when navInputMode = 'Touch', so native touch
-		// navigation there isn't blocked by the pad's own buttons.
-		// Was missing the FlxG.state.subState != null check, so this also
-		// fired during ordinary, unpaused gameplay: any player who picked
-		// gameInputMode = 'Virtual Pad' (taps the pad to hit notes) together
-		// with navInputMode = 'Touch' (an independent, unrelated menu-nav
-		// preference) had their note-hitting pad hidden and deactivated the
-		// instant a song started, with no keyboard/gamepad to press to bring
-		// it back -- a full softlock for that valid settings combination.
-		if (forGameplay && ClientPrefs.navInputMode == 'Touch' && FlxG.state.subState != null)
+		// Hide the gameplay pad entirely whenever a substate covers PlayState
+		// (pause menu, cosmetics locker, etc.) -- PlayState keeps ticking this
+		// pad underneath any open substate via persistentUpdate, but every one
+		// of those substates already brings its own dedicated pad/touch UI for
+		// its own navigation, so the gameplay D-pad has nothing useful to do
+		// there regardless of navInputMode.
+		// This used to only special-case navInputMode == 'Touch' (with a
+		// keyboard/gamepad press bringing the pad back) -- for 'Virtual Pad'
+		// nav mode specifically, that left the gameplay D-pad fully visible
+		// and active AT THE SAME TIME as the substate's own pad (e.g. the
+		// pause menu's addVirtualPad(UP_DOWN, A_B)), both receiving touches
+		// and likely overlapping on screen. And for 'Touch' mode, the escape
+		// hatch back to the gameplay pad via keyboard/gamepad was never
+		// actually needed once inside a substate -- that substate's own UI
+		// already covers its own input needs. (The Touch-mode softlock this
+		// replaced -- the gameplay pad staying hidden during ordinary,
+		// unpaused gameplay -- is fixed by requiring subState != null here,
+		// same as before.)
+		if (forGameplay && FlxG.state.subState != null)
 		{
 			if (this.visible)
 			{
@@ -387,21 +394,6 @@ class MobileVirtualPad extends TouchInputManager
 				{
 					btn.active = false;
 					btn.visible = false;
-				}
-			}
-			// Only show pad when keyboard or gamepad is pressed during gameplay
-			keyboardPressed = FlxG.keys.justPressed.ANY;
-			gamepadPressed = false;
-			// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
-			// scan it for a justPressed button; anyButton() checks the same state with no allocation.
-			if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
-			if (keyboardPressed || gamepadPressed)
-			{
-				this.visible = true;
-				for (btn in buttons)
-				{
-					btn.active = true;
-					btn.visible = true;
 				}
 			}
 			return;
