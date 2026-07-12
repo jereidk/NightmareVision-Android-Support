@@ -509,7 +509,16 @@ class NoteUtil
 		final idx = id > skin.keys ? 0 : id;
 
 		var colors = skin.colors[idx];
-		if (ClientPrefs.quants && quant != 0) colors = quantDefaultColors[quants.indexOf(quant)];
+		var hsv:Array<Int> = (idx >= 0 && idx < ClientPrefs.arrowHSV.length) ? ClientPrefs.arrowHSV[idx] : null;
+
+		if (ClientPrefs.quants && quant != 0)
+		{
+			final quantIdx = quants.indexOf(quant);
+			colors = quantDefaultColors[quantIdx];
+			hsv = (quantIdx >= 0 && quantIdx < ClientPrefs.quantHSV.length) ? ClientPrefs.quantHSV[quantIdx] : null;
+		}
+
+		colors = applyHSVShift(colors, hsv);
 
 		if (into != null)
 		{
@@ -518,6 +527,39 @@ class NoteUtil
 		}
 
 		return new RGBGraphics(colors.r, colors.g, colors.b);
+	}
+
+	/**
+	 * NotesSubState/QuantNotesSubState and MobileHitbox.getArrowColor() both
+	 * treat arrowHSV/quantHSV as a shift on top of each note's traditional
+	 * base color rather than an absolute override -- this applies that same
+	 * shift to an actual ColorList's 3 tones (highlight/mid/shadow) so the
+	 * notes you see falling actually match what those two settings screens
+	 * (and the hitbox) preview. Saturation/brightness scale relative to each
+	 * tone's own value so the shading between tones is preserved, not
+	 * flattened to a single absolute S/B like the hitbox's flat-color case.
+	 */
+	public static function applyHSVShift(colors:ColorList, hsv:Array<Int>):ColorList
+	{
+		if (colors == null || hsv == null || (hsv[0] == 0 && hsv[1] == 0 && hsv[2] == 0)) return colors;
+
+		return {
+			r: shiftColorHSV(colors.r, hsv),
+			g: shiftColorHSV(colors.g, hsv),
+			b: shiftColorHSV(colors.b, hsv)
+		};
+	}
+
+	static function shiftColorHSV(color:FlxColor, hsv:Array<Int>):FlxColor
+	{
+		if (color == null) return color;
+
+		var hue = (color.hue + hsv[0]) % 360;
+		if (hue < 0) hue += 360;
+		var sat = flixel.math.FlxMath.bound(color.saturation * (100 + hsv[1]) / 100, 0, 1);
+		var bri = flixel.math.FlxMath.bound(color.brightness * (100 + hsv[2]) / 100, 0, 1);
+
+		return FlxColor.fromHSB(hue, sat, bri, color.alphaFloat);
 	}
 	
 	public static function colorToArray(color:ColorList):Array<FlxColor>

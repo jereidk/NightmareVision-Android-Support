@@ -252,7 +252,12 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		
 		var arr:Array<FlxColor> = note?.rgbShader?.getColors();
 		
-		arr ??= (!isQuant && skin.colors != null ? NoteUtil.colorToArray(skin.colors[noteData]) : NoteUtil.getCurColors(noteData, note?.quant ?? 4, player).getColors());
+		// The no-note (idle receptor) case bypassed getCurColors() entirely for
+		// non-quant notes, so it never picked up the arrowHSV shift NotesSubState
+		// lets you preview -- apply it here too so the receptor's own idle color
+		// matches what actually falls once a note passes through it.
+		var idleHSV:Array<Int> = (noteData >= 0 && noteData < ClientPrefs.arrowHSV.length) ? ClientPrefs.arrowHSV[noteData] : null;
+		arr ??= (!isQuant && skin.colors != null ? NoteUtil.colorToArray(NoteUtil.applyHSVShift(skin.colors[noteData], idleHSV)) : NoteUtil.getCurColors(noteData, note?.quant ?? 4, player).getColors());
 		
 		rgbShader.setColors(arr);
 	}
