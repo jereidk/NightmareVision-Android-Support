@@ -251,7 +251,13 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		var looksieScale:Float = FlxMath.lerp(looksie.scale.x, looksieHover ? 1.25 : 1, FlxMath.bound(elapsed * 15.6, 0, 1));
 		looksie.scale.set(looksieScale, looksieScale);
 		
-		if (looksieHover && FlxG.mouse.justPressed)
+		// Unlike the optionText tap-handling right below, this wasn't gated at
+		// all -- 'looksie' sits in the bottom-right corner, the same area the
+		// Virtual Pad's A/B buttons occupy (see addVirtualPad(UP_DOWN, A_B)
+		// above), so a Virtual Pad user's button tap could also land on this
+		// and toggle viewingMode, which then hijacks BACK (see update() above:
+		// BACK exits viewingMode instead of resuming/closing the pause menu).
+		if (looksieHover && FlxG.mouse.justPressed #if mobile && MobileNavUtil.allowPointerNav() #end)
 		{
 			changeView(!viewingMode);
 		}
