@@ -97,18 +97,18 @@ class MusicBeatState extends FlxUIState
 				return;
 			}
 
-			// Note Tap: tap the actual VSlice receptor sprites directly —
-			// invisible zones matching their real position/size (NOTE_TAP),
-			// not the separate Arrows scheme's own fixed-position flicker sprites.
+			// Note Tap: tap the actual falling note sprite wherever it currently
+			// is (NoteTapInput tracks each note's own live x/y every frame), not
+			// a fixed zone at the receptor's position -- so this works under any
+			// Note Layout, not just VSlice.
 			if (ClientPrefs.gameInputMode == 'Note Tap')
 			{
-				hitbox = new MobileHitbox(NOTE_TAP);
-				hitboxCam = new FlxCamera();
-				hitboxCam.bgColor.alpha = 0;
-				FlxG.cameras.add(hitboxCam, DefaultDrawTarget);
-				hitbox.cameras = [hitboxCam];
-				hitbox.visible = false;
-				add(hitbox);
+				final playState = Std.downcast(this, funkin.states.PlayState);
+				if (playState != null)
+				{
+					noteTapInput = new NoteTapInput(playState.notes);
+					add(noteTapInput);
+				}
 				return;
 			}
 

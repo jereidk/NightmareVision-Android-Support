@@ -15,7 +15,10 @@ class MobileFunctions
 		Lua_helper.add_callback(lua, "touchUtilJustReleased", TouchUtil.justReleased);
 		Lua_helper.add_callback(lua, "setHitboxVisible", function(visible:Bool = false):Void
 		{
-			PlayState.instance.hitbox.visible = visible;
+			// hitbox is null when gameInputMode is 'Virtual Pad' or 'Note Tap'
+			// (neither uses a MobileHitbox at all) -- this call would already
+			// have crashed for the former; guard both now.
+			if (PlayState.instance?.hitbox != null) PlayState.instance.hitbox.visible = visible;
 		});
 		Lua_helper.add_callback(lua, "enableKeyboard", function()
 		{
