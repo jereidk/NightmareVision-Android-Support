@@ -22,7 +22,7 @@ class ExtraDropShadowShader extends flixel.system.FlxAssets.FlxShader
 			Logger.log('Crash Log ->: "${error.toString()}"', ERROR);
 			Logger.writeDump(error.toString(), 'crash_dump', 'shader_error');
 
-			return super.__createGLProgram(vertexSource, funkin.backend.FunkinShader._templateFrag);
+			@:privateAccess return super.__createGLProgram(vertexSource, funkin.backend.FunkinShader._templateFrag);
 		}
 	}
 

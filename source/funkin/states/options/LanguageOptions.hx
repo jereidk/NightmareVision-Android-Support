@@ -39,7 +39,7 @@ class LanguageOptions
 				// still fully clickable, and the picker's own list sits in roughly
 				// the same screen area, so a tap meant for a language row could
 				// silently change the hidden tab underneath instead.
-				OptionsState.instance.blockInput = true;
+				@:privateAccess OptionsState.instance.blockInput = true;
 				OptionsState.instance.openSubState(new LanguagePickerSubState(codes, displayNames, (pickedCode) -> {
 					langOption.curOption = codes.indexOf(pickedCode);
 					langOption.setValue(pickedCode);
