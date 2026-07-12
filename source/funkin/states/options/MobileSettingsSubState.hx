@@ -47,7 +47,7 @@ typedef PreviewZone =
  *   BACK         — close
  * Touch:
  *   tap a row        — select it
- *   tap ◄ / ►        — change the selected value
+ *   tap < / >        — change the selected value
  *   tap a preview zone — "test" it (lights up)
  */
 class MobileSettingsSubState extends MusicBeatSubstate
@@ -205,8 +205,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_rowValue.push(v);
 			add(v);
 
+			// '<'/'>' instead of '◄'/'►' -- vcr.ttf has no glyph for the
+			// geometric-shapes-block arrows (confirmed via fonttools cmap), so
+			// they rendered as blank boxes on a real device. Plain ASCII is
+			// guaranteed to be in any font.
 			// Left arrow — drawn after value so it renders on top if widths ever shift
-			var lA = new FlxText(OPT_X + OPT_W - 248, rowY + 4, 52, '◄');
+			var lA = new FlxText(OPT_X + OPT_W - 248, rowY + 4, 52, '<');
 			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lA.borderSize = 1.5;
 			lA.visible = false;
@@ -214,7 +218,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			add(lA);
 
 			// Right arrow
-			var rA = new FlxText(OPT_X + OPT_W - 56, rowY + 4, 52, '►');
+			var rA = new FlxText(OPT_X + OPT_W - 56, rowY + 4, 52, '>');
 			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			rA.borderSize = 1.5;
 			rA.visible = false;
@@ -260,7 +264,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_backBtn.antialiasing = ClientPrefs.globalAntialiasing;
 		_backBtn.color = 0xFF334455;
 		add(_backBtn);
-		_backBtnLabel = new FlxText(OPT_X, backBtnY + 9, 160, '◄  BACK');
+		_backBtnLabel = new FlxText(OPT_X, backBtnY + 9, 160, '<  BACK');
 		_backBtnLabel.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		_backBtnLabel.borderSize = 1.5;
 		_backBtnLabel.antialiasing = ClientPrefs.globalAntialiasing;
@@ -471,8 +475,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	/**
 	 * Use the full row as a touch target.
-	 * Left half of the row → ◄ (change left); right half → ► (change right).
-	 * The ◄ ► sprites are visual only.
+	 * Left half of the row → < (change left); right half → > (change right).
+	 * The < > sprites are visual only.
 	 */
 	function _resolveRowTap(mx:Float, my:Float):Void
 	{
@@ -583,7 +587,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_backBtnLabel.visible = touchMode;
 		_helpText.text = touchMode
 			? Lang.str('mobile_controls_help_touch', 'tap a zone to test it   ·   BACK to exit')
-			: Lang.str('mobile_controls_help', '◄ ►  change   ·   tap a zone to test it   ·   B  back');
+			: Lang.str('mobile_controls_help', '<  >  change   ·   tap a zone to test it   ·   B  back');
 	}
 
 	// ── ClientPrefs accessors ──────────────────────────────────────────────────

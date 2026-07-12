@@ -42,7 +42,7 @@ typedef DLCListItem = {
  * Touch (default 'Touch' nav mode, no virtual pad on screen):
  *   tap a tab      — switch tab
  *   tap a row      — select it; tap the selected row again to activate it
- *   tap ▲/▼ hints  — scroll selection up / down
+ *   tap the scroll hints — scroll selection up / down
  *   (BACK is the Android hardware back key, always available)
  */
 class MobileDLCSubState extends MusicBeatSubstate
@@ -262,15 +262,17 @@ class MobileDLCSubState extends MusicBeatSubstate
         _statusText.borderSize = 1;
         add(_statusText);
 
-        // Scroll position hints — shown when items extend above or below the visible window
-        _scrollUpHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 - 16, 156, "▲ more above");
+        // Scroll position hints — shown when items extend above or below the visible window.
+        // Plain text instead of ▲/▼ -- vcr.ttf has no glyph for those (confirmed
+        // via fonttools cmap), so they rendered as blank boxes on a real device.
+        _scrollUpHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 - 16, 156, "More above");
         _scrollUpHint.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.fromRGB(120, 120, 120), RIGHT,
             FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
         _scrollUpHint.borderSize = 1;
         _scrollUpHint.visible = false;
         add(_scrollUpHint);
 
-        _scrollDownHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 + MAX_VIS * ITEM_H + 2, 156, "▼ more below");
+        _scrollDownHint = new FlxText(LIST_X + LIST_W - 160, LIST_Y0 + MAX_VIS * ITEM_H + 2, 156, "More below");
         _scrollDownHint.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.fromRGB(120, 120, 120), RIGHT,
             FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
         _scrollDownHint.borderSize = 1;
