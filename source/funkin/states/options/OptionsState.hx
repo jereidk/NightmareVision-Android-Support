@@ -78,9 +78,13 @@ class OptionsState extends MusicBeatState
 	var descText:FlxText;
 	var descBg:FlxSprite;
 
+	var resetIcon:FlxSprite;
+	var resetLabel:FlxText;
+
 	var mouseControlActive:Bool = true;
 	var hoveredTab:Int = -1;
 	var hoveredButton:Int = -1;
+	var hoveredReset:Bool = false;
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
@@ -99,6 +103,10 @@ class OptionsState extends MusicBeatState
 	// whole reason for this redesign, so keeping the list clear of it is the
 	// one non-negotiable measurement here.
 	static final LIST_X:Float = 360;
+
+	// Strip reserved at the description box's right edge for the reset-to-
+	// default button, so descText's word wrap never runs underneath it.
+	static final RESET_W:Float = 110;
 
 	var bottomControls:Null<AmongControls>;
 
@@ -168,6 +176,16 @@ class OptionsState extends MusicBeatState
 			var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xAA0A0A14);
 			add(dim);
 
+			// Same header panel MobileSettingsSubState/VirtualPadCustomizerSubState
+			// already use for their own top bar -- ties this screen visually to the
+			// sub-states it opens, instead of the title/buttons/tabs floating
+			// directly over the starfield with nothing behind them.
+			var topBar = new FlxSprite(0, 0).loadGraphic(Paths.image('menu/common/topBar'));
+			topBar.antialiasing = ClientPrefs.globalAntialiasing;
+			topBar.setGraphicSize(Std.int(FlxG.width), Std.int(LIST_Y - 10));
+			topBar.updateHitbox();
+			add(topBar);
+
 			var optionsHeaderY:Float = 18 + (ClientPrefs.language == 'arabic' ? -10 : 0);
 			optionsHeader = new FlxText(40 + cutout * 0.5, optionsHeaderY, 0, Lang.str('options'), 62);
 			optionsHeader.setFormat(Paths.font('AmaticSC-Bold.ttf'), 42, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -192,11 +210,13 @@ class OptionsState extends MusicBeatState
 			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6).makeGraphic(Std.int(listW + 12), 74, 0x88000000);
 			add(descBg);
 
-			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 12, listW - 16, '');
+			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 12, listW - 16 - RESET_W, '');
 			descText.setFormat(Paths.font('vcr.ttf'), 18, 0xFFB0B0B0, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			descText.borderSize = 1.2;
 			descText.wordWrap = true;
 			add(descText);
+
+			buildResetButton();
 
 			#if !mobile
 			bottomControls = new AmongControls([
@@ -304,6 +324,34 @@ class OptionsState extends MusicBeatState
 		txt.y = boxY + Math.max(0, (boxH - txt.height) * 0.5);
 	}
 
+	/**
+	 * Touch-first equivalent of the RESET keybind (funkin.input.Controls.RESET,
+	 * keyboard/gamepad only) -- resets the currently active tab's options to
+	 * their defaults. Reuses menu/common/reset, the same icon CosmeticsSubstate
+	 * already uses for its own reset button.
+	 */
+	function buildResetButton():Void
+	{
+		final iconH = 34.0;
+		final iconScale = iconH / 175; // reset.png is a 165x175 source image
+		final iconW = 165 * iconScale;
+		final stripX = descBg.x + descBg.width - RESET_W;
+		final contentH = iconH + 2 + 18;
+		final topY = descBg.y + (descBg.height - contentH) * 0.5;
+
+		resetIcon = new FlxSprite(stripX + (RESET_W - iconW) * 0.5, topY).loadGraphic(Paths.image('menu/common/reset'));
+		resetIcon.antialiasing = ClientPrefs.globalAntialiasing;
+		resetIcon.setGraphicSize(0, Std.int(iconH));
+		resetIcon.updateHitbox();
+		add(resetIcon);
+
+		resetLabel = new FlxText(stripX, topY + iconH + 2, RESET_W, Lang.str('reset', 'RESET'));
+		resetLabel.setFormat(Paths.font('vcr.ttf'), 14, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		resetLabel.borderSize = 1.2;
+		resetLabel.antialiasing = ClientPrefs.globalAntialiasing;
+		add(resetLabel);
+	}
+
 	function onOptionSelected(opt:Option):Void
 	{
 		focus = 'list';
@@ -376,6 +424,7 @@ class OptionsState extends MusicBeatState
 			fitLabel(lbl, tabBg[lbl.ID].width - 8, TAB_H, TAB_Y, 17);
 		}
 		refreshActionButtonText();
+		resetLabel.text = Lang.str('reset', 'RESET');
 
 		scriptGroup.call('onRefreshLang', []);
 		refreshVisuals();
@@ -397,6 +446,8 @@ class OptionsState extends MusicBeatState
 			btnBg[i].color = isSel ? 0xFF5A5A7A : (i == hoveredButton ? 0xFF45455F : 0xFF35354F);
 			btnLabels[i].color = isSel ? 0xFFFFE066 : FlxColor.WHITE;
 		}
+		resetIcon.alpha = hoveredReset ? 1 : 0.8;
+		resetLabel.color = hoveredReset ? 0xFFFFE066 : FlxColor.WHITE;
 	}
 
 	override function update(elapsed:Float)
@@ -409,6 +460,7 @@ class OptionsState extends MusicBeatState
 
 		hoveredTab = -1;
 		hoveredButton = -1;
+		hoveredReset = false;
 
 		if ((FlxG.mouse.justMoved || FlxG.mouse.justPressed) && ClientPrefs.navInputMode != 'Virtual Pad')
 		{
@@ -448,6 +500,12 @@ class OptionsState extends MusicBeatState
 					openSelectedSubstate(actionButtons[i]);
 				}
 				break;
+			}
+
+			if (FlxG.mouse.overlaps(resetIcon))
+			{
+				hoveredReset = true;
+				if (FlxG.mouse.justPressed) optionList.resetAllToDefault();
 			}
 		}
 
