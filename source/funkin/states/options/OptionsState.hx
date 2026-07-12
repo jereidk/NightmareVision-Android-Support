@@ -342,26 +342,46 @@ class OptionsState extends MusicBeatState
 			add(bg);
 			tabBg.push(bg);
 
-			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, Lang.str('opt_category_' + tabs[i]));
+			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, '');
 			lbl.setFormat(Paths.font('vcr.ttf'), 17, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.antialiasing = ClientPrefs.globalAntialiasing;
 			lbl.wordWrap = true;
 			lbl.ID = i;
-			fitLabel(lbl, tabW - 12, TAB_H, TAB_Y, 17);
 			add(lbl);
 			tabLabels.push(lbl);
 
-			// Staggered drop-in, same cascade style as MobileSettingsSubState's
-			// option rows. Safe to tween .y here (unlike buildActionButtons)
-			// since fitLabel() already ran above, before this captures the
-			// resting y.
-			for (spr in [bg, lbl])
-			{
-				final targetY = spr.y;
-				spr.y = targetY - 24;
-				FlxTween.tween(spr, {y: targetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
-			}
+			// Staggered drop-in for the card, same two-phase split as
+			// buildActionButtons() below -- the label's tween moved into its
+			// own loop, AFTER refreshTabText() sets its text and runs
+			// fitLabel(). refreshTabText() previously wasn't a shared function
+			// (this loop and refreshOptionFonts() each hand-duplicated the same
+			// "set text + fitLabel" logic, unlike the action buttons, which
+			// already shared refreshActionButtonText() between the two) --
+			// extracting it removes that duplication and, as a side effect,
+			// requires the same fitLabel()-runs-before-the-tween-captures-y
+			// ordering buildActionButtons() already needs.
+			final bgTargetY = bg.y;
+			bg.y = bgTargetY - 24;
+			FlxTween.tween(bg, {y: bgTargetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
+		}
+		refreshTabText();
+
+		for (i in 0...tabLabels.length)
+		{
+			final lbl = tabLabels[i];
+			final targetY = lbl.y;
+			lbl.y = targetY - 24;
+			FlxTween.tween(lbl, {y: targetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
+		}
+	}
+
+	function refreshTabText():Void
+	{
+		for (lbl in tabLabels)
+		{
+			lbl.text = Lang.str('opt_category_' + tabs[lbl.ID]);
+			fitLabel(lbl, tabBg[lbl.ID].width - 8, TAB_H, TAB_Y, 17);
 		}
 	}
 
@@ -473,11 +493,7 @@ class OptionsState extends MusicBeatState
 		@:privateAccess bottomControls?.refreshBar();
 		#end
 
-		for (lbl in tabLabels)
-		{
-			lbl.text = Lang.str('opt_category_' + tabs[lbl.ID]);
-			fitLabel(lbl, tabBg[lbl.ID].width - 8, TAB_H, TAB_Y, 17);
-		}
+		refreshTabText();
 		refreshActionButtonText();
 		resetLabel.text = Lang.str('reset', 'RESET');
 
