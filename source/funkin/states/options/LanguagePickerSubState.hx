@@ -76,8 +76,25 @@ class LanguagePickerSubState extends MusicBeatSubstate
 
 			final opt = new Option(entry.name, '', '', 'button');
 			opt.callback = () -> {
-				onPicked(entry.code);
-				close();
+				// Already your language -- nothing to confirm, just close.
+				if (entry.code == ClientPrefs.language)
+				{
+					close();
+					return;
+				}
+
+				// A mis-tap here (31 small rows) instantly drops you into a
+				// language you might not read, with no easy way back -- unlike
+				// the arrow-cycle path, where a wrong tap is just one step to
+				// undo. Confirm first, shown in whatever language is still
+				// active (native Android dialog, so it works identically
+				// whether nav mode is Touch or Virtual Pad).
+				mobile.backend.utils.PopUp.showConfirm(Lang.str('opt_language_confirm_title', 'Change Language?'),
+					Lang.str('opt_language_confirm_msg', 'Switch to this language?') + '\n\n' + entry.name,
+					Lang.str('yes', 'Yes'), Lang.str('no', 'No'), () -> {
+						onPicked(entry.code);
+						close();
+					}, null);
 			};
 			opts.push(opt);
 		}
