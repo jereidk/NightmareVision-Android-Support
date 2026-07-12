@@ -57,12 +57,39 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	/**
 	 * Real mobile VSlice's player strumline visually splits into two pairs
 	 * (LEFT+DOWN, UP+RIGHT) with an extra gap between them -- matches its
-	 * Hitbox input mode's left-hand/right-hand touch zone split. Measured as
-	 * the same reference screenshot's DOWN-UP gap (334px) minus its own
-	 * normal per-lane step (198px, see VSLICE_PLAYER_SPACING_MULT) = 136px
-	 * extra, added only between direction indices 1 and 2.
+	 * Hitbox input mode's left-hand/right-hand touch zone split. Originally
+	 * measured as a fixed 136px from the reference screenshot's DOWN-UP gap
+	 * (334px) minus its own normal per-lane step (198px, see
+	 * VSLICE_PLAYER_SPACING_MULT).
+	 *
+	 * Confirmed against FunkinCrew/Funkin's actual source
+	 * (source/funkin/play/notes/Strumline.hx, getXPos()): this gap is NOT a
+	 * fixed pixel value there, it's `3 * pos` where
+	 * `pos = 35 * amplification` and
+	 * `amplification = (FlxG.width/FlxG.height) / (FlxG.initialWidth/FlxG.initialHeight)`
+	 * -- i.e. it scales with the device's aspect ratio, pinned to 1.0 at the
+	 * 1280x720 design resolution. At our reference screenshot's 1600x720
+	 * (amplification 1.25), that formula gives 3*35*1.25 = 131.25px, within
+	 * ~3.5% of the 136px pixel measurement above. Reimplemented here as a
+	 * coefficient times vsliceAmplification() so it reproduces the exact
+	 * already-confirmed 136px at that resolution while now actually scaling
+	 * correctly (like the real formula) at other aspect ratios instead of
+	 * staying frozen at 136px everywhere.
 	 */
-	public static final VSLICE_PLAYER_SPLIT_GAP:Float = 136;
+	public static final VSLICE_PLAYER_SPLIT_GAP_COEFF:Float = 108.8; // 136 / 1.25
+
+	/**
+	 * Aspect-ratio multiplier from FunkinCrew/Funkin's own mobile formula
+	 * (PlayState.initNoteHitbox()): `(FlxG.width/FlxG.height) / (FlxG.initialWidth/FlxG.initialHeight)`.
+	 * Evaluates to 1.0 at the 1280x720 design resolution (FlxG.initialWidth/
+	 * Height); grows on wider-than-1280:720 devices, since VSlice's scale mode
+	 * keeps FlxG.height pinned at 720 while FlxG.width grows to fill the
+	 * screen (e.g. 1600 wide -> amplification 1.25, our reference screenshot).
+	 */
+	public static function vsliceAmplification():Float
+	{
+		return (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
+	}
 
 	/**
 	 * Absolute X for the player's LEFT receptor -- like VSLICE_OPPONENT_X_OFFSET,
@@ -74,7 +101,15 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 * anchor the player strumline to the screen's horizontal midpoint either
 	 * -- it sits at a fixed position instead. All 4 lane centers matched the
 	 * reference within ~1px using this single absolute value plus
-	 * VSLICE_PLAYER_SPACING_MULT/VSLICE_PLAYER_SPLIT_GAP above.
+	 * VSLICE_PLAYER_SPACING_MULT/VSLICE_PLAYER_SPLIT_GAP_COEFF above.
+	 *
+	 * Confirmed against FunkinCrew/Funkin's actual mobile formula
+	 * (PlayState.initNoteHitbox()): the player strumline's own X there is
+	 * `(FlxG.width - playerStrumline.width) / 2 + STRUMLINE_X_OFFSET`, which
+	 * depends on playerStrumline.width -- itself derived from a note-scale
+	 * term that doesn't match this project's own note-scale measurements (see
+	 * VSLICE_PLAYER_SIZE_SCALE), so it can't be safely reproduced as a formula
+	 * yet. Left as the fixed, pixel-confirmed value here rather than guessing.
 	 */
 	public static final VSLICE_PLAYER_X_OFFSET:Float = 416;
 
@@ -277,8 +312,8 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		final baseX:Float = isPlayerLane ? VSLICE_PLAYER_X_OFFSET : VSLICE_OPPONENT_X_OFFSET;
 		var x = baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
-		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP.
-		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP * spacingScale;
+		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP_COEFF/vsliceAmplification().
+		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP_COEFF * vsliceAmplification() * spacingScale;
 		return x;
 	}
 
