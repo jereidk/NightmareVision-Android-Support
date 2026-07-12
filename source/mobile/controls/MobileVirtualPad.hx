@@ -128,7 +128,18 @@ class MobileVirtualPad extends TouchInputManager
 	function _clearButtons():Void
 	{
 		for (btn in buttons)
+		{
+			// remove() first: add()'d buttons live in this FlxTypedSpriteGroup's
+			// own `members` array (inherited from TouchInputManager), separate
+			// from the `buttons` array below. Destroying without splicing them
+			// out of `members` left every previously-live button as a dangling,
+			// destroyed reference there -- the next update()/draw() pass over
+			// the group iterates into it and crashes. This ran on every single
+			// reconfigure()/restorePrevious(), i.e. every substate open/close
+			// once a pad could be shared, so `members` piled up dead entries fast.
+			remove(btn, true);
 			FlxDestroyUtil.destroy(btn);
+		}
 		buttons = [];
 
 		buttonLeft = buttonUp = buttonRight = buttonDown = null;
