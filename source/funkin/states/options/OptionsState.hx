@@ -83,6 +83,14 @@ class OptionsState extends MusicBeatState
 	var resetIcon:FlxSprite;
 	var resetLabel:FlxText;
 
+	// Shown in place of optionList/descBg/descText while still choosing a
+	// section (focus != 'list') -- see the panel-building block in create()
+	// and the visibility toggle in update() for the rest of this.
+	var artPanelBg:FlxSprite;
+	var artImage:FlxSprite;
+	var titleText:FlxText;
+	var versionText:FlxText;
+
 	var mouseControlActive:Bool = true;
 	var hoveredTab:Int = -1;
 	var hoveredButton:Int = -1;
@@ -223,6 +231,50 @@ class OptionsState extends MusicBeatState
 			descText.borderSize = 1.2;
 			descText.wordWrap = true;
 			add(descText);
+
+			// Upstream's OptionsState only ever showed this hero-art/title/version
+			// panel on its own dedicated category-picker screen, swapped out
+			// entirely once a category opened its own full substate over it. This
+			// tab-based redesign has no separate picker screen to swap away from,
+			// so the panel takes over the option list's own footprint instead --
+			// see the focus-based toggle in update() for when each one shows.
+			// Built (and thus z-ordered) before buildResetButton() so the reset
+			// icon/label -- which stay visible/functional regardless of focus,
+			// see the RESET keybind handling below -- always render on top of
+			// whichever of these two panels is currently showing, instead of
+			// getting covered by the art panel whenever it's up.
+			final panelX = LIST_X - 6;
+			final panelY = LIST_Y - 6;
+			final panelH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6 + 74;
+
+			artPanelBg = new FlxSprite(panelX, panelY).loadGraphic(Paths.image('menu/options/artPanel'));
+			artPanelBg.setGraphicSize(Std.int(listW + 12), Std.int(panelH));
+			artPanelBg.updateHitbox();
+			artPanelBg.antialiasing = ClientPrefs.globalAntialiasing;
+			add(artPanelBg);
+
+			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY');
+			titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 36, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			titleText.borderSize = 2;
+			titleText.antialiasing = ClientPrefs.globalAntialiasing;
+			add(titleText);
+
+			artImage = new FlxSprite().loadGraphic(Paths.image('menu/options/art'));
+			// Capped at 520 (not just "however wide the panel is minus a margin")
+			// -- title/gap/art/gap/version all have to fit within panelH, and a
+			// width scaled straight off the panel's own (quite generous) width
+			// left the art tall enough to push version past the panel's bottom.
+			artImage.setGraphicSize(Std.int(Math.min(listW + 12 - 80, 520)));
+			artImage.updateHitbox();
+			artImage.antialiasing = ClientPrefs.globalAntialiasing;
+			artImage.setPosition(panelX + (listW + 12 - artImage.width) * 0.5, titleText.y + titleText.height + 16);
+			add(artImage);
+
+			versionText = new FlxText(panelX, artImage.y + artImage.height + 12, listW + 12, Main.LEGACY_VERSION);
+			versionText.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			versionText.borderSize = 1.5;
+			versionText.antialiasing = ClientPrefs.globalAntialiasing;
+			add(versionText);
 
 			buildResetButton();
 
@@ -517,13 +569,16 @@ class OptionsState extends MusicBeatState
 		{
 			final isSel = (i == curTab) && (focus != 'buttons');
 			tabBg[i].color = isSel ? 0xFF4A4A6A : (i == hoveredTab ? 0xFF35354A : 0xFF2A2A3A);
-			tabLabels[i].color = isSel ? 0xFFFFE066 : FlxColor.WHITE;
+			// 3 states like upstream's category list: gold selected, white
+			// hovered-but-not-selected, dim gray otherwise -- was just a 2-state
+			// white/gold before, with no way to tell "moused over" from "neither".
+			tabLabels[i].color = isSel ? 0xFFFFE066 : (i == hoveredTab ? FlxColor.WHITE : 0xFFC9C9C9);
 		}
 		for (i in 0...btnBg.length)
 		{
 			final isSel = (i == curButton) && (focus == 'buttons');
 			btnBg[i].color = isSel ? 0xFF5A5A7A : (i == hoveredButton ? 0xFF45455F : 0xFF35354F);
-			btnLabels[i].color = isSel ? 0xFFFFE066 : FlxColor.WHITE;
+			btnLabels[i].color = isSel ? 0xFFFFE066 : (i == hoveredButton ? FlxColor.WHITE : 0xFFC9C9C9);
 		}
 		resetIcon.alpha = hoveredReset ? 1 : 0.8;
 		resetLabel.color = hoveredReset ? 0xFFFFE066 : FlxColor.WHITE;
@@ -536,6 +591,14 @@ class OptionsState extends MusicBeatState
 		if (!isHardcodedState()) return;
 
 		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
+
+		// Swap the option list for the hero-art panel while still choosing a
+		// section -- active=false (not just visible=false) so a tap landing on
+		// the now-hidden list doesn't still register on one of its rows.
+		final showList = (focus == 'list');
+		optionList.visible = optionList.active = showList;
+		descBg.visible = descText.visible = showList;
+		artPanelBg.visible = artImage.visible = titleText.visible = versionText.visible = !showList;
 
 		hoveredTab = -1;
 		hoveredButton = -1;
