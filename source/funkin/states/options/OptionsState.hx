@@ -5,6 +5,8 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 
 import funkin.data.*;
 import funkin.states.*;
@@ -207,7 +209,13 @@ class OptionsState extends MusicBeatState
 			optionList.onDatasetChanged = (opt) -> descText.text = opt.description;
 			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
-			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6).makeGraphic(Std.int(listW + 12), 74, 0x88000000);
+			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6);
+			descBg.loadGraphic(Paths.image('menu/freeplay/card'));
+			descBg.setGraphicSize(Std.int(listW + 12), 74);
+			descBg.updateHitbox();
+			descBg.antialiasing = ClientPrefs.globalAntialiasing;
+			descBg.color = 0xFF1A1A2E;
+			descBg.alpha = 0.9;
 			add(descBg);
 
 			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 12, listW - 16 - RESET_W, '');
@@ -263,7 +271,16 @@ class OptionsState extends MusicBeatState
 		{
 			final bx = areaStart + (btnW + gap) * i;
 
-			final bg = new FlxSprite(bx, HEADER_Y).makeGraphic(Std.int(btnW), Std.int(BTN_H), 0xFF35354F);
+			// Real card sprite instead of a flat makeGraphic() rect -- same
+			// rounded panel MobileSettingsSubState uses, so both options
+			// screens share one UI language instead of each inventing its own
+			// flat rectangles.
+			final bg = new FlxSprite(bx, HEADER_Y);
+			bg.loadGraphic(Paths.image('menu/freeplay/card'));
+			bg.setGraphicSize(Std.int(btnW), Std.int(BTN_H));
+			bg.updateHitbox();
+			bg.antialiasing = ClientPrefs.globalAntialiasing;
+			bg.color = 0xFF35354F;
 			add(bg);
 			btnBg.push(bg);
 
@@ -275,8 +292,25 @@ class OptionsState extends MusicBeatState
 			lbl.ID = i;
 			add(lbl);
 			btnLabels.push(lbl);
+
+			// Staggered drop-in for the card, same cascade style as
+			// MobileSettingsSubState's option rows. The label is animated
+			// separately below, AFTER refreshActionButtonText() -- fitLabel()
+			// sets lbl.y synchronously, which would otherwise cancel this
+			// offset before the tween ever got to run.
+			final bgTargetY = bg.y;
+			bg.y = bgTargetY - 24;
+			FlxTween.tween(bg, {y: bgTargetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
 		}
 		refreshActionButtonText();
+
+		for (i in 0...btnLabels.length)
+		{
+			final lbl = btnLabels[i];
+			final targetY = lbl.y;
+			lbl.y = targetY - 24;
+			FlxTween.tween(lbl, {y: targetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
+		}
 	}
 
 	function refreshActionButtonText():Void
@@ -297,7 +331,14 @@ class OptionsState extends MusicBeatState
 		{
 			final tx = 40 + cutout * 0.5 + tabW * i;
 
-			final bg = new FlxSprite(tx, TAB_Y).makeGraphic(Std.int(tabW - 4), Std.int(TAB_H), 0xFF2A2A3A);
+			// Real card sprite instead of a flat makeGraphic() rect -- see
+			// buildActionButtons() above for why.
+			final bg = new FlxSprite(tx, TAB_Y);
+			bg.loadGraphic(Paths.image('menu/freeplay/card'));
+			bg.setGraphicSize(Std.int(tabW - 4), Std.int(TAB_H));
+			bg.updateHitbox();
+			bg.antialiasing = ClientPrefs.globalAntialiasing;
+			bg.color = 0xFF2A2A3A;
 			add(bg);
 			tabBg.push(bg);
 
@@ -310,6 +351,17 @@ class OptionsState extends MusicBeatState
 			fitLabel(lbl, tabW - 12, TAB_H, TAB_Y, 17);
 			add(lbl);
 			tabLabels.push(lbl);
+
+			// Staggered drop-in, same cascade style as MobileSettingsSubState's
+			// option rows. Safe to tween .y here (unlike buildActionButtons)
+			// since fitLabel() already ran above, before this captures the
+			// resting y.
+			for (spr in [bg, lbl])
+			{
+				final targetY = spr.y;
+				spr.y = targetY - 24;
+				FlxTween.tween(spr, {y: targetY}, 0.3, {ease: FlxEase.quintOut, startDelay: i * 0.05});
+			}
 		}
 	}
 
@@ -552,8 +604,16 @@ class OptionsState extends MusicBeatState
 			case 'buttons':
 				if (!blockInput && !blockAllInput)
 				{
-					if (controls.UI_LEFT_P) curButton = (curButton <= 0 ? actionButtons.length - 1 : curButton - 1);
-					if (controls.UI_RIGHT_P) curButton = (curButton >= actionButtons.length - 1 ? 0 : curButton + 1);
+					if (controls.UI_LEFT_P)
+					{
+						curButton = (curButton <= 0 ? actionButtons.length - 1 : curButton - 1);
+						_pulseButton(curButton);
+					}
+					if (controls.UI_RIGHT_P)
+					{
+						curButton = (curButton >= actionButtons.length - 1 ? 0 : curButton + 1);
+						_pulseButton(curButton);
+					}
 					if (controls.UI_DOWN_P) focus = 'tabs';
 					if (controls.ACCEPT) openSelectedSubstate(actionButtons[curButton]);
 
@@ -591,5 +651,30 @@ class OptionsState extends MusicBeatState
 		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
 
 		FlxG.sound.play(Paths.sound('hover'), 0.5);
+		_pulseTab(curTab);
 	}
+
+	/**
+	 * Small scale punch on a tab/button card when it becomes selected --
+	 * same feedback pattern as MobileSettingsSubState's _pulseSelection(),
+	 * so both options screens share the same bit of bounce instead of tabs
+	 * just snapping to their new color.
+	 */
+	function _pulseCard(spr:FlxSprite):Void
+	{
+		if (spr == null) return;
+		FlxTween.cancelTweensOf(spr.scale);
+		spr.origin.set(spr.width / 2, spr.height / 2);
+		spr.scale.set(1, 1);
+		FlxTween.tween(spr.scale, {x: 1.05, y: 1.12}, 0.08, {
+			ease: FlxEase.quadOut,
+			onComplete: (_) -> FlxTween.tween(spr.scale, {x: 1, y: 1}, 0.14, {ease: FlxEase.quadIn})
+		});
+	}
+
+	inline function _pulseTab(index:Int):Void
+		_pulseCard((index >= 0 && index < tabBg.length) ? tabBg[index] : null);
+
+	inline function _pulseButton(index:Int):Void
+		_pulseCard((index >= 0 && index < btnBg.length) ? btnBg[index] : null);
 }
