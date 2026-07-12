@@ -562,7 +562,14 @@ class OptionsState extends MusicBeatState
 				hoveredButton = i;
 				if (FlxG.mouse.justPressed)
 				{
+					// changeTab() sets focus = 'tabs' itself on a tab click, but this
+					// never set focus = 'buttons' -- so a mouse click here left curButton
+					// pointing at this button while focus stayed wherever it was before
+					// (e.g. 'list'), so refreshVisuals() wouldn't highlight this button as
+					// selected once the substate closed, and keyboard/gamepad input would
+					// go back to the tab list instead of this button row.
 					curButton = i;
+					focus = 'buttons';
 					openSelectedSubstate(actionButtons[i]);
 				}
 				break;
@@ -607,11 +614,16 @@ class OptionsState extends MusicBeatState
 					if (controls.UI_LEFT_P)
 					{
 						curButton = (curButton <= 0 ? actionButtons.length - 1 : curButton - 1);
+						// changeTab() plays this same 'hover' cue on every tab change --
+						// cycling the button row is the same kind of horizontal selection
+						// move and had no audio feedback at all before this.
+						FlxG.sound.play(Paths.sound('hover'), 0.5);
 						_pulseButton(curButton);
 					}
 					if (controls.UI_RIGHT_P)
 					{
 						curButton = (curButton >= actionButtons.length - 1 ? 0 : curButton + 1);
+						FlxG.sound.play(Paths.sound('hover'), 0.5);
 						_pulseButton(curButton);
 					}
 					if (controls.UI_DOWN_P) focus = 'tabs';

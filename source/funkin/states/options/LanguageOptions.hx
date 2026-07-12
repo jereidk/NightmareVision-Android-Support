@@ -30,6 +30,16 @@ class LanguageOptions
 		findLangOption.callback = () -> {
 			if (OptionsState.instance != null)
 			{
+				// 'mobile'/'dlc'/'credits' all open via openSelectedSubstate(), which
+				// sets blockInput = true so OptionsState's own tab/button/reset-icon
+				// mouse handling in update() goes quiet while that substate covers
+				// the screen. This bypasses openSelectedSubstate() (it needs its own
+				// constructor args), so it never set that flag -- OptionsState kept
+				// running underneath (persistentUpdate = true) with its tab row
+				// still fully clickable, and the picker's own list sits in roughly
+				// the same screen area, so a tap meant for a language row could
+				// silently change the hidden tab underneath instead.
+				OptionsState.instance.blockInput = true;
 				OptionsState.instance.openSubState(new LanguagePickerSubState(codes, displayNames, (pickedCode) -> {
 					langOption.curOption = codes.indexOf(pickedCode);
 					langOption.setValue(pickedCode);
