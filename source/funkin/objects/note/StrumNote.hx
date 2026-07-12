@@ -39,13 +39,29 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static final VSLICE_OPPONENT_SCALE:Float = 0.5;
 
 	/**
-	 * Player-lane tuning, adjusted by ear/eye against reference footage --
-	 * unlike VSLICE_OPPONENT_SCALE these two are independent: the 4 lanes
-	 * spread out MORE (spacing > 1) while the receptor/note art itself
-	 * renders slightly SMALLER (size < 1).
+	 * Player-lane tuning -- unlike VSLICE_OPPONENT_SCALE these two are
+	 * independent: the 4 lanes spread out MORE (spacing > 1) while the
+	 * receptor/note art itself renders slightly SMALLER (size < 1).
+	 *
+	 * Re-derived by pixel-measuring a reference screenshot's arrow centers
+	 * (connected-component analysis, not by eye) -- the previous 1.3 assumed
+	 * uniform spacing across all 4 lanes, but the reference's actual
+	 * consecutive-arrow gaps measured 198px/334px/198px: LEFT-DOWN and
+	 * UP-RIGHT are each other's normal step (198px), with an extra gap only
+	 * between DOWN and UP. 198/112 = 1.7679, rounded here.
 	 */
-	public static final VSLICE_PLAYER_SPACING_MULT:Float = 1.3;
+	public static final VSLICE_PLAYER_SPACING_MULT:Float = 1.77;
 	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.85;
+
+	/**
+	 * Real mobile VSlice's player strumline visually splits into two pairs
+	 * (LEFT+DOWN, UP+RIGHT) with an extra gap between them -- matches its
+	 * Hitbox input mode's left-hand/right-hand touch zone split. Measured as
+	 * the same reference screenshot's DOWN-UP gap (334px) minus its own
+	 * normal per-lane step (198px, see VSLICE_PLAYER_SPACING_MULT) = 136px
+	 * extra, added only between direction indices 1 and 2.
+	 */
+	public static final VSLICE_PLAYER_SPLIT_GAP:Float = 136;
 
 	/**
 	 * Extra inset for the opponent's compact corner strumline, separate from
@@ -244,7 +260,10 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
 	{
 		final baseX:Float = isPlayerLane ? (FlxG.width / 2 + STRUMLINE_X_OFFSET) : VSLICE_OPPONENT_X_OFFSET;
-		return baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
+		var x = baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
+		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP.
+		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP * spacingScale;
+		return x;
 	}
 
 	/**
