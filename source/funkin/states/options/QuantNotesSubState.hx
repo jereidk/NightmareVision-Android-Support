@@ -349,24 +349,33 @@ class QuantNotesSubState extends MusicBeatSubstate
 	
 	function resetValue(selected:Int, type:Int)
 	{
-		curValue = 0;
-		if (ClientPrefs.quants)
+		// Was unconditional on ClientPrefs.quants while updateValue() (the
+		// manual arrow-key edit path) isn't -- Reset silently no-opped the
+		// actual value whenever quants were toggled off, while still lying
+		// about it below (see the other two fixes in this function).
+		curValue = defaults[selected][type];
+		ClientPrefs.quantHSV[selected][type] = defaults[selected][type];
+		switch (type)
 		{
-			ClientPrefs.quantHSV[selected][type] = defaults[selected][type];
-			switch (type)
-			{
-				case 0:
-					shaderArray[selected].hue = defaults[selected][type];
-				case 1:
-					shaderArray[selected].saturation = defaults[selected][type];
-				case 2:
-					shaderArray[selected].lightness = defaults[selected][type];
-			}
+			// Was missing the /360 and /100 normalization updateValue() uses
+			// for the exact same fields -- fed the shader raw degree/percent
+			// values (e.g. -120) instead of the 0..1 range it expects,
+			// scrambling the note's color on reset.
+			case 0:
+				shaderArray[selected].hue = defaults[selected][type] / 360;
+			case 1:
+				shaderArray[selected].saturation = defaults[selected][type] / 100;
+			case 2:
+				shaderArray[selected].lightness = defaults[selected][type] / 100;
 		}
-		
+
 		var item = grpNumbers.members[(selected * 3) + type];
-		item.changeText('0');
+		// Was hardcoded '0' -- correct for NotesSubState (whose defaults are
+		// always 0) but QuantNotesSubState's defaults are mostly nonzero, so
+		// this displayed a false "0" no matter what the reset value actually was.
+		item.changeText(Std.string(defaults[selected][type]));
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;
+		if (defaults[selected][type] < 0) item.offset.x += 10;
 	}
 	
 	function updateValue(change:Float = 0)
