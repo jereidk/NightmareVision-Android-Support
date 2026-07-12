@@ -441,7 +441,11 @@ class MobileHitbox extends TouchInputManager
 		{
 			hint.animation.play('pressed');
 			if (hintTween != null) hintTween.cancel();
-			hintTween = FlxTween.tween(hint, {alpha: 1.0}, 0.075, {
+			// Was hardcoded to 1.0 -- every other layout's createHint*()
+			// tweens to alphaTarget (ClientPrefs.hitboxAlpha) instead, so
+			// Arrows was the one Hitbox Layout that ignored the player's own
+			// Hitbox Opacity setting and always flashed at full opacity.
+			hintTween = FlxTween.tween(hint, {alpha: alphaTarget}, 0.075, {
 				ease: FlxEase.circInOut,
 				onComplete: function(_) { hintTween = null; }
 			});
