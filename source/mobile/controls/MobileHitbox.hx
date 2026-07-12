@@ -156,8 +156,8 @@ class MobileHitbox extends TouchInputManager
 	}
 
 	/**
-	 * Builds the DPad layout - two circular zones with 4 directional buttons each.
-	 * Inspired by FunkinCrew's DoubleThumbDPad scheme.
+	 * Builds the DPad layout - two circular zones, 2 directional buttons each
+	 * (4 total). Inspired by FunkinCrew's DoubleThumbDPad scheme.
 	 * Left thumb zone covers LEFT+DOWN, Right thumb zone covers UP+RIGHT.
 	 */
 	function buildDPad(safe:{top:Float, bottom:Float, left:Float, right:Float}):Void
@@ -350,36 +350,49 @@ class MobileHitbox extends TouchInputManager
 			[FlxMobileInputID.hitboxRIGHT, FlxMobileInputID.noteRIGHT]
 		];
 
-		// Two thumb zones: 0=left side, 1=right side
+		// Two thumb zones: 0=left side (LEFT+DOWN), 1=right side (UP+RIGHT).
+		// Was building all 4 triangles in EACH thumb iteration regardless of
+		// which zone -- the exact same bug just fixed in buildDPad() above.
+		// e.g. thumb 0's "UP" block built a second UP triangle spanning the
+		// left half of the screen (on top of LEFT/DOWN's own zone), even
+		// though this function's own comment two lines below says the left
+		// zone only covers LEFT+DOWN. Confirmed the resulting rectangles
+		// tile correctly with only 4 total: LEFT/DOWN built once at
+		// thumb == 0, UP/RIGHT built once at thumb == 1.
 		for (thumb in 0...2)
 		{
 			var xOffset:Float = (thumb == 1) ? screenHalf : safeLeft;
 
-			// LEFT triangle (full height, left side of zone)
-			var leftW:Int = Std.int(FlxG.width / 4);
-			var btnLeft = createHintTriangle(xOffset, safeTop, leftW, FlxG.height - safeTop, hintsColors[0], hintsIDs[0], 'left');
-			add(btnLeft);
-			buttons.push(btnLeft);
+			if (thumb == 0)
+			{
+				// LEFT triangle (full height, left side of zone)
+				var leftW:Int = Std.int(FlxG.width / 4);
+				var btnLeft = createHintTriangle(xOffset, safeTop, leftW, FlxG.height - safeTop, hintsColors[0], hintsIDs[0], 'left');
+				add(btnLeft);
+				buttons.push(btnLeft);
 
-			// DOWN triangle (bottom half, left portion of zone)
-			var downW:Int = Std.int(FlxG.width / 2);
-			var downH:Int = Std.int((FlxG.height - safeTop) / 2);
-			var btnDown = createHintTriangle(xOffset, safeTop + downH, downW, downH, hintsColors[1], hintsIDs[1], 'down');
-			add(btnDown);
-			buttons.push(btnDown);
+				// DOWN triangle (bottom half, left portion of zone)
+				var downW:Int = Std.int(FlxG.width / 2);
+				var downH:Int = Std.int((FlxG.height - safeTop) / 2);
+				var btnDown = createHintTriangle(xOffset, safeTop + downH, downW, downH, hintsColors[1], hintsIDs[1], 'down');
+				add(btnDown);
+				buttons.push(btnDown);
+			}
+			else
+			{
+				// UP triangle (top half, right portion of zone)
+				var upW:Int = Std.int(FlxG.width / 2);
+				var upH:Int = Std.int((FlxG.height - safeTop) / 2);
+				var btnUp = createHintTriangle(xOffset, safeTop, upW, upH, hintsColors[2], hintsIDs[2], 'up');
+				add(btnUp);
+				buttons.push(btnUp);
 
-			// UP triangle (top half, right portion of zone)
-			var upW:Int = Std.int(FlxG.width / 2);
-			var upH:Int = Std.int((FlxG.height - safeTop) / 2);
-			var btnUp = createHintTriangle(xOffset, safeTop, upW, upH, hintsColors[2], hintsIDs[2], 'up');
-			add(btnUp);
-			buttons.push(btnUp);
-
-			// RIGHT triangle (full height, right side of zone)
-			var rightW:Int = Std.int(FlxG.width / 4);
-			var btnRight = createHintTriangle(xOffset + rightW, safeTop, rightW, FlxG.height - safeTop, hintsColors[3], hintsIDs[3], 'right');
-			add(btnRight);
-			buttons.push(btnRight);
+				// RIGHT triangle (full height, right side of zone)
+				var rightW:Int = Std.int(FlxG.width / 4);
+				var btnRight = createHintTriangle(xOffset + rightW, safeTop, rightW, FlxG.height - safeTop, hintsColors[3], hintsIDs[3], 'right');
+				add(btnRight);
+				buttons.push(btnRight);
+			}
 		}
 
 		// Assign button references (left zone: 0=LEFT, 1=DOWN; right zone: 2=UP, 3=RIGHT)
