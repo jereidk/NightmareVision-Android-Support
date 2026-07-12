@@ -9,6 +9,8 @@ import flixel.util.FlxColor;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
 import flixel.graphics.frames.FlxTileFrames;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 import openfl.display.BitmapData;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
@@ -84,6 +86,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	static final COLOR_DESC:Int      = 0xFFB0B0B0;
 	static final COLOR_BG:Int        = 0xFF0A0A14;
 
+	// Accent color for interactive bits (arrows, selected state) -- reuses the
+	// same hot pink as ZONE_COLORS[0] (LEFT) instead of the neon cyan this
+	// screen used before, which read more like a generic dev-tool palette
+	// than FNF's own (MainMenuState's actual reds/pinks/golds).
+	static final COLOR_ACCENT:Int     = 0xFFFF6B9D;
+	static final COLOR_ACCENT_DIM:Int = 0xFF8C5062;
+
 	// ── UI: preview ──────────────────────────────────────────────────────────
 	var _canvasBg:FlxSprite;
 	var _modeText:FlxText;
@@ -142,6 +151,18 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Dim the menu behind us.
 		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
 		add(bg);
+
+		// Faint decorative splash of the game's actual cast (menu/options/art) in
+		// the bottom-right corner -- low alpha so it reads as background texture,
+		// not a foreground element competing with the option rows.
+		var artSplash = new FlxSprite();
+		artSplash.loadGraphic(Paths.image('menu/options/art'));
+		artSplash.setGraphicSize(420, Std.int(420 * artSplash.height / artSplash.width));
+		artSplash.updateHitbox();
+		artSplash.setPosition(FlxG.width - artSplash.width, FlxG.height - artSplash.height);
+		artSplash.alpha = 0.16;
+		artSplash.antialiasing = ClientPrefs.globalAntialiasing;
+		add(artSplash);
 
 		// Header bar behind the title.
 		var topBar = new FlxSprite(0, 0);
@@ -211,7 +232,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// guaranteed to be in any font.
 			// Left arrow — drawn after value so it renders on top if widths ever shift
 			var lA = new FlxText(OPT_X + OPT_W - 248, rowY + 4, 52, '<');
-			lA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			lA.setFormat(Paths.font('vcr.ttf'), 26, COLOR_ACCENT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lA.borderSize = 1.5;
 			lA.visible = false;
 			_rowLeft.push(lA);
@@ -219,16 +240,35 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 			// Right arrow
 			var rA = new FlxText(OPT_X + OPT_W - 56, rowY + 4, 52, '>');
-			rA.setFormat(Paths.font('vcr.ttf'), 26, 0xFF00D9FF, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			rA.setFormat(Paths.font('vcr.ttf'), 26, COLOR_ACCENT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			rA.borderSize = 1.5;
 			rA.visible = false;
 			_rowRight.push(rA);
 			add(rA);
+
+			// Staggered cascade entrance: each row slides in from the right,
+			// one after another, instead of the whole screen just popping in
+			// at once (that's still handled separately by the _enterAlpha
+			// fade in update()). Purely a position tween -- doesn't touch
+			// alpha, so it can't fight with that fade.
+			for (row_spr in [lbl, v, lA, rA])
+			{
+				final targetX = row_spr.x;
+				row_spr.x = targetX + 80;
+				FlxTween.tween(row_spr, {x: targetX}, 0.35, {ease: FlxEase.quintOut, startDelay: i * 0.045});
+			}
 		}
 
-		// Description text with better styling and background
+		// Description panel -- reuses the same rounded card as the row
+		// highlight/back button (tinted near-black) instead of a flat
+		// makeGraphic() rect, so every panel on this screen reads as the
+		// same UI language.
 		_descBg = new FlxSprite(OPT_X - 6, OPT_Y0 + MAX_OPT * OPT_H + 4);
-		_descBg.makeGraphic(OPT_W + 12, 70, 0x88000000);
+		_descBg.loadGraphic(Paths.image('menu/freeplay/card'));
+		_descBg.setGraphicSize(OPT_W + 12, 70);
+		_descBg.updateHitbox();
+		_descBg.color = 0xFF1A1A2E;
+		_descBg.alpha = 0.9;
 		_descBg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_descBg);
 
@@ -246,7 +286,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		add(_scrollBar);
 
 		_scrollThumb = new FlxSprite(scrollBarX, OPT_Y0);
-		_scrollThumb.makeGraphic(8, 40, 0xAAFFFFFF);
+		_scrollThumb.makeGraphic(8, 40, FlxColor.WHITE);
+		_scrollThumb.color = COLOR_ACCENT;
 		add(_scrollThumb);
 
 		// Help text at bottom (updated dynamically by _updateNavModeUI)
@@ -262,7 +303,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_backBtn.setGraphicSize(160, 42);
 		_backBtn.updateHitbox();
 		_backBtn.antialiasing = ClientPrefs.globalAntialiasing;
-		_backBtn.color = 0xFF334455;
+		_backBtn.color = 0xFF3D2430;
 		add(_backBtn);
 		_backBtnLabel = new FlxText(OPT_X, backBtnY + 9, 160, '<  BACK');
 		_backBtnLabel.setFormat(Paths.font('vcr.ttf'), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -354,12 +395,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_sel = (_sel <= 0) ? _opts.length - 1 : _sel - 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
 			_updateScrollOffset();
+			_pulseSelection();
 		}
 		if (controls.UI_DOWN_P)
 		{
 			_sel = (_sel >= _opts.length - 1) ? 0 : _sel + 1;
 			FunkinSound.play(Paths.sound('hover'), 0.5);
 			_updateScrollOffset();
+			_pulseSelection();
 		}
 
 		if (controls.UI_LEFT_P)  _changeSelected(-1);
@@ -499,6 +542,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_sel = optIndex;
 				FunkinSound.play(Paths.sound('hover'), 0.5);
 				_updateScrollOffset();
+				_pulseSelection();
 			}
 
 			if (mx < OPT_X + OPT_W * 0.5)
@@ -714,8 +758,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		});
 
 		_opts.push({
+			// No folder emoji prefix -- confirmed missing from vcr.ttf (fonttools
+			// cmap), same invisible-glyph issue fixed elsewhere this session. The
+			// label text already says what it does.
 			id: 'openDataFolder', kind: 'button',
-			label: '📁 ' + Lang.str('opt_opendatafolder', 'Open Data Folder'),
+			label: Lang.str('opt_opendatafolder', 'Open Data Folder'),
 			desc:  Lang.str('opt_opendatafolder_desc', 'Opens the game data folder in your file manager.\nUse this to install mods or access save files.')
 		});
 		#end
@@ -734,8 +781,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				var pct = Std.int(Math.round(_getFloat(opt.id) * 100));
 				var filled = Std.int(pct / 10);
 				var bar = '[';
-				for (i in 0...filled) bar += '█';
-				for (i in filled...10) bar += '░';
+				// '#'/'-' instead of '█'/'░' -- both block-shade glyphs are missing
+				// from vcr.ttf (confirmed via fonttools cmap), same invisible-glyph
+				// issue fixed elsewhere this session.
+				for (i in 0...filled) bar += '#';
+				for (i in filled...10) bar += '-';
 				bar += '] ' + pct + '%';
 				bar;
 			case 'string':
@@ -746,9 +796,32 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				}
 				else _getStr(opt.id);
 			case 'button':
-				'[  ▶  ]';
+				// Was '[  ▶  ]' -- confirmed missing from vcr.ttf.
+				'[ TAP ]';
 			default: '';
 		};
+	}
+
+	/**
+	 * Small scale punch on whichever row slot currently holds _sel, played
+	 * right after _sel changes (UP/DOWN and touch-tap) alongside the existing
+	 * 'hover' sound -- gives the highlight card a bit of the same bouncy
+	 * feedback FNF's own menus have instead of just snapping into place.
+	 */
+	function _pulseSelection():Void
+	{
+		final topIndex = Std.int(_scrollOffset / OPT_H);
+		final slot = _sel - topIndex;
+		if (slot < 0 || slot >= MAX_OPT) return;
+
+		final hi = _rowHi[slot];
+		FlxTween.cancelTweensOf(hi.scale);
+		hi.origin.set(hi.width / 2, hi.height / 2);
+		hi.scale.set(1, 1);
+		FlxTween.tween(hi.scale, {x: 1.05, y: 1.12}, 0.08, {
+			ease: FlxEase.quadOut,
+			onComplete: (_) -> FlxTween.tween(hi.scale, {x: 1, y: 1}, 0.14, {ease: FlxEase.quadIn})
+		});
 	}
 
 	function _updateRows():Void
@@ -802,13 +875,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// Selection visual feedback
 			if (selected)
 			{
-				_rowLeft[i].color = 0xFF00FFFF;
-				_rowRight[i].color = 0xFF00FFFF;
+				_rowLeft[i].color = COLOR_ACCENT;
+				_rowRight[i].color = COLOR_ACCENT;
 			}
 			else
 			{
-				_rowLeft[i].color = 0xFF6699CC;
-				_rowRight[i].color = 0xFF6699CC;
+				_rowLeft[i].color = COLOR_ACCENT_DIM;
+				_rowRight[i].color = COLOR_ACCENT_DIM;
 			}
 		}
 
