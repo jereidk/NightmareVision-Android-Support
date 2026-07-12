@@ -40,10 +40,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	/** Minimum separation between button edges (prevents overlap). */
 	static final MIN_GAP:Float = 6;
 
-	/** Keyboard/gamepad nudge: single-press step, and px/sec while held. */
-	static inline final NUDGE_STEP:Float = 8;
-	static inline final NUDGE_SPEED:Float = 220;
-
 	var dragButtons:Array<DragButton> = [];
 
 	var saveBtn:FlxSprite;
@@ -56,20 +52,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 
 	/** Button bounding boxes for overlap check (invisible, used like Shadow Engine's TouchButton.bounds). */
 	var _boundsList:Array<FlxRect> = [];
-
-	// ── Keyboard / gamepad focus ─────────────────────────────────────────────
-	// This whole screen was mouse/touch-only before -- a keyboard or gamepad
-	// user could open and close it, but had no way to actually move a button,
-	// unlike every other options screen in this app. 0-3 = the four direction
-	// buttons, 4 = SAVE & EXIT, 5 = RESET; UP/DOWN cycles focus between them,
-	// ACCEPT "grabs" a direction button (entering _kbMoveMode) the same way a
-	// mouse-down does, and the arrow keys then nudge it -- ACCEPT again drops
-	// it, mirroring mouse-up.
-	static inline final KB_FOCUS_COUNT:Int = 6; // 4 buttons + save + reset
-	var _kbFocus:Int = 0;
-	var _kbMoveMode:Bool = false;
-	var _kbHoldTime:Float = 0.0;
-	var _defaultHint:String;
 
 	override function create()
 	{
@@ -111,8 +93,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		add(layoutLabel);
 
 		// ── Status / hint (below header bar) ──
-		_defaultHint = Lang.str('vpadcustomizer_hint', 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults');
-		statusText = new FlxText(0, 148, FlxG.width, _defaultHint);
+		statusText = new FlxText(0, 148, FlxG.width, Lang.str('vpadcustomizer_hint', 'Drag the buttons to reposition · B / SAVE to confirm · RESET restores defaults'));
 		statusText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.fromRGB(180, 180, 180), CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		statusText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(statusText);
@@ -162,8 +143,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			addVirtualPadCamera();
 		}
 		#end
-
-		_updateKbFocusVisuals();
 	}
 
 	override function update(elapsed:Float)
@@ -233,107 +212,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			dragIdx = -1;
 		}
 
-		// ── Keyboard / gamepad focus & move ──
-		// Skipped while an actual mouse/touch drag is in progress so the two
-		// input paths never fight over the same button's position in the
-		// same frame.
-		if (dragIdx < 0)
-		{
-			if (_kbMoveMode)
-			{
-				final btn = dragButtons[_kbFocus];
-				final held = controls.UI_LEFT || controls.UI_RIGHT || controls.UI_UP || controls.UI_DOWN;
-				final justPressed = controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.UI_UP_P || controls.UI_DOWN_P;
-
-				if (held)
-				{
-					_kbHoldTime += elapsed;
-					// First tap moves immediately by one step; holding then
-					// repeats smoothly instead of waiting out the same
-					// threshold on every individual nudge.
-					if (justPressed || _kbHoldTime > 0.4)
-					{
-						final step = justPressed ? NUDGE_STEP : NUDGE_SPEED * elapsed;
-						var dx = 0.0, dy = 0.0;
-						if (controls.UI_LEFT)  dx -= step;
-						if (controls.UI_RIGHT) dx += step;
-						if (controls.UI_UP)    dy -= step;
-						if (controls.UI_DOWN)  dy += step;
-
-						var newX = Math.max(0, Math.min(FlxG.width  - btn.width,  btn.x + dx));
-						var newY = Math.max(0, Math.min(FlxG.height - btn.height, btn.y + dy));
-						// Same collision-snapping mouse dragging already uses,
-						// so a keyboard nudge can't overlap another button either.
-						var snapped = _resolveCollision(_kbFocus, newX, newY);
-						btn.x = snapped.x;
-						btn.y = snapped.y;
-					}
-				}
-				else
-				{
-					_kbHoldTime = 0;
-				}
-
-				if (controls.ACCEPT)
-				{
-					_kbMoveMode = false;
-					FunkinSound.play(Paths.sound('confirmMenu'));
-					statusText.text = _defaultHint;
-					_updateKbFocusVisuals();
-				}
-				else if (controls.BACK)
-				{
-					// Cancels the move, not the whole screen -- BACK while
-					// actively repositioning a button means "let go of this",
-					// not "save & exit" (see the global BACK handling below,
-					// which this intentionally skips via return).
-					_kbMoveMode = false;
-					FunkinSound.play(Paths.sound('cancelMenu'));
-					statusText.text = _defaultHint;
-					_updateKbFocusVisuals();
-					return;
-				}
-			}
-			else
-			{
-				if (controls.UI_UP_P)
-				{
-					_kbFocus = (_kbFocus <= 0) ? KB_FOCUS_COUNT - 1 : _kbFocus - 1;
-					FunkinSound.play(Paths.sound('hover'), 0.5);
-					_updateKbFocusVisuals();
-				}
-				if (controls.UI_DOWN_P)
-				{
-					_kbFocus = (_kbFocus >= KB_FOCUS_COUNT - 1) ? 0 : _kbFocus + 1;
-					FunkinSound.play(Paths.sound('hover'), 0.5);
-					_updateKbFocusVisuals();
-				}
-
-				if (controls.ACCEPT)
-				{
-					if (_kbFocus < dragButtons.length)
-					{
-						_kbMoveMode = true;
-						_kbHoldTime = 0;
-						FunkinSound.play(Paths.sound('scrollMenu'));
-						statusText.text = Lang.str('vpadcustomizer_moving', 'Moving @ -- arrow keys to nudge, ACCEPT to drop, BACK to cancel').replace('@', DIR_NAMES[_kbFocus]);
-						_updateKbFocusVisuals();
-					}
-					else if (_kbFocus == dragButtons.length)
-					{
-						_saveAllPositions();
-						ClientPrefs.flushSave();
-						close();
-						return;
-					}
-					else
-					{
-						_resetAllPositions();
-					}
-				}
-			}
-		}
-
 		// ── BACK = save & exit ──
 		if (controls.BACK)
 		{
@@ -341,29 +219,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			ClientPrefs.flushSave();
 			close();
 		}
-	}
-
-	/**
-	 * Reflects _kbFocus/_kbMoveMode (and an active mouse drag) in each
-	 * candidate's visual state -- drag buttons: 'idle' (unfocused) / 'hover'
-	 * (keyboard-focused, not grabbed) / 'pressed' (grabbed, by keyboard move
-	 * mode or an active mouse drag). Save/reset use a simple alpha brighten
-	 * since they don't have their own frame states.
-	 */
-	function _updateKbFocusVisuals():Void
-	{
-		for (i in 0...dragButtons.length)
-		{
-			if (dragIdx == i || (_kbFocus == i && _kbMoveMode))
-				dragButtons[i].animation.play('pressed');
-			else if (_kbFocus == i)
-				dragButtons[i].animation.play('hover');
-			else
-				dragButtons[i].animation.play('idle');
-		}
-
-		saveBtn.alpha  = (_kbFocus == dragButtons.length)     ? 1.0 : 0.75;
-		resetBtn.alpha = (_kbFocus == dragButtons.length + 1) ? 1.0 : 0.75;
 	}
 
 	// ── Collision resolution (like Shadow Engine's TouchButton.bounds overlap) ──
@@ -591,10 +446,6 @@ class DragButton extends FlxSprite
 		var graphic = FlxG.bitmap.add('assets/mobile/virtualpad/$graphicName.png');
 		frames = FlxTileFrames.fromGraphic(graphic, FlxPoint.weak(Std.int(graphic.width / 3), graphic.height));
 		animation.add('idle',    [0], 1, false);
-		// Middle frame of the sheet was never wired up before -- now used to
-		// show keyboard/gamepad focus (selected but not yet grabbed), same
-		// spritesheet mouse/touch dragging already used frame 2 ('pressed') for.
-		animation.add('hover',   [1], 1, false);
 		animation.add('pressed', [2], 1, false);
 		animation.play('idle');
 		this.color = color;
