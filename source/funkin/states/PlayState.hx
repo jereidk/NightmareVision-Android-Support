@@ -2364,21 +2364,35 @@ class PlayState extends MusicBeatState
 		for (t in _drsRing) _drsSum += t;
 		final _drsAvg:Float = _drsSum / DRS_RING_SIZE;
 		final _drsNow:Float = haxe.Timer.stamp();
+		// DRS's frame-cache captures/blits at a fixed size taken once when it
+		// activates (DynamicResolution._winW/_winH, from the window's logical
+		// size) and never re-checked afterward. RenderScale shrinks the actual
+		// hardware surface buffer underneath that same window at any point,
+		// completely independently -- so a frame captured/blitted at the old
+		// (pre-RenderScale) size, once the real buffer is smaller, reads back
+		// only the small real content plus whatever garbage fills the rest of
+		// that now-oversized capture, exactly the "small render in a black
+		// box" glitch this was built to catch. Both were designed as
+		// alternative fixes for the same GPU-fill-rate problem (see each
+		// class's own doc comment), not to run together -- mutual exclusion is
+		// the safe fix instead of trying to make DRS track a live-resizing
+		// buffer it currently has no way to observe.
+		final renderScaleActive = mobile.backend.RenderScale.currentScale < 0.999;
 		// drsForceAlwaysOn bypasses the fps-triggered logic entirely, so we can
 		// test whether the frame-cache mechanism itself helps at all, isolated
 		// from whether the threshold/timing tuning is right.
 		if (ClientPrefs.drsForceAlwaysOn)
 		{
-			if (ClientPrefs.drsEnabled && !_drsActive)
+			if (ClientPrefs.drsEnabled && !_drsActive && !renderScaleActive)
 				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
-			else if (!ClientPrefs.drsEnabled && _drsActive)
+			else if ((!ClientPrefs.drsEnabled || renderScaleActive) && _drsActive)
 				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
 		}
 		else
 		{
-			if (ClientPrefs.drsEnabled && !_drsActive && _drsAvg > 1 / ClientPrefs.drsActivateFps)
+			if (ClientPrefs.drsEnabled && !_drsActive && !renderScaleActive && _drsAvg > 1 / ClientPrefs.drsActivateFps)
 				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
-			else if (_drsActive && (_drsNow - _drsActivatedAt >= ClientPrefs.drsMinActiveSeconds) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / ClientPrefs.drsDeactivateFps))
+			else if (_drsActive && (renderScaleActive || (_drsNow - _drsActivatedAt >= ClientPrefs.drsMinActiveSeconds) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / ClientPrefs.drsDeactivateFps)))
 				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
 		}
 		SystemMonitor.reportDrsState(_drsActive);
