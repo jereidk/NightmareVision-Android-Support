@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.GameManager;
 import android.app.GameState;
 import android.content.Context;
+import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
@@ -11,6 +12,7 @@ import android.os.Environment;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowInsetsController;
+import android.widget.Toast;
 import org.haxe.extension.Extension;
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +20,10 @@ import java.io.IOException;
 public class AndroidUtils extends Extension {
 
     private static int _fullscreenMode = 0; // 0=off, 1=status bar only, 2=full immersive
+
+    // FileUtils.java (same package) already uses 1024-1026 for its own
+    // startActivityForResult() calls -- keep this distinct so results don't collide.
+    private static final int OPEN_DATA_FOLDER_CODE = 1027;
 
     public static void keepScreenOn(final boolean enable) {
         final Activity activity = mainActivity;
@@ -228,26 +234,60 @@ public class AndroidUtils extends Extension {
                     // android:permission="android.permission.MANAGE_DOCUMENTS" (the
                     // correct, standard way to expose a DocumentsProvider) — but that
                     // permission is signature-only and no third-party app can ever hold
-                    // it. So ACTION_VIEW/ACTION_BROWSE handed straight to this content://
-                    // URI can only ever reach an app that will hit a SecurityException
-                    // the moment it actually queries the provider, which isn't
-                    // detectable from here (startActivity succeeds either way). The
-                    // system's own SAF tree picker is the only caller that holds
-                    // MANAGE_DOCUMENTS, so it's the only guaranteed-working path.
-                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE);
-                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    // it. There is also no universal "open this exact folder" intent
+                    // that arbitrary file manager apps support (confirmed against real
+                    // reports, e.g. github.com/syncthing/syncthing-android/issues/838),
+                    // so ACTION_VIEW/ACTION_BROWSE straight to a random file manager
+                    // isn't reliable either. The system's own SAF tree picker
+                    // (DocumentsUI) is the one caller guaranteed to hold MANAGE_DOCUMENTS
+                    // on every device, so it's the only reliably-working path.
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                     // Intent.EXTRA_INITIAL_URI is API 26+ and isn't exposed by this
                     // project's compileSdk stub jar ("cannot find symbol"), so it's
                     // referenced by its literal Bundle key instead. The key itself works
                     // on any OS version; older ones that don't understand it just
                     // ignore it and open at the default root.
                     intent.putExtra("android.provider.extra.INITIAL_URI", docUri);
-                    activity.startActivity(intent);
+                    // No FLAG_ACTIVITY_NEW_TASK here -- per Android's own
+                    // startActivityForResult() docs, that flag makes the launched
+                    // activity run in a different task, so "you will immediately
+                    // receive a cancel result" instead of the real one. It was also
+                    // never needed: this call already runs from a real Activity
+                    // instance, not a bare Application/Service Context.
+                    activity.startActivityForResult(intent, OPEN_DATA_FOLDER_CODE);
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());
                 }
             }
         });
+    }
+
+    /**
+     * Handles the result of the OPEN_DATA_FOLDER_CODE picker started in
+     * openDataFolder(). Without this override the picker's "confirm"/"use this
+     * folder" button had nothing to report to -- this is what makes it
+     * actually do something instead of silently closing.
+     */
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == OPEN_DATA_FOLDER_CODE) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                Uri treeUri = data.getData();
+                if (treeUri != null) {
+                    try {
+                        // Persist the grant so it survives past this process (otherwise
+                        // it's revoked as soon as the app is killed).
+                        mainActivity.getContentResolver().takePersistableUriPermission(treeUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    } catch (Exception e) {
+                        android.util.Log.w("AndroidUtils", "Could not persist data folder permission: " + e);
+                    }
+                    Toast.makeText(mainActivity, "Data folder selected", Toast.LENGTH_SHORT).show();
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     private static android.view.Display getDisplay(Activity activity) {
