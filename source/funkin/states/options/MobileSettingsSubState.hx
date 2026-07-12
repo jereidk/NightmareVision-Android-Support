@@ -540,17 +540,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (controls.ACCEPT)
 		{
 			final opt = _opts[_sel];
-			if (opt != null && opt.kind == 'bool') _changeSelected(1);
-			else if (opt != null && opt.kind == 'customize' && opt.id == 'vpadCustomize')
-				openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
-			// 'button' kind (currently just 'openDataFolder') had no ACCEPT
-			// handling at all -- keyboard/gamepad could only reach it via
-			// UI_LEFT_P/UI_RIGHT_P below (_changeSelected() ignores 'kind' for
-			// its id-based side effects), which doesn't make sense for a row
-			// that isn't an adjustable value. TouchOptionList already treats
-			// ACCEPT as the "activate" input for its own 'button' rows; this
-			// matches that instead of leaving ACCEPT do nothing here.
-			else if (opt != null && opt.kind == 'button') _changeSelected(1);
+			// 'customize' used to call openSubState(new VirtualPadCustomizerSubState())
+			// directly right here -- the exact same call _changeSelected()'s
+			// id-dispatch below already makes for a touch tap on this same row
+			// (via _resolveRowTap()), so keyboard/gamepad ACCEPT and a touch tap
+			// were two separately-written copies of the same action. Routing
+			// 'customize' through _changeSelected() too (like 'bool'/'button'
+			// already do) removes that duplicate.
+			if (opt != null && (opt.kind == 'bool' || opt.kind == 'button' || opt.kind == 'customize')) _changeSelected(1);
 		}
 
 		if (controls.RESET) _resetToDefault();
