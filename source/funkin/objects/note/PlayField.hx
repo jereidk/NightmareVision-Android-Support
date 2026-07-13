@@ -516,11 +516,23 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		if (!note.hitCausesMiss && !note.canMiss)
 		{
 			note.tailState.missed = true;
-			
+
+			// note here can be either the head itself (parent == null) or one
+			// of its own tail segments (parent == the head) -- always anchor
+			// the identity check on the actual head note, mirroring
+			// noteHit()'s "sustain.parent != note" idiom (there, note is
+			// always the head, guarded by !note.isSustainNote). Comparing
+			// against note.parent unconditionally broke for head notes: every
+			// valid sibling sustain (parent == the head, non-null) looked
+			// "already recycled" and got skipped, while a stale Note sitting
+			// in this hold's shared tail array whose own .parent field also
+			// happened to be null would incorrectly pass the check instead.
+			final headNote:Note = (note.parent != null) ? note.parent : note;
+
 			for (sustain in note.tail)
 			{
-				if (sustain.parent != note.parent) continue; // ignore notes that have already been recycled
-				
+				if (sustain.parent != headNote) continue; // ignore notes that have already been recycled
+
 				sustain.tooLate = true;
 				sustain.blockHit = true;
 				sustain.ignoreNote = true;
