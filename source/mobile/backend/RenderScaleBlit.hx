@@ -43,6 +43,7 @@ class RenderScaleBlit
 	static var _uvLoc:Int        = -1;
 	static var _texLoc:Int       = -1;
 	static var _initialized:Bool = false;
+	static var _diagLogged:Bool  = false; // one-shot in-game confirmation, not spammed every frame
 
 	/** Call once from Init.hx to register context-loss recovery. */
 	public static function init():Void
@@ -59,13 +60,25 @@ class RenderScaleBlit
 		try
 		{
 			final ctx:Null<Context3D> = FlxG.stage.context3D;
-			if (ctx == null) return;
+			if (ctx == null)
+			{
+				_diagOnce('[RenderScaleBlit] context3D is null, skipping blit');
+				return;
+			}
 
 			final tex = ctx.__backBufferTexture;
-			if (tex == null) return;
+			if (tex == null)
+			{
+				_diagOnce('[RenderScaleBlit] __backBufferTexture is null, skipping blit');
+				return;
+			}
 
 			if (!_initialized) _tryCreateGL(ctx.gl);
-			if (!_initialized) return;
+			if (!_initialized)
+			{
+				_diagOnce('[RenderScaleBlit] GL setup never succeeded, skipping blit');
+				return;
+			}
 
 			final gl = _gl;
 			// window.width/height are NOT touched by RenderScale (only
@@ -100,11 +113,21 @@ class RenderScaleBlit
 			gl.useProgram(null);
 			gl.enable(gl.BLEND);
 			gl.flush(); // ensure commands reach the GPU before eglSwapBuffers
+
+			_diagOnce('[RenderScaleBlit] blit executed OK (backbuffer=${ctx.backBufferWidth}x${ctx.backBufferHeight} -> window=${winW}x${winH})');
 		}
 		catch (e:Dynamic)
 		{
-			Logger.log('[RenderScaleBlit] blit failed: $e', WARN);
+			_diagOnce('[RenderScaleBlit] blit failed: $e');
 		}
+	}
+
+	/** Logs a message once (both to file and as an in-game toast) so a per-frame call site doesn't spam it every frame. */
+	static function _diagOnce(msg:String):Void
+	{
+		if (_diagLogged) return;
+		_diagLogged = true;
+		Logger.log(msg, NOTICE, true);
 	}
 
 	static function _onContextCreate(_:Dynamic):Void
