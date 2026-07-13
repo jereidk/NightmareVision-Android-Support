@@ -21,6 +21,7 @@ var toogusorange:FlxSprite;
 var toogusblue:FlxSprite;
 var tooguswhite:FlxSprite;
 var red:Character;
+var redElements:Array<animate.internal.elements.FlxSpriteElement> = [];
 var introFade:FlxSprite;
 var wall:FlxSprite;
 var glow:FlxSprite;
@@ -413,6 +414,14 @@ function onCreatePost()
 		// own independent element avoids that entirely; they all just wrap
 		// the same red Character, and only whichever frame is current ever
 		// actually gets drawn.
+		//
+		// dad.library comes from FlxAnimateFrames' own static path cache
+		// (_cachedAtlases), so these Frame objects are the SAME ones reused
+		// across every retry, not fresh per PlayState. Every retry pushed one
+		// more redElement into frame.elements without ever removing the
+		// previous retry's one, which by then wrapped an already-destroyed
+		// `red` -- onDestroy() below removes them again so the cache stays
+		// clean for the next retry.
 		if (placeholder != null)
 			placeholder.timeline.layers[0].forEachFrame((frame) -> {
 				for (i in frame.elements)
@@ -421,6 +430,7 @@ function onCreatePost()
 				var redElement = new animate.internal.elements.FlxSpriteElement(red);
 				redElement.active = false;
 				frame.add(redElement);
+				redElements.push(redElement);
 			});
 	}
 	
@@ -508,6 +518,13 @@ function onUpdate(elapsed:Float):Void
 
 function onDestroy():Void
 {
+	for (el in redElements)
+	{
+		if (el.parentFrame != null) el.parentFrame.remove(el);
+		el.destroy();
+	}
+	redElements = [];
+
 	red.destroy();
 }
 
