@@ -1230,14 +1230,14 @@ jobs:
             fi
           fi
 
-      # Same NDK toolchain wrapper as the Android-ARM64 job, with one
-      # change: the *-strip wrappers save an unstripped copy of any .so
-      # they're about to strip into ~/unstripped-so before actually
-      # stripping it. Harmless on its own (HXCPP_DEBUG_LINK_AND_STRIP below
-      # is what makes there be real debug info left to save by the time
-      # this runs -- without it, the .so would already be link-time
-      # stripped via -Wl,--strip-all and this would just be saving an
-      # already-empty shell).
+      # Plain NDK toolchain wrapper, same as the Android-ARM64 job -- no
+      # longer intercepts *-strip. That interception (an earlier attempt at
+      # this same problem) turned out to target a mechanism this build never
+      # goes through: hxcpp's android-toolchain-clang.xml (confirmed against
+      # the actual hxcpp source) never shells out to an external strip tool
+      # at all -- that was gcc-toolchain-only, and this NDK build uses
+      # clang. Symbol preservation now happens entirely on the Gradle side
+      # (see patch-lime-gradle-keep-debug-symbols.sh) instead.
       - name: Prepare NDK clang++ for Android
         run: |
           mkdir -p /tmp/ndk-wrap
@@ -1253,17 +1253,8 @@ jobs:
           } > /tmp/ndk-wrap/clang++
           printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
             "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
-          mkdir -p "$HOME/unstripped-so"
-          {
-            printf '#!/bin/bash\n'
-            printf 'mkdir -p "%s/unstripped-so"\n' "$HOME"
-            printf 'for arg in "$@"; do\n'
-            printf '  case "$arg" in\n'
-            printf '    *.so) cp -f "$arg" "%s/unstripped-so/$(basename "$arg")" 2>/dev/null || true ;;\n' "$HOME"
-            printf '  esac\n'
-            printf 'done\n'
-            printf 'exec "%s/bin/llvm-strip" "$@"\n' "$NDK_PREBUILT"
-          } > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
@@ -1391,6 +1382,12 @@ jobs:
       - name: Enable native debug symbols output for release
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
+      # The one that actually matters for our own library -- see
+      # patch-lime-gradle-keep-debug-symbols.sh for why debugSymbolLevel
+      # alone (just above) isn't enough by itself.
+      - name: Keep debug symbols in our own library
+        run: bash .github/scripts/patch-lime-gradle-keep-debug-symbols.sh
+
       # Separate cache lineage from the Android-ARM64 job's release build on
       # purpose -- see the top-of-job comment on HXCPP_DEBUG_LINK_AND_STRIP.
       - name: Cache hxcpp build artifacts (ARM64, debug symbols)
@@ -1443,6 +1440,12 @@ jobs:
           echo "=== Specifically looking for our own app library ==="
           find export/release/android -iname "*ImpostorLegacy*" 2>/dev/null
 
+      # This APK IS the symbol source now (see
+      # patch-lime-gradle-keep-debug-symbols.sh) -- libImpostorLegacy.so
+      # inside lib/arm64-v8a/ ships with full debug info intact, no separate
+      # artifact needed. Extract it from the APK (a zip) and run
+      # addr2line/ndk-stack against it directly with a
+      # native_crash_trace.log's rel_pc offsets.
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -1456,25 +1459,3 @@ jobs:
           name: Native Debug Symbols - Gradle (Android ARM64)
           path: export/release/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
           if-no-files-found: warn
-
-      # The one that actually matters for symbolizing a native_crash_trace.log:
-      # the game's own library, saved unstripped by the *-strip wrapper above
-      # before the real llvm-strip ran on it. Zipped here since
-      # upload-artifact doesn't need one, but a raw .so glob directly out of
-      # $HOME is easier to get wrong across shells than just zipping it first.
-      - name: Zip unstripped game library
-        run: |
-          if [ -z "$(ls -A "$HOME/unstripped-so" 2>/dev/null)" ]; then
-            echo "ERROR: no unstripped .so files were captured -- HXCPP_DEBUG_LINK_AND_STRIP may not have taken effect, or the strip wrapper never ran"
-            exit 1
-          fi
-          ls -la "$HOME/unstripped-so"
-          cd "$HOME/unstripped-so"
-          zip -r "$GITHUB_WORKSPACE/unstripped-game-library.zip" .
-
-      - name: Upload unstripped game library
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: Unstripped Game Library (Android ARM64)
-          path: unstripped-game-library.zip
-          if-no-files-found: error
