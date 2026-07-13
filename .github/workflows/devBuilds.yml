@@ -306,26 +306,6 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
-      - name: Patch Lime SDL for Android render-scale support
-        run: |
-          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
-          while IFS= read -r ACTIVITY_FILE; do
-            echo "Found: $ACTIVITY_FILE"
-            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
-          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
-
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -666,26 +646,6 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
-      - name: Patch Lime SDL for Android render-scale support
-        run: |
-          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
-          while IFS= read -r ACTIVITY_FILE; do
-            echo "Found: $ACTIVITY_FILE"
-            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
-          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
-
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -1013,26 +973,6 @@ jobs:
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
-
-      - name: Patch Lime SDL for Android render-scale support
-        run: |
-          echo "=== Patching SDLActivity.java: expose setRenderBufferSize/resetRenderBufferSize ==="
-          while IFS= read -r ACTIVITY_FILE; do
-            echo "Found: $ACTIVITY_FILE"
-            python3 .github/scripts/patch-lime-sdlactivity-renderscale.py "$ACTIVITY_FILE"
-          done < <(find .haxelib/lime -name "SDLActivity.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: keep touch input aligned when render scale < 100% ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-touch-normalize.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
-
-          echo "=== Patching SDLSurface.java: track surfaceChanged() calls for RenderScale diagnostics ==="
-          while IFS= read -r SURFACE_FILE; do
-            echo "Found: $SURFACE_FILE"
-            python3 .github/scripts/patch-lime-sdlsurface-diagnostics.py "$SURFACE_FILE"
-          done < <(find .haxelib/lime -name "SDLSurface.java" -type f 2>/dev/null)
 
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can

@@ -4,50 +4,45 @@ import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
 
 /**
- * True render-resolution scaling via Android's hardware surface scaler
- * (SurfaceHolder.setFixedSize), NOT DynamicResolution's frame-caching.
+ * True render-resolution scaling driven entirely through OpenFL's own
+ * backbuffer pipeline, NOT DynamicResolution's frame-caching.
  *
  * Perfetto traces showed the game is GPU fill-rate bound -- the GPU is slow
- * to finish each frame, not slow to receive draw commands (RenderThread
- * itself was nearly idle). DynamicResolution mitigates that by skipping
- * every other render outright; this instead makes every render cheaper by
- * shrinking how many pixels the GPU has to fill, at effectively no extra
- * cost -- SurfaceFlinger already scales the buffer up to the View's real
- * on-screen size during composition, a hardware operation it performs every
- * frame regardless of whether we ask for a smaller buffer.
+ * to finish each frame, not slow to receive draw commands. DynamicResolution
+ * mitigates that by skipping every other render outright; this instead makes
+ * every render cheaper by shrinking how many pixels the GPU has to fill.
  *
- * Requires the SDLActivity/SDLSurface patches applied at build time (see
- * .github/scripts/patch-lime-sdlactivity-renderscale.py and
- * patch-lime-sdlsurface-touch-normalize.py) -- the second one is what keeps
- * touch input aligned to the screen once the buffer is smaller than the View.
+ * This used to reach into the Android Surface directly (SurfaceHolder's
+ * hardware buffer scaler, via JNI). That bypassed OpenFL/Lime's own resize
+ * pipeline entirely, so Stage.__resize() -- the one place that recomputes
+ * both Context3D's backbuffer AND OpenGLRenderer's glViewport/projection --
+ * never re-ran, leaving the GPU viewport pointed at the old, full-native
+ * size while the real buffer underneath had shrunk. That mismatch is what
+ * produced the "flea in the corner with black borders" result instead of a
+ * clean downscale.
+ *
+ * window.scale is the SAME lever OpenFL already uses for HiDPI (rendering
+ * MORE physical pixels than the logical stage size, on displays with a
+ * device pixel ratio above 1). Scaling it below 1 asks for the opposite:
+ * fewer physical pixels than the logical size. Stage.stageWidth/stageHeight
+ * (and therefore FlxG's logical resolution and all touch/mouse mapping,
+ * which normalizes against the View's real on-screen size, not the
+ * backbuffer) stay untouched, since window.width cancels window.scale out
+ * of that calculation -- only the physical backbuffer/viewport shrink.
+ * Re-running Stage.__resize() then lets OpenFL's own already-correct,
+ * already-shipping code do the rest: reconfigure Context3D's backbuffer and
+ * recompute the renderer's glViewport/projection to match, exactly as it
+ * would for a genuine HiDPI display.
  */
 class RenderScale
 {
-	#if android
-	static var _setBufferSize = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "setRenderBufferSize", "(II)V");
-	static var _resetBufferSize = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "resetRenderBufferSize", "()V");
-	static var _getBufferWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferWidth", "()I");
-	static var _getBufferHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceBufferHeight", "()I");
-	static var _getSurfaceChangedCallCount = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceChangedCallCount", "()I");
-	static var _getLastSurfaceChangedWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getLastSurfaceChangedWidth", "()I");
-	static var _getLastSurfaceChangedHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getLastSurfaceChangedHeight", "()I");
-	static var _getSurfaceViewLayoutWidth = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceViewLayoutWidth", "()I");
-	static var _getSurfaceViewLayoutHeight = JNI.createStaticMethod("org/libsdl/app/SDLActivity", "getSurfaceViewLayoutHeight", "()I");
-	#end
-
 	public static var currentScale(default, null):Float = 1.0;
 
-	// Captured once, ever, the first time apply() runs -- window.width/height
-	// only reliably reflects the device's true native resolution before any
-	// scale has actually taken hold. Now that setRenderBufferSize() actually
-	// resizes the buffer (and Flixel picks up the new window size once
-	// surfaceChanged() fires), computing each new scale as a percentage of
-	// the CURRENT (already-shrunk) window.width/height compounded every
-	// repeated call onto whatever the previous one left behind -- 55% then
-	// 60% then 55% collapsed the buffer to a sliver within a few slider
-	// drags instead of ever landing on 60%/55% of the real native size.
-	static var _nativeWidth:Int = 0;
-	static var _nativeHeight:Int = 0;
+	// The device's real window.scale (DPI factor), captured once the first
+	// time apply() runs. Every later call multiplies this baseline by the
+	// requested render scale rather than compounding onto whatever the
+	// previous call already left window.scale at.
+	static var _baseWindowScale:Float = 0;
 
 	/**
 	 * Applies a render scale factor (e.g. 0.75 for 75%). 1.0 reverts to native
@@ -58,35 +53,21 @@ class RenderScale
 		#if android
 		try
 		{
-			if (_nativeWidth <= 0)
+			final stage = flixel.FlxG.stage;
+			final window = stage.window;
+
+			if (_baseWindowScale <= 0)
 			{
-				_nativeWidth = Std.int(flixel.FlxG.stage.window.width);
-				_nativeHeight = Std.int(flixel.FlxG.stage.window.height);
+				_baseWindowScale = window.scale;
 			}
 
-			if (scale >= 0.999)
-			{
-				_resetBufferSize();
-				currentScale = 1.0;
-				Logger.log('[RenderScale] Reset to native 1:1', NOTICE);
-			}
-			else
-			{
-				final w = Std.int(_nativeWidth * scale);
-				final h = Std.int(_nativeHeight * scale);
-				_setBufferSize(w, h);
-				currentScale = scale;
-				Logger.log('[RenderScale] Set to ${Std.int(scale * 100)}% (${w}x${h})', NOTICE);
-			}
+			@:privateAccess window.__scale = _baseWindowScale * scale;
+			@:privateAccess stage.__resize();
 
-			// Diagnostics: setFixedSize() only takes effect once the next
-			// surfaceChanged() callback fires (async), and it resizes the surface
-			// BUFFER -- not necessarily what Flixel/OpenFL think the resolution is.
-			// Log both readings twice: immediately (expected to still show the OLD
-			// buffer size, proving the async gap is real) and after a delay
-			// (expected to show the NEW size if the OS + engine both reacted).
-			logDiagnostics('immediate');
-			haxe.Timer.delay(() -> logDiagnostics('+500ms'), 500);
+			currentScale = scale;
+			Logger.log('[RenderScale] Set to ${Std.int(scale * 100)}% '
+				+ '(window.scale=${window.scale}, stage=${stage.stageWidth}x${stage.stageHeight}, '
+				+ 'FlxG=${flixel.FlxG.width}x${flixel.FlxG.height})', NOTICE);
 		}
 		catch (e:Dynamic)
 		{
@@ -94,30 +75,4 @@ class RenderScale
 		}
 		#end
 	}
-
-	#if android
-	static function logDiagnostics(when:String):Void
-	{
-		try
-		{
-			final bufW = (_getBufferWidth() : Int);
-			final bufH = (_getBufferHeight() : Int);
-			final callCount = (_getSurfaceChangedCallCount() : Int);
-			final lastW = (_getLastSurfaceChangedWidth() : Int);
-			final lastH = (_getLastSurfaceChangedHeight() : Int);
-			final layoutW = (_getSurfaceViewLayoutWidth() : Int);
-			final layoutH = (_getSurfaceViewLayoutHeight() : Int);
-			Logger.log('[RenderScale][$when] surfaceBuffer=${bufW}x${bufH} '
-				+ 'surfaceChangedCalls=$callCount lastReported=${lastW}x${lastH} '
-				+ 'viewLayout=${layoutW}x${layoutH} '
-				+ 'FlxG=${flixel.FlxG.width}x${flixel.FlxG.height} '
-				+ 'stage=${flixel.FlxG.stage.stageWidth}x${flixel.FlxG.stage.stageHeight} '
-				+ 'window=${flixel.FlxG.stage.window.width}x${flixel.FlxG.stage.window.height}', NOTICE);
-		}
-		catch (e:Dynamic)
-		{
-			Logger.log('[RenderScale][$when] Failed to read diagnostics: $e', WARN);
-		}
-	}
-	#end
 }
