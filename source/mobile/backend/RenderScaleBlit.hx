@@ -82,6 +82,21 @@ class RenderScaleBlit
 	// only the very first message of the whole session ever winning.
 	static var _diagKeys:Map<String, Bool> = [];
 
+	// Periodic (not one-shot) counters -- the flicker/teleport symptom
+	// reported after the one-shot logs all showed clean success suggests an
+	// INTERMITTENT failure (some frames redirect correctly, some don't) or a
+	// genuinely unstable backbuffer size frame-to-frame, neither of which a
+	// log that only ever fires once could ever catch.
+	static var _periodBeginOK:Int    = 0;
+	static var _periodBeginFail:Int  = 0;
+	static var _periodEndOK:Int      = 0;
+	static var _periodEndFail:Int    = 0;
+	static var _periodFrames:Int     = 0;
+	static var _periodLastW:Int      = -1;
+	static var _periodLastH:Int      = -1;
+	static var _periodSizeChanges:Int = 0;
+	static inline final PERIOD_FRAMES = 90; // ~1.5s at 60fps
+
 	/** Call once from Init.hx to register context-loss recovery. */
 	public static function init():Void
 	{
@@ -99,12 +114,14 @@ class RenderScaleBlit
 			final ctx:Null<Context3D> = FlxG.stage.context3D;
 			if (ctx == null)
 			{
+				_periodBeginFail++;
 				_diagOnce('begin_ctxnull', '[RenderScaleBlit] context3D is null, skipping');
 				return;
 			}
 			if (_gl == null) _gl = ctx.gl;
 			if (_gl == null)
 			{
+				_periodBeginFail++;
 				_diagOnce('begin_glnull', '[RenderScaleBlit] context3D.gl is null, skipping');
 				return;
 			}
@@ -113,13 +130,22 @@ class RenderScaleBlit
 			final h = ctx.backBufferHeight;
 			if (w <= 0 || h <= 0)
 			{
+				_periodBeginFail++;
 				_diagOnce('begin_zerosize', '[RenderScaleBlit] backBufferWidth/Height is ${w}x${h}, skipping');
 				return;
+			}
+
+			if (w != _periodLastW || h != _periodLastH)
+			{
+				if (_periodLastW >= 0) _periodSizeChanges++;
+				_periodLastW = w;
+				_periodLastH = h;
 			}
 
 			if (_tex == null || _fboW != w || _fboH != h) _createTarget(ctx, w, h);
 			if (_fbo == null)
 			{
+				_periodBeginFail++;
 				_diagOnce('begin_nofbo', '[RenderScaleBlit] no offscreen target available, skipping (see earlier target-creation log)');
 				return;
 			}
@@ -127,10 +153,12 @@ class RenderScaleBlit
 			if (!_shaderReady) _createBlitShader();
 
 			ctx.__state.__primaryGLFramebuffer = _fbo;
+			_periodBeginOK++;
 			_diagOnce('begin_ok', '[RenderScaleBlit] beginFrame redirecting to offscreen target ${w}x${h}');
 		}
 		catch (e:Dynamic)
 		{
+			_periodBeginFail++;
 			_diagOnce('begin_exn', '[RenderScaleBlit] beginFrame failed: $e');
 		}
 	}
@@ -147,8 +175,10 @@ class RenderScaleBlit
 			final ctx:Null<Context3D> = FlxG.stage.context3D;
 			if (ctx == null || _gl == null || _tex == null || !_shaderReady)
 			{
+				_periodEndFail++;
 				_diagOnce('end_notready',
 					'[RenderScaleBlit] endFrame skipped -- ctx=${ctx != null} gl=${_gl != null} tex=${_tex != null} shader=${_shaderReady}');
+				_reportPeriodIfDue();
 				return;
 			}
 
@@ -190,12 +220,43 @@ class RenderScaleBlit
 			gl.enable(gl.BLEND);
 			gl.flush(); // ensure commands reach the GPU before eglSwapBuffers
 
+			_periodEndOK++;
 			_diagOnce('end_ok', '[RenderScaleBlit] blit executed OK (offscreen=${_fboW}x${_fboH} -> window=${winW}x${winH})');
 		}
 		catch (e:Dynamic)
 		{
+			_periodEndFail++;
 			_diagOnce('end_exn', '[RenderScaleBlit] endFrame failed: $e');
 		}
+
+		_reportPeriodIfDue();
+	}
+
+	/**
+	 * Every ~1.5s, reports how many of the last PERIOD_FRAMES begin/end
+	 * calls actually succeeded, and how many times the backbuffer size
+	 * itself changed mid-period. A 100%-success period with a stable size
+	 * would rule out an intermittent redirect failure as the cause of the
+	 * reported flicker/teleport symptom -- pointing instead at something
+	 * outside what this file can see (e.g. double/triple-buffer swap-chain
+	 * timing). Frequent size changes during a period the user isn't
+	 * actively dragging the slider would itself be a red flag.
+	 */
+	static function _reportPeriodIfDue():Void
+	{
+		_periodFrames++;
+		if (_periodFrames < PERIOD_FRAMES) return;
+
+		Logger.log('[RenderScaleBlit] last ${_periodFrames}f: begin ${_periodBeginOK}ok/${_periodBeginFail}fail, '
+			+ 'end ${_periodEndOK}ok/${_periodEndFail}fail, sizeChanges=$_periodSizeChanges, '
+			+ 'currentSize=${_periodLastW}x${_periodLastH}', NOTICE, true);
+
+		_periodFrames = 0;
+		_periodBeginOK = 0;
+		_periodBeginFail = 0;
+		_periodEndOK = 0;
+		_periodEndFail = 0;
+		_periodSizeChanges = 0;
 	}
 
 	static function _createTarget(ctx:Context3D, w:Int, h:Int):Void
