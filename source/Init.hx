@@ -155,6 +155,35 @@ class Init extends FlxState
 		
 		ClientPrefs.load();
 
+		// Safe mode: an external, file-based escape hatch for settings that can
+		// leave the screen unusable from inside the game itself (render scale
+		// stuck small, DRS, forcing Virtual Pad nav when touch would still
+		// work) -- reachable through the phone's own file manager even when
+		// the game can't be seen or navigated at all. Drop an empty
+		// SAFE_MODE.txt directly in the .ImpostorLegacy folder (same folder
+		// "Open Data Folder" opens) and the next launch resets these to their
+		// defaults and deletes the marker.
+		#if (android && sys)
+		try
+		{
+			final safeModePath = mobile.backend.StorageSystem.getStorageDirectory() + 'SAFE_MODE.txt';
+			if (sys.FileSystem.exists(safeModePath))
+			{
+				ClientPrefs.renderScale = 1.0;
+				ClientPrefs.drsEnabled = false;
+				ClientPrefs.drsForceAlwaysOn = false;
+				ClientPrefs.navInputMode = 'Touch';
+				ClientPrefs.flush();
+				sys.FileSystem.deleteFile(safeModePath);
+				Logger.log('[SafeMode] SAFE_MODE.txt found -- reset render scale, DRS and nav input mode to defaults', NOTICE, true);
+			}
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('[SafeMode] Failed to check/apply SAFE_MODE.txt: $e', WARN);
+		}
+		#end
+
 		// Applied here (after load, not next to DynamicResolution.init() above)
 		// since it needs the saved value, and reapplied whenever the setting
 		// changes live from the Graphics options category. A no-op at 1.0 (default).
