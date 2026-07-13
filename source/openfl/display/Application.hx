@@ -9,6 +9,8 @@ import lime.ui.WindowAttributes;
 #end
 #if (android && cpp)
 import mobile.backend.DynamicResolution;
+import mobile.backend.RenderScale;
+import mobile.backend.RenderScaleBlit;
 import lime.graphics.RenderContext;
 #end
 #if ((sys || air) && (!flash_doc_gen || air_doc_gen))
@@ -174,6 +176,12 @@ class Application #if lime extends LimeApplication #end
 		}
 		super.render(context);
 		DynamicResolution.saveCurrentFrame();
+
+		// window.scale correctly shrinks the backbuffer + viewport together
+		// (see RenderScale.hx), but nothing then stretches that smaller
+		// buffer back up to the real window on presentation -- this manual
+		// blit is that missing step (see RenderScaleBlit.hx).
+		if (RenderScale.currentScale < 0.999) RenderScaleBlit.blit();
 	}
 	#end
 

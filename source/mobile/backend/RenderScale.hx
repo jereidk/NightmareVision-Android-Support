@@ -33,6 +33,13 @@ import funkin.backend.Logger.Severity;
  * already-shipping code do the rest: reconfigure Context3D's backbuffer and
  * recompute the renderer's glViewport/projection to match, exactly as it
  * would for a genuine HiDPI display.
+ *
+ * That correctly resizes and renders the scene, but nothing in OpenFL then
+ * stretches the resulting smaller backbuffer back up to the real window on
+ * presentation -- it shows up as-is, pixel for pixel, in a corner of the
+ * screen with black filling the rest. See RenderScaleBlit.hx (hooked into
+ * Application.hx's render() override) for the manual fullscreen-quad blit
+ * that finishes the job.
  */
 class RenderScale
 {

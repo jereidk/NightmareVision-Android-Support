@@ -109,6 +109,7 @@ class Init extends FlxState
 		mobile.backend.AstcSupport.check();
 		mobile.backend.AstcLoader.installContextHandler();
 		mobile.backend.DynamicResolution.init();
+		mobile.backend.RenderScaleBlit.init();
 		#end
 
 		// Route FlxAnimate spritemap texture loads through FunkinAssets so that
