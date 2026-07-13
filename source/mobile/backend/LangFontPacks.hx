@@ -33,21 +33,21 @@ typedef LangFontPack =
  */
 class LangFontPacks
 {
-	static final RELEASE_BASE = "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/asian-langs-v1/";
+	static final RELEASE_BASE = "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/langs.font-v1/";
 
 	static final PACKS:Map<String, LangFontPack> = [
 		"korean" => {
 			id: "asian-langs-korean",
 			displayName: "Korean",
 			zipName: "korean-fonts.zip",
-			sha256: "7a9d02d85a719f648b24569b14233fc1c4b30d70c267436b364d3f273e3a3896",
+			sha256: "407ed6b853ad4d43289a8f67840e8a4624ebc1dabee15eed0af178b9b48ca0cf",
 			sizeMb: 4.3,
 		},
 		"japanese" => {
 			id: "asian-langs-japanese",
 			displayName: "Japanese",
 			zipName: "japanese-fonts.zip",
-			sha256: "64880a2124a0e8e44a1e1afceaae28261b878bac81593eb25eb869ba2d833668",
+			sha256: "bc6d9929c7099b12fa7d3b75dcb29cb642f9ac68d4ff66334f5b6d57ffcdbab8",
 			sizeMb: 6.05,
 		},
 		// zh-cn and zh-tw share the exact same font_replacement targets, so
@@ -56,14 +56,14 @@ class LangFontPacks
 			id: "asian-langs-chinese",
 			displayName: "Chinese",
 			zipName: "chinese-fonts.zip",
-			sha256: "0c868cf73cf4eefb3a1bcc316b0f1c71b8ceebc1449322934511f9ac8d4fd703",
+			sha256: "6c35715e607c0235ccf096752ca58c2de90b495b04b462e48c20fbc47c738cf8",
 			sizeMb: 17.7,
 		},
 		"zh-tw" => {
 			id: "asian-langs-chinese",
 			displayName: "Chinese",
 			zipName: "chinese-fonts.zip",
-			sha256: "0c868cf73cf4eefb3a1bcc316b0f1c71b8ceebc1449322934511f9ac8d4fd703",
+			sha256: "6c35715e607c0235ccf096752ca58c2de90b495b04b462e48c20fbc47c738cf8",
 			sizeMb: 17.7,
 		},
 	];
