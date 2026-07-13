@@ -307,6 +307,24 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -660,6 +678,24 @@ jobs:
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -1000,6 +1036,24 @@ jobs:
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
 
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
@@ -1369,6 +1423,24 @@ jobs:
             echo "Found: $IRIS_FILE"
             python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
           done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         run: |
