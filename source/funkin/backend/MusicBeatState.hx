@@ -325,7 +325,8 @@ class MusicBeatState extends FlxUIState
 	{
 		addPlayTimeDelta();
 		SystemMonitor.checkFrame(elapsed);
-		
+		mobile.backend.LangFontPacks.pollCompletion();
+
 		final oldStep:Int = curStep;
 		
 		updateCurStep();

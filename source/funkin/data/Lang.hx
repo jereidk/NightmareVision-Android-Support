@@ -69,8 +69,14 @@ class Lang
 	public static function reloadLangFile():Void
 	{
 		fallback = loadLang(defaultLanguage);
-		
+
 		current = (ClientPrefs.language == defaultLanguage ? fallback : loadLang(ClientPrefs.language));
+
+		// Some languages (Korean/Japanese/Chinese) need a font pack that isn't
+		// bundled -- kick off a background download the first time they're
+		// actually selected. No-ops instantly if it's already installed, in
+		// flight, or the language doesn't need one.
+		mobile.backend.LangFontPacks.ensureDownloaded(ClientPrefs.language);
 	}
 	
 	public static function loadLang(lang:String):Null<Language>
