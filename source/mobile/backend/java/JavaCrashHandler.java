@@ -143,10 +143,15 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
                 // ApplicationExitInfo.getTraceInputStream() -- for CRASH_NATIVE (5) and
                 // ANR (6) this can carry the actual native backtrace/tombstone data the
-                // summary fields above never include. Best-effort: many OEM builds
-                // simply return null here, so this is strictly additive -- it never
-                // changes what gets returned on failure.
-                if (reason == 5 || reason == 6) {
+                // summary fields above never include. Requires API 31 (Android 12);
+                // the reflective getMethod() call below would just throw
+                // NoSuchMethodException and no-op on API 30, but checking explicitly
+                // avoids relying on that silently swallowing the wrong kind of failure.
+                // Best-effort even on 31+: these traces live in a system-wide circular
+                // buffer shared with every other app on the device, so many OEM builds
+                // (or ones simply queried too late) return null here -- this is
+                // strictly additive, it never changes what gets returned on failure.
+                if ((reason == 5 || reason == 6) && Build.VERSION.SDK_INT >= 31) {
                     String tracePath = saveTraceIfPresent(cls, info, pid, timestamp);
                     if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
                 }

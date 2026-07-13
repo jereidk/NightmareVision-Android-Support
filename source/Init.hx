@@ -82,21 +82,32 @@ class Init extends FlxState
 		#if sys
 		try
 		{
+			var crashLogMessage:Null<String> = null;
 			if (sys.FileSystem.exists(_crashLogPath))
 			{
 				final log = sys.io.File.getContent(_crashLogPath);
 				sys.FileSystem.deleteFile(_crashLogPath);
-				_pendingCrashMessage = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
+				crashLogMessage = log.length > 900 ? log.substr(0, 900) + '\n[truncated…]' : log;
 			}
+
+			// 2. Always ALSO check Android's own exit record (API 30+),
+			//    regardless of whether crash.log existed above -- this catches
+			//    native SIGSEGV / OOM / ANR from the previous session that
+			//    killed the process before any handler could write. Native
+			//    trace data lives in a system-wide circular buffer shared with
+			//    every other app on the device (confirmed via ApplicationExitInfo's
+			//    own docs), so skipping this check on a launch that happened to
+			//    also have a pending crash.log would risk losing that trace for
+			//    good to another app's crash evicting it, not just delaying
+			//    when we'd notice it.
+			final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
+
+			if (crashLogMessage != null && nativeInfo != null && nativeInfo.length > 0)
+				_pendingCrashMessage = crashLogMessage + '\n\n=== Crash nativo (misma o distinta sesión) ===\n\n' + nativeInfo;
+			else if (nativeInfo != null && nativeInfo.length > 0)
+				_pendingCrashMessage = nativeInfo;
 			else
-			{
-				// 2. No crash.log → check Android's own exit record (API 30+).
-				//    This catches native SIGSEGV / OOM / ANR from the previous
-				//    session that killed the process before any handler could write.
-				final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
-				if (nativeInfo != null && nativeInfo.length > 0)
-					_pendingCrashMessage = nativeInfo;
-			}
+				_pendingCrashMessage = crashLogMessage;
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end
