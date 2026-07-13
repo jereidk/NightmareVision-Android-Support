@@ -340,6 +340,9 @@ jobs:
       - name: Reset Gradle ABI filter (this is the universal/fat build)
         run: bash .github/scripts/patch-lime-gradle.sh fat
 
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
       - name: Cache hxcpp compile cache
         uses: actions/cache@v4
         with:
@@ -393,6 +396,16 @@ jobs:
           name: VS Impostor Legacy (Android)
           path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android)
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          if-no-files-found: warn
 
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM64 (aarch64) — covers all modern Android devices (2019+).
@@ -674,6 +687,9 @@ jobs:
           # This removes armeabi-v7a libraries from the APK
           bash .github/scripts/patch-lime-gradle.sh arm64
 
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
       - name: Cache hxcpp build artifacts (ARM64)
         uses: actions/cache@v4
         with:
@@ -714,6 +730,16 @@ jobs:
           name: VS Impostor Legacy (Android ARM64)
           path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android ARM64)
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          if-no-files-found: warn
 
   # ───────────────────────────────────────────────────────────────────────────────
   # ARM32 (armeabi-v7a) — for older / low-end 32-bit devices.
@@ -1002,6 +1028,9 @@ jobs:
           # This removes arm64-v8a libraries from the APK
           bash .github/scripts/patch-lime-gradle.sh armv7
 
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
       - name: Cache hxcpp build artifacts (ARM32)
         uses: actions/cache@v4
         with:
@@ -1042,3 +1071,13 @@ jobs:
           name: VS Impostor Legacy (Android ARM32)
           path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
           if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android ARM32)
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          if-no-files-found: warn
