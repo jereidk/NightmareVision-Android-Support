@@ -644,13 +644,40 @@ class PlayField extends FlxTypedContainer<StrumNote>
 				var splash:SustainSplash = grpSusSplashes.recycle(SustainSplash);
 				splash.setupSplash(strum, note, isPlayer, note.rgbShader, this);
 				grpSusSplashes.add(splash);
-				
+
+				// TEMP diagnostic for the native_crash_trace.log crash confirmed
+				// (via objdump, not just addr2line's nearest-symbol guess) to
+				// land right here, building this exact array literal. Written
+				// unconditionally (bypassing GameLogger's inDevMode gate) since
+				// the crash happens in normal play, not just dev-mode sessions.
+				// Remove once the crash is actually root-caused.
+				#if (android && sys)
+				try
+				{
+					final dbgLine = '[' + Date.now().toString() + '] spawnSusSplash: noteData=' + note.noteData
+						+ ' tailLen=' + note.tail.length
+						+ ' hasParent=' + (note.parent != null)
+						+ ' isSustainNote=' + note.isSustainNote
+						+ ' isSustainEnd=' + note.isSustainEnd
+						+ ' strumTime=' + note.strumTime
+						+ ' sustainLength=' + note.sustainLength
+						+ ' wasGoodHit=' + note.wasGoodHit
+						+ ' exists=' + note.exists
+						+ ' splashAlreadySet=' + (note.tailState.splash != null)
+						+ '\n';
+					final dbgOut = sys.io.File.append(mobile.backend.StorageSystem.getDirectory() + 'sustain_debug.log', false);
+					dbgOut.writeString(dbgLine);
+					dbgOut.close();
+				}
+				catch (e:Dynamic) {}
+				#end
+
 				PlayState.instance.scripts.call('onSpawnSustainSplash', [splash, note]);
-				
+
 				return note.tailState.splash = note.sustainSplash = splash;
 			}
 		}
-		
+
 		return null;
 	}
 	
