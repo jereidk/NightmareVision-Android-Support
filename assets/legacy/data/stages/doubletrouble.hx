@@ -21,7 +21,6 @@ var toogusorange:FlxSprite;
 var toogusblue:FlxSprite;
 var tooguswhite:FlxSprite;
 var red:Character;
-var redElement:FlxSpriteElement;
 var introFade:FlxSprite;
 var wall:FlxSprite;
 var glow:FlxSprite;
@@ -398,18 +397,29 @@ function onCreatePost()
 	FlxTween.tween(lightoverlay, {alpha: .25}, .5, {type: 4, ease: FlxEase.sineInOut});
 	FlxTween.tween(lightoverlay2, {alpha: .25}, .5, {startDelay: .5, type: 4, ease: FlxEase.sineInOut});
 	
-	redElement = new animate.internal.elements.FlxSpriteElement(red);
-	redElement.active = false;
-	
 	if (dad.library != null)
 	{
 		var placeholder = dad.library.getSymbol('red placeholder');
-		
+
+		// one FlxSpriteElement PER frame here, not a single instance shared
+		// across all of them -- Frame.destroy() (see flixel-animate's
+		// Frame.hx) destroys every element in its own elements array, and
+		// only one frame is ever the active one at a time, so a shared
+		// instance works fine visually right up until whichever frame
+		// happens to get destroyed/recycled first (as part of the timeline's
+		// normal instance lifecycle, not state teardown) takes the shared
+		// element down with it -- every OTHER frame is then left holding a
+		// reference to an already-destroyed element. Giving each frame its
+		// own independent element avoids that entirely; they all just wrap
+		// the same red Character, and only whichever frame is current ever
+		// actually gets drawn.
 		if (placeholder != null)
 			placeholder.timeline.layers[0].forEachFrame((frame) -> {
 				for (i in frame.elements)
 					i.visible = false;
-					
+
+				var redElement = new animate.internal.elements.FlxSpriteElement(red);
+				redElement.active = false;
 				frame.add(redElement);
 			});
 	}
