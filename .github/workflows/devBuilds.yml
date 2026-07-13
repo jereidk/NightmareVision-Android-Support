@@ -1103,27 +1103,31 @@ jobs:
   #      (patch-lime-gradle-native-symbols.sh) -- Gradle's own mechanism,
   #      but it can only preserve debug info that still EXISTS at Gradle
   #      packaging time. Works for prebuilt NDK libraries Gradle processes
-  #      itself, but does nothing for our own compiled library: HXCPP
-  #      already strips that one, earlier, before Gradle ever sees it.
+  #      itself, but does nothing for our own compiled library on its own.
   #
-  #   2. -D HXCPP_DEBUG_LINK_AND_STRIP -- HXCPP's own toolchain (see
-  #      android-toolchain-gcc.xml / finish-setup.xml in the hxcpp haxelib)
-  #      normally links our library straight to a stripped .so via
-  #      -Wl,--strip-all. This define instead links WITH full debug info
-  #      (-g) and defers stripping to a separate external `strip` call --
-  #      the same aarch64-linux-android-strip wrapper this workflow already
-  #      provides to satisfy the NDK toolchain. That wrapper is modified
-  #      below to save an unstripped copy of any .so it's about to strip
-  #      before it actually strips it, so the final packaged .so is
-  #      identical in size/behavior to a normal release build, but we also
-  #      get to keep the pre-strip copy as a build artifact.
+  #   2. -D HXCPP_DEBUG_LINK -- adds -g when linking our own library (same
+  #      as HXCPP_DEBUG_LINK_AND_STRIP would), but WITHOUT also asking
+  #      hxcpp's own BuildTool to strip the result afterward. Confirmed via
+  #      hxcpp's tools/hxcpp/BuildTool.hx + Linker.hx and toolchain/
+  #      gcc-toolchain.xml (which android-toolchain-clang.xml <include>s):
+  #      HXCPP_DEBUG_LINK_AND_STRIP unconditionally strips the linked .so
+  #      via hxcpp's own external `strip` call, before Gradle ever sees it
+  #      -- keepDebugSymbols (patch-lime-gradle-keep-debug-symbols.sh) can
+  #      only "keep" debug info that's still present in its input, so it
+  #      was fighting a file already stripped upstream. Plain
+  #      HXCPP_DEBUG_LINK leaves that stripper disabled (hxcpp's own
+  #      nostrip flag), so the .so still has full debug info by the time
+  #      Gradle's keepDebugSymbols runs on it.
   #
   # Uses its own hxcpp compile-cache lineage, never shared with the
-  # Android-ARM64 job's release cache above: HXCPP_DEBUG_LINK_AND_STRIP
-  # changes what gets passed to the compiler/linker (adds -g), and this
-  # file's own comments elsewhere already document that seeding an hxcpp
-  # object cache across a haxedef toggle like this produces mass "undefined
-  # symbol" link failures.
+  # Android-ARM64 job's release cache above -- kept separate defensively
+  # even though HXCPP_DEBUG_LINK's only effect on the actual compiled
+  # objects is the same -g flag HXCPP_DEBUG_LINK_AND_STRIP already added
+  # (the strip-or-not difference is a link-stage-only toolchain XML setting,
+  # confirmed via grep to have zero #if branches in hxcpp's own runtime
+  # source), and this file's own comments elsewhere already document that
+  # seeding an hxcpp object cache across a haxedef toggle like this can
+  # produce mass "undefined symbol" link failures.
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64-DebugSymbols:
     name: Build Android (ARM64, debug symbols)
@@ -1153,8 +1157,8 @@ jobs:
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
       # Shared with the other jobs on purpose -- this is Lime's source + its
-      # own built liblime.so, unaffected by HXCPP_DEBUG_LINK_AND_STRIP (that
-      # define only changes how OUR app library gets linked/stripped).
+      # own built liblime.so, unaffected by HXCPP_DEBUG_LINK (that define
+      # only changes how OUR app library gets linked/stripped).
       - name: Cache Lime (source + built artifacts)
         id: lime-cache
         uses: actions/cache@v4
@@ -1389,7 +1393,7 @@ jobs:
         run: bash .github/scripts/patch-lime-gradle-keep-debug-symbols.sh
 
       # Separate cache lineage from the Android-ARM64 job's release build on
-      # purpose -- see the top-of-job comment on HXCPP_DEBUG_LINK_AND_STRIP.
+      # purpose -- see the top-of-job comment on HXCPP_DEBUG_LINK.
       - name: Cache hxcpp build artifacts (ARM64, debug symbols)
         uses: actions/cache@v4
         with:
@@ -1413,22 +1417,23 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK_AND_STRIP -D $BUILD_FLAGS
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
           else
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK_AND_STRIP
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
           fi
 
-      # Diagnostic only -- no effect on the build. The previous run's
-      # aarch64-linux-android-strip wrapper never fired (confirmed: hxcpp's
-      # android-toolchain-clang.xml, unlike the gcc one, has no --strip-all
-      # flag and never shells out to an external strip tool at all -- that
-      # was a gcc-toolchain-only mechanism this project's actual clang-based
-      # build never goes through). Whether -D HXCPP_DEBUG_LINK_AND_STRIP's
-      # -g flag actually landed in the compiled .so is still unconfirmed --
+      # Diagnostic only -- no effect on the build. Confirmed via hxcpp's own
+      # source (tools/hxcpp/BuildTool.hx, Linker.hx) that
+      # HXCPP_DEBUG_LINK_AND_STRIP (the previous flag used here) makes
+      # BuildTool always strip the linked .so before Gradle ever sees it --
+      # android-toolchain-clang.xml <include>s gcc-toolchain.xml, which is
+      # where that stripper is actually defined, so the earlier belief that
+      # clang's toolchain has no strip mechanism at all was wrong. Plain
+      # HXCPP_DEBUG_LINK (now used above) still adds -g but leaves nostrip
+      # set, so BuildTool's stripper never activates in the first place --
       # this lists every .so found under export/, with `file` output (which
-      # reports "not stripped" vs a stripped ELF) and size, BEFORE Gradle's
-      # own packaging/stripping ever touches them, to settle that directly
-      # instead of guessing further from truncated CI logs.
+      # reports "not stripped" vs a stripped ELF) and size, to confirm that
+      # directly instead of guessing further from CI logs.
       - name: Diagnostic - inspect .so files before Gradle packaging
         run: |
           echo "=== All .so files under export/release/android/ ==="
@@ -1438,10 +1443,10 @@ jobs:
           find export/release/android -name "*.so" -exec file {} \; 2>/dev/null
           echo ""
           echo "=== Specifically looking for our own app library ==="
-          find export/release/android -iname "*ImpostorLegacy*" 2>/dev/null
+          find export/release/android -iname "*ApplicationMain*" 2>/dev/null
 
       # This APK IS the symbol source now (see
-      # patch-lime-gradle-keep-debug-symbols.sh) -- libImpostorLegacy.so
+      # patch-lime-gradle-keep-debug-symbols.sh) -- libApplicationMain.so
       # inside lib/arm64-v8a/ ships with full debug info intact, no separate
       # artifact needed. Extract it from the APK (a zip) and run
       # addr2line/ndk-stack against it directly with a

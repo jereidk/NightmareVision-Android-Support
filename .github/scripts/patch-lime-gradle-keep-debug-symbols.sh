@@ -1,9 +1,14 @@
 #!/bin/bash
 # patch-lime-gradle-keep-debug-symbols.sh - Stops Gradle from stripping our
 # own compiled library specifically, so it ships inside the APK with full
-# debug info intact (assuming it was compiled with -g -- see
-# -D HXCPP_DEBUG_LINK_AND_STRIP in the Compile step) instead of needing a
-# separate native-debug-symbols.zip mechanism.
+# debug info intact, PROVIDED it actually still has that debug info by the
+# time Gradle sees it -- see the Compile step's -D HXCPP_DEBUG_LINK (NOT
+# HXCPP_DEBUG_LINK_AND_STRIP: that variant makes hxcpp's own BuildTool.hx
+# strip the linked .so itself, unconditionally, before Gradle ever runs --
+# confirmed via hxcpp's tools/hxcpp/BuildTool.hx + Linker.hx and
+# toolchain/gcc-toolchain.xml, which android-toolchain-clang.xml <include>s.
+# A prior belief that the clang toolchain has no strip mechanism at all was
+# wrong -- it inherits gcc-toolchain.xml's via that include).
 #
 # Why this instead of relying on debugSymbolLevel alone
 # (patch-lime-gradle-native-symbols.sh): debugSymbolLevel's own
@@ -19,6 +24,15 @@
 # reference), just a different, more direct lever: keep this ONE library
 # unstripped in the shipped output rather than exporting a stripped-vs-
 # unstripped pair on the side.
+#
+# The library Lime/HXCPP actually produces for Android is always named
+# libApplicationMain.so -- hardcoded in Lime's own
+# tools/platforms/AndroidPlatform.hx (System.copyIfNewer(..., path +
+# "/libApplicationMain.so")), NOT derived from the app's configured
+# name/package (that only names the final .apk). A previous version of this
+# script targeted libImpostorLegacy.so, which never matched anything --
+# confirmed by a build's own diagnostic step, where searching for
+# "*ImpostorLegacy*" only ever found the .apk, never a .so.
 #
 # Only wired into the debug-symbols job -- a normal release build should
 # stay small, this only makes sense for the one job that intentionally
@@ -54,7 +68,7 @@ if count != 1:
 packaging_block = (
     "\tpackagingOptions {\n"
     "\t\tjniLibs {\n"
-    "\t\t\tkeepDebugSymbols += [\"**/libImpostorLegacy.so\"]\n"
+    "\t\t\tkeepDebugSymbols += [\"**/libApplicationMain.so\"]\n"
     "\t\t}\n"
     "\t}\n\n"
 )
@@ -62,5 +76,5 @@ c = c.replace(marker, packaging_block + marker, 1)
 
 with open(build_gradle, 'w') as f:
     f.write(c)
-print("Added packagingOptions.jniLibs.keepDebugSymbols for libImpostorLegacy.so")
+print("Added packagingOptions.jniLibs.keepDebugSymbols for libApplicationMain.so")
 PYTHON_EOF
