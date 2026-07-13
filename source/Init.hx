@@ -108,6 +108,14 @@ class Init extends FlxState
 				_pendingCrashMessage = nativeInfo;
 			else
 				_pendingCrashMessage = crashLogMessage;
+
+			// readPreviousNativeCrash() can now report several accumulated exits
+			// at once (see JavaCrashHandler.java) -- cap the popup the same way
+			// crash.log's own content already was, so a long stretch without
+			// launching the app can't balloon this into an unreadable wall of
+			// text in PopUp's dialog.
+			if (_pendingCrashMessage != null && _pendingCrashMessage.length > 2000)
+				_pendingCrashMessage = _pendingCrashMessage.substr(0, 2000) + '\n[truncated…]';
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end

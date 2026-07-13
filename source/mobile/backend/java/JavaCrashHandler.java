@@ -13,9 +13,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.FilenameFilter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -162,6 +165,8 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             // get re-scanned in full on every future launch either.
             saveLastSeenTimestamp(newestTimestamp);
 
+            pruneOldTraceFiles();
+
             if (sb == null) return null;
             if (newCount > 1)
                 sb.insert(0, "(" + newCount + " salidas anómalas detectadas desde el último inicio)\n\n");
@@ -213,6 +218,43 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 try { in.close(); } catch (IOException ignored) {}
             }
         }
+    }
+
+    /**
+     * Each saved trace now gets its own pid+timestamp filename (see
+     * saveTraceIfPresent()) specifically so multiple crashes don't clobber
+     * each other -- but that also means they never got cleaned up on their
+     * own. Keeps only the newest MAX_KEPT_TRACES on disk, oldest first by
+     * last-modified time, so a device that crashes occasionally over a long
+     * install doesn't quietly accumulate trace files forever.
+     */
+    private static final int MAX_KEPT_TRACES = 10;
+
+    private static void pruneOldTraceFiles() {
+        try {
+            String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+            if (dir == null) return;
+
+            File[] traces = new File(dir).listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File d, String name) {
+                    return name.startsWith("native_crash_trace_") && name.endsWith(".log");
+                }
+            });
+            if (traces == null || traces.length <= MAX_KEPT_TRACES) return;
+
+            Arrays.sort(traces, new Comparator<File>() {
+                @Override
+                public int compare(File a, File b) {
+                    return Long.compare(a.lastModified(), b.lastModified());
+                }
+            });
+
+            int toDelete = traces.length - MAX_KEPT_TRACES;
+            for (int i = 0; i < toDelete; i++) {
+                traces[i].delete();
+            }
+        } catch (Exception ignored) {}
     }
 
     /**
