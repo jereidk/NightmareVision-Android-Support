@@ -2936,7 +2936,7 @@ class PlayState extends MusicBeatState
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in
 	// recycleNote() used to do (recycle against the shared parent/prevNote
-	// chain, append to the parent's tail array, spawn it), with three guards
+	// chain, append to the parent's tail array, spawn it), with four guards
 	// verified against the CURRENT code (not assumed from history):
 	function spawnPendingTail(entry:PendingTail):Void
 	{
@@ -2962,7 +2962,23 @@ class PlayState extends MusicBeatState
 		// identical to it never having lagged.
 		if (entry.qn.strumTime + entry.qn.sustainLength + noteKillOffset < Conductor.songPosition) return;
 
-		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, entry.chain.lastNote);
+		// Guard 4: entry.chain.lastNote is only trustworthy as prevNote if it's
+		// still actually linked into THIS hold's chain. Unlike parentNote (Guards
+		// 1/2 above), nothing re-validates chain.lastNote between segments -- it's
+		// just reassigned to whatever Note preRecycle() returns each time
+		// (below). A tail segment has its own independent pool lifecycle from the
+		// head, so by the time a later staggered segment finally drains here,
+		// chain.lastNote's underlying object can already have been recycled for
+		// an unrelated note (e.g. a simultaneous opponent note) -- same class of
+		// bug preRecycle()'s own prevNote-self-loop comment describes, just
+		// reachable from a different angle. Mirrors the .parent identity check
+		// PlayField.noteHit() already uses for the same reason ("ignore notes
+		// that have already been recycled"). The == entry.parentNote branch
+		// covers the first tail segment of a hold, where chain.lastNote starts
+		// out as the head itself (whose own .parent is null, not itself).
+		final lastNoteValid:Bool = entry.chain.lastNote == entry.parentNote || entry.chain.lastNote.parent == entry.parentNote;
+
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, lastNoteValid ? entry.chain.lastNote : null);
 
 		entry.parentNote.tail.push(tailNote);
 		entry.chain.lastNote = tailNote;
