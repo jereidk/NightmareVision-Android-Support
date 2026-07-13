@@ -16,6 +16,8 @@ import openfl.geom.Rectangle;
 import openfl.sensors.Accelerometer;
 import openfl.events.AccelerometerEvent;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
 import funkin.data.*;
 import funkin.data.CosmicubeData;
 import funkin.data.GameFlags;
@@ -176,6 +178,24 @@ class MainMenuState extends MusicBeatState
 
 	override function create()
 	{
+		#if android
+		try
+		{
+			final ctx = FlxG.stage.context3D;
+			Logger.log('[RSDIAG] ClientPrefs.renderScale=${ClientPrefs.renderScale} '
+				+ 'RenderScale.currentScale=${mobile.backend.RenderScale.currentScale} '
+				+ 'window=${FlxG.stage.window.width}x${FlxG.stage.window.height} scale=${FlxG.stage.window.scale} '
+				+ 'stage=${FlxG.stage.stageWidth}x${FlxG.stage.stageHeight} '
+				+ 'FlxG=${FlxG.width}x${FlxG.height} '
+				+ 'camera=${FlxG.camera.width}x${FlxG.camera.height} zoom=${FlxG.camera.zoom} '
+				+ 'backBuffer=${ctx != null ? ctx.backBufferWidth + "x" + ctx.backBufferHeight : "null ctx"}', NOTICE, true);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('[RSDIAG] Failed to dump diagnostics: $e', WARN, true);
+		}
+		#end
+
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
 
 		Mods.currentModDirectory = null;
