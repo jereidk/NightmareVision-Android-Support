@@ -6,6 +6,7 @@ import mobile.backend.DLCManager.DLCTaskState;
 
 import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
+import funkin.Mods;
 
 /**
  * Metadata for a downloadable language font pack.
