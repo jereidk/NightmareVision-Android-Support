@@ -7,8 +7,10 @@ import android.os.Build;
 import org.haxe.extension.Extension;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
@@ -95,10 +97,60 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 sb.append("Descripción: ").append(desc).append("\n");
             sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
             sb.append("Código de salida: ").append(status).append("\n");
+
+            // ApplicationExitInfo.getTraceInputStream() -- for CRASH_NATIVE (5) and
+            // ANR (6) this can carry the actual native backtrace/tombstone data the
+            // summary fields above never include (readPreviousNativeCrash() above
+            // only ever surfaced "Descripción: crash", no addresses or call stack).
+            // Best-effort: many OEM builds simply return null here, so this is
+            // strictly additive -- it never changes what gets returned on failure.
+            if (reason == 5 || reason == 6) {
+                String tracePath = saveTraceIfPresent(cls, info);
+                if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
+            }
+
             return sb.toString();
 
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * Copies ApplicationExitInfo.getTraceInputStream() (if the OEM/OS actually
+     * populated it) to a file next to crash.log, so a native crash leaves
+     * something more useful than the bare summary above to diagnose from.
+     *
+     * @return the saved file's absolute path, or null if there was no trace
+     * data to save (either the method returned null, or writing failed).
+     */
+    private static String saveTraceIfPresent(Class<?> infoClass, Object info) {
+        InputStream in = null;
+        try {
+            Method getTrace = infoClass.getMethod("getTraceInputStream");
+            in = (InputStream) getTrace.invoke(info);
+            if (in == null) return null;
+
+            String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+            if (dir == null) return null;
+            File outFile = new File(dir, "native_crash_trace.log");
+
+            File parent = outFile.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
+
+            FileOutputStream out = new FileOutputStream(outFile, false);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            out.close();
+
+            return outFile.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (in != null) {
+                try { in.close(); } catch (IOException ignored) {}
+            }
         }
     }
 
