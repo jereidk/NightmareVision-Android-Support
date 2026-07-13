@@ -6,7 +6,11 @@ class LaneUnderlay extends FlxSprite
 	
 	public var baseAlpha:Float = 1;
 	public var padding:Float = 10;
-	
+
+	var _cachedMinX:Float = Math.NaN;
+	var _cachedMaxX:Float = Math.NaN;
+	var _cachedHeight:Float = Math.NaN;
+
 	public function new(parent:PlayField)
 	{
 		super();
@@ -45,10 +49,21 @@ class LaneUnderlay extends FlxSprite
 			if (maxAlpha <= 0) return;
 			
 			alpha = (baseAlpha * maxAlpha);
-			setGraphicSize(maxX - minX, camera.height);
-			updateHitbox();
-			x = minX;
-			
+
+			// Strums essentially never move mid-song, so minX/maxX are almost
+			// always identical frame to frame -- skip the setGraphicSize()/
+			// updateHitbox() bookkeeping (and the x reassignment) when they
+			// are, since redoing them would produce the exact same result.
+			if (minX != _cachedMinX || maxX != _cachedMaxX || camera.height != _cachedHeight)
+			{
+				setGraphicSize(maxX - minX, camera.height);
+				updateHitbox();
+				x = minX;
+				_cachedMinX = minX;
+				_cachedMaxX = maxX;
+				_cachedHeight = camera.height;
+			}
+
 			super.draw();
 		}
 	}
