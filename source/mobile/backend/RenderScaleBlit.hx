@@ -75,7 +75,12 @@ class RenderScaleBlit
 	static var _texLoc:Int       = -1;
 	static var _shaderReady:Bool = false;
 
-	static var _diagLogged:Bool = false; // one-shot in-game confirmation, not spammed every frame
+	// Keyed rather than a single flag -- a per-frame call site would spam
+	// dozens of identical lines a second, but each DISTINCT thing worth
+	// knowing (a specific failure reason, or the one-time success
+	// confirmation) should still get its own one-shot report instead of
+	// only the very first message of the whole session ever winning.
+	static var _diagKeys:Map<String, Bool> = [];
 
 	/** Call once from Init.hx to register context-loss recovery. */
 	public static function init():Void
@@ -94,30 +99,39 @@ class RenderScaleBlit
 			final ctx:Null<Context3D> = FlxG.stage.context3D;
 			if (ctx == null)
 			{
-				_diagOnce('[RenderScaleBlit] context3D is null, skipping');
+				_diagOnce('begin_ctxnull', '[RenderScaleBlit] context3D is null, skipping');
 				return;
 			}
 			if (_gl == null) _gl = ctx.gl;
 			if (_gl == null)
 			{
-				_diagOnce('[RenderScaleBlit] context3D.gl is null, skipping');
+				_diagOnce('begin_glnull', '[RenderScaleBlit] context3D.gl is null, skipping');
 				return;
 			}
 
 			final w = ctx.backBufferWidth;
 			final h = ctx.backBufferHeight;
-			if (w <= 0 || h <= 0) return;
+			if (w <= 0 || h <= 0)
+			{
+				_diagOnce('begin_zerosize', '[RenderScaleBlit] backBufferWidth/Height is ${w}x${h}, skipping');
+				return;
+			}
 
 			if (_tex == null || _fboW != w || _fboH != h) _createTarget(ctx, w, h);
-			if (_fbo == null) return;
+			if (_fbo == null)
+			{
+				_diagOnce('begin_nofbo', '[RenderScaleBlit] no offscreen target available, skipping (see earlier target-creation log)');
+				return;
+			}
 
 			if (!_shaderReady) _createBlitShader();
 
 			ctx.__state.__primaryGLFramebuffer = _fbo;
+			_diagOnce('begin_ok', '[RenderScaleBlit] beginFrame redirecting to offscreen target ${w}x${h}');
 		}
 		catch (e:Dynamic)
 		{
-			_diagOnce('[RenderScaleBlit] beginFrame failed: $e');
+			_diagOnce('begin_exn', '[RenderScaleBlit] beginFrame failed: $e');
 		}
 	}
 
@@ -131,7 +145,12 @@ class RenderScaleBlit
 		try
 		{
 			final ctx:Null<Context3D> = FlxG.stage.context3D;
-			if (ctx == null || _gl == null || _tex == null || !_shaderReady) return;
+			if (ctx == null || _gl == null || _tex == null || !_shaderReady)
+			{
+				_diagOnce('end_notready',
+					'[RenderScaleBlit] endFrame skipped -- ctx=${ctx != null} gl=${_gl != null} tex=${_tex != null} shader=${_shaderReady}');
+				return;
+			}
 
 			final gl = _gl;
 			// window.width/height are NOT touched by RenderScale (only
@@ -171,16 +190,20 @@ class RenderScaleBlit
 			gl.enable(gl.BLEND);
 			gl.flush(); // ensure commands reach the GPU before eglSwapBuffers
 
-			_diagOnce('[RenderScaleBlit] blit executed OK (offscreen=${_fboW}x${_fboH} -> window=${winW}x${winH})');
+			_diagOnce('end_ok', '[RenderScaleBlit] blit executed OK (offscreen=${_fboW}x${_fboH} -> window=${winW}x${winH})');
 		}
 		catch (e:Dynamic)
 		{
-			_diagOnce('[RenderScaleBlit] endFrame failed: $e');
+			_diagOnce('end_exn', '[RenderScaleBlit] endFrame failed: $e');
 		}
 	}
 
 	static function _createTarget(ctx:Context3D, w:Int, h:Int):Void
 	{
+		// Not rate-limited like the per-frame diagnostics above -- this only
+		// runs when the render scale setting actually changes size, so it's
+		// rare, and every distinct size the user tries during a session is
+		// worth its own line rather than only the first ever logged.
 		try
 		{
 			if (_tex != null)
@@ -194,10 +217,35 @@ class RenderScaleBlit
 			_fbo = @:privateAccess _tex.__getGLFramebuffer(true, 0, 0);
 			_fboW = w;
 			_fboH = h;
+
+			// FBO completeness is checked with glCheckFramebufferStatus, not
+			// exceptions -- a bad depth/stencil combo on some GPU could leave
+			// this incomplete and every draw into it silently a no-op, with
+			// nothing above ever throwing to explain why the screen stays
+			// black. The raw bind here doesn't need to be undone: beginFrame()
+			// sets Context3DState.__primaryGLFramebuffer right after this
+			// returns, and its mismatch-vs-__currentGLFramebuffer check (see
+			// endFrame()'s comment on the same mechanism) forces a proper
+			// rebind through Context3D's own wrapper before anything draws.
+			final gl = _gl;
+			gl.bindFramebuffer(gl.FRAMEBUFFER, _fbo);
+			final status:Int = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+			final complete = (status == gl.FRAMEBUFFER_COMPLETE);
+			Logger.log('[RenderScaleBlit] created offscreen target ${w}x${h}, '
+				+ 'FBO status=$status (${complete ? "COMPLETE" : "INCOMPLETE"})', NOTICE, !complete);
+
+			if (!complete)
+			{
+				_tex.dispose();
+				_tex = null;
+				_fbo = null;
+				_fboW = 0;
+				_fboH = 0;
+			}
 		}
 		catch (e:Dynamic)
 		{
-			_diagOnce('[RenderScaleBlit] offscreen target creation failed: $e');
+			Logger.log('[RenderScaleBlit] offscreen target creation failed for ${w}x${h}: $e', NOTICE, true);
 			_tex = null;
 			_fbo = null;
 			_fboW = 0;
@@ -274,19 +322,25 @@ class RenderScaleBlit
 			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
 			_shaderReady = true;
+			Logger.log('[RenderScaleBlit] blit shader ready (posLoc=$_posLoc uvLoc=$_uvLoc texLoc=$_texLoc)', NOTICE, _posLoc < 0 || _uvLoc < 0 || _texLoc < 0);
 		}
 		catch (e:Dynamic)
 		{
-			_diagOnce('[RenderScaleBlit] blit shader creation failed: $e');
+			_diagOnce('shader_exn', '[RenderScaleBlit] blit shader creation failed: $e');
 			_shaderReady = false;
 		}
 	}
 
-	/** Logs a message once (both to file and as an in-game toast) so a per-frame call site doesn't spam it every frame. */
-	static function _diagOnce(msg:String):Void
+	/**
+	 * Logs a message once per distinct `key` (both to file and as an
+	 * in-game toast), so a per-frame call site doesn't spam it every frame
+	 * while still surfacing every different thing that happens over a
+	 * session (not just whichever one happened first).
+	 */
+	static function _diagOnce(key:String, msg:String):Void
 	{
-		if (_diagLogged) return;
-		_diagLogged = true;
+		if (_diagKeys.exists(key)) return;
+		_diagKeys.set(key, true);
 		Logger.log(msg, NOTICE, true);
 	}
 }
