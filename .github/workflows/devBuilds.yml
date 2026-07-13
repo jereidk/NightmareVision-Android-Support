@@ -1421,6 +1421,28 @@ jobs:
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK_AND_STRIP
           fi
 
+      # Diagnostic only -- no effect on the build. The previous run's
+      # aarch64-linux-android-strip wrapper never fired (confirmed: hxcpp's
+      # android-toolchain-clang.xml, unlike the gcc one, has no --strip-all
+      # flag and never shells out to an external strip tool at all -- that
+      # was a gcc-toolchain-only mechanism this project's actual clang-based
+      # build never goes through). Whether -D HXCPP_DEBUG_LINK_AND_STRIP's
+      # -g flag actually landed in the compiled .so is still unconfirmed --
+      # this lists every .so found under export/, with `file` output (which
+      # reports "not stripped" vs a stripped ELF) and size, BEFORE Gradle's
+      # own packaging/stripping ever touches them, to settle that directly
+      # instead of guessing further from truncated CI logs.
+      - name: Diagnostic - inspect .so files before Gradle packaging
+        run: |
+          echo "=== All .so files under export/release/android/ ==="
+          find export/release/android -name "*.so" -exec ls -la {} \; 2>/dev/null
+          echo ""
+          echo "=== file(1) output for each (stripped vs not) ==="
+          find export/release/android -name "*.so" -exec file {} \; 2>/dev/null
+          echo ""
+          echo "=== Specifically looking for our own app library ==="
+          find export/release/android -iname "*ImpostorLegacy*" 2>/dev/null
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
