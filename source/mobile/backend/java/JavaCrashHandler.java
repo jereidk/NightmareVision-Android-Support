@@ -3,6 +3,8 @@ package mobile.backend.java;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import org.haxe.extension.Extension;
 
@@ -17,9 +19,12 @@ import java.io.FilenameFilter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Two-pronged native crash capture for Android:
@@ -101,6 +106,17 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
             @SuppressWarnings("unchecked")
             List<Object> exits = (List<Object>) getReasons.invoke(am, null, 0, 0);
+
+            // Build-identity marker: read what build was running LAST launch
+            // (i.e. the one whose exit we're about to inspect below) before
+            // overwriting it with the CURRENT build. Without this, a crash
+            // reported after the app was updated would get symbolicated
+            // against the wrong .so -- the exact class of misattribution
+            // that already burned us once with addr2line's nearest-symbol
+            // guessing on unrelated code.
+            String prevBuildInfo = loadPreviousBuildInfo();
+            saveCurrentBuildInfo();
+
             if (exits == null || exits.isEmpty()) return null;
 
             long lastSeenTimestamp = loadLastSeenTimestamp();
@@ -134,15 +150,31 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 int status    = (int) cls.getMethod("getStatus").invoke(info);
                 int pid       = (int) cls.getMethod("getPid").invoke(info);
 
+                // Extra context so the trace can be diagnosed precisely
+                // without guessing: which process actually exited (in case
+                // Android reports a helper/isolated process, not our main
+                // one), and memory pressure at the moment of exit (helps
+                // tell a real code bug apart from an OOM-adjacent crash).
+                String processName = null;
+                long pss = -1L, rss = -1L;
+                try { processName = (String) cls.getMethod("getProcessName").invoke(info); } catch (Exception ignored) {}
+                try { pss = (long) cls.getMethod("getPss").invoke(info); } catch (Exception ignored) {}
+                try { rss = (long) cls.getMethod("getRss").invoke(info); } catch (Exception ignored) {}
+
                 if (sb == null) sb = new StringBuilder();
                 else sb.append("\n---\n\n");
 
                 sb.append("Crash detectado (sesión anterior)\n\n");
+                sb.append("Fecha: ").append(formatTimestamp(timestamp)).append("\n");
                 sb.append("Tipo: ").append(reasonLabel(reason)).append("\n");
                 if (desc != null && !desc.toString().isEmpty())
                     sb.append("Descripción: ").append(desc).append("\n");
                 sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
                 sb.append("Código de salida: ").append(status).append("\n");
+                if (processName != null && !processName.isEmpty())
+                    sb.append("Proceso: ").append(processName).append("\n");
+                if (pss >= 0 || rss >= 0)
+                    sb.append("Memoria PSS/RSS: ").append(pss).append("KB / ").append(rss).append("KB\n");
 
                 // ApplicationExitInfo.getTraceInputStream() -- for CRASH_NATIVE (5) and
                 // ANR (6) this can carry the actual native backtrace/tombstone data the
@@ -155,7 +187,19 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 // (or ones simply queried too late) return null here -- this is
                 // strictly additive, it never changes what gets returned on failure.
                 if ((reason == 5 || reason == 6) && Build.VERSION.SDK_INT >= 31) {
-                    String tracePath = saveTraceIfPresent(cls, info, pid, timestamp);
+                    // Every saved trace is stamped with the build/device/process
+                    // it actually came from, so the file is self-describing --
+                    // no need to separately track "which build was this from"
+                    // when handing the .log off for symbolication later.
+                    String header = "=== Native crash trace metadata ===\n"
+                        + "Reason: " + reasonLabel(reason) + "\n"
+                        + "Timestamp: " + timestamp + " (" + formatTimestamp(timestamp) + ")\n"
+                        + "PID: " + pid + "\n"
+                        + (processName != null && !processName.isEmpty() ? "Process: " + processName + "\n" : "")
+                        + "Memory PSS/RSS KB: " + pss + " / " + rss + "\n"
+                        + "Build: " + (prevBuildInfo != null ? prevBuildInfo : "unknown") + "\n"
+                        + "=== raw tombstone data follows ===\n";
+                    String tracePath = saveTraceIfPresent(cls, info, pid, timestamp, header);
                     if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
                 }
             }
@@ -168,8 +212,14 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             pruneOldTraceFiles();
 
             if (sb == null) return null;
+
+            String header = "";
+            if (prevBuildInfo != null) header += "Build (sesión anterior): " + prevBuildInfo + "\n\n";
             if (newCount > 1)
-                sb.insert(0, "(" + newCount + " salidas anómalas detectadas desde el último inicio)\n\n");
+                header += "(" + newCount + " salidas anómalas detectadas desde el último inicio"
+                    + " -- si hubo una actualización de la app entre ellas, el build de arriba"
+                    + " solo aplica con certeza a la más reciente)\n\n";
+            if (!header.isEmpty()) sb.insert(0, header);
 
             return sb.toString();
 
@@ -190,7 +240,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
      * @return the saved file's absolute path, or null if there was no trace
      * data to save (either the method returned null, or writing failed).
      */
-    private static String saveTraceIfPresent(Class<?> infoClass, Object info, int pid, long timestamp) {
+    private static String saveTraceIfPresent(Class<?> infoClass, Object info, int pid, long timestamp, String header) {
         InputStream in = null;
         try {
             Method getTrace = infoClass.getMethod("getTraceInputStream");
@@ -205,6 +255,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             if (parent != null && !parent.exists()) parent.mkdirs();
 
             FileOutputStream out = new FileOutputStream(outFile, false);
+            if (header != null) out.write(header.getBytes("UTF-8"));
             byte[] buf = new byte[8192];
             int n;
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
@@ -291,6 +342,73 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             fw.write(Long.toString(timestamp));
             fw.close();
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * A one-line fingerprint of the build/device currently running --
+     * versionName/versionCode (which .so this maps to), ABI (which arch's
+     * addresses these are), and device/OS (device-specific crash quirks).
+     * Written to disk every launch (see saveCurrentBuildInfo()) so the NEXT
+     * launch, reading a crash this session may not survive to report itself,
+     * can attribute it to the exact build that produced it.
+     */
+    private static String buildCurrentBuildInfo() {
+        try {
+            Activity activity = mainActivity;
+            if (activity == null) return null;
+            PackageManager pm = activity.getPackageManager();
+            PackageInfo pkgInfo = pm.getPackageInfo(activity.getPackageName(), 0);
+            long versionCode = Build.VERSION.SDK_INT >= 28 ? pkgInfo.getLongVersionCode() : pkgInfo.versionCode;
+
+            return "versionName=" + pkgInfo.versionName
+                + " versionCode=" + versionCode
+                + " abi=" + (Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "?")
+                + " device=" + Build.MANUFACTURER + " " + Build.MODEL
+                + " androidSdk=" + Build.VERSION.SDK_INT
+                + " androidRelease=" + Build.VERSION.RELEASE;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String loadPreviousBuildInfo() {
+        String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+        if (dir == null) return null;
+        File marker = new File(dir, ".last_build_info");
+        if (!marker.exists()) return null;
+
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(marker));
+            return br.readLine();
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (br != null) {
+                try { br.close(); } catch (IOException ignored) {}
+            }
+        }
+    }
+
+    private static void saveCurrentBuildInfo() {
+        String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+        if (dir == null) return;
+        String info = buildCurrentBuildInfo();
+        if (info == null) return;
+        try {
+            File marker = new File(dir, ".last_build_info");
+            FileWriter fw = new FileWriter(marker, false);
+            fw.write(info);
+            fw.close();
+        } catch (Exception ignored) {}
+    }
+
+    private static String formatTimestamp(long epochMillis) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(epochMillis));
+        } catch (Exception e) {
+            return String.valueOf(epochMillis);
+        }
     }
 
     // ── UncaughtExceptionHandler impl ────────────────────────────────────────
