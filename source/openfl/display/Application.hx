@@ -174,14 +174,22 @@ class Application #if lime extends LimeApplication #end
 			DynamicResolution.reuseLastFrame();
 			return;
 		}
-		super.render(context);
-		DynamicResolution.saveCurrentFrame();
 
-		// window.scale correctly shrinks the backbuffer + viewport together
-		// (see RenderScale.hx), but nothing then stretches that smaller
-		// buffer back up to the real window on presentation -- this manual
-		// blit is that missing step (see RenderScaleBlit.hx).
-		if (RenderScale.currentScale < 0.999) RenderScaleBlit.blit();
+		// window.scale correctly shrinks the viewport and
+		// Context3D.backBufferWidth/Height together (see RenderScale.hx), but
+		// Context3D never actually creates an offscreen backbuffer texture
+		// for this game's primary (non-Stage3D) context -- confirmed via a
+		// device log showing __backBufferTexture stays null -- so normal
+		// rendering draws directly into an unstretched corner of the real
+		// window. beginFrame()/endFrame() redirect that rendering into our
+		// own correctly-sized offscreen texture and stretch-blit it onto the
+		// real window afterward (see RenderScaleBlit.hx).
+		final renderScaleActive = RenderScale.currentScale < 0.999;
+		if (renderScaleActive) RenderScaleBlit.beginFrame();
+		super.render(context);
+		if (renderScaleActive) RenderScaleBlit.endFrame();
+
+		DynamicResolution.saveCurrentFrame();
 	}
 	#end
 
