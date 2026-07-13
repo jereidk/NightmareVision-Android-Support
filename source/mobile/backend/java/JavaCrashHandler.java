@@ -6,8 +6,10 @@ import android.content.Context;
 import android.os.Build;
 import org.haxe.extension.Extension;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,11 +51,32 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     /**
-     * Read Android's ApplicationExitInfo (API 30 / Android 11+) for the most
-     * recent process exit from the previous session.  Uses reflection so this
-     * compiles against any compileSdkVersion.
+     * Read Android's ApplicationExitInfo (API 30 / Android 11+) for every
+     * process exit since the last time this was checked. Uses reflection so
+     * this compiles against any compileSdkVersion.
      *
-     * @return human-readable summary if the exit was abnormal, null otherwise
+     * Confirmed via AOSP's AppExitInfoTracker source: reading this history
+     * does NOT clear or consume it -- entries stay available for future
+     * queries until the OS itself evicts the oldest one past its own
+     * retention cap. Two consequences this used to get wrong by only ever
+     * asking for the single latest entry (maxNum=1) and overwriting one
+     * fixed "native_crash_trace.log" filename every time:
+     *
+     *   1. Two crashes in a row, before the user extracts each trace, meant
+     *      the second overwrote the first's saved file -- lost for good,
+     *      even though Android itself still had both.
+     *   2. Since Android never clears its own history, re-running this same
+     *      maxNum=1 query on every subsequent launch kept re-surfacing (and
+     *      re-overwriting the trace file for) the SAME old crash indefinitely,
+     *      until enough newer exits pushed it out of the OS's own retention.
+     *
+     * Fixed by asking for the full available history each time (maxNum=0),
+     * saving every new exit's trace under its own pid+timestamp filename,
+     * and persisting the newest timestamp we've already processed so a
+     * later launch only reports genuinely new exits.
+     *
+     * @return human-readable summary of any new abnormal exit(s), null if
+     * none are new since the last check.
      */
     public static String readPreviousNativeCrash() {
         if (Build.VERSION.SDK_INT < 30) return null;
@@ -67,47 +90,76 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
             if (am == null) return null;
 
             // ActivityManager.getHistoricalProcessExitReasons(String pkgName, int pid, int maxNum)
+            // maxNum=0 means "return everything the OS still has", not "return
+            // nothing" -- confirmed via AOSP source (ActivityManager.java).
             Method getReasons = ActivityManager.class.getDeclaredMethod(
                 "getHistoricalProcessExitReasons",
                 String.class, int.class, int.class);
 
             @SuppressWarnings("unchecked")
-            List<Object> exits = (List<Object>) getReasons.invoke(am, null, 0, 1);
+            List<Object> exits = (List<Object>) getReasons.invoke(am, null, 0, 0);
             if (exits == null || exits.isEmpty()) return null;
 
-            Object info = exits.get(0);
-            Class<?> cls = info.getClass();
+            long lastSeenTimestamp = loadLastSeenTimestamp();
+            long newestTimestamp   = lastSeenTimestamp;
+            int newCount = 0;
+            StringBuilder sb = null;
 
-            int reason = (int) cls.getMethod("getReason").invoke(info);
+            for (Object info : exits) {
+                Class<?> cls = info.getClass();
 
-            // ApplicationExitInfo reason constants (API 30):
-            //   UNKNOWN=0, EXIT_SELF=1, SIGNALED=2, LOW_MEMORY=3,
-            //   CRASH=4, CRASH_NATIVE=5, ANR=6, INITIALIZATION_FAILURE=7,
-            //   PERMISSION_CHANGE=8, EXCESSIVE_RESOURCE_USAGE=9, USER_REQUESTED=10
-            // Skip clean/expected exits (UNKNOWN, EXIT_SELF, USER_REQUESTED).
-            if (reason == 0 || reason == 1 || reason == 10) return null;
+                long timestamp = (long) cls.getMethod("getTimestamp").invoke(info);
+                // Already reported on a previous launch -- Android's own
+                // history isn't cleared by reading it, so without this check
+                // the same old exit would resurface on every future launch.
+                if (timestamp <= lastSeenTimestamp) continue;
+                if (timestamp > newestTimestamp) newestTimestamp = timestamp;
 
-            Object desc = cls.getMethod("getDescription").invoke(info);
-            int importance = (int) cls.getMethod("getImportance").invoke(info);
-            int status    = (int) cls.getMethod("getStatus").invoke(info);
+                int reason = (int) cls.getMethod("getReason").invoke(info);
 
-            StringBuilder sb = new StringBuilder("Crash detectado (sesión anterior)\n\n");
-            sb.append("Tipo: ").append(reasonLabel(reason)).append("\n");
-            if (desc != null && !desc.toString().isEmpty())
-                sb.append("Descripción: ").append(desc).append("\n");
-            sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
-            sb.append("Código de salida: ").append(status).append("\n");
+                // ApplicationExitInfo reason constants (API 30):
+                //   UNKNOWN=0, EXIT_SELF=1, SIGNALED=2, LOW_MEMORY=3,
+                //   CRASH=4, CRASH_NATIVE=5, ANR=6, INITIALIZATION_FAILURE=7,
+                //   PERMISSION_CHANGE=8, EXCESSIVE_RESOURCE_USAGE=9, USER_REQUESTED=10
+                // Skip clean/expected exits (UNKNOWN, EXIT_SELF, USER_REQUESTED).
+                if (reason == 0 || reason == 1 || reason == 10) continue;
 
-            // ApplicationExitInfo.getTraceInputStream() -- for CRASH_NATIVE (5) and
-            // ANR (6) this can carry the actual native backtrace/tombstone data the
-            // summary fields above never include (readPreviousNativeCrash() above
-            // only ever surfaced "Descripción: crash", no addresses or call stack).
-            // Best-effort: many OEM builds simply return null here, so this is
-            // strictly additive -- it never changes what gets returned on failure.
-            if (reason == 5 || reason == 6) {
-                String tracePath = saveTraceIfPresent(cls, info);
-                if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
+                newCount++;
+
+                Object desc = cls.getMethod("getDescription").invoke(info);
+                int importance = (int) cls.getMethod("getImportance").invoke(info);
+                int status    = (int) cls.getMethod("getStatus").invoke(info);
+                int pid       = (int) cls.getMethod("getPid").invoke(info);
+
+                if (sb == null) sb = new StringBuilder();
+                else sb.append("\n---\n\n");
+
+                sb.append("Crash detectado (sesión anterior)\n\n");
+                sb.append("Tipo: ").append(reasonLabel(reason)).append("\n");
+                if (desc != null && !desc.toString().isEmpty())
+                    sb.append("Descripción: ").append(desc).append("\n");
+                sb.append("Estado del proceso: ").append(importanceLabel(importance)).append("\n");
+                sb.append("Código de salida: ").append(status).append("\n");
+
+                // ApplicationExitInfo.getTraceInputStream() -- for CRASH_NATIVE (5) and
+                // ANR (6) this can carry the actual native backtrace/tombstone data the
+                // summary fields above never include. Best-effort: many OEM builds
+                // simply return null here, so this is strictly additive -- it never
+                // changes what gets returned on failure.
+                if (reason == 5 || reason == 6) {
+                    String tracePath = saveTraceIfPresent(cls, info, pid, timestamp);
+                    if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
+                }
             }
+
+            // Persist even if nothing newsworthy was found this time, so a run
+            // of clean exits (SIGNALED/LOW_MEMORY filtered out, etc.) doesn't
+            // get re-scanned in full on every future launch either.
+            saveLastSeenTimestamp(newestTimestamp);
+
+            if (sb == null) return null;
+            if (newCount > 1)
+                sb.insert(0, "(" + newCount + " salidas anómalas detectadas desde el último inicio)\n\n");
 
             return sb.toString();
 
@@ -121,10 +173,14 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
      * populated it) to a file next to crash.log, so a native crash leaves
      * something more useful than the bare summary above to diagnose from.
      *
+     * Named per pid+timestamp (not a single fixed "native_crash_trace.log")
+     * so a second crash before the user has grabbed the first one's trace
+     * doesn't silently overwrite it.
+     *
      * @return the saved file's absolute path, or null if there was no trace
      * data to save (either the method returned null, or writing failed).
      */
-    private static String saveTraceIfPresent(Class<?> infoClass, Object info) {
+    private static String saveTraceIfPresent(Class<?> infoClass, Object info, int pid, long timestamp) {
         InputStream in = null;
         try {
             Method getTrace = infoClass.getMethod("getTraceInputStream");
@@ -133,7 +189,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
 
             String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
             if (dir == null) return null;
-            File outFile = new File(dir, "native_crash_trace.log");
+            File outFile = new File(dir, "native_crash_trace_" + pid + "_" + timestamp + ".log");
 
             File parent = outFile.getParentFile();
             if (parent != null && !parent.exists()) parent.mkdirs();
@@ -152,6 +208,42 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                 try { in.close(); } catch (IOException ignored) {}
             }
         }
+    }
+
+    /**
+     * Timestamp (ApplicationExitInfo.getTimestamp(), ms since epoch) of the
+     * newest exit already processed by readPreviousNativeCrash(), so Android's
+     * own (non-clearing) exit history doesn't get re-reported forever.
+     */
+    private static long loadLastSeenTimestamp() {
+        String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+        if (dir == null) return 0L;
+        File marker = new File(dir, ".last_exit_info_timestamp");
+        if (!marker.exists()) return 0L;
+
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(marker));
+            String line = br.readLine();
+            return line != null ? Long.parseLong(line.trim()) : 0L;
+        } catch (Exception e) {
+            return 0L;
+        } finally {
+            if (br != null) {
+                try { br.close(); } catch (IOException ignored) {}
+            }
+        }
+    }
+
+    private static void saveLastSeenTimestamp(long timestamp) {
+        String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+        if (dir == null) return;
+        try {
+            File marker = new File(dir, ".last_exit_info_timestamp");
+            FileWriter fw = new FileWriter(marker, false);
+            fw.write(Long.toString(timestamp));
+            fw.close();
+        } catch (Exception ignored) {}
     }
 
     // ── UncaughtExceptionHandler impl ────────────────────────────────────────
