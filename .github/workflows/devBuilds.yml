@@ -1487,3 +1487,36 @@ jobs:
           name: Native Debug Symbols - Gradle (Android ARM64)
           path: export/release/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
           if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # This job's only purpose is cache housekeeping, split out from the main
+  # debug-symbols job on purpose. actions/cache's own save happens as a
+  # post-job hook that runs AFTER every regular step in a job finishes --
+  # there's no way to inject a step that runs after that save within the
+  # SAME job, so the "Prune stale hxcpp compile caches" step inside
+  # Android-ARM64-DebugSymbols can only ever prune caches that existed
+  # BEFORE this run started, never the one this run's own compile just
+  # produced. That's fine for the routine ARM64/ARM32/fat jobs (built often
+  # enough that the next run prunes yesterday's leftovers within hours),
+  # but arm64-debugsymbols is only triggered manually, occasionally, while
+  # chasing a specific crash -- so its ~900MB-per-generation cache could
+  # otherwise sit orphaned for weeks between uses. Running the exact same
+  # prune here, right after Android-ARM64-DebugSymbols (and its cache-save
+  # post-hook) finishes, cleans that up the same day instead.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Prune-DebugSymbols-Cache:
+    name: Prune stale debug-symbols hxcpp cache
+    needs: Android-ARM64-DebugSymbols
+    if: always() && inputs.target == 'arm64-debugsymbols'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Prune stale hxcpp compile caches (post-build)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
