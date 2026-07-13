@@ -258,14 +258,26 @@ public class AndroidUtils extends Extension {
                     // back to the tree picker if no app resolves ACTION_VIEW at all
                     // (its worse UX -- a permission grant, not real browsing -- beats
                     // silently doing nothing).
+                    //
+                    // FLAG_GRANT_READ_URI_PERMISSION only works if this app already
+                    // HOLDS (or can itself grant) access to that specific document --
+                    // building the URI by hand doesn't grant anything on its own. On
+                    // a device/build where this app was never granted persisted access
+                    // to that path (no prior ACTION_OPEN_DOCUMENT_TREE grant, no
+                    // MANAGE_EXTERNAL_STORAGE), the OS throws a SecurityException
+                    // ("UID ... does not have permission to content://...") --
+                    // synchronously out of startActivity(), not the
+                    // ActivityNotFoundException this used to only catch -- so it needs
+                    // its own catch here too, otherwise it escapes to the outer
+                    // catch-all below and the tree-picker fallback never runs.
                     try {
                         Intent viewIntent = new Intent(Intent.ACTION_VIEW);
                         viewIntent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
                         viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         activity.startActivity(viewIntent);
                         return;
-                    } catch (ActivityNotFoundException e) {
-                        android.util.Log.w("AndroidUtils", "ACTION_VIEW has no handler, falling back to the SAF tree picker: " + e);
+                    } catch (ActivityNotFoundException | SecurityException e) {
+                        android.util.Log.w("AndroidUtils", "ACTION_VIEW failed (no handler, or no URI grant), falling back to the SAF tree picker: " + e);
                     }
 
                     // Fallback: the system's own SAF tree picker (DocumentsUI), which
