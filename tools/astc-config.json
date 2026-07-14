@@ -15,7 +15,6 @@
   "min_size": 500,
 
   "overrides": {
-    "NOTE_assets":  {"blocksize": "6x6"},
     "Arrows":       {"blocksize": "6x6"},
     "sustainHold":  {"blocksize": "6x6"},
     "noteSplashes": {"blocksize": "6x6"},

@@ -506,7 +506,7 @@ class NoteUtil
 	{
 		final skin = getSkinFromID(player);
 
-		final idx = id > skin.keys ? 0 : id;
+		final idx = id % skin.colors.length;
 
 		var colors = skin.colors[idx];
 		var hsv:Array<Int> = (idx >= 0 && idx < ClientPrefs.arrowHSV.length) ? ClientPrefs.arrowHSV[idx] : null;

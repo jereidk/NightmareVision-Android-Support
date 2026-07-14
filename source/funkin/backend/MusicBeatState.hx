@@ -34,14 +34,17 @@ class MusicBeatState extends FlxUIState
 	
 	public function new() super();
 	
-	private var curSection:Int = 0;
-	private var stepsToDo:Int = 0;
-	
-	private var curStep:Int = 0;
-	private var curBeat:Int = 0;
-	
-	private var curDecStep:Float = 0;
-	private var curDecBeat:Float = 0;
+	public var curSection:Int = 0;
+	public var curStep:Int = 0;
+	public var curBeat:Int = 0;
+
+	public var curSectionStep:Int = 0;
+	public var nextSectionStep:Int = 0;
+
+	public var curDecSection:Float = 0;
+	public var curDecStep:Float = 0;
+	public var curDecBeat:Float = 0;
+
 	private var controls(get, never):Controls;
 
 	#if mobile
@@ -165,6 +168,9 @@ class MusicBeatState extends FlxUIState
 	public var scriptGroup:ScriptGroup = new ScriptGroup();
 
 	final _updateArgs:Array<Dynamic> = [0.0];
+	final _stepArgs:Array<Dynamic> = [0];
+	final _beatArgs:Array<Dynamic> = [0];
+	final _sectionArgs:Array<Dynamic> = [0];
 	static final _emptyArgs:Array<Dynamic> = [];
 	
 	inline function isHardcodedState():Bool return !ScriptConstants.stopping(scriptGroup?.call('customMenu'));
@@ -328,21 +334,28 @@ class MusicBeatState extends FlxUIState
 		mobile.backend.LangFontPacks.pollCompletion();
 
 		final oldStep:Int = curStep;
-		
+
+		curDecSection = Conductor.getSection(Conductor.songPosition - ClientPrefs.noteOffset);
 		updateCurStep();
 		updateBeat();
-		
+
 		if (curStep > oldStep)
 		{
-			if (curStep >= 0) for (step in oldStep...curStep)
+			for (step in oldStep...curStep)
 			{
 				curStep = step + 1;
+
 				updateBeat();
-				stepHit();
+
+				if (curStep >= 0) stepHit();
+
 				updateSection();
 			}
 		}
-		else if (PlayState.SONG != null) rollbackSection();
+		else if (curStep < oldStep)
+		{
+			updateSection(true);
+		}
 		
 		_updateArgs[0] = elapsed;
 		var _smT = haxe.Timer.stamp();
@@ -354,49 +367,41 @@ class MusicBeatState extends FlxUIState
 		super.update(elapsed);
 	}
 	
-	private function updateSection():Void
+	inline function updateSection(rollback:Bool = false):Void
 	{
-		if (stepsToDo < 1) stepsToDo = Math.round(getBeatsOnSection() * 4);
-		while (curStep >= stepsToDo)
+		final lastSection:Int = curSection;
+
+		if (rollback)
 		{
-			curSection++;
-			var beats:Float = getBeatsOnSection();
-			stepsToDo += Math.round(beats * 4);
-			sectionHit();
+			curSection = Math.floor(curDecSection);
+			updateSectionStep();
+
+			if (curSection != lastSection && curSection >= 0) sectionHit();
 		}
-	}
-	
-	private function rollbackSection():Void
-	{
-		if (curStep < 0) return;
-		
-		var lastSection:Int = curSection;
-		curSection = 0;
-		stepsToDo = 0;
-		for (i in 0...PlayState.SONG.notes.length)
+		else
 		{
-			if (PlayState.SONG.notes[i] != null)
+			while (curStep >= nextSectionStep)
 			{
-				stepsToDo += Math.round(getBeatsOnSection() * 4);
-				if (stepsToDo > curStep) break;
-				
-				curSection++;
+				curSection ++;
+				curSectionStep = nextSectionStep;
+				nextSectionStep += (getBeatsOnSection() * 4);
+
+				if (curSection >= 0) sectionHit();
 			}
 		}
-		
-		if (curSection > lastSection) sectionHit();
 	}
-	
-	private function updateBeat():Void
+
+	inline function updateSectionStep():Void
 	{
-		curBeat = Math.floor(curStep / 4);
-		curDecBeat = curDecStep / 4;
+		curSectionStep = Math.round(Conductor.getStep(Conductor.sectionToSeconds(curSection)));
+		nextSectionStep = Math.round(Conductor.getStep(Conductor.sectionToSeconds(curSection + 1)));
 	}
-	
-	private function updateCurStep():Void
-	{
-		curStep = Math.floor(curDecStep = Conductor.getStep(Conductor.songPosition - ClientPrefs.noteOffset));
-	}
+
+	inline function updateBeat():Void curBeat = Math.floor(curDecBeat = curDecStep / 4);
+
+	inline function updateCurStep():Void curStep = Math.floor(curDecStep = Conductor.getStep(Conductor.songPosition - ClientPrefs.noteOffset));
+
+	public inline function getBeatsOnSection():Int return (PlayState.SONG?.notes[curSection]?.sectionBeats ?? 4);
 	
 	public static function getState():MusicBeatState
 	{
@@ -412,7 +417,8 @@ class MusicBeatState extends FlxUIState
 	
 	public function stepHit():Void
 	{
-		scriptGroup.call('onStepHit', _emptyArgs);
+		_stepArgs[0] = curStep;
+		scriptGroup.call('onStepHit', _stepArgs);
 		PluginsManager.callOnScripts('onStepHit');
 
 		if (curStep % 4 == 0) beatHit();
@@ -420,21 +426,18 @@ class MusicBeatState extends FlxUIState
 
 	public function beatHit():Void
 	{
-		scriptGroup.call('onBeatHit', _emptyArgs);
+		_beatArgs[0] = curBeat;
+		scriptGroup.call('onBeatHit', _beatArgs);
 		PluginsManager.callOnScripts('onBeatHit');
 	}
 
 	public function sectionHit():Void
 	{
-		scriptGroup.call('onSectionHit', _emptyArgs);
+		_sectionArgs[0] = curSection;
+		scriptGroup.call('onSectionHit', _sectionArgs);
 		PluginsManager.callOnScripts('onSectionHit');
 	}
-	
-	function getBeatsOnSection():Float
-	{
-		return PlayState.SONG?.notes[curSection]?.sectionBeats ?? 4.0;
-	}
-	
+
 	override function startOutro(onOutroComplete:() -> Void)
 	{
 		final sub = getSubState()?.subState;

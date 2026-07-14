@@ -24,17 +24,17 @@ class MusicBeatSubstate extends FlxSubState
 		instance = this;
 	}
 	
-	private var curSection:Int = 0;
-	private var stepsToDo:Int = 0;
-	
-	private var lastBeat:Float = 0;
-	private var lastStep:Float = 0;
-	
-	private var curStep:Int = 0;
-	private var curBeat:Int = 0;
-	
-	private var curDecStep:Float = 0;
-	private var curDecBeat:Float = 0;
+	public var curSection:Int = 0;
+	public var curStep:Int = 0;
+	public var curBeat:Int = 0;
+
+	public var curSectionStep:Int = 0;
+	public var nextSectionStep:Int = 0;
+
+	public var curDecSection:Float = 0;
+	public var curDecStep:Float = 0;
+	public var curDecBeat:Float = 0;
+
 	private var controls(get, never):Controls;
 
 	inline function get_controls():Controls return Controls.instance;
@@ -206,6 +206,7 @@ class MusicBeatSubstate extends FlxSubState
 
 	final _updateArgs:Array<Dynamic> = [0.0];
 	final _beatStepArgs:Array<Dynamic> = [0];
+	final _sectionArgs:Array<Dynamic> = [0];
 	static final _emptyArgs:Array<Dynamic> = [];
 	
 	public function initStateScript(?scriptName:String, callOnLoad:Bool = true):Bool
@@ -258,86 +259,78 @@ class MusicBeatSubstate extends FlxSubState
 	
 	override function update(elapsed:Float)
 	{
-		var oldStep:Int = curStep;
-		
+		final oldStep:Int = curStep;
+
+		curDecSection = Conductor.getSection(Conductor.songPosition - ClientPrefs.noteOffset);
 		updateCurStep();
 		updateBeat();
-		
-		if (oldStep != curStep)
+
+		if (curStep > oldStep)
 		{
-			if (curStep > 0) stepHit();
-			
-			if (PlayState.SONG != null)
+			for (step in oldStep...curStep)
 			{
-				if (oldStep < curStep) updateSection();
-				else rollbackSection();
+				curStep = step + 1;
+
+				updateBeat();
+
+				if (curStep >= 0) stepHit();
+
+				updateSection();
 			}
 		}
-		
+		else if (curStep < oldStep)
+		{
+			updateSection(true);
+		}
+
 		_updateArgs[0] = elapsed;
 		scriptGroup.call('onUpdate', _updateArgs);
 
 		super.update(elapsed);
 	}
-	
-	private function updateSection():Void
+
+	inline function updateSection(rollback:Bool = false):Void
 	{
-		if (stepsToDo < 1) stepsToDo = Math.round(getBeatsOnSection() * 4);
-		while (curStep >= stepsToDo)
+		final lastSection:Int = curSection;
+
+		if (rollback)
 		{
-			curSection++;
-			var beats:Float = getBeatsOnSection();
-			stepsToDo += Math.round(beats * 4);
-			sectionHit();
+			curSection = Math.floor(curDecSection);
+			updateSectionStep();
+
+			if (curSection != lastSection && curSection >= 0) sectionHit();
 		}
-	}
-	
-	private function rollbackSection():Void
-	{
-		if (curStep < 0) return;
-		
-		var lastSection:Int = curSection;
-		curSection = 0;
-		stepsToDo = 0;
-		for (i in 0...PlayState.SONG.notes.length)
+		else
 		{
-			if (PlayState.SONG.notes[i] != null)
+			while (curStep >= nextSectionStep)
 			{
-				stepsToDo += Math.round(getBeatsOnSection() * 4);
-				if (stepsToDo > curStep) break;
-				
-				curSection++;
+				curSection ++;
+				curSectionStep = nextSectionStep;
+				nextSectionStep += (getBeatsOnSection() * 4);
+
+				if (curSection >= 0) sectionHit();
 			}
 		}
-		
-		if (curSection > lastSection) sectionHit();
 	}
-	
-	function getBeatsOnSection():Float
+
+	inline function updateSectionStep():Void
 	{
-		return PlayState.SONG?.notes[curSection]?.sectionBeats ?? 4.0;
+		curSectionStep = Math.round(Conductor.getStep(Conductor.sectionToSeconds(curSection)));
+		nextSectionStep = Math.round(Conductor.getStep(Conductor.sectionToSeconds(curSection + 1)));
 	}
-	
-	private function updateBeat():Void
-	{
-		curBeat = Math.floor(curStep / 4);
-		curDecBeat = curDecStep / 4;
-	}
-	
-	private function updateCurStep():Void
-	{
-		var lastChange = Conductor.getBPMFromSeconds(Conductor.songPosition);
-		
-		var shit = ((Conductor.songPosition - ClientPrefs.noteOffset) - lastChange.songTime) / lastChange.stepCrotchet;
-		curDecStep = lastChange.stepTime + shit;
-		curStep = lastChange.stepTime + Math.floor(shit);
-	}
-	
+
+	inline function updateBeat():Void curBeat = Std.int(curDecBeat = curDecStep / 4);
+
+	inline function updateCurStep():Void curStep = Std.int(curDecStep = Conductor.getStep(Conductor.songPosition - ClientPrefs.noteOffset));
+
+	public inline function getBeatsOnSection():Int return (PlayState.SONG?.notes[curSection]?.sectionBeats ?? 4);
+
 	public function stepHit():Void
 	{
-		if (curStep % 4 == 0) beatHit();
 		_beatStepArgs[0] = curStep;
 		scriptGroup.call('onStepHit', _beatStepArgs);
+
+		if (curStep % 4 == 0) beatHit();
 	}
 
 	public function beatHit():Void
@@ -348,7 +341,8 @@ class MusicBeatSubstate extends FlxSubState
 
 	public function sectionHit()
 	{
-		scriptGroup.call('onSectionHit', _emptyArgs);
+		_sectionArgs[0] = curSection;
+		scriptGroup.call('onSectionHit', _sectionArgs);
 	}
 	
 	override function destroy()
