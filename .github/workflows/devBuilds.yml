@@ -125,6 +125,27 @@ jobs:
       - name: Ensure hxcpp for Lime rebuild
         run: haxelib install hxcpp > /dev/null --quiet
 
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
       - name: Wrap g++-13 to force C++23
         run: |
           mkdir -p /tmp/cxx-wrap
@@ -528,6 +549,27 @@ jobs:
       - name: Ensure hxcpp for Lime rebuild
         run: haxelib install hxcpp > /dev/null --quiet
 
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
       - name: Wrap g++-13 to force C++23
         run: |
           mkdir -p /tmp/cxx-wrap
@@ -899,6 +941,27 @@ jobs:
 
       - name: Ensure hxcpp for Lime rebuild
         run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
 
       - name: Wrap g++-13 to force C++23
         run: |
@@ -1314,6 +1377,27 @@ jobs:
 
       - name: Ensure hxcpp for Lime rebuild
         run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
 
       - name: Wrap g++-13 to force C++23
         run: |
