@@ -325,6 +325,23 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
           done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
 
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -696,6 +713,23 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
           done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
 
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -1054,6 +1088,23 @@ jobs:
             echo "Found: $ELEMENT_FILE"
             python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
           done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
 
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
@@ -1441,6 +1492,23 @@ jobs:
             echo "Found: $ELEMENT_FILE"
             python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
           done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         run: |
