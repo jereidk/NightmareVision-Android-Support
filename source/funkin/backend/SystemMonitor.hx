@@ -331,7 +331,11 @@ class SystemMonitor
 				clsName = cls != null ? (Type.getClassName(cls) ?? '<anon>') : '<non-object:' + Type.typeof(target) + '>';
 			}
 			_write('[REFLECT] ' + clsName + '.' + field);
-			if (Std.isOfType(target, funkin.audio.PlayableSong)) flush();
+			// String compare instead of Std.isOfType(target, PlayableSong) --
+			// PlayableSong is a secondary type in SyncedFlxSoundGroup.hx, not
+			// the file's primary class, so it isn't resolvable as a plain
+			// type path from another module without importing the module.
+			if (clsName == 'funkin.audio.PlayableSong') flush();
 		}
 		catch (e:Dynamic) {} // diagnostic-only -- must never itself disrupt script execution
 	}
