@@ -304,6 +304,39 @@ class SystemMonitor
 	}
 
 	/**
+	 * Breadcrumb for HScript's dynamic `object.field` reads/writes
+	 * (InterpEx.get()/set()). This fires from EVERY scripted `obj.field`
+	 * expression across every active script -- including per-frame onUpdate
+	 * hooks -- so the write itself stays a cheap buffered append, same cost
+	 * as any other frequent SystemMonitor call.
+	 *
+	 * The buffered line is only guaranteed to survive an ordinary Haxe
+	 * exception (flush() gets forced from CrashHandler right before those
+	 * are reported). A raw native SIGSEGV a few instructions later bypasses
+	 * that entirely, so the one class this breadcrumb exists to catch
+	 * (PlayableSong -- see funkin/audio/SyncedFlxSoundGroup.hx, the object
+	 * behind the `audio`/`vocals` reflection crash this was added for) gets
+	 * an immediate forced flush too. Real disk I/O, but only for that one
+	 * rare/event-driven class, not the general per-frame case above.
+	 */
+	public static function logReflectAccess(target:Dynamic, field:String):Void
+	{
+		if (!enabled) return;
+		try
+		{
+			var clsName:String = 'null';
+			if (target != null)
+			{
+				final cls = Type.getClass(target);
+				clsName = cls != null ? (Type.getClassName(cls) ?? '<anon>') : '<non-object:' + Type.typeof(target) + '>';
+			}
+			_write('[REFLECT] ' + clsName + '.' + field);
+			if (Std.isOfType(target, funkin.audio.PlayableSong)) flush();
+		}
+		catch (e:Dynamic) {} // diagnostic-only -- must never itself disrupt script execution
+	}
+
+	/**
 	 * Log GPU context info
 	 */
 	public static function logGPUInfo():Void
