@@ -116,6 +116,29 @@ class Init extends FlxState
 			// text in PopUp's dialog.
 			if (_pendingCrashMessage != null && _pendingCrashMessage.length > 2000)
 				_pendingCrashMessage = _pendingCrashMessage.substr(0, 2000) + '\n[truncated…]';
+
+			// Persist immediately, independent of the popup below and of
+			// GameLogger (which isn't initialized yet -- it waits on
+			// ClientPrefs.load(), see the comment near the top of this
+			// function). readPreviousNativeCrash() already marked this
+			// exit as "seen" on the Java side the instant it was read
+			// (JavaCrashHandler.java's saveLastSeenTimestamp()), so if
+			// THIS session also crashes before ever reaching the popup
+			// at super.create() below -- a real observed case, back-to-
+			// back crashes a few seconds apart -- the summary would
+			// otherwise be gone for good: Android's own history never
+			// re-reports an exit once its timestamp has been consumed.
+			if (_pendingCrashMessage != null)
+			{
+				try
+				{
+					sys.io.File.saveContent(
+						mobile.backend.StorageSystem.getDirectory() + 'last_crash_summary.log',
+						'[' + Date.now().toString() + ']\n' + _pendingCrashMessage
+					);
+				}
+				catch (e:Dynamic) {}
+			}
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end
