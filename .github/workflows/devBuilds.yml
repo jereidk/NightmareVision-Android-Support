@@ -451,7 +451,13 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       # Only produced for a release buildType (see
@@ -461,7 +467,10 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: Native Debug Symbols (Android)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
           if-no-files-found: warn
 
   # ───────────────────────────────────────────────────────────────────────────────
@@ -841,7 +850,13 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android ARM64)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       # Only produced for a release buildType (see
@@ -851,7 +866,10 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: Native Debug Symbols (Android ARM64)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
           if-no-files-found: warn
 
   # ───────────────────────────────────────────────────────────────────────────────
@@ -1238,7 +1256,13 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: VS Impostor Legacy (Android ARM32)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/*.apk
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       # Only produced for a release buildType (see
@@ -1248,7 +1272,10 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: Native Debug Symbols (Android ARM32)
-          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/native-debug-symbols.zip
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
           if-no-files-found: warn
 
   # ───────────────────────────────────────────────────────────────────────────────
