@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║         PRE-COMPILE: Copy Extensions + Full Diagnostic          ║
@@ -78,7 +78,7 @@ if [ -f "$GA" ]; then
     # Show extension init lines (the foreach ANDROID_EXTENSIONS)
     echo ""
     echo "  Extension init lines:"
-    grep -n "ANDROID_EXTENSIONS\|mobile\.\|new.*()" "$GA" | head -20 || echo "    (none)"
+    grep -n "ANDROID_EXTENSIONS\|mobile\\\.\\|new.*()" "$GA" 2>/dev/null | head -20 || echo "    (none)"
 else
     fail "TEMPLATE MISSING: $GA"
     # Try to find it elsewhere
@@ -194,13 +194,13 @@ done
 
 echo ""
 echo "--- <source path> ---"
-grep -n '<source path' Project.xml | head -10 | while read line; do
+grep -n '<source path' Project.xml 2>/dev/null | head -10 | while read line; do || true
     echo "  $line"
 done
 
 echo ""
 echo "--- <haxelib> ---"
-grep -n '<haxelib' Project.xml | head -10 | while read line; do
+grep -n '<haxelib' Project.xml 2>/dev/null | head -10 | while read line; do
     echo "  $line"
 done
 

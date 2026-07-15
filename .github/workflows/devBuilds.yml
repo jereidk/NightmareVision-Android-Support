@@ -432,7 +432,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Setup & Diagnostic
+      - name: Pre-Compile Diagnostic
         run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
@@ -444,6 +444,30 @@ jobs:
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
+
+          # Run lime update first to create the build directory structure
+          echo "[SETUP] Running lime update to create build dir..."
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime update android -D $BUILD_FLAGS
+          else
+            haxelib run lime update android
+          fi
+
+          # Copy extension Java files into the Gradle source set
+          echo "[SETUP] Copying extension .java files..."
+          SRC="source/mobile/backend/java"
+          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
+            if [ -d "$BUILD_DIR" ]; then
+              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
+              mkdir -p "$DEST"
+              cp -v "$SRC"/*.java "$DEST/"
+              echo "[SETUP] Copied to $DEST"
+              break
+            fi
+          done
+
+          # Now compile
+          echo "[COMPILE] Building..."
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
           else
@@ -837,7 +861,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Setup & Diagnostic
+      - name: Pre-Compile Diagnostic
         run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
@@ -846,6 +870,23 @@ jobs:
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
+
+          # Run lime update first to create build dir, then copy extensions, then build
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime update android -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
+          else
+            haxelib run lime update android -D ANDROID_ARM64_ONLY
+          fi
+
+          SRC="source/mobile/backend/java"
+          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
+            if [ -d "$BUILD_DIR" ]; then
+              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
+              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
+              break
+            fi
+          done
+
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
           else
@@ -1246,7 +1287,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Setup & Diagnostic
+      - name: Pre-Compile Diagnostic
         run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
@@ -1255,6 +1296,22 @@ jobs:
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
+
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime update android -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
+          else
+            haxelib run lime update android -D ANDROID_ARM32_ONLY
+          fi
+
+          SRC="source/mobile/backend/java"
+          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
+            if [ -d "$BUILD_DIR" ]; then
+              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
+              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
+              break
+            fi
+          done
+
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
           else
@@ -1669,7 +1726,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
-      - name: Pre-Compile Setup & Diagnostic
+      - name: Pre-Compile Diagnostic
         run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
@@ -1677,6 +1734,22 @@ jobs:
           HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
+
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime update android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
+          else
+            haxelib run lime update android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
+          fi
+
+          SRC="source/mobile/backend/java"
+          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
+            if [ -d "$BUILD_DIR" ]; then
+              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
+              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
+              break
+            fi
+          done
+
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
           else
