@@ -445,56 +445,13 @@ jobs:
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
 
-          # Run lime update first to create the build directory structure
-          echo "[SETUP] Running lime update to create build dir..."
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime update android -D $BUILD_FLAGS
-          else
-            haxelib run lime update android
-          fi
+          # Patch Lime templates so that lime build's update() step
+          # automatically includes extension imports and source dirs.
+          echo "[SETUP] Patching Lime templates..."
+          bash .github/scripts/patch-lime-templates.sh
 
-          # Copy extension Java files into the Gradle source set
-          echo "[SETUP] Copying extension .java files..."
-          SRC="source/mobile/backend/java"
-          COPIED=false
-          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
-            if [ -d "$BUILD_DIR" ]; then
-              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
-              mkdir -p "$DEST"
-              cp -v "$SRC"/*.java "$DEST/"
-              echo "[SETUP] Copied extensions to $DEST"
-              COPIED=true
-
-              # -- INLINE POST-COPY DIAGNOSTIC --
-              echo ""
-              echo "=== POST-COPY VERIFICATION ==="
-              echo "Extensions in build dir:"
-              ls -la "$DEST/"
-              echo ""
-              BGADIR="$BUILD_DIR/app/src/main/java/org/haxe/lime"
-              echo "Generated GameActivity.java:"
-              if [ -f "$BGADIR/GameActivity.java" ]; then
-                echo "  EXISTS: $BGADIR/GameActivity.java"
-                echo "  Imports with mobile:"
-                grep "mobile" "$BGADIR/GameActivity.java" || echo "  (NONE)"
-                echo "  Lines 168-178 (extension init):"
-                sed -n '168,178p' "$BGADIR/GameActivity.java"
-              else
-                echo "  NOT FOUND at $BGADIR/GameActivity.java"
-              fi
-              echo ""
-              echo "All .java files under build app/src/main/java:"
-              find "$BUILD_DIR/app/src/main/java" -name "*.java" | sort | head -20
-              echo "=== END VERIFICATION ==="
-              echo ""
-              break
-            fi
-          done
-          if [ "$COPIED" = false ]; then
-            echo "[SETUP] WARNING: no build dir found, extensions not copied"
-          fi
-
-          # Now compile
+          # lime build does update() + build() in one command.
+          # update() now uses our patched templates.
           echo "[COMPILE] Building..."
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
@@ -898,22 +855,7 @@ jobs:
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-
-          # Run lime update first to create build dir, then copy extensions, then build
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime update android -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
-          else
-            haxelib run lime update android -D ANDROID_ARM64_ONLY
-          fi
-
-          SRC="source/mobile/backend/java"
-          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
-            if [ -d "$BUILD_DIR" ]; then
-              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
-              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
-              break
-            fi
-          done
+          bash .github/scripts/patch-lime-templates.sh
 
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
@@ -1324,21 +1266,7 @@ jobs:
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime update android -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
-          else
-            haxelib run lime update android -D ANDROID_ARM32_ONLY
-          fi
-
-          SRC="source/mobile/backend/java"
-          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
-            if [ -d "$BUILD_DIR" ]; then
-              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
-              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
-              break
-            fi
-          done
+          bash .github/scripts/patch-lime-templates.sh
 
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
@@ -1762,21 +1690,7 @@ jobs:
           HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime update android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
-          else
-            haxelib run lime update android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
-          fi
-
-          SRC="source/mobile/backend/java"
-          for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
-            if [ -d "$BUILD_DIR" ]; then
-              DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
-              mkdir -p "$DEST" && cp "$SRC"/*.java "$DEST/" && echo "[SETUP] Copied extensions to $DEST"
-              break
-            fi
-          done
+          bash .github/scripts/patch-lime-templates.sh
 
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
