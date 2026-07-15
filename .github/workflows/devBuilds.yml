@@ -445,9 +445,9 @@ jobs:
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "$BUILD_FLAGS"
           else
-            haxelib run lime build android $BUILD_MODE_FLAG
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}"
           fi
 
       - name: Upload Artifact
@@ -847,9 +847,9 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM64_ONLY $BUILD_FLAGS"
           else
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM64_ONLY"
           fi
 
       - name: Upload Artifact
@@ -1256,9 +1256,9 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM32_ONLY $BUILD_FLAGS"
           else
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY
+            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM32_ONLY"
           fi
 
       - name: Upload Artifact
@@ -1678,9 +1678,9 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
+            bash .github/scripts/android-compile.sh release "ANDROID_ARM64_ONLY HXCPP_DEBUG_LINK $BUILD_FLAGS"
           else
-            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
+            bash .github/scripts/android-compile.sh release "ANDROID_ARM64_ONLY HXCPP_DEBUG_LINK"
           fi
 
       # Diagnostic only -- no effect on the build. By this point Gradle has
