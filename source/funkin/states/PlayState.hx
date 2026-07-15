@@ -54,17 +54,20 @@ import funkin.video.FunkinVideoSprite;
 #end
 
 // Shared by every deferred tail segment queued from the same head note (see
-// PlayState._pendingTails) so they can chain prevNote correctly even though
-// they're no longer recycled back-to-back in a single call. `headQueueNote`
-// lets a deferred entry detect that its head's pool slot has since been
-// reused for a different note (see spawnPendingTail()).
-private typedef PendingTailChain = {lastNote:Note, headQueueNote:QueueNote};
+// PlayState._pendingTails). `headQueueNote` lets a deferred entry detect
+// that its head's pool slot has since been reused for a different note
+// (see spawnPendingTail()).
+private typedef PendingTailChain = {headQueueNote:QueueNote};
 
 private typedef PendingTail =
 {
 	qn:QueueNote,
 	parentNote:Note,
-	chain:PendingTailChain
+	chain:PendingTailChain,
+	// Known upfront from this segment's position in its hold's tail array --
+	// stamped onto the spawned Note as isFirstTailSegment once it exists
+	// (see spawnPendingTail()).
+	isFirst:Bool
 };
 
 class PlayState extends MusicBeatState
@@ -278,13 +281,12 @@ class PlayState extends MusicBeatState
 	// builds the head immediately and queues the rest here, letting them
 	// drain a few at a time (see the second noteSpawn loop in update()) as
 	// each segment's OWN strumTime actually earns it. `chain` is shared by
-	// every entry queued from the same head so they keep chaining prevNote
-	// correctly even though they're no longer built back-to-back; it also
-	// carries `headQueueNote`, the QueueNote the head was originally
-	// recycled against -- preRecycle() always re-stamps `note.queueNote` on
-	// every recycle, so comparing that back against this lets a deferred
-	// entry detect "my head's pool slot became a different note" instead of
-	// corrupting a stranger's state (see spawnPendingTail()).
+	// every entry queued from the same head and carries `headQueueNote`,
+	// the QueueNote the head was originally recycled against -- preRecycle()
+	// always re-stamps `note.queueNote` on every recycle, so comparing that
+	// back against this lets a deferred entry detect "my head's pool slot
+	// became a different note" instead of corrupting a stranger's state
+	// (see spawnPendingTail()).
 	static inline final MAX_NOTE_SPAWNS_PER_FRAME:Int = 12;
 	var _pendingTails:Array<PendingTail> = [];
 	var _pendingTailIdx:Int = 0;
@@ -2879,7 +2881,7 @@ class PlayState extends MusicBeatState
 		scripts.call('onUpdatePost', _scriptUpdateArgs);
 	}
 	
-	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
+	public function recycleNote(queueNote:QueueNote, ?parent:Note):Note
 	{
 		final targetField:Null<PlayField> = getFieldFromID(queueNote.playField);
 
@@ -2887,10 +2889,10 @@ class PlayState extends MusicBeatState
 			? recycleCompatibleNote(targetField._skin, queueNote.noteData)
 			: notes.recycle(Note, () -> new Note());
 
-		note.preRecycle(queueNote, parent, prevNote);
-		
+		note.preRecycle(queueNote, parent);
+
 		if (parent != null) return note;
-		
+
 		if (queueNote.tail != null)
 		{
 			final note:Note = spawnNote(note);
@@ -2911,8 +2913,9 @@ class PlayState extends MusicBeatState
 
 	function enqueuePendingTails(headNote:Note, headQueueNote:QueueNote, tails:Array<QueueNote>):Void
 	{
-		final chain:PendingTailChain = {lastNote: headNote, headQueueNote: headQueueNote};
-		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
+		final chain:PendingTailChain = {headQueueNote: headQueueNote};
+		for (i in 0...tails.length)
+			_pendingTails.push({qn: tails[i], parentNote: headNote, chain: chain, isFirst: i == 0});
 	}
 
 	// Always spawns a trail alongside the head. Whether it actually RENDERS
@@ -2935,9 +2938,9 @@ class PlayState extends MusicBeatState
 	}
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in
-	// recycleNote() used to do (recycle against the shared parent/prevNote
-	// chain, append to the parent's tail array, spawn it), with four guards
-	// verified against the CURRENT code (not assumed from history):
+	// recycleNote() used to do (recycle against the shared parent chain,
+	// append to the parent's tail array, spawn it), with two guards verified
+	// against the CURRENT code (not assumed from history):
 	function spawnPendingTail(entry:PendingTail):Void
 	{
 		// Guard 1: the head's pool slot has been reused for a totally
@@ -2962,26 +2965,10 @@ class PlayState extends MusicBeatState
 		// identical to it never having lagged.
 		if (entry.qn.strumTime + entry.qn.sustainLength + noteKillOffset < Conductor.songPosition) return;
 
-		// Guard 4: entry.chain.lastNote is only trustworthy as prevNote if it's
-		// still actually linked into THIS hold's chain. Unlike parentNote (Guards
-		// 1/2 above), nothing re-validates chain.lastNote between segments -- it's
-		// just reassigned to whatever Note preRecycle() returns each time
-		// (below). A tail segment has its own independent pool lifecycle from the
-		// head, so by the time a later staggered segment finally drains here,
-		// chain.lastNote's underlying object can already have been recycled for
-		// an unrelated note (e.g. a simultaneous opponent note) -- same class of
-		// bug preRecycle()'s own prevNote-self-loop comment describes, just
-		// reachable from a different angle. Mirrors the .parent identity check
-		// PlayField.noteHit() already uses for the same reason ("ignore notes
-		// that have already been recycled"). The == entry.parentNote branch
-		// covers the first tail segment of a hold, where chain.lastNote starts
-		// out as the head itself (whose own .parent is null, not itself).
-		final lastNoteValid:Bool = entry.chain.lastNote == entry.parentNote || entry.chain.lastNote.parent == entry.parentNote;
-
-		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, lastNoteValid ? entry.chain.lastNote : null);
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote);
+		tailNote.isFirstTailSegment = entry.isFirst;
 
 		entry.parentNote.tail.push(tailNote);
-		entry.chain.lastNote = tailNote;
 
 		// Replay whatever state the parent is CURRENTLY in onto a segment
 		// that didn't exist yet when that state was decided -- mirrors

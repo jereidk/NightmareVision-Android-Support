@@ -601,7 +601,13 @@ class PlayField extends FlxTypedContainer<StrumNote>
 				
 				char.playAnim(animToPlay, true);
 				
-				if (!note.isSustainNote || note.prevNote?.isSustainNote) char.lastHitTime = note.strumTime;
+				// Same "not the very first segment of a fresh hold" check the
+				// old prevNote?.isSustainNote read answered (a hold's HEAD
+				// QueueNote is always constructed with isSustainNote=false, so
+				// a first tail segment's old prevNote -- the head -- always
+				// read isSustainNote=false too; !isFirstTailSegment is that
+				// same fact without chasing another Note's identity for it).
+				if (!note.isSustainNote || !note.isFirstTailSegment) char.lastHitTime = note.strumTime;
 			}
 		}
 	}
@@ -636,41 +642,23 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	
 	public function spawnSusSplash(note:Note, isPlayer:Bool = false):SustainSplash
 	{
+		// Same "ignore notes that have already been recycled" identity check
+		// noteHit()/noteMiss() already apply to tail-array entries before
+		// touching them -- this function read note.tailState/note.tail
+		// unconditionally despite that, the one place in this class that
+		// didn't. `note` itself can't go stale mid-call (single-threaded,
+		// synchronously reached from noteHit()), but a corrupted/shared
+		// tailState reaching here from elsewhere shouldn't be trusted either.
+		if (!note.exists || note.tailState == null) return null;
+
 		if (_skin?.sustainSplashes && note.tailState.splash == null && note.tail.length > 0)
 		{
-			final strum:Null<StrumNote> = note.playField.members[note.noteData];
+			final strum:Null<StrumNote> = note.playField?.members[note.noteData];
 			if (strum != null)
 			{
 				var splash:SustainSplash = grpSusSplashes.recycle(SustainSplash);
 				splash.setupSplash(strum, note, isPlayer, note.rgbShader, this);
 				grpSusSplashes.add(splash);
-
-				// TEMP diagnostic for the native_crash_trace.log crash confirmed
-				// (via objdump, not just addr2line's nearest-symbol guess) to
-				// land right here, building this exact array literal. Written
-				// unconditionally (bypassing GameLogger's inDevMode gate) since
-				// the crash happens in normal play, not just dev-mode sessions.
-				// Remove once the crash is actually root-caused.
-				#if (android && sys)
-				try
-				{
-					final dbgLine = '[' + Date.now().toString() + '] spawnSusSplash: noteData=' + note.noteData
-						+ ' tailLen=' + note.tail.length
-						+ ' hasParent=' + (note.parent != null)
-						+ ' isSustainNote=' + note.isSustainNote
-						+ ' isSustainEnd=' + note.isSustainEnd
-						+ ' strumTime=' + note.strumTime
-						+ ' sustainLength=' + note.sustainLength
-						+ ' wasGoodHit=' + note.wasGoodHit
-						+ ' exists=' + note.exists
-						+ ' splashAlreadySet=' + (note.tailState.splash != null)
-						+ '\n';
-					final dbgOut = sys.io.File.append(mobile.backend.StorageSystem.getDirectory() + 'sustain_debug.log', false);
-					dbgOut.writeString(dbgLine);
-					dbgOut.close();
-				}
-				catch (e:Dynamic) {}
-				#end
 
 				PlayState.instance.scripts.call('onSpawnSustainSplash', [splash, note]);
 
