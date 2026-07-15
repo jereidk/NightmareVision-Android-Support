@@ -33,6 +33,21 @@ import funkin.game.shaders.RGBShader;
 class SustainTrail extends RGBSprite implements funkin.game.modchart.IModNote
 {
 	public var headNote:Note;
+
+	// Set by PlayState.setupSustainTrail() right after setupTrail() below
+	// (Note.queueNote is only @:allow'd to PlayState, not this class, so the
+	// capture has to happen from there). Compared every frame against
+	// headNote.queueNote by PlayState's own susTrails pass -- headNote.alive
+	// alone isn't enough to tell "this is still my hold's head": once the
+	// original head note is disposed, notes.recycle() can hand that exact
+	// pool slot straight back out to a totally unrelated note before this
+	// trail's next per-frame check ever sees it dead, at which point
+	// headNote.alive reads true again for someone else's hold entirely.
+	// SustainSplash.hx had this exact bug once (commit 75bf70b9, "tracked a
+	// reused parent") -- this is the same fix, applied to its sibling, which
+	// never got one.
+	public var headQueueNote:QueueNote;
+
 	public var field:PlayField;
 	public var noteData:Int = 0;
 	public var player:Int = 0;
@@ -124,6 +139,7 @@ class SustainTrail extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		super.kill();
 		headNote = null;
+		headQueueNote = null;
 		field = null;
 		visible = false;
 	}
