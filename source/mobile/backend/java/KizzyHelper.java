@@ -151,7 +151,7 @@ public class KizzyHelper extends Extension {
         style.setShowActionsInCompactView(0);
 
         builder.setVisibility(Notification.VISIBILITY_SECRET)
-                .setSmallIcon(null)
+                .setSmallIcon(context.getApplicationInfo().icon)
                 .setLargeIcon(art)
                 .setContentTitle(title)
                 .setContentText(artist)
