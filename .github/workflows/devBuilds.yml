@@ -432,9 +432,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
@@ -836,9 +833,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
-
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
 
       - name: Compile
         env:
@@ -1245,9 +1239,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
-
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
 
       - name: Compile
         env:
@@ -1668,9 +1659,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
-
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
 
       - name: Compile
         env:
