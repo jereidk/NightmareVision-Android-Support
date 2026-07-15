@@ -180,22 +180,88 @@ class DiscordClient
 		return rpcId;
 	}
 }
+#elseif android
+import mobile.backend.AndroidRPC;
+
+/**
+ * Android replacement for the desktop DiscordClient. There's no local Discord
+ * IPC socket to connect to on Android (that's what DISCORD_ALLOWED/hxdiscord_rpc
+ * needs, and Android doesn't have it), so this drives a local MediaSession
+ * instead -- see AndroidRPC.hx/KizzyHelper.java. A separate app the player
+ * installs themselves (Kizzy, github.com/dead8309/Kizzy) can pick that up
+ * generically via Android's own MediaSessionManager and relay it to the
+ * player's own Discord account. We have no way to detect whether the player
+ * actually has Kizzy installed/configured -- this only makes the MediaSession
+ * available for it to find.
+ */
+class DiscordClient
+{
+	public static final NMV_ID:String = '1445524195864870996';
+
+	public static var rpcId(default, set):String = NMV_ID;
+
+	static var initiated:Bool = false;
+
+	public static function init()
+	{
+		if (!ClientPrefs.discordRPC || initiated) return;
+
+		AndroidRPC.initialize();
+		initiated = true;
+
+		FlxG.stage.window.onClose.add(close);
+	}
+
+	/**
+	 * Enables or disables the RPC MediaSession depending on user preference.
+	 */
+	public static function check():Void
+	{
+		if (ClientPrefs.discordRPC) init();
+		else if (initiated) close();
+	}
+
+	public static function close():Void
+	{
+		if (initiated) AndroidRPC.shutdown();
+		initiated = false;
+	}
+
+	/**
+	 * Same call shape as the desktop version, so every existing call site works
+	 * unchanged -- mapped onto AndroidRPC.update()'s narrower (title, artist,
+	 * charIcon, isPlaying) shape: `details` -> title, `state` -> artist,
+	 * `smallImageKey` -> character icon key (only PlayState passes one, via
+	 * `dad.healthIcon`). `hasStartTimestamp` -> isPlaying: every call site that
+	 * omits it is a menu/editor/paused state, every one that sets it true is an
+	 * actively-playing song. `endTimestamp`/`largeImageKey` have no Android
+	 * equivalent here (no progress-bar/duration support) and are ignored.
+	 */
+	public static function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
+			largeImageKey:String = 'icon'):Void
+	{
+		if (!initiated) return;
+		AndroidRPC.update(details, state, smallImageKey, hasStartTimestamp);
+	}
+
+	static function set_rpcId(value:String):String return (rpcId = value);
+}
 #else
 
 /**
  * Dummy class
- * 
+ *
  * Does nothing but exists for the cases discord is unavailable.
  */
 class DiscordClient
 {
 	public static final NMV_ID:String = '1252033037680513115';
-	
+
 	public static var rpcId(default, set):String = '';
-	
+
 	public static inline function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
 		largeImageKey:String = 'icon'):Void {}
-		
+
 	public static function check():Void {}
 
 	public static function close():Void {}

@@ -191,11 +191,21 @@
 		<config:android permission="android.permission.ACCESS_NETWORK_STATE"/>
 		<config:android permission="android.permission.INTERNET"/>
 		<config:android permission="android.permission.CAPTURE_AUDIO_OUTPUT" />
+		<!-- Required for KizzyHelper's MediaSession notification (API 33+) --
+		     without this, requestPermissions() for it is auto-denied since
+		     Android refuses to grant any runtime permission that isn't also
+		     declared here, and the notification silently never posts. -->
+		<config:android permission="android.permission.POST_NOTIFICATIONS"/>
 
 		<android extension="mobile.backend.java.FileUtils" />
 		<android extension="mobile.backend.java.AndroidUtils" />
 		<android extension="mobile.backend.java.JavaCrashHandler" />
 		<android extension="mobile.backend.java.ScreenUtil" />
+		<!-- Reached only via JNI.createStaticMethod (AndroidRPC.hx), never
+		     through Lime's own Extension callback dispatch -- registered here
+		     anyway so it isn't a stripped-as-unused target if this project
+		     ever turns on R8/ProGuard minification. -->
+		<android extension="mobile.backend.java.KizzyHelper" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
 
