@@ -542,15 +542,44 @@ class FunkinAssets
 		}
 		
 		var sound:Null<Sound> = null;
-		
-		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(key)) sound = Sound.fromFile(key);
-		else #end if (Assets.exists(key, SOUND)) sound = Assets.getSound(key, true);
-		
+
+		#if (MODS_ALLOWED || ASSET_REDIRECT)
+		if (FileSystem.exists(key))
+		{
+			try
+			{
+				sound = Sound.fromFile(key);
+			}
+			catch (e:Dynamic)
+			{
+				// Sound.fromFile() throws (not returns null) when lime's
+				// native AudioBuffer.fromFile() fails to decode -- confirmed
+				// on real devices for loose/mod .ogg files specifically
+				// (every DLC song with its own audio crashed identically,
+				// while every bundled core-game .ogg kept working, which
+				// goes through a different loading path/doesn't hit this).
+				// Rather than let that exception reach FlxG's own crash
+				// screen, fall back to the VorbisFile-based decoder below --
+				// a genuinely different native code path (lime_vorbis, not
+				// the WAV/OGG::Decode chain Sound.fromFile() uses), so this
+				// actually has a real chance of succeeding where the primary
+				// attempt didn't, instead of just downgrading the crash to a
+				// silent failure.
+				Logger.log('Sound.fromFile failed for ($key): $e -- trying VorbisFile fallback', WARN);
+				sound = null;
+			}
+		}
+		else
+		#end
+		if (Assets.exists(key, SOUND)) sound = Assets.getSound(key, true);
+
+		if (sound == null) sound = getVorbisSound(key);
+
 		if (sound != null)
 		{
 			cache.cacheSound(key, sound);
 		}
-		
+
 		return sound;
 	}
 	
