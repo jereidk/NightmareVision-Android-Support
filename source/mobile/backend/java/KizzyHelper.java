@@ -47,6 +47,7 @@ public class KizzyHelper extends Extension {
                         createNotificationChannel();
                         
                         Log.d(TAG, "Session started in the background.");
+                        JavaCrashHandler.appendToGameLog(TAG, "INFO", "Session started in the background.");
                     }
 
                     if (Build.VERSION.SDK_INT >= 33) {
@@ -54,6 +55,7 @@ public class KizzyHelper extends Extension {
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "INIT ERROR: " + e.getMessage());
+                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "INIT ERROR: " + e);
                 }
             }
         });
@@ -97,6 +99,7 @@ public class KizzyHelper extends Extension {
                             }
                         } catch (Exception e) {
                             Log.e(TAG, "Image could not be loaded: " + imagePath);
+                            JavaCrashHandler.appendToGameLog(TAG, "ERROR", "Image could not be loaded: " + imagePath + " - " + e);
                         }
                     }
 
@@ -121,6 +124,7 @@ public class KizzyHelper extends Extension {
 
                 } catch (Exception e) {
                     Log.e(TAG, "UPDATE ERROR: " + e.getMessage());
+                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "UPDATE ERROR: " + e);
                 }
             }
         });
@@ -183,8 +187,10 @@ public class KizzyHelper extends Extension {
                         notificationManager.cancel(NOTIFICATION_ID);
                     }
                     Log.d(TAG, "MediaSession closed and cleared.");
+                    JavaCrashHandler.appendToGameLog(TAG, "INFO", "MediaSession closed and cleared.");
                 } catch (Exception e) {
                     Log.e(TAG, "SHUTDOWN ERROR: " + e.getMessage());
+                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "SHUTDOWN ERROR: " + e);
                 }
             }
         });
