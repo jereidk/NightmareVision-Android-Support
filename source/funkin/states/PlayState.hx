@@ -2714,7 +2714,17 @@ class PlayState extends MusicBeatState
 				if (trail == null || !trail.alive) continue;
 
 				final headNote = trail.headNote;
-				if (headNote == null || !headNote.alive)
+				// headNote.alive alone can't tell "this is still my hold's
+				// head" -- once the real head is disposed, its pool slot can
+				// be handed straight back out to a totally unrelated note
+				// before this loop's next pass ever sees it dead, at which
+				// point .alive reads true again for someone else's hold.
+				// queueNote is re-stamped on every single preRecycle() call,
+				// so comparing it against what was captured when this trail
+				// was set up (see setupSustainTrail()) catches that reuse
+				// reliably -- same mechanism spawnPendingTail()'s Guards 1/2
+				// already use for the same reason.
+				if (headNote == null || !headNote.alive || headNote.queueNote != trail.headQueueNote)
 				{
 					trail.kill();
 					continue;
@@ -2934,6 +2944,7 @@ class PlayState extends MusicBeatState
 
 		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
 		trail.setupTrail(headNote, field);
+		trail.headQueueNote = headNote.queueNote;
 		headNote.sustainTrail = trail;
 	}
 
