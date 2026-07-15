@@ -432,8 +432,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/diag-pre-compile.sh
+      - name: Pre-Compile Setup & Diagnostic
+        run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
         env:
@@ -837,8 +837,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/diag-pre-compile.sh
+      - name: Pre-Compile Setup & Diagnostic
+        run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
         env:
@@ -1246,8 +1246,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/diag-pre-compile.sh
+      - name: Pre-Compile Setup & Diagnostic
+        run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
         env:
@@ -1669,8 +1669,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/diag-pre-compile.sh
+      - name: Pre-Compile Setup & Diagnostic
+        run: bash .github/scripts/pre-compile-setup.sh
 
       - name: Compile
         env:
