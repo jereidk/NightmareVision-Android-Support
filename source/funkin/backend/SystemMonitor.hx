@@ -307,35 +307,40 @@ class SystemMonitor
 	 * Breadcrumb for HScript's dynamic `object.field` reads/writes
 	 * (InterpEx.get()/set()). This fires from EVERY scripted `obj.field`
 	 * expression across every active script -- including per-frame onUpdate
-	 * hooks -- so the write itself stays a cheap buffered append, same cost
-	 * as any other frequent SystemMonitor call.
-	 *
-	 * The buffered line is only guaranteed to survive an ordinary Haxe
-	 * exception (flush() gets forced from CrashHandler right before those
-	 * are reported). A raw native SIGSEGV a few instructions later bypasses
-	 * that entirely, so the one class this breadcrumb exists to catch
-	 * (PlayableSong -- see funkin/audio/SyncedFlxSoundGroup.hx, the object
-	 * behind the `audio`/`vocals` reflection crash this was added for) gets
-	 * an immediate forced flush too. Real disk I/O, but only for that one
-	 * rare/event-driven class, not the general per-frame case above.
+	 * hooks -- so logging every single call (as this used to do) drowned
+	 * sysmon.log in routine, uninteresting traffic (ClientPrefs/Conductor
+	 * -style static-field access alone is thousands of calls per minute of
+	 * play) and rotated away the more useful entries far faster than
+	 * intended. Only the two actually-diagnostic shapes get written now:
+	 * a null target (the classic NPE precursor -- accessing a field on
+	 * something that was never set), and PlayableSong specifically (see
+	 * funkin/audio/SyncedFlxSoundGroup.hx, the object behind the
+	 * `audio`/`vocals` reflection crash this breadcrumb exists for). Every
+	 * other target (the overwhelming majority) is skipped entirely -- no
+	 * line, no buffered write, no cost beyond the two checks below.
 	 */
 	public static function logReflectAccess(target:Dynamic, field:String):Void
 	{
 		if (!enabled) return;
 		try
 		{
-			var clsName:String = 'null';
-			if (target != null)
+			if (target == null)
 			{
-				final cls = Type.getClass(target);
-				clsName = cls != null ? (Type.getClassName(cls) ?? '<anon>') : '<non-object:' + Type.typeof(target) + '>';
+				_write('[REFLECT] <null>.' + field);
+				return;
 			}
-			_write('[REFLECT] ' + clsName + '.' + field);
+
+			final cls = Type.getClass(target);
 			// String compare instead of Std.isOfType(target, PlayableSong) --
 			// PlayableSong is a secondary type in SyncedFlxSoundGroup.hx, not
 			// the file's primary class, so it isn't resolvable as a plain
 			// type path from another module without importing the module.
-			if (clsName == 'funkin.audio.PlayableSong') flush();
+			final clsName = cls != null ? Type.getClassName(cls) : null;
+			if (clsName == 'funkin.audio.PlayableSong')
+			{
+				_write('[REFLECT] ' + clsName + '.' + field);
+				flush();
+			}
 		}
 		catch (e:Dynamic) {} // diagnostic-only -- must never itself disrupt script execution
 	}

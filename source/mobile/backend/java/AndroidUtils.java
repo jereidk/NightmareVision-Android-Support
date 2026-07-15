@@ -262,25 +262,27 @@ public class AndroidUtils extends Extension {
                     // (its worse UX -- a permission grant, not real browsing -- beats
                     // silently doing nothing).
                     //
-                    // FLAG_GRANT_READ_URI_PERMISSION only works if this app already
-                    // HOLDS (or can itself grant) access to that specific document --
-                    // building the URI by hand doesn't grant anything on its own. On
-                    // a device/build where this app was never granted persisted access
-                    // to that path (no prior ACTION_OPEN_DOCUMENT_TREE grant, no
-                    // MANAGE_EXTERNAL_STORAGE), the OS throws a SecurityException
-                    // ("UID ... does not have permission to content://...") --
-                    // synchronously out of startActivity(), not the
-                    // ActivityNotFoundException this used to only catch -- so it needs
-                    // its own catch here too, otherwise it escapes to the outer
-                    // catch-all below and the tree-picker fallback never runs.
+                    // Deliberately NOT adding FLAG_GRANT_READ_URI_PERMISSION here.
+                    // That flag asks the OS to let the TARGET activity read a URI on
+                    // OUR app's behalf -- which requires proving *we* already hold (or
+                    // can grant) access to that specific document. We don't: this URI
+                    // is hand-built under com.android.externalstorage.documents, a
+                    // provider we've never been granted anything on. Adding the flag
+                    // made startActivity() itself throw ("UID ... does not have
+                    // permission to content://...") before the file manager ever got
+                    // a chance to run, forcing every single launch onto the
+                    // tree-picker fallback below instead of real browsing. Without the
+                    // flag, the OS just resolves and starts the activity normally --
+                    // the file manager reads the URI with its OWN storage access
+                    // (stock file managers already have it), the same way tapping that
+                    // folder from inside the Files app itself would work.
                     try {
                         Intent viewIntent = new Intent(Intent.ACTION_VIEW);
                         viewIntent.setDataAndType(docUri, android.provider.DocumentsContract.Document.MIME_TYPE_DIR);
-                        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         activity.startActivity(viewIntent);
                         return;
-                    } catch (ActivityNotFoundException | SecurityException e) {
-                        android.util.Log.w("AndroidUtils", "ACTION_VIEW failed (no handler, or no URI grant), falling back to the SAF tree picker: " + e);
+                    } catch (ActivityNotFoundException e) {
+                        android.util.Log.w("AndroidUtils", "ACTION_VIEW failed (no file manager registered for it), falling back to the SAF tree picker: " + e);
                         JavaCrashHandler.appendToGameLog("AndroidUtils", "WARN", "openDataFolder: ACTION_VIEW failed, falling back to SAF tree picker: " + e);
                     }
 
