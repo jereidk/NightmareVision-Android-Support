@@ -26,34 +26,6 @@ public class AndroidUtils extends Extension {
     // startActivityForResult() calls -- keep this distinct so results don't collide.
     private static final int OPEN_DATA_FOLDER_CODE = 1027;
 
-    /**
-     * Appends a line to game.log (Haxe's funkin.backend.GameLogger, same
-     * file, same folder as crash.log), so Java-side failures here show up
-     * alongside everything Haxe already logs there instead of only ever
-     * reaching a Toast (gone as soon as it's dismissed) or Logcat (needs
-     * adb, not available to most players reporting a bug). Only appends if
-     * game.log already exists -- GameLogger only creates it when developer
-     * mode is on, and by the time a user can tap a button that reaches this
-     * code, GameLogger.init() (called as early as possible in Init.create())
-     * has already had its chance to create it for this session if so. No
-     * JNI call back into Haxe needed just to ask that.
-     */
-    private static void appendToGameLog(String folderPath, String level, String message) {
-        try {
-            File logFile = new File(folderPath, "game.log");
-            if (!logFile.exists()) return;
-
-            String stamp = new java.text.SimpleDateFormat("[HH:mm:ss]").format(new java.util.Date());
-            String line = stamp + " [" + level + "] [Java/AndroidUtils] " + message + "\n";
-
-            java.io.FileOutputStream out = new java.io.FileOutputStream(logFile, true);
-            out.write(line.getBytes("UTF-8"));
-            out.close();
-        } catch (Exception e) {
-            android.util.Log.w("AndroidUtils", "Failed to append to game.log: " + e);
-        }
-    }
-
     public static void keepScreenOn(final boolean enable) {
         final Activity activity = mainActivity;
         if (activity == null) return;
@@ -188,6 +160,7 @@ public class AndroidUtils extends Extension {
                     );
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "Error scanning folder: " + e.toString());
+                    JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "scanFolder failed: " + e);
                 }
             }
         });
@@ -215,6 +188,7 @@ public class AndroidUtils extends Extension {
                     gm.setGameState(new GameState(false, mode));
                 } catch (Exception e) {
                     android.util.Log.w("AndroidUtils", "setGameplayState: " + e);
+                    JavaCrashHandler.appendToGameLog("AndroidUtils", "WARN", "setGameplayState failed: " + e);
                 }
             }
         });
@@ -238,6 +212,7 @@ public class AndroidUtils extends Extension {
                     File folder = new File(folderPath);
                     if (!folder.exists()) {
                         android.util.Log.w("AndroidUtils", "Data folder does not exist: " + folderPath);
+                        JavaCrashHandler.appendToGameLog("AndroidUtils", "WARN", "Data folder does not exist: " + folderPath);
                         Toast.makeText(activity, "Data folder does not exist: " + folderPath, Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -306,7 +281,7 @@ public class AndroidUtils extends Extension {
                         return;
                     } catch (ActivityNotFoundException | SecurityException e) {
                         android.util.Log.w("AndroidUtils", "ACTION_VIEW failed (no handler, or no URI grant), falling back to the SAF tree picker: " + e);
-                        appendToGameLog(folderPath, "WARN", "openDataFolder: ACTION_VIEW failed, falling back to SAF tree picker: " + e);
+                        JavaCrashHandler.appendToGameLog("AndroidUtils", "WARN", "openDataFolder: ACTION_VIEW failed, falling back to SAF tree picker: " + e);
                     }
 
                     // Fallback: the system's own SAF tree picker (DocumentsUI), which
@@ -332,7 +307,7 @@ public class AndroidUtils extends Extension {
                     // is indistinguishable from the button doing nothing at all, which
                     // is exactly the bug being debugged when this fires.
                     android.util.Log.e("AndroidUtils", "Error opening data folder: " + e.toString());
-                    appendToGameLog(folderPath, "ERROR", "openDataFolder failed: " + e);
+                    JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "openDataFolder failed: " + e);
                     Toast.makeText(activity, "Open Data Folder failed: " + e, Toast.LENGTH_LONG).show();
                 }
             }
@@ -358,6 +333,7 @@ public class AndroidUtils extends Extension {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     } catch (Exception e) {
                         android.util.Log.w("AndroidUtils", "Could not persist data folder permission: " + e);
+                        JavaCrashHandler.appendToGameLog("AndroidUtils", "WARN", "Could not persist data folder permission: " + e);
                     }
                     Toast.makeText(mainActivity, "Data folder selected", Toast.LENGTH_SHORT).show();
                 }
@@ -397,6 +373,7 @@ public class AndroidUtils extends Extension {
             return maxRate;
         } catch (Exception e) {
             android.util.Log.e("AndroidUtils", "getMaxRefreshRate failed: " + e);
+            JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "getMaxRefreshRate failed: " + e);
             return 60f;
         }
     }
@@ -427,6 +404,7 @@ public class AndroidUtils extends Extension {
                     activity.getWindow().setAttributes(params);
                 } catch (Exception e) {
                     android.util.Log.e("AndroidUtils", "requestHighRefreshRate failed: " + e);
+                    JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "requestHighRefreshRate failed: " + e);
                 }
             }
         });

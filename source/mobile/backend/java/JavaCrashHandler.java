@@ -59,6 +59,41 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     /**
+     * Appends a line to game.log (Haxe's funkin.backend.GameLogger, same file
+     * this class already writes crash.log/trace/logcat dumps next to), so
+     * non-fatal Java-side Log.w/Log.e calls elsewhere in this package (Kizzy
+     * Discord RPC, file-manager intents, refresh-rate queries, ...) show up
+     * alongside everything Haxe already logs there instead of only ever
+     * reaching Logcat -- which needs adb, not available to most players
+     * reporting a bug, and isn't captured at all outside the ~3000-line
+     * window saveLogcatDump() grabs at the moment of an actual crash/exit.
+     *
+     * Shared here (keyed off sCrashLogPath, already known once install() has
+     * run) rather than each caller deriving its own path, since most of
+     * those call sites have no directory to hand in themselves.
+     * Only appends if game.log already exists -- GameLogger only creates it
+     * when developer mode is on, and by the time any of these call sites can
+     * fire, GameLogger.init() (called as early as possible in Init.create())
+     * has already had its chance to create it for this session if so.
+     */
+    public static void appendToGameLog(String tag, String level, String message) {
+        try {
+            if (sCrashLogPath == null) return;
+            File logFile = new File(new File(sCrashLogPath).getParent(), "game.log");
+            if (!logFile.exists()) return;
+
+            String stamp = new SimpleDateFormat("[HH:mm:ss]", Locale.US).format(new Date());
+            String line = stamp + " [" + level + "] [Java/" + tag + "] " + message + "\n";
+
+            FileOutputStream out = new FileOutputStream(logFile, true);
+            out.write(line.getBytes("UTF-8"));
+            out.close();
+        } catch (Exception e) {
+            android.util.Log.w("JavaCrashHandler", "Failed to append to game.log: " + e);
+        }
+    }
+
+    /**
      * Read Android's ApplicationExitInfo (API 30 / Android 11+) for every
      * process exit since the last time this was checked. Uses reflection so
      * this compiles against any compileSdkVersion.
