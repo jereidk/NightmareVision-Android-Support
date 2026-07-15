@@ -283,8 +283,9 @@ section "SUMMARY"
 ERRORS=0
 # Check critical path
 if [ -f "$GA" ]; then
-    IMPORT_COUNT=$(grep -c "mobile.backend.java" "$GA" 2>/dev/null || echo 0)
-    if [ "$IMPORT_COUNT" -ge 5 ]; then
+    IMPORT_COUNT=$(grep -c "mobile.backend.java" "$GA" 2>/dev/null | head -1 | tr -d '[:space:]')
+    IMPORT_COUNT="${IMPORT_COUNT:-0}"
+    if [ "$IMPORT_COUNT" -ge 5 ] 2>/dev/null; then
         ok "GameActivity.java has all 5 extension imports"
     else
         fail "GameActivity.java has only $IMPORT_COUNT/5 extension imports"
