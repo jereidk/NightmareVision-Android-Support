@@ -202,6 +202,19 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
                     String tracePath = saveTraceIfPresent(cls, info, pid, timestamp, header);
                     if (tracePath != null) sb.append("Trace guardado en: ").append(tracePath).append("\n");
                 }
+
+                // logcat catches everything our own Haxe-level Logger/GameLogger
+                // never sees -- GameLogger only hooks haxe.Log.trace, so any
+                // native C/C++ logging from SDL, VLC, mbedtls, or debuggerd
+                // itself (e.g. the human-readable "Fatal signal 11 (SIGSEGV)..."
+                // line the kernel/debuggerd writes for every native crash,
+                // often with a partial backtrace already in plain text) never
+                // reaches a file at all otherwise. Not gated to reason 5/6 like
+                // the tombstone above -- OOM kills and other exit reasons can
+                // still have useful context in logcat (e.g. the low-memory
+                // killer's own log lines), and this is cheap either way.
+                String logcatPath = saveLogcatDump(pid, timestamp);
+                if (logcatPath != null) sb.append("Logcat guardado en: ").append(logcatPath).append("\n");
             }
 
             // Persist even if nothing newsworthy was found this time, so a run
@@ -272,40 +285,115 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
     }
 
     /**
-     * Each saved trace now gets its own pid+timestamp filename (see
-     * saveTraceIfPresent()) specifically so multiple crashes don't clobber
-     * each other -- but that also means they never got cleaned up on their
-     * own. Keeps only the newest MAX_KEPT_TRACES on disk, oldest first by
-     * last-modified time, so a device that crashes occasionally over a long
-     * install doesn't quietly accumulate trace files forever.
+     * Dumps this app's own recent logcat history to a file, best-effort.
+     *
+     * No special permission needed: since Android 4.1, logd restricts a
+     * non-privileged app's `logcat` read to its own UID's lines by default
+     * (READ_LOGS is only required to read OTHER apps' logs) -- confirmed via
+     * AOSP's logd source (LogReader's UID filtering). "-d" dumps the current
+     * buffer and exits instead of streaming, "-t 3000" caps it to the most
+     * recent 3000 lines so a device with a long-lived log buffer doesn't
+     * balloon this into a huge file. No --pid filter: this app's own dead
+     * process from a past run has no live PID for logd to filter by, and the
+     * UID restriction above already scopes the dump to relevant lines
+     * (plus this app's own logcat commonly also includes the crashing
+     * process's own tag from debuggerd/ART even after it's gone, e.g. the
+     * kernel's "Fatal signal 11 (SIGSEGV)..." line for a native crash).
+     *
+     * @return the saved file's absolute path, or null if the dump failed or
+     * produced nothing (logcat access revoked by the OEM, no permission,
+     * process spawn failure, etc.)
+     */
+    private static String saveLogcatDump(int pid, long timestamp) {
+        Process proc = null;
+        try {
+            String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
+            if (dir == null) return null;
+
+            // redirectErrorStream(true): merges stderr into the same stream we
+            // read below. Without it, if logcat ever wrote enough to stderr to
+            // fill its pipe buffer while we're only draining stdout, the child
+            // would block on write() and this whole call would hang -- exactly
+            // the kind of thing a crash handler must never risk doing.
+            ProcessBuilder pb = new ProcessBuilder("logcat", "-d", "-t", "3000", "-v", "threadtime");
+            pb.redirectErrorStream(true);
+            proc = pb.start();
+
+            File outFile = new File(dir, "logcat_dump_" + pid + "_" + timestamp + ".log");
+            File parent = outFile.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
+
+            BufferedReader reader = new BufferedReader(
+                new java.io.InputStreamReader(proc.getInputStream(), "UTF-8"));
+            FileWriter writer = new FileWriter(outFile, false);
+            String line;
+            int lineCount = 0;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line);
+                writer.write('\n');
+                lineCount++;
+            }
+            writer.close();
+            reader.close();
+            proc.waitFor();
+
+            if (lineCount == 0) {
+                outFile.delete();
+                return null;
+            }
+
+            return outFile.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (proc != null) proc.destroy();
+        }
+    }
+
+    /**
+     * Each saved trace/logcat dump now gets its own pid+timestamp filename
+     * (see saveTraceIfPresent()/saveLogcatDump()) specifically so multiple
+     * crashes don't clobber each other -- but that also means they never got
+     * cleaned up on their own. Keeps only the newest maxKept on disk per
+     * prefix, oldest first by last-modified time, so a device that crashes
+     * occasionally over a long install doesn't quietly accumulate files
+     * forever. Each file category is pruned to its own cap independently
+     * (called once per prefix) since logcat dumps and tombstones have very
+     * different typical sizes.
      */
     private static final int MAX_KEPT_TRACES = 10;
+    private static final int MAX_KEPT_LOGCAT_DUMPS = 10;
 
-    private static void pruneOldTraceFiles() {
+    private static void pruneOldFiles(final String prefix, int maxKept) {
         try {
             String dir = sCrashLogPath != null ? new File(sCrashLogPath).getParent() : null;
             if (dir == null) return;
 
-            File[] traces = new File(dir).listFiles(new FilenameFilter() {
+            File[] matches = new File(dir).listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File d, String name) {
-                    return name.startsWith("native_crash_trace_") && name.endsWith(".log");
+                    return name.startsWith(prefix) && name.endsWith(".log");
                 }
             });
-            if (traces == null || traces.length <= MAX_KEPT_TRACES) return;
+            if (matches == null || matches.length <= maxKept) return;
 
-            Arrays.sort(traces, new Comparator<File>() {
+            Arrays.sort(matches, new Comparator<File>() {
                 @Override
                 public int compare(File a, File b) {
                     return Long.compare(a.lastModified(), b.lastModified());
                 }
             });
 
-            int toDelete = traces.length - MAX_KEPT_TRACES;
+            int toDelete = matches.length - maxKept;
             for (int i = 0; i < toDelete; i++) {
-                traces[i].delete();
+                matches[i].delete();
             }
         } catch (Exception ignored) {}
+    }
+
+    private static void pruneOldTraceFiles() {
+        pruneOldFiles("native_crash_trace_", MAX_KEPT_TRACES);
+        pruneOldFiles("logcat_dump_", MAX_KEPT_LOGCAT_DUMPS);
     }
 
     /**

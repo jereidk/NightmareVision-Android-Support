@@ -132,10 +132,27 @@ class Init extends FlxState
 			{
 				try
 				{
+					// Timestamped filename, not a single fixed "last_crash_summary.log" --
+					// same reasoning as JavaCrashHandler.java's own per-pid+timestamp
+					// trace/logcat files: a second crash before this one gets read
+					// would otherwise silently overwrite it.
+					final dir = mobile.backend.StorageSystem.getDirectory();
+					final stamp = Std.int(Date.now().getTime());
 					sys.io.File.saveContent(
-						mobile.backend.StorageSystem.getDirectory() + 'last_crash_summary.log',
+						dir + 'last_crash_summary_$stamp.log',
 						'[' + Date.now().toString() + ']\n' + _pendingCrashMessage
 					);
+
+					// Keep only the newest few -- these are small, but there's no
+					// reason to let them accumulate forever on a device that crashes
+					// occasionally over a long install.
+					final summaries = sys.FileSystem.readDirectory(dir).filter(
+						f -> f.startsWith('last_crash_summary_') && f.endsWith('.log'));
+					summaries.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+					while (summaries.length > 10)
+					{
+						try sys.FileSystem.deleteFile(dir + summaries.shift()) catch (e:Dynamic) {}
+					}
 				}
 				catch (e:Dynamic) {}
 			}
