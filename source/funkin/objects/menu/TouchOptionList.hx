@@ -156,7 +156,12 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			add(hi);
 			_rowHi.push(hi);
 
-			final accent = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(5, Std.int(ROW_H - 6), 0xFFFFD700);
+			// White base so runtime `.color` tinting (selection gold vs. a
+			// badgeProvider's own color -- see refreshRows()) actually
+			// produces that exact color, same reasoning as _rowLeftBg/
+			// _rowRightBg below.
+			final accent = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(5, Std.int(ROW_H - 6), FlxColor.WHITE);
+			accent.color = 0xFFFFD700;
 			accent.alpha = 0;
 			add(accent);
 			_rowAccent.push(accent);
@@ -593,13 +598,35 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			final selected = show && (optIndex == curSelected);
 			final hovered = show && (optIndex == hoveredRow);
 
+			// Optional per-row indicator (e.g. a downloadable language's
+			// "· 6.05 MB"/"Downloading… N%") -- see Option.badgeProvider's
+			// own doc comment. Computed once per row per frame; every other
+			// tab's rows never set this, so this is a no-op fallback to
+			// today's exact behavior everywhere else.
+			final badge = (show && opt.type != 'label' && opt.badgeProvider != null) ? opt.badgeProvider() : null;
+
 			final rowTopY = show ? y0 + i * ROW_H - 3 : -9999;
 			_rowHi[i].y = rowTopY;
 			_rowHi[i].alpha = selected ? 0.92 : (hovered ? 0.4 : 0);
 			_rowHiBorder[i].y = rowTopY - 2;
 			_rowHiBorder[i].alpha = selected ? 0.8 : 0;
 			_rowAccent[i].y = rowTopY;
-			_rowAccent[i].alpha = selected ? 1 : 0;
+			if (selected)
+			{
+				_rowAccent[i].color = 0xFFFFD700;
+				_rowAccent[i].alpha = 1;
+			}
+			else if (badge != null)
+			{
+				// Dim, persistent indicator -- distinct from the full-bright
+				// selection state, but still visible while scrolling past.
+				_rowAccent[i].color = badge.color;
+				_rowAccent[i].alpha = 0.55;
+			}
+			else
+			{
+				_rowAccent[i].alpha = 0;
+			}
 			if (selected)
 			{
 				_rowHi[i].y = highlightY;
@@ -639,8 +666,8 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 
 			if (isLabel) continue;
 
-			_rowValue[i].text = displayValue(opt);
-			_rowValue[i].color = selected ? 0xFFFFE066 : 0xFFCCCCCC;
+			_rowValue[i].text = (badge != null) ? badge.text : displayValue(opt);
+			_rowValue[i].color = selected ? 0xFFFFE066 : (badge != null ? badge.color : 0xFFCCCCCC);
 
 			if (isBool)
 			{
