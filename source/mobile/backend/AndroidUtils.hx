@@ -3,15 +3,15 @@ package mobile.backend;
 #if android
 class AndroidUtils
 {
-	static var _keepScreenOn = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "keepScreenOn", "(Z)V");
-	static var _setFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setFullscreen", "(I)V");
-	static var _getFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getFullscreen", "()I");
-	static var _toggleFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "toggleFullscreen", "()V");
-	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
-	static var _openDataFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
-	static var _setGameplayState = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setGameplayState", "(Z)V");
-	static var _getMaxRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getMaxRefreshRate", "()F");
-	static var _requestHighRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "requestHighRefreshRate", "()V");
+	static var _keepScreenOn = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "keepScreenOn", "(Z)V");
+	static var _setFullscreen = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "setFullscreen", "(I)V");
+	static var _getFullscreen = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "getFullscreen", "()I");
+	static var _toggleFullscreen = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "toggleFullscreen", "()V");
+	static var _scanFolder = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
+	static var _openDataFolder = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
+	static var _setGameplayState = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "setGameplayState", "(Z)V");
+	static var _getMaxRefreshRate = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "getMaxRefreshRate", "()F");
+	static var _requestHighRefreshRate = JNI.createStaticMethod("org/haxe/lime/AndroidUtils", "requestHighRefreshRate", "()V");
 
 	// JNI.createStaticMethod() defaults useArray to false, which returns the
 	// method wrapped via Reflect.makeVarArgs -- meant to be called with plain

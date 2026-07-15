@@ -11,7 +11,7 @@ class AndroidRPC {
 
 	public static function initialize() {
 		if (_init == null)
-			_init = JNI.createStaticMethod("mobile/backend/java/KizzyHelper", "initialize", "()V");
+			_init = JNI.createStaticMethod("org/haxe/lime/KizzyHelper", "initialize", "()V");
 
 		try {
 			_init();
@@ -33,7 +33,7 @@ class AndroidRPC {
 	 */
 	public static function update(title:String, artist:String, ?charIcon:String, isPlaying:Bool = true) {
 		if (_update == null) {
-			_update = JNI.createStaticMethod("mobile/backend/java/KizzyHelper", "updateStatus", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V");
+			_update = JNI.createStaticMethod("org/haxe/lime/KizzyHelper", "updateStatus", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V");
 		}
 
 		try {
@@ -45,7 +45,7 @@ class AndroidRPC {
 
 	public static function shutdown() {
 		if (_shutdown == null)
-			_shutdown = JNI.createStaticMethod("mobile/backend/java/KizzyHelper", "shutdown", "()V");
+			_shutdown = JNI.createStaticMethod("org/haxe/lime/KizzyHelper", "shutdown", "()V");
 
 		try { _shutdown(); } catch(e:Dynamic) { trace("JNI Shutdown Error: " + e); }
 	}

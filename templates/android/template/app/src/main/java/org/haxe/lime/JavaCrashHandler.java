@@ -1,4 +1,4 @@
-package mobile.backend.java;
+package org.haxe.lime;
 
 import android.app.Activity;
 import android.app.ActivityManager;
