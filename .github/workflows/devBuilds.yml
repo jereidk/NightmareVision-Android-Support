@@ -456,15 +456,43 @@ jobs:
           # Copy extension Java files into the Gradle source set
           echo "[SETUP] Copying extension .java files..."
           SRC="source/mobile/backend/java"
+          COPIED=false
           for BUILD_DIR in export/debug/android/bin export/release/android/bin; do
             if [ -d "$BUILD_DIR" ]; then
               DEST="$BUILD_DIR/app/src/main/java/mobile/backend/java"
               mkdir -p "$DEST"
               cp -v "$SRC"/*.java "$DEST/"
-              echo "[SETUP] Copied to $DEST"
+              echo "[SETUP] Copied extensions to $DEST"
+              COPIED=true
+
+              # -- INLINE POST-COPY DIAGNOSTIC --
+              echo ""
+              echo "=== POST-COPY VERIFICATION ==="
+              echo "Extensions in build dir:"
+              ls -la "$DEST/"
+              echo ""
+              BGADIR="$BUILD_DIR/app/src/main/java/org/haxe/lime"
+              echo "Generated GameActivity.java:"
+              if [ -f "$BGADIR/GameActivity.java" ]; then
+                echo "  EXISTS: $BGADIR/GameActivity.java"
+                echo "  Imports with mobile:"
+                grep "mobile" "$BGADIR/GameActivity.java" || echo "  (NONE)"
+                echo "  Lines 168-178 (extension init):"
+                sed -n '168,178p' "$BGADIR/GameActivity.java"
+              else
+                echo "  NOT FOUND at $BGADIR/GameActivity.java"
+              fi
+              echo ""
+              echo "All .java files under build app/src/main/java:"
+              find "$BUILD_DIR/app/src/main/java" -name "*.java" | sort | head -20
+              echo "=== END VERIFICATION ==="
+              echo ""
               break
             fi
           done
+          if [ "$COPIED" = false ]; then
+            echo "[SETUP] WARNING: no build dir found, extensions not copied"
+          fi
 
           # Now compile
           echo "[COMPILE] Building..."
