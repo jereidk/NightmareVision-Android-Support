@@ -495,6 +495,10 @@ class PlayState extends MusicBeatState
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
+	/** In story mode, true when this is the last song of the week.
+	 *  Set by endSong() just before the score popup. */
+	var _isLastSongOfWeek:Bool = false;
+
 	/**
 	 * Default camera zoom the game will attempt to return to.
 	 *
@@ -3807,6 +3811,7 @@ class PlayState extends MusicBeatState
 				
 				if (storyMeta.playlist.length <= 0)
 				{
+					_isLastSongOfWeek = true;
 					if (WeekData.weeksList[storyMeta.curWeek] != null)
 					{
 						unlockJsonAwards(curSong, [WeekData.weeksList[storyMeta.curWeek]]);
@@ -3856,13 +3861,30 @@ class PlayState extends MusicBeatState
 					
 					PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
 					
+					// Prefetch next song's assets in background while the player
+					// watches the score popup.  LoadingState will pick up the
+					// work on the next switch and show real progress.
+					#if (android && sys)
+					funkin.states.LoadingState.prefetchSong(PlayState.SONG);
+					#end
+					
 					popUpEndCallback = function() {
 						if (!ScriptConstants.stopping(scripts.call('postEndSong')))
 						{
 							CoolUtil.cancelMusicFadeTween();
 							FlxG.sound.music.stop();
 							
+							// Hybrid: if prefetch already finished, go straight
+							// to PlayState (assets are cache-warm).  Otherwise
+							// show LoadingState with real progress.
+							#if (android && sys)
+							if (funkin.states.LoadingState.prefetchComplete)
+								FlxG.switchState(PlayState.new);
+							else
+								funkin.states.LoadingState.loadAndSwitchState(() -> new PlayState());
+							#else
 							FlxG.switchState(PlayState.new);
+							#end
 						}
 					}
 				}
@@ -4315,11 +4337,17 @@ class PlayState extends MusicBeatState
 
 		super.destroy();
 
-		if (_bitmapSnapshotAtCreate != null)
+	// In Story Mode, keep assets warm between songs of the same week
+	// so the next LoadingState → PlayState transition is instant.
+	// Only flush the cache when leaving the week entirely or on Freeplay.
+	if (_bitmapSnapshotAtCreate != null)
+	{
+		if (!isStoryMode || _isLastSongOfWeek)
 		{
 			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
-			_bitmapSnapshotAtCreate = null;
 		}
+		_bitmapSnapshotAtCreate = null;
+	}
 	}
 	
 	override function stepHit()
