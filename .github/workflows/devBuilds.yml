@@ -432,9 +432,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/pre-compile-setup.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
@@ -444,15 +441,6 @@ jobs:
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
-
-          # Patch Lime templates so that lime build's update() step
-          # automatically includes extension imports and source dirs.
-          echo "[SETUP] Patching Lime templates..."
-          bash .github/scripts/patch-lime-templates.sh
-
-          # lime build does update() + build() in one command.
-          # update() now uses our patched templates.
-          echo "[COMPILE] Building..."
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
           else
@@ -846,17 +834,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/pre-compile-setup.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-          bash .github/scripts/patch-lime-templates.sh
-
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
           else
@@ -1257,17 +1240,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/pre-compile-setup.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-          bash .github/scripts/patch-lime-templates.sh
-
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
           else
@@ -1682,16 +1660,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
-      - name: Pre-Compile Diagnostic
-        run: bash .github/scripts/pre-compile-setup.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
-          bash .github/scripts/patch-lime-templates.sh
-
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
           else
