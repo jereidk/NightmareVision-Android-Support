@@ -149,7 +149,12 @@ class MusicBeatSubstate extends FlxSubState
 		}
 		if (virtualPadCam != null)
 		{
-			FlxG.cameras.remove(virtualPadCam);
+			// Same guard as MusicBeatState.removeVirtualPad(): a full state
+			// switch happening while this substate is still open would have
+			// already wiped this camera via FlxG.cameras.reset(), so check
+			// before removing again to avoid the "not a part of the game"
+			// warning.
+			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
 			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
 		}
 	}
@@ -207,7 +212,7 @@ class MusicBeatSubstate extends FlxSubState
 		}
 		if (hitboxCam != null)
 		{
-			FlxG.cameras.remove(hitboxCam);
+			if (FlxG.cameras.list.indexOf(hitboxCam) != -1) FlxG.cameras.remove(hitboxCam);
 			hitboxCam = FlxDestroyUtil.destroy(hitboxCam);
 		}
 	}
