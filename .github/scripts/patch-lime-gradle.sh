@@ -51,24 +51,3 @@ with open(build_gradle, 'w') as f: f.write(c)
 PYTHON_EOF
 
 echo "[INFO] Done! ABI filter: $ABI_FILTER"
-
-# ── Also patch GameActivity.java template with our extension imports ──
-GAMEACTIVITY=".haxelib/lime/git/templates/android/template/app/src/main/java/org/haxe/lime/GameActivity.java"
-if [ -f "$GAMEACTIVITY" ]; then
-    if ! grep -q "import mobile.backend.java" "$GAMEACTIVITY"; then
-        echo "[INFO] Adding extension imports to Lime GameActivity.java template..."
-        IMPORTS="import mobile.backend.java.FileUtils;
-import mobile.backend.java.AndroidUtils;
-import mobile.backend.java.JavaCrashHandler;
-import mobile.backend.java.ScreenUtil;
-import mobile.backend.java.KizzyHelper;"
-        sed -i "/^import java.util.List;$/a\\
-\\
-$IMPORTS" "$GAMEACTIVITY"
-        echo "[INFO] GameActivity.java template patched."
-    else
-        echo "[INFO] GameActivity.java template already has extension imports."
-    fi
-else
-    echo "[WARN] GameActivity.java template not found at $GAMEACTIVITY"
-fi
