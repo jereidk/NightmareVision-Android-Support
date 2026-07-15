@@ -519,7 +519,7 @@ class FunkinAssets
 	 * every other platform.
 	 */
 	#if (android && sys)
-	static function androidStoragePath(path:String):String
+	public static function androidStoragePath(path:String):String
 	{
 		try
 		{
@@ -532,7 +532,7 @@ class FunkinAssets
 		}
 	}
 	#else
-	static inline function androidStoragePath(path:String):String
+	public static inline function androidStoragePath(path:String):String
 		return path;
 	#end
 

@@ -260,10 +260,18 @@ class Paths
 	public static inline function font(key:String, overridable:Bool = true, mode:PathsTestMode = NORMAL):String
 	{
 		key = overridable ? Lang.getFont(key) : key;
-			
+
 		final path:String = findFileWithExts('fonts/$key', ['ttf', 'otf'], null, mode);
-			
-		return (!FileSystem.exists(path) && Assets.exists(path, FONT) ? Assets.getFont(path).fontName : path);
+
+		// A loose/mod/DLC font (e.g. a downloaded LangFontPacks CJK pack)
+		// ends up handed to openfl.text._internal.TextEngine's own
+		// `Font.fromFile(name)` call wherever this path string is actually
+		// used -- which needs an absolute path on Android for the exact
+		// same reason FunkinAssets.getSoundUnsafe()/getBitmapData() do (see
+		// androidStoragePath()'s own doc comment): the native loader opens
+		// it via lime::fopen() (SDL-backed), not sys.FileSystem's own
+		// resolution, which is what FileSystem.exists() just used here.
+		return (!FileSystem.exists(path) && Assets.exists(path, FONT) ? Assets.getFont(path).fontName : FunkinAssets.androidStoragePath(path));
 	}
 	
 	public static function findFileWithExts(key:String, exts:Array<String>, ?parentFolder:String, mode:PathsTestMode = NORMAL):String
