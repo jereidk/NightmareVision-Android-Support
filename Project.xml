@@ -219,12 +219,6 @@
 
     <template path="templates/android" if="android"/>
 
-    <!-- Override Lime's GameActivity.java template with one that includes
-         import statements for our custom extension classes.  Without these
-         imports javac cannot resolve the FQCNs in the generated
-         "new mobile.backend.java.Xxx()" calls. -->
-    <template path="templates/android/GameActivity.java" rename="app/src/main/java/org/haxe/lime/GameActivity.java" if="android"/>
-
     <icon path="projFiles/icon/icon16.png" size='16'/>
     <icon path="projFiles/icon/icon32.png" size='32'/>
     <icon path="projFiles/icon/icon64.png" size='64'/>
