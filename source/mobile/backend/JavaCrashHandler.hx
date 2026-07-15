@@ -4,13 +4,13 @@ package mobile.backend;
 class JavaCrashHandler
 {
 	static var _install = JNI.createStaticMethod(
-		"org/haxe/lime/JavaCrashHandler",
+		"mobile/backend/java/JavaCrashHandler",
 		"install",
 		"(Ljava/lang/String;)V"
 	);
 
 	static var _readPreviousNativeCrash = JNI.createStaticMethod(
-		"org/haxe/lime/JavaCrashHandler",
+		"mobile/backend/java/JavaCrashHandler",
 		"readPreviousNativeCrash",
 		"()Ljava/lang/String;"
 	);

@@ -20,11 +20,11 @@ class ScreenUtil
 	static var _cached:Null<{top:Float, bottom:Float, left:Float, right:Float}> = null;
 
 	#if android
-	static var _getTop    = JNI.createStaticMethod("org/haxe/lime/ScreenUtil", "getSafeInsetTop",    "()I");
-	static var _getBottom = JNI.createStaticMethod("org/haxe/lime/ScreenUtil", "getSafeInsetBottom", "()I");
-	static var _getLeft   = JNI.createStaticMethod("org/haxe/lime/ScreenUtil", "getSafeInsetLeft",   "()I");
-	static var _getRight  = JNI.createStaticMethod("org/haxe/lime/ScreenUtil", "getSafeInsetRight",  "()I");
-	static var _getCutoutDimensions = JNI.createStaticMethod("org/haxe/lime/ScreenUtil", "getCutoutDimensions", "()[[F");
+	static var _getTop    = JNI.createStaticMethod("mobile/backend/java/ScreenUtil", "getSafeInsetTop",    "()I");
+	static var _getBottom = JNI.createStaticMethod("mobile/backend/java/ScreenUtil", "getSafeInsetBottom", "()I");
+	static var _getLeft   = JNI.createStaticMethod("mobile/backend/java/ScreenUtil", "getSafeInsetLeft",   "()I");
+	static var _getRight  = JNI.createStaticMethod("mobile/backend/java/ScreenUtil", "getSafeInsetRight",  "()I");
+	static var _getCutoutDimensions = JNI.createStaticMethod("mobile/backend/java/ScreenUtil", "getCutoutDimensions", "()[[F");
 	#end
 
 	/**

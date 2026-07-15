@@ -1,4 +1,4 @@
-package org.haxe.lime;
+package mobile.backend.java;
 
 import android.content.Context;
 import android.database.Cursor;

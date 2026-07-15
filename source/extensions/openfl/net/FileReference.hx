@@ -606,7 +606,7 @@ class FileReference extends EventDispatcher
 		try
 		{
 			var mimeType = "application/json";
-			var jniCall = JNI.createStaticMethod("org/haxe/lime/FileUtils", "browseFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
+			var jniCall = JNI.createStaticMethod("mobile/backend/java/FileUtils", "browseFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
 
 			jniCall(mimeType, this);
 
@@ -1131,7 +1131,7 @@ class FileReference extends EventDispatcher
 
 			if (content != null && content.length > 0)
 			{
-				var jniCall = JNI.createStaticMethod("org/haxe/lime/FileUtils", "saveFile", "(Ljava/lang/String;Ljava/lang/String;)V");
+				var jniCall = JNI.createStaticMethod("mobile/backend/java/FileUtils", "saveFile", "(Ljava/lang/String;Ljava/lang/String;)V");
 				jniCall(defaultFileName != null ? defaultFileName : "file.json", content);
 
 				dispatchEvent(new Event(Event.SELECT));

@@ -23,9 +23,9 @@ typedef BrowseOptions =
 class FileUtil
 {
 	#if android
-	private static var _saveFile_jni = JNI.createStaticMethod("org/haxe/lime/FileUtils", "saveFile", "(Ljava/lang/String;Ljava/lang/String;)V");
-	private static var _browseForFile = JNI.createStaticMethod("org/haxe/lime/FileUtils", "browseFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
-	private static var _browseForMultipleFiles = JNI.createStaticMethod("org/haxe/lime/FileUtils", "browseForMultipleFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
+	private static var _saveFile_jni = JNI.createStaticMethod("mobile/backend/java/FileUtils", "saveFile", "(Ljava/lang/String;Ljava/lang/String;)V");
+	private static var _browseForFile = JNI.createStaticMethod("mobile/backend/java/FileUtils", "browseFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
+	private static var _browseForMultipleFiles = JNI.createStaticMethod("mobile/backend/java/FileUtils", "browseForMultipleFiles", "(Ljava/lang/String;Lorg/haxe/lime/HaxeObject;)V");
 	private static var _onSelectCallback:Null<String->Void> = null;
 	private static var _onCancelCallback:Null<Void->Void> = null; // fuck you IOS
 	#end

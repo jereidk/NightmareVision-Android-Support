@@ -197,15 +197,15 @@
 		     declared here, and the notification silently never posts. -->
 		<config:android permission="android.permission.POST_NOTIFICATIONS"/>
 
-		<android extension="org.haxe.lime.FileUtils" />
-		<android extension="org.haxe.lime.AndroidUtils" />
-		<android extension="org.haxe.lime.JavaCrashHandler" />
-		<android extension="org.haxe.lime.ScreenUtil" />
+		<android extension="mobile.backend.java.FileUtils" />
+		<android extension="mobile.backend.java.AndroidUtils" />
+		<android extension="mobile.backend.java.JavaCrashHandler" />
+		<android extension="mobile.backend.java.ScreenUtil" />
 		<!-- Reached only via JNI.createStaticMethod (AndroidRPC.hx), never
 		     through Lime's own Extension callback dispatch -- registered here
 		     anyway so it isn't a stripped-as-unused target if this project
 		     ever turns on R8/ProGuard minification. -->
-		<android extension="org.haxe.lime.KizzyHelper" />
+		<android extension="mobile.backend.java.KizzyHelper" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
 
