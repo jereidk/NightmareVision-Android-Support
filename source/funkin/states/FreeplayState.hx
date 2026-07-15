@@ -144,7 +144,7 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_HEIGHT:Float = 52; // icon size -- bumped from 36, were too small to read at a glance
+	var CIRCLE_HEIGHT:Float = 72; // icon size -- bumped from 52 (which itself was bumped from 36), still read as too small
 	var CIRCLE_PADDING:Float = 16; // spacing between circle icons — tight, they should read as one connected row
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
@@ -450,18 +450,21 @@ class FreeplayState extends AmongUIState
 		
 		refreshCards();
 		changeSong(0, true);
-		preloadSectionPortraits(curMonth);
 
 		if (by != 0) FlxG.sound.play(Paths.sound(by > 0 ? 'panelAppear' : 'panelDisappear'), 0.5);
 	}
-	
+
 	inline function moveCard(c:FreeplayCard, selection:Float, instant:Bool = false):Void
 	{
 		if (c == null) return;
 
 		final dist:Float = (c.ID - selection);
 
-		if (Math.abs(dist) <= LAZY_ICON_LOAD_DIST) c.loadIconIfNeeded();
+		if (Math.abs(dist) <= LAZY_ICON_LOAD_DIST)
+		{
+			c.loadIconIfNeeded();
+			preloadCardPortrait(c);
+		}
 
 		final centerShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * CARD_EXPAND_CENTER_FACTOR
@@ -971,24 +974,32 @@ class FreeplayState extends AmongUIState
 		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
 		circlesMinY = circles.findMinY();
 		circlesMaxY = circles.findMaxY();
-
-		preloadSectionPortraits(curMonth);
 	}
 
-	function preloadSectionPortraits(sectionIndex:Int):Void
+	// Tracks which portrait keys have already been cache-warmed this
+	// session, so scrolling back and forth over the same cards doesn't
+	// redundantly re-call Paths.image() for ones already loaded.
+	var _portraitCacheWarmed:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
+
+	/**
+	 * Warms this card's portrait into FunkinAssets.cache without assigning it
+	 * to any sprite -- same lazy, distance-gated strategy moveCard() already
+	 * uses for FreeplayCard.loadIconIfNeeded(), just for changeSong()'s
+	 * portrait.loadGraphic() call instead. Replaces the old
+	 * preloadSectionPortraits(), which eagerly decoded every distinct
+	 * portrait across an ENTIRE section on every section change -- the same
+	 * "decode+GPU-upload burst" cost this file's per-card icon lazy-loading
+	 * was already fixed to avoid (see loadIconIfNeeded()'s doc comment),
+	 * just for portraits instead of icons.
+	 */
+	inline function preloadCardPortrait(c:FreeplayCard):Void
 	{
-		if (sectionIndex < 0 || sectionIndex >= weeks.length) return;
-		final section = weeks[sectionIndex];
-		final seenPorts = new haxe.ds.StringMap<Bool>();
-		for (i in 0...section.songs.length)
-		{
-			final si:SongInformation = cast section.songs[i];
-			final porty:String = si.portrait;
-			if (seenPorts.exists(porty)) continue;
-			seenPorts.set(porty, true);
-			Mods.currentModDirectory = si.mod;
-			Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
-		}
+		if (c.meta == null) return;
+		final porty:String = c.meta.portrait;
+		if (_portraitCacheWarmed.exists(porty)) return;
+		_portraitCacheWarmed.set(porty, true);
+		Mods.currentModDirectory = c.meta.mod;
+		Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
 		Mods.currentModDirectory = null;
 	}
 }
