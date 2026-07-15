@@ -60,7 +60,16 @@ class GameOverSubstate extends MusicBeatSubstate
 	var startedDeath:Bool = false;
 	
 	var camCTRL:FlxCamera;
-	
+
+	/**
+	 * True when `boyfriend` was taken from PlayState.preloadedGameoverChar --
+	 * still needs the on-screen positioning create() normally does for a
+	 * freshly-constructed one (see the `else if` there). False for the
+	 * "reuse the live PlayState.instance.boyfriend in place" case, which is
+	 * already correctly positioned.
+	 */
+	var needsPositioning:Bool = false;
+
 	/**
 	 * Resets gameover character values
 	 */
@@ -86,6 +95,16 @@ class GameOverSubstate extends MusicBeatSubstate
 			{
 				boyfriend = new Character(PlayState.instance.boyfriend.getScreenPosition()
 					.x, PlayState.instance.boyfriend.getScreenPosition().y, characterName, true);
+				boyfriend.x += boyfriend.positionArray[0] - PlayState.instance.boyfriend.positionArray[0];
+				boyfriend.y += boyfriend.positionArray[1] - PlayState.instance.boyfriend.positionArray[1];
+			}
+			else if (needsPositioning)
+			{
+				// Came from PlayState.preloadedGameoverChar -- built off-screen
+				// at (0, 0) ahead of time, so (unlike the "reuse the live
+				// PlayState.instance.boyfriend in place" branch above) it still
+				// needs the same positioning the cold path just did.
+				boyfriend.setPosition(PlayState.instance.boyfriend.getScreenPosition().x, PlayState.instance.boyfriend.getScreenPosition().y);
 				boyfriend.x += boyfriend.positionArray[0] - PlayState.instance.boyfriend.positionArray[0];
 				boyfriend.y += boyfriend.positionArray[1] - PlayState.instance.boyfriend.positionArray[1];
 			}
@@ -148,6 +167,17 @@ class GameOverSubstate extends MusicBeatSubstate
 		if (PlayState.instance.boyfriend != null && PlayState.instance.boyfriend.curCharacter == characterName)
 		{
 			boyfriend = PlayState.instance.boyfriend;
+		}
+		// Otherwise, PlayState already warmed this exact character's atlas
+		// ahead of time (see PlayState.preloadedGameoverChar) -- take
+		// ownership of it instead of `new Character(...)`-ing a cold one
+		// right now. Nulled on PlayState's side so its own destroy() doesn't
+		// also dispose the instance we're now using.
+		else if (PlayState.instance?.preloadedGameoverChar != null && PlayState.instance.preloadedGameoverChar.curCharacter == characterName)
+		{
+			boyfriend = PlayState.instance.preloadedGameoverChar;
+			PlayState.instance.preloadedGameoverChar = null;
+			needsPositioning = true;
 		}
 	}
 	

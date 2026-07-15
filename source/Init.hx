@@ -252,6 +252,7 @@ class Init extends FlxState
 
 		funkin.backend.GameLogger.init();
 		funkin.backend.SystemMonitor.init();
+		funkin.backend.ReflectLog.init();
 		funkin.data.Highscore.load();
 		
 		if (FlxG.save.data.weekCompleted != null) funkin.states.StoryMenuState.weekCompleted = FlxG.save.data.weekCompleted;

@@ -307,17 +307,17 @@ class SystemMonitor
 	 * Breadcrumb for HScript's dynamic `object.field` reads/writes
 	 * (InterpEx.get()/set()). This fires from EVERY scripted `obj.field`
 	 * expression across every active script -- including per-frame onUpdate
-	 * hooks -- so logging every single call (as this used to do) drowned
-	 * sysmon.log in routine, uninteresting traffic (ClientPrefs/Conductor
-	 * -style static-field access alone is thousands of calls per minute of
-	 * play) and rotated away the more useful entries far faster than
-	 * intended. Only the two actually-diagnostic shapes get written now:
-	 * a null target (the classic NPE precursor -- accessing a field on
+	 * hooks -- so only the two actually-diagnostic shapes get written: a
+	 * null target (the classic NPE precursor -- accessing a field on
 	 * something that was never set), and PlayableSong specifically (see
 	 * funkin/audio/SyncedFlxSoundGroup.hx, the object behind the
 	 * `audio`/`vocals` reflection crash this breadcrumb exists for). Every
 	 * other target (the overwhelming majority) is skipped entirely -- no
-	 * line, no buffered write, no cost beyond the two checks below.
+	 * line, no write, no cost beyond the two checks below.
+	 *
+	 * Writes to ReflectLog's own reflect.log, not sysmon.log -- keeping it
+	 * out of the general system-diagnostics log so a burst of reflection
+	 * breadcrumbs can't rotate away GC/memory/FPS entries that matter more.
 	 */
 	public static function logReflectAccess(target:Dynamic, field:String):Void
 	{
@@ -326,7 +326,7 @@ class SystemMonitor
 		{
 			if (target == null)
 			{
-				_write('[REFLECT] <null>.' + field);
+				ReflectLog.write('[REFLECT] <null>.' + field);
 				return;
 			}
 
@@ -338,7 +338,12 @@ class SystemMonitor
 			final clsName = cls != null ? Type.getClassName(cls) : null;
 			if (clsName == 'funkin.audio.PlayableSong')
 			{
-				_write('[REFLECT] ' + clsName + '.' + field);
+				ReflectLog.write('[REFLECT] ' + clsName + '.' + field);
+				// Not for the reflect line itself (ReflectLog writes
+				// immediately, unbuffered) -- this forces sysmon.log's own
+				// buffered GC/memory/FPS entries to disk too, in case a
+				// native crash follows this risky access a few
+				// instructions later.
 				flush();
 			}
 		}
