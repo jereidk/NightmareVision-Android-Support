@@ -1,5 +1,6 @@
 package funkin.states.options;
 
+import funkin.states.options.Option.OptionBadge;
 import mobile.backend.LangFontPacks;
 import mobile.backend.DLCManager;
 import mobile.backend.DLCManager.DLCTaskState;
