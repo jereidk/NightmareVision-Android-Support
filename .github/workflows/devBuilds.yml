@@ -432,9 +432,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
@@ -445,9 +442,9 @@ jobs:
           mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "$BUILD_FLAGS"
+            haxelib run lime build android $BUILD_MODE_FLAG -D $BUILD_FLAGS
           else
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}"
+            haxelib run lime build android $BUILD_MODE_FLAG
           fi
 
       - name: Upload Artifact
@@ -837,9 +834,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
@@ -847,9 +841,9 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM64_ONLY $BUILD_FLAGS"
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
           else
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM64_ONLY"
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY
           fi
 
       - name: Upload Artifact
@@ -1246,9 +1240,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
@@ -1256,9 +1247,9 @@ jobs:
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM32_ONLY $BUILD_FLAGS"
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
           else
-            bash .github/scripts/android-compile.sh "${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}" "ANDROID_ARM32_ONLY"
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY
           fi
 
       - name: Upload Artifact
@@ -1669,18 +1660,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
-      - name: Patch Lime GameActivity.java (extension imports)
-        run: bash .github/scripts/patch-lime-gameactivity.sh
-
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
         run: |
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
-            bash .github/scripts/android-compile.sh release "ANDROID_ARM64_ONLY HXCPP_DEBUG_LINK $BUILD_FLAGS"
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
           else
-            bash .github/scripts/android-compile.sh release "ANDROID_ARM64_ONLY HXCPP_DEBUG_LINK"
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
           fi
 
       # Diagnostic only -- no effect on the build. By this point Gradle has
