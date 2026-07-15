@@ -2,6 +2,7 @@ package funkin.objects.note;
 
 import funkin.data.*;
 import funkin.game.shaders.RGBShader;
+import funkin.objects.note.Note.QueueNote;
 
 /**
  * A single stretched sprite representing an entire hold, replacing the old
