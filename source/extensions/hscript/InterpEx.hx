@@ -69,26 +69,6 @@ class InterpEx extends crowplexus.hscript.Interp
 		return parent;
 	}
 
-	/**
-	 * Breadcrumb before the actual reflective read (see base Interp.get() --
-	 * this is the only call site that reaches into a scripted object's own
-	 * __Field()/__GetFields() machinery for `obj.field` expressions). Logged
-	 * separately from resolve()/EIdent handling below, which only covers bare
-	 * identifiers backed by parentFields/sharedFields, not chained member
-	 * access like `audio.songLength`.
-	 */
-	override function get(o:Dynamic, f:String):Dynamic
-	{
-		funkin.backend.SystemMonitor.logReflectAccess(o, f);
-		return super.get(o, f);
-	}
-
-	override function set(o:Dynamic, f:String, v:Dynamic):Dynamic
-	{
-		funkin.backend.SystemMonitor.logReflectAccess(o, f);
-		return super.set(o, f, v);
-	}
-	
 	override function increment(e:Expr, prefix:Bool, delta:Int):Dynamic
 	{
 		#if hscriptPos
