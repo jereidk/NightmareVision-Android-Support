@@ -819,6 +819,7 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
+            ~/.hxcpp_cache
           key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
@@ -834,11 +835,43 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
 
+      # DIAGNOSTIC ONLY -- no effect on the build. Investigating whether
+      # hxcpp.n / haxe-target.xml (dateOnly depends that feed FileGroup.mNewest,
+      # see File.isOutOfDate() in hxcpp's BuildTool) get touched with a fresh
+      # mtime on every run regardless of the haxelibs cache hit, which would
+      # make the whole "haxe" group always appear out-of-date independent of
+      # HXCPP_COMPILE_CACHE. Prints real timestamps instead of guessing.
+      - name: DIAGNOSTIC -- mtime comparison for cache staleness investigation
+        run: |
+          echo "== current time =="
+          date -u
+          echo "== hxcpp.n (touched by 'Ensure hxcpp for Lime rebuild'?) =="
+          find ~/haxelib/hxcpp .haxelib/hxcpp -iname "hxcpp.n" 2>/dev/null -exec stat --format='%n mtime=%y' {} \; || echo "not found"
+          echo "== toolchain/haxe-target.xml (dateOnly depend) =="
+          find ~/haxelib/hxcpp .haxelib/hxcpp -iname "haxe-target.xml" 2>/dev/null -exec stat --format='%n mtime=%y' {} \; || echo "not found"
+          echo "== sample restored .o files from the obj cache =="
+          find export -iname "*.o" 2>/dev/null | head -3 | xargs -r stat --format='%n mtime=%y' || echo "no .o files found (fresh obj dir?)"
+          echo "== ~/.hxcpp_cache contents (should be non-empty on the 2nd+ run) =="
+          ls -la ~/.hxcpp_cache 2>/dev/null | head -5 || echo "~/.hxcpp_cache does not exist yet"
+          find ~/.hxcpp_cache -type f 2>/dev/null | wc -l
+
+      # HXCPP_COMPILE_CACHE was never set in this job (unlike the fat job's
+      # own Compile step, which does export it) -- without it,
+      # CompileCache.hasCache stays false for hxcpp's whole build tool, so
+      # FileGroup.isCached() is false for every group, and Compiler.compile()
+      # never even enters its cache-lookup branch (Compiler.hx ~328: `if
+      # (mCompilerVersion!=null && inFile.mGroup.isCached())`) -- every object
+      # gets rebuilt from scratch every run, regardless of anything restored
+      # into export/.../obj above. Matches this job's own cache path (added
+      # ~/.hxcpp_cache to the step above) instead of introducing a second cache.
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D $BUILD_FLAGS
@@ -1225,6 +1258,7 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
+            ~/.hxcpp_cache
           key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
@@ -1240,11 +1274,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
 
+      # See the matching comment in the ARM64 job's Compile step -- same
+      # missing HXCPP_COMPILE_CACHE bug, same fix.
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
         run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
@@ -1650,6 +1689,7 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
+            ~/.hxcpp_cache
           key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
             hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-
@@ -1660,10 +1700,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
+      # See the matching comment in the ARM64 job's Compile step -- same
+      # missing HXCPP_COMPILE_CACHE bug, same fix. Uses this job's own
+      # ~/.hxcpp_cache (cached above under its own debugsyms key) -- safe to
+      # reuse the same $HOME path since each job runs in an isolated runner VM.
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
         run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
