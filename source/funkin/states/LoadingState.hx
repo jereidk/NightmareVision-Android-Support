@@ -119,6 +119,42 @@ class LoadingState extends MusicBeatState
 	}
 
 	/**
+	 * Abandons an in-flight/finished prefetch that's about to go unused --
+	 * e.g. Freeplay lingered 2s on a song (starting a background decode
+	 * Thread), then the player left without ever picking that song. Nothing
+	 * else cancels that Thread otherwise: it only self-terminates early once
+	 * a NEWER prefetchSong()/startPreload() bumps _threadGeneration, so an
+	 * abandoned one just runs to completion on its own, competing with the
+	 * foreground (Freeplay/StoryMenu, including virtual pad input handling)
+	 * for CPU during hxcpp's stop-the-world GC pauses, for zero benefit since
+	 * nothing will ever call finalizePendingAssets() to consume its output.
+	 *
+	 * `keepSongId` is the song actually being committed to (if any) -- pass
+	 * null to always cancel, or the target songId to skip cancelling when
+	 * the pending prefetch is exactly the one about to be consumed.
+	 */
+	#if (sys && cpp)
+	public static function cancelPendingPrefetch(?keepSongId:String):Void
+	{
+		_mutex.acquire();
+		final shouldCancel = _prefetchForSongId != '' && _prefetchForSongId != keepSongId;
+		if (shouldCancel)
+		{
+			_threadGeneration++;
+			_pendingBitmaps.resize(0);
+			_pendingAudioBuffers.resize(0);
+			_prefetchComplete = false;
+			_prefetchForSongId = '';
+			_prefetchTotal = 0;
+			_prefetchDone = 0;
+		}
+		_mutex.release();
+	}
+	#else
+	public static function cancelPendingPrefetch(?keepSongId:String):Void {}
+	#end
+
+	/**
 	 * Fire-and-forget: start preloading the given song's assets in a
 	 * background Thread right now.  Called from PlayState.endSong() while
 	 * the score popup is showing, so by the time LoadingState appears

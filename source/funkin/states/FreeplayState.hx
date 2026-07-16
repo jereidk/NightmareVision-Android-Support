@@ -180,6 +180,9 @@ class FreeplayState extends AmongUIState
 	var _freeplayPrefetchTimer:Float = 0;
 	static inline final PREFETCH_DELAY:Float = 2.0;
 	var _lastPrefetchedSong:String = '';
+
+	/** Set right before actually switching to the prefetched song -- see destroy(). */
+	var _committingToSongId:Null<String> = null;
 	#end
 
 	override function create()
@@ -909,6 +912,7 @@ class FreeplayState extends AmongUIState
 			// different (or never-lingered-on) song must never read a
 			// stale "complete" flag left over from an unrelated song.
 			#if (android && sys)
+			_committingToSongId = PlayState.SONG?.song;
 			if (PlayState.SONG != null && funkin.states.LoadingState.isPrefetchedFor(PlayState.SONG.song))
 				FlxG.switchState(PlayState.new);
 			else
@@ -921,6 +925,14 @@ class FreeplayState extends AmongUIState
 	
 	override function destroy()
 	{
+		// Abandon any in-flight/finished prefetch we're not actually about to
+		// use -- e.g. lingered 2s on a song (starting a background decode
+		// Thread) then left without picking it. See cancelPendingPrefetch()'s
+		// own doc comment for why an orphaned Thread left running matters.
+		#if (android && sys)
+		funkin.states.LoadingState.cancelPendingPrefetch(_committingToSongId);
+		#end
+
 		// super.destroy() (AmongUIState) handles disposeNewSince(_bitmapSnapshotAtCreate).
 		super.destroy();
 
