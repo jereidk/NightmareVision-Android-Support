@@ -50,4 +50,33 @@ if m:
 with open(build_gradle, 'w') as f: f.write(c)
 PYTHON_EOF
 
+# ── Add extension Java source directory so Gradle compiles the
+# mobile.backend.java classes that GameActivity.java references ──
+echo "[INFO] Adding extension java sourceSet..."
+python3 - "$BUILD_GRADLE" << 'EXTEOF'
+import sys
+bg = sys.argv[1]
+with open(bg) as f: c = f.read()
+old2 = '	}
+
+	::if KEY_STORE::'
+new2 = '	}
+
+	sourceSets {
+		main {
+			java {
+				srcDir '../../../../../../source/mobile/backend/java'
+			}
+		}
+	}
+
+	::if KEY_STORE::'
+if old2 in c:
+    c = c.replace(old2, new2)
+    print("Added extension java sourceSet")
+else:
+    print("WARN: could not find injection point for extension sourceSet")
+with open(bg, 'w') as f: f.write(c)
+EXTEOF
+
 echo "[INFO] Done! ABI filter: $ABI_FILTER"
