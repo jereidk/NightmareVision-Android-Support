@@ -80,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v6-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -513,7 +513,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v6-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -915,7 +915,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v6-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -1365,7 +1365,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v6-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       - name: Install Linux system deps
         run: |
