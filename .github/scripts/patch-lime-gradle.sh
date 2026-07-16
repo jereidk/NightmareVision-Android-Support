@@ -50,40 +50,15 @@ if m:
 with open(build_gradle, 'w') as f: f.write(c)
 PYTHON_EOF
 
-# ── Inject extension java source dir ──
-# GameActivity.java imports mobile.backend.java.* classes that javac
-# cannot find unless they are in Gradle's source set. Lime normally
-# copies extension .java files into the build dir via recursiveCopy
-# during update(), but that try/catch swallows errors silently on
-# some runners. Adding srcDir makes Gradle find them directly.
-echo "[INFO] Adding extension java sourceSets..."
-python3 - "$BUILD_GRADLE" << 'EXTEOF'
-import sys
-bg = sys.argv[1]
-with open(bg) as f:
-    c = f.read()
-# Template line ends defaultConfig block with a tab-indented
-# closing brace, blank line, then the ::if KEY_STORE:: guard.
-# Inject sourceSets right between them.
-needle = '\t}\n\n\t::if KEY_STORE::'
-replacement = (
-    '\t}\n\n'
-    '\tsourceSets {\n'
-    '\t\tmain {\n'
-    '\t\t\tjava {\n'
-    '\t\t\t\tsrcDir \'../../../../../../../source/mobile/backend/java\'\n'
-    '\t\t\t}\n'
-    '\t\t}\n'
-    '\t}\n\n'
-    '\t::if KEY_STORE::'
-)
-if needle in c:
-    c = c.replace(needle, replacement)
-    print('[INFO] Added extension java sourceSet')
-else:
-    print('[WARN] Could not find injection point')
-with open(bg, 'w') as f:
-    f.write(c)
-EXTEOF
-
 echo "[INFO] Done! ABI filter: $ABI_FILTER"
+
+# NOTE: this used to also inject an extra Gradle sourceSet here to work
+# around GameActivity.java's mobile.backend.java.* imports going missing
+# (lime's own <java path> copy in AndroidPlatform.hx wraps recursiveCopy()
+# in a try/catch with no throw/log, so it can silently no-op). That's now
+# fixed at the actual source of the problem instead: Project.xml's <java
+# path> was pointed at the whole "source" tree (~300 unrelated Haxe files,
+# any one of which hiccuping during copy would silently drop the entire
+# path including the real extension classes) and has been narrowed to a
+# dedicated androidJava/ root containing only the 6 files that need to be
+# there. No CI-side template patching needed for this anymore.
