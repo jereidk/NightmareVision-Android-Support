@@ -269,9 +269,17 @@ class Paths
 		// used -- which needs an absolute path on Android for the exact
 		// same reason FunkinAssets.getSoundUnsafe()/getBitmapData() do (see
 		// androidStoragePath()'s own doc comment): the native loader opens
-		// it via lime::fopen() (SDL-backed), not sys.FileSystem's own
+		// it via lime.fopen() (SDL-backed), not sys.FileSystem's own
 		// resolution, which is what FileSystem.exists() just used here.
-		return (!FileSystem.exists(path) && Assets.exists(path, FONT) ? Assets.getFont(path).fontName : FunkinAssets.androidStoragePath(path));
+		//
+		// Only prefix when FileSystem.exists(path) is CONFIRMED true (a real
+		// loose/mod file) -- same gate getBitmapData()/getSoundUnsafe() use.
+		// Prefixing unconditionally in the else branch would also catch the
+		// "doesn't exist anywhere" case, handing a bogus storage-prefixed
+		// path to Font.fromFile() instead of the plain path a bundled
+		// (embed="false") asset actually needs.
+		if (!FileSystem.exists(path) && Assets.exists(path, FONT)) return Assets.getFont(path).fontName;
+		return FileSystem.exists(path) ? FunkinAssets.androidStoragePath(path) : path;
 	}
 	
 	public static function findFileWithExts(key:String, exts:Array<String>, ?parentFolder:String, mode:PathsTestMode = NORMAL):String

@@ -508,9 +508,9 @@ class FunkinAssets
 	/**
 	 * Makes a relative loose-file path (already confirmed to exist via
 	 * FileSystem.exists()) absolute for Android's native file loaders.
-	 * lime's C++ media decoders (OGG::Decode/WAV::Decode/VorbisFile, and
+	 * lime's C++ media decoders (OGG.Decode/WAV.Decode/VorbisFile, and
 	 * BitmapData.fromFile before this had the same fix) open files via
-	 * lime::fopen(), which is backed by SDL's SDL_IOFromFile() rather than a
+	 * lime.fopen(), which is backed by SDL's SDL_IOFromFile() rather than a
 	 * plain POSIX fopen() -- on Android, SDL resolves a relative path
 	 * against its own APK-asset lookup first, not this app's actual
 	 * external-storage working directory, so a relative "content/<mod>/..."
@@ -577,8 +577,8 @@ class FunkinAssets
 		#if (MODS_ALLOWED || ASSET_REDIRECT)
 		if (FileSystem.exists(key))
 		{
-			// Sound.fromFile() ends up in lime's native OGG::Decode/WAV::Decode,
-			// which open the file via lime::fopen() -- backed by SDL's
+			// Sound.fromFile() ends up in lime's native OGG.Decode/WAV.Decode,
+			// which open the file via lime.fopen() -- backed by SDL's
 			// SDL_IOFromFile(), NOT a plain POSIX fopen(). On Android, SDL
 			// resolves a relative path against its own APK-asset lookup
 			// first, not against this app's actual working directory, so a
@@ -634,7 +634,7 @@ class FunkinAssets
 		return null;
 		#else
 		// VorbisFile.fromFile() opens the file through the exact same
-		// native lime::fopen()/SDL_IOFromFile() path as Sound.fromFile() --
+		// native lime.fopen()/SDL_IOFromFile() path as Sound.fromFile() --
 		// see androidStoragePath()'s own doc comment. Only meaningful once a
 		// loose file is confirmed to exist; a bundled/APK-relative key
 		// passes through unchanged.
