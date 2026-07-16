@@ -59,12 +59,7 @@ class CrashHandler
 
 		var message:String = Std.string(event.error);
 
-		// Not trace()/Logger.log() -- this fires from inside the uncaught-error
-		// handler itself, so keep it to the one thing that can't itself throw.
-		// GameLogger.write() below is what actually makes this durable; this
-		// line is just so it's visible via logcat too, same as it always was.
 		#if sys Sys.println #else trace #end (message);
-		#if android GameLogger.write('[CRASHHANDLER] ' + message); #end
 
 		if (Std.isOfType(event.error, Error))
 		{

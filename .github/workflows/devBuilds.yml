@@ -80,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v7-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -321,27 +321,6 @@ jobs:
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
 
-      # Symbolicated a native_crash_trace.log: SIGSEGV, null pointer
-      # dereference, fault addr 0x10, at hxcpp_main+40 -- crashing before a
-      # single line of our own Haxe code runs. logcat right before the
-      # crash showed two NoSuchMethodError warnings for
-      # "Ljava/lang/Boolean;.booleanValue()D" and
-      # "Ljava/lang/Character;.charValue()D" -- neither method actually
-      # returns double (they return boolean/char), so JNI.cpp's
-      # INIT_ELEMENT macro (which hardcodes "()D" for every boxed-number
-      # wrapper) fails GetMethodID() for exactly those two, silently (the
-      # resulting exception gets swallowed), leaving their jmethodID null.
-      # The very next boxed Boolean/Character value that crosses the JNI
-      # boundary gets unboxed with that null jmethodID -- undefined
-      # behavior, this crash. See patch-lime-jni-boxed-methodid.py for the
-      # full writeup.
-      - name: Patch lime JNI.cpp boxed Boolean/Character method signatures
-        run: |
-          while IFS= read -r JNI_FILE; do
-            echo "Found: $JNI_FILE"
-            python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
-
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
           while IFS= read -r IRIS_FILE; do
@@ -425,9 +404,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
-          key: hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
 
       # v2 bump (was hxcpp-cache-android-fat-): restore-keys seeds
       # HXCPP_COMPILE_CACHE from the closest OLD entry under the prefix,
@@ -451,7 +430,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -534,7 +513,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v7-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -760,27 +739,6 @@ jobs:
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
 
-      # Symbolicated a native_crash_trace.log: SIGSEGV, null pointer
-      # dereference, fault addr 0x10, at hxcpp_main+40 -- crashing before a
-      # single line of our own Haxe code runs. logcat right before the
-      # crash showed two NoSuchMethodError warnings for
-      # "Ljava/lang/Boolean;.booleanValue()D" and
-      # "Ljava/lang/Character;.charValue()D" -- neither method actually
-      # returns double (they return boolean/char), so JNI.cpp's
-      # INIT_ELEMENT macro (which hardcodes "()D" for every boxed-number
-      # wrapper) fails GetMethodID() for exactly those two, silently (the
-      # resulting exception gets swallowed), leaving their jmethodID null.
-      # The very next boxed Boolean/Character value that crosses the JNI
-      # boundary gets unboxed with that null jmethodID -- undefined
-      # behavior, this crash. See patch-lime-jni-boxed-methodid.py for the
-      # full writeup.
-      - name: Patch lime JNI.cpp boxed Boolean/Character method signatures
-        run: |
-          while IFS= read -r JNI_FILE; do
-            echo "Found: $JNI_FILE"
-            python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
-
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
           while IFS= read -r IRIS_FILE; do
@@ -861,9 +819,9 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
@@ -874,7 +832,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -957,7 +915,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v7-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
       # real rebuild even on a cache hit (self-healing a missing ndll), and
@@ -1187,27 +1145,6 @@ jobs:
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
 
-      # Symbolicated a native_crash_trace.log: SIGSEGV, null pointer
-      # dereference, fault addr 0x10, at hxcpp_main+40 -- crashing before a
-      # single line of our own Haxe code runs. logcat right before the
-      # crash showed two NoSuchMethodError warnings for
-      # "Ljava/lang/Boolean;.booleanValue()D" and
-      # "Ljava/lang/Character;.charValue()D" -- neither method actually
-      # returns double (they return boolean/char), so JNI.cpp's
-      # INIT_ELEMENT macro (which hardcodes "()D" for every boxed-number
-      # wrapper) fails GetMethodID() for exactly those two, silently (the
-      # resulting exception gets swallowed), leaving their jmethodID null.
-      # The very next boxed Boolean/Character value that crosses the JNI
-      # boundary gets unboxed with that null jmethodID -- undefined
-      # behavior, this crash. See patch-lime-jni-boxed-methodid.py for the
-      # full writeup.
-      - name: Patch lime JNI.cpp boxed Boolean/Character method signatures
-        run: |
-          while IFS= read -r JNI_FILE; do
-            echo "Found: $JNI_FILE"
-            python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
-
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
           while IFS= read -r IRIS_FILE; do
@@ -1288,9 +1225,9 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
@@ -1301,7 +1238,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1428,7 +1365,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .haxelib/lime
-          key: lime-android-v7-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
 
       - name: Install Linux system deps
         run: |
@@ -1642,27 +1579,6 @@ jobs:
             python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
           done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
 
-      # Symbolicated a native_crash_trace.log: SIGSEGV, null pointer
-      # dereference, fault addr 0x10, at hxcpp_main+40 -- crashing before a
-      # single line of our own Haxe code runs. logcat right before the
-      # crash showed two NoSuchMethodError warnings for
-      # "Ljava/lang/Boolean;.booleanValue()D" and
-      # "Ljava/lang/Character;.charValue()D" -- neither method actually
-      # returns double (they return boolean/char), so JNI.cpp's
-      # INIT_ELEMENT macro (which hardcodes "()D" for every boxed-number
-      # wrapper) fails GetMethodID() for exactly those two, silently (the
-      # resulting exception gets swallowed), leaving their jmethodID null.
-      # The very next boxed Boolean/Character value that crosses the JNI
-      # boundary gets unboxed with that null jmethodID -- undefined
-      # behavior, this crash. See patch-lime-jni-boxed-methodid.py for the
-      # full writeup.
-      - name: Patch lime JNI.cpp boxed Boolean/Character method signatures
-        run: |
-          while IFS= read -r JNI_FILE; do
-            echo "Found: $JNI_FILE"
-            python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
-
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
           while IFS= read -r IRIS_FILE; do
@@ -1734,15 +1650,15 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-
+            hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-
 
       - name: Prune stale hxcpp compile caches
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1854,4 +1770,4 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"

@@ -144,7 +144,7 @@ class FreeplayState extends AmongUIState
 	var TAB_DISTANCE:Float = 320;
 	var TAB_RADIUS:Float = 5.3; // higher make less ciruclar
 
-	var CIRCLE_HEIGHT:Float = 72; // icon size -- bumped from 52 (which itself was bumped from 36), still read as too small
+	var CIRCLE_HEIGHT:Float = 52; // icon size -- bumped from 36, were too small to read at a glance
 	var CIRCLE_PADDING:Float = 16; // spacing between circle icons — tight, they should read as one connected row
 	var CIRCLE_FADE:Float = 0.3; // minimum opacity for non-focused circles
 
@@ -174,14 +174,7 @@ class FreeplayState extends AmongUIState
 	var controlUP:TurboControl = TurboControl.fromControl('ui_up');
 	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
 	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
-
-	#if (android && sys)
-	/** Timer: when the player stays on the same song for this long, prefetch its audio. */
-	var _freeplayPrefetchTimer:Float = 0;
-	static inline final PREFETCH_DELAY:Float = 2.0;
-	var _lastPrefetchedSong:String = '';
-	#end
-
+	
 	override function create()
 	{
 		FunkinAssets.cache.clearStoredMemory();
@@ -457,21 +450,18 @@ class FreeplayState extends AmongUIState
 		
 		refreshCards();
 		changeSong(0, true);
+		preloadSectionPortraits(curMonth);
 
 		if (by != 0) FlxG.sound.play(Paths.sound(by > 0 ? 'panelAppear' : 'panelDisappear'), 0.5);
 	}
-
+	
 	inline function moveCard(c:FreeplayCard, selection:Float, instant:Bool = false):Void
 	{
 		if (c == null) return;
 
 		final dist:Float = (c.ID - selection);
 
-		if (Math.abs(dist) <= LAZY_ICON_LOAD_DIST)
-		{
-			c.loadIconIfNeeded();
-			preloadCardPortrait(c);
-		}
+		if (Math.abs(dist) <= LAZY_ICON_LOAD_DIST) c.loadIconIfNeeded();
 
 		final centerShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
 			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * CARD_EXPAND_CENTER_FACTOR
@@ -530,11 +520,6 @@ class FreeplayState extends AmongUIState
 		scriptGroup.call('onSongChange', [song.songName]);
 		intendedScore = Highscore.getScore(song.songName, 1);
 		intendedRating = Highscore.getRating(song.songName, 1);
-
-		// Reset the prefetch timer every time the selection changes.
-		#if (android && sys)
-		_freeplayPrefetchTimer = 0;
-		#end
 	}
 	
 	function changePortrait(reset:Bool)
@@ -772,27 +757,6 @@ class FreeplayState extends AmongUIState
 		
 		infoText.text = scoreLine + '\n' + accLine;
 		
-		// Prefetch audio when the player lingers on a song.
-		#if (android && sys)
-		if (!lockMovement && cutscenePhase == NONE && week_songs.length > 0)
-		{
-			final song:SongInformation = week_songs[curSelect];
-			if (song.songName != _lastPrefetchedSong)
-			{
-				_freeplayPrefetchTimer += elapsed;
-				if (_freeplayPrefetchTimer >= PREFETCH_DELAY)
-				{
-					final ret = PlayState.prepareForSong(song.songName);
-					if (ret == null && PlayState.SONG != null)
-					{
-						funkin.states.LoadingState.prefetchSong(PlayState.SONG);
-						_lastPrefetchedSong = song.songName;
-					}
-				}
-			}
-		}
-		#end
-		
 		super.update(elapsed);
 	}
 	
@@ -904,16 +868,7 @@ class FreeplayState extends AmongUIState
 		}
 		else
 		{
-			// Hybrid: skip LoadingState if the player lingered long enough
-			// for the prefetch to finish.
-			#if (android && sys)
-			if (funkin.states.LoadingState.prefetchComplete)
-				FlxG.switchState(PlayState.new);
-			else
-				LoadingState.loadAndSwitchState(PlayState.new);
-			#else
 			LoadingState.loadAndSwitchState(PlayState.new);
-			#end
 		}
 	}
 	
@@ -1016,32 +971,24 @@ class FreeplayState extends AmongUIState
 		circles.x = Std.int((FlxG.width - circles.width) * .5 - circles.findMinX());
 		circlesMinY = circles.findMinY();
 		circlesMaxY = circles.findMaxY();
+
+		preloadSectionPortraits(curMonth);
 	}
 
-	// Tracks which portrait keys have already been cache-warmed this
-	// session, so scrolling back and forth over the same cards doesn't
-	// redundantly re-call Paths.image() for ones already loaded.
-	var _portraitCacheWarmed:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
-
-	/**
-	 * Warms this card's portrait into FunkinAssets.cache without assigning it
-	 * to any sprite -- same lazy, distance-gated strategy moveCard() already
-	 * uses for FreeplayCard.loadIconIfNeeded(), just for changeSong()'s
-	 * portrait.loadGraphic() call instead. Replaces the old
-	 * preloadSectionPortraits(), which eagerly decoded every distinct
-	 * portrait across an ENTIRE section on every section change -- the same
-	 * "decode+GPU-upload burst" cost this file's per-card icon lazy-loading
-	 * was already fixed to avoid (see loadIconIfNeeded()'s doc comment),
-	 * just for portraits instead of icons.
-	 */
-	inline function preloadCardPortrait(c:FreeplayCard):Void
+	function preloadSectionPortraits(sectionIndex:Int):Void
 	{
-		if (c.meta == null) return;
-		final porty:String = c.meta.portrait;
-		if (_portraitCacheWarmed.exists(porty)) return;
-		_portraitCacheWarmed.set(porty, true);
-		Mods.currentModDirectory = c.meta.mod;
-		Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
+		if (sectionIndex < 0 || sectionIndex >= weeks.length) return;
+		final section = weeks[sectionIndex];
+		final seenPorts = new haxe.ds.StringMap<Bool>();
+		for (i in 0...section.songs.length)
+		{
+			final si:SongInformation = cast section.songs[i];
+			final porty:String = si.portrait;
+			if (seenPorts.exists(porty)) continue;
+			seenPorts.set(porty, true);
+			Mods.currentModDirectory = si.mod;
+			Paths.image(ext + 'portraits/' + porty, null, true, STRICT);
+		}
 		Mods.currentModDirectory = null;
 	}
 }

@@ -82,13 +82,9 @@ class MusicBeatState extends FlxUIState
 			virtualPad = FlxDestroyUtil.destroy(virtualPad);
 		}
 
-		if (virtualPadCam != null)
+		if(virtualPadCam != null)
 		{
-			// FunkinGame.switchState() already wipes every camera via
-			// FlxG.cameras.reset() before this state's own destroy() runs --
-			// check before removing again to avoid the "not a part of the
-			// game" warning (same fix as ControlsSubState.hx's destroy()).
-			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
+			FlxG.cameras.remove(virtualPadCam);
 			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
 		}
 	}
@@ -145,9 +141,9 @@ class MusicBeatState extends FlxUIState
 			hitbox = FlxDestroyUtil.destroy(hitbox);
 		}
 
-		if (hitboxCam != null)
+		if(hitboxCam != null)
 		{
-			if (FlxG.cameras.list.indexOf(hitboxCam) != -1) FlxG.cameras.remove(hitboxCam);
+			FlxG.cameras.remove(hitboxCam);
 			hitboxCam = FlxDestroyUtil.destroy(hitboxCam);
 		}
 

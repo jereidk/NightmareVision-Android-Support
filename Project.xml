@@ -191,21 +191,11 @@
 		<config:android permission="android.permission.ACCESS_NETWORK_STATE"/>
 		<config:android permission="android.permission.INTERNET"/>
 		<config:android permission="android.permission.CAPTURE_AUDIO_OUTPUT" />
-		<!-- Required for KizzyHelper's MediaSession notification (API 33+) --
-		     without this, requestPermissions() for it is auto-denied since
-		     Android refuses to grant any runtime permission that isn't also
-		     declared here, and the notification silently never posts. -->
-		<config:android permission="android.permission.POST_NOTIFICATIONS"/>
 
 		<android extension="mobile.backend.java.FileUtils" />
 		<android extension="mobile.backend.java.AndroidUtils" />
 		<android extension="mobile.backend.java.JavaCrashHandler" />
 		<android extension="mobile.backend.java.ScreenUtil" />
-		<!-- Reached only via JNI.createStaticMethod (AndroidRPC.hx), never
-		     through Lime's own Extension callback dispatch -- registered here
-		     anyway so it isn't a stripped-as-unused target if this project
-		     ever turns on R8/ProGuard minification. -->
-		<android extension="mobile.backend.java.KizzyHelper" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
 
@@ -215,29 +205,7 @@
     <architecture name="armv7" unless="ANDROID_ARM64_ONLY" />
     </section>
 
-    <!-- Points at androidJava/ (NOT source/) -- lime's own Android export
-         (AndroidPlatform.hx) copies each <java path>'s CONTENTS flat into
-         the Gradle java source root (System.recursiveCopy: "destination +
-         '/' + file", no basename nesting), wrapped in a silently-swallowed
-         try/catch (no throw, no log on failure -- the throw is explicitly
-         commented out upstream). This used to point at "source" (~300
-         files of unrelated Haxe code) so that source's mobile/backend/java
-         subfolder landed at the right package-matching path once copied.
-         But that meant any hiccup copying ANY of those ~300 unrelated
-         files silently dropped the ENTIRE java path, including these
-         actual extension classes -- producing the "cannot find symbol:
-         class FileUtils/.../KizzyHelper" Gradle failure with zero
-         indication why. androidJava/mobile/backend/java/*.java reproduces
-         the exact same post-copy directory structure (still matches
-         `package mobile.backend.java;` in each file) while cutting the
-         copy down to just the 6 files that actually need to be there --
-         nothing here is Haxe-reachable, only referenced via
-         JNI.createStaticMethod("mobile/backend/java/X", ...) fully-
-         qualified strings (AndroidUtils.hx, AndroidRPC.hx, ScreenUtil.hx,
-         JavaCrashHandler.hx, FileUtil.hx, FileReference.hx), which resolve
-         against the compiled .dex at runtime and don't care where the
-         .java source lived on disk. -->
-    <java path="androidJava" if="android"/>
+    <java path="source" if="android"/>
 
     <template path="templates/android" if="android"/>
 

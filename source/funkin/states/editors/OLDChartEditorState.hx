@@ -3420,7 +3420,7 @@ class OLDChartEditorState extends MusicBeatState
 			}
 		}
 		
-		var note:EditorNote = new EditorNote(daStrumTime, intendedData % _song.keys, null, true);
+		var note:EditorNote = new EditorNote(daStrumTime, intendedData % _song.keys, null, null, true);
 		note.lane = Std.int(Math.max(Math.floor(intendedData / _song.keys), 0));
 		note.noteData = intendedData % _song.keys;
 		note.alreadyShifted = true;

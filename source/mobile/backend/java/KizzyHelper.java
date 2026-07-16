@@ -47,7 +47,6 @@ public class KizzyHelper extends Extension {
                         createNotificationChannel();
                         
                         Log.d(TAG, "Session started in the background.");
-                        JavaCrashHandler.appendToGameLog(TAG, "INFO", "Session started in the background.");
                     }
 
                     if (Build.VERSION.SDK_INT >= 33) {
@@ -55,13 +54,12 @@ public class KizzyHelper extends Extension {
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "INIT ERROR: " + e.getMessage());
-                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "INIT ERROR: " + e);
                 }
             }
         });
     }
 
-    public static void updateStatus(final String title, final String artist, final String imagePath, final boolean isPlaying) {
+    public static void updateStatus(final String title, final String artist, final String imagePath) {
         if (Extension.mainActivity == null) return;
 
         Extension.mainActivity.runOnUiThread(new Runnable() {
@@ -99,7 +97,6 @@ public class KizzyHelper extends Extension {
                             }
                         } catch (Exception e) {
                             Log.e(TAG, "Image could not be loaded: " + imagePath);
-                            JavaCrashHandler.appendToGameLog(TAG, "ERROR", "Image could not be loaded: " + imagePath + " - " + e);
                         }
                     }
 
@@ -114,14 +111,9 @@ public class KizzyHelper extends Extension {
                             .build();
                     mediaSession.setMetadata(metadata);
 
-                    // isPlaying=false (menus, or a paused song) must report STATE_PAUSED,
-                    // not just skip the update -- Kizzy's own Media RPC polls this
-                    // MediaSession independently of when we last called updateStatus(),
-                    // so leaving it on STATE_PLAYING would keep showing "still playing"
-                    // in Discord indefinitely after the player actually paused.
                     PlaybackState state = new PlaybackState.Builder()
                             .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT)
-                            .setState(isPlaying ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, 0, isPlaying ? 1.0f : 0f)
+                            .setState(PlaybackState.STATE_PLAYING, 0, 1.0f)
                             .build();
                     mediaSession.setPlaybackState(state);
 
@@ -129,7 +121,6 @@ public class KizzyHelper extends Extension {
 
                 } catch (Exception e) {
                     Log.e(TAG, "UPDATE ERROR: " + e.getMessage());
-                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "UPDATE ERROR: " + e);
                 }
             }
         });
@@ -151,7 +142,7 @@ public class KizzyHelper extends Extension {
         style.setShowActionsInCompactView(0);
 
         builder.setVisibility(Notification.VISIBILITY_SECRET)
-                .setSmallIcon(context.getApplicationInfo().icon)
+                .setSmallIcon(null)
                 .setLargeIcon(art)
                 .setContentTitle(title)
                 .setContentText(artist)
@@ -192,10 +183,8 @@ public class KizzyHelper extends Extension {
                         notificationManager.cancel(NOTIFICATION_ID);
                     }
                     Log.d(TAG, "MediaSession closed and cleared.");
-                    JavaCrashHandler.appendToGameLog(TAG, "INFO", "MediaSession closed and cleared.");
                 } catch (Exception e) {
                     Log.e(TAG, "SHUTDOWN ERROR: " + e.getMessage());
-                    JavaCrashHandler.appendToGameLog(TAG, "ERROR", "SHUTDOWN ERROR: " + e);
                 }
             }
         });

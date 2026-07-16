@@ -62,29 +62,6 @@ class GameLogger
 			prev(v, pos);
 			_write(stamp() + ' [TRACE] ' + haxe.Log.formatOutput(v, pos));
 		};
-
-		// FlxG.log.error/warn/notice/add() calls (17 call sites across the
-		// codebase) don't go through haxe.Log.trace at all -- they call
-		// LogFrontEnd.advanced() directly. In release builds that whole
-		// method's body is #if FLX_DEBUG-gated and gets stripped, so those
-		// calls silently produce nothing anywhere. LogStyle.onLog is the one
-		// signal `advanced()` fires unconditionally regardless of FLX_DEBUG,
-		// so hooking the four built-in styles here (the only ones any call
-		// site uses) catches all of them without touching those call sites.
-		final flxLogStyles = [
-			flixel.system.debug.log.LogStyle.NORMAL,
-			flixel.system.debug.log.LogStyle.WARNING,
-			flixel.system.debug.log.LogStyle.ERROR,
-			flixel.system.debug.log.LogStyle.NOTICE
-		];
-		for (style in flxLogStyles)
-		{
-			style.onLog.add(function(data:Any, ?pos:haxe.PosInfos)
-			{
-				final formatted = (pos != null) ? haxe.Log.formatOutput(data, pos) : Std.string(data);
-				_write(stamp() + ' [FLXLOG] ' + formatted);
-			});
-		}
 		#end
 	}
 

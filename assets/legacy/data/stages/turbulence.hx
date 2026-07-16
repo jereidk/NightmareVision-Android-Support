@@ -212,7 +212,7 @@ function spawnThing(time:Float, z:Float, ?prop:Bool = false):FlxSprite
 	
 	if (prop)
 	{
-		var variant:Int = propNames[FlxG.random.int(0, propNames.length - 1)];
+		var variant:Int = propNames[FlxG.random.int(0, propNames.length)];
 		var somewhereMidsong:Bool = (Conductor.songPosition >= (audio.songLength * .75 + FlxG.random.int(-11000, 11000)));
 		// pink s forced to show somewhere at the near end of the song if she hasnt cus its fun
 		

@@ -579,8 +579,8 @@ class OptionsState extends MusicBeatState
 
 		scriptGroup.call('onRefreshLang', []);
 		refreshVisuals();
-		// This runs after ANY substate closes (Mobile/DLC/Credits), not
-		// just on a real tab switch (changeTab(), which SHOULD
+		// This runs after ANY substate closes (Mobile/DLC/Credits/Language
+		// Picker), not just on a real tab switch (changeTab(), which SHOULD
 		// reset scroll/selection for a genuinely different category) -- without
 		// preserving curSelected here, returning from e.g. Credits threw the
 		// player back to the top of whatever tab they were on, discarding
@@ -806,32 +806,10 @@ class OptionsState extends MusicBeatState
 		curTab = index;
 		focus = 'tabs';
 		refreshVisuals();
-		// A genuine tab switch starts fresh (top of the list) for every tab
-		// except 'language' -- that one opens pre-scrolled to your current
-		// language, same as the old LanguagePickerSubState used to.
-		// refreshOptionFonts() below deliberately does NOT do this (see its
-		// own comment) -- only a real category change should jump here.
-		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])(), tabs[curTab] == 'language' ? LanguageOptions.currentLanguageRowIndex : null);
+		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
 
 		FlxG.sound.play(Paths.sound('hover'), 0.5);
 		_pulseTab(curTab);
-	}
-
-	/**
-	 * Rebuilds the 'language' tab's rows in place (fresh badges/credits
-	 * right after a language switch) while preserving scroll position, same
-	 * idea as refreshOptionFonts() but scoped to just this one tab instead
-	 * of running the full substate-close refresh. Guarded to the language
-	 * tab specifically: PopUp.showConfirm's callback is async (fires later,
-	 * not blocking), so the user could navigate to a different tab before
-	 * confirming a language switch -- without this guard, a delayed
-	 * callback landing after that would silently overwrite whatever tab is
-	 * actually on screen by then.
-	 */
-	public function refreshLanguageTabInPlace():Void
-	{
-		if (tabs[curTab] != 'language') return;
-		optionList.setOptions(TAB_BUILDERS.get('language')(), optionList.curSelected);
 	}
 
 	/**

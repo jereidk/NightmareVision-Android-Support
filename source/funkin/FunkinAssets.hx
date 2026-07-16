@@ -506,41 +506,10 @@ class FunkinAssets
 	}
 	
 	/**
-	 * Makes a relative loose-file path (already confirmed to exist via
-	 * FileSystem.exists()) absolute for Android's native file loaders.
-	 * lime's C++ media decoders (OGG::Decode/WAV::Decode/VorbisFile, and
-	 * BitmapData.fromFile before this had the same fix) open files via
-	 * lime::fopen(), which is backed by SDL's SDL_IOFromFile() rather than a
-	 * plain POSIX fopen() -- on Android, SDL resolves a relative path
-	 * against its own APK-asset lookup first, not this app's actual
-	 * external-storage working directory, so a relative "content/<mod>/..."
-	 * path that sys.FileSystem.exists() (hxcpp's own check, unaffected by
-	 * this) already found still fails to open through these calls. No-op on
-	 * every other platform.
-	 */
-	#if (android && sys)
-	public static function androidStoragePath(path:String):String
-	{
-		try
-		{
-			return StorageSystem.getDirectory() + path;
-		}
-		catch (e:Dynamic)
-		{
-			Logger.log('androidStoragePath: Failed to get storage directory: $e', WARN);
-			return path;
-		}
-	}
-	#else
-	public static inline function androidStoragePath(path:String):String
-		return path;
-	#end
-
-	/**
 	 * Retrives a Sound instance from key.
-	 *
+	 * 
 	 * If the sound could not be found, a beep sound will be given in place.
-	 *
+	 * 
 	 * @param useCache Retrieves from the cache if possible. Otherwise, it will be cached
 	 */
 	public static function getSound(key:String, useCache:Bool = true):Sound
@@ -573,50 +542,15 @@ class FunkinAssets
 		}
 		
 		var sound:Null<Sound> = null;
-
-		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		if (FileSystem.exists(key))
-		{
-			// Sound.fromFile() ends up in lime's native OGG::Decode/WAV::Decode,
-			// which open the file via lime::fopen() -- backed by SDL's
-			// SDL_IOFromFile(), NOT a plain POSIX fopen(). On Android, SDL
-			// resolves a relative path against its own APK-asset lookup
-			// first, not against this app's actual working directory, so a
-			// relative "content/<mod>/..." path that sys.FileSystem.exists()
-			// (hxcpp's own check, which DOES resolve correctly) just found
-			// still fails to open here. getBitmapData() above already hit
-			// this exact issue for images and fixed it the same way: hand
-			// the native loader a full absolute path instead.
-			final loadPath = androidStoragePath(key);
-
-			try
-			{
-				sound = Sound.fromFile(loadPath);
-			}
-			catch (e:Dynamic)
-			{
-				// Sound.fromFile() throws (not returns null) on decode
-				// failure. Falls through to the VorbisFile-based decoder
-				// below as a last resort -- it shares the same underlying
-				// native file-open path, so this mostly guards against a
-				// genuinely bad/unsupported file rather than the path issue
-				// above (already handled by loadPath), but costs nothing to
-				// try before giving up to the beep fallback.
-				Logger.log('Sound.fromFile failed for ($loadPath): $e', WARN);
-				sound = null;
-			}
-		}
-		else
-		#end
-		if (Assets.exists(key, SOUND)) sound = Assets.getSound(key, true);
-
-		if (sound == null) sound = getVorbisSound(key);
-
+		
+		#if (MODS_ALLOWED || ASSET_REDIRECT) if (FileSystem.exists(key)) sound = Sound.fromFile(key);
+		else #end if (Assets.exists(key, SOUND)) sound = Assets.getSound(key, true);
+		
 		if (sound != null)
 		{
 			cache.cacheSound(key, sound);
 		}
-
+		
 		return sound;
 	}
 	
@@ -628,24 +562,13 @@ class FunkinAssets
 	public static function getVorbisSound(key:String):Null<Sound>
 	{
 		if (key.extension() != 'ogg') return null;
-
+		
 		#if !lime_vorbis
 		// trace('gulp');
 		return null;
 		#else
-		// VorbisFile.fromFile() opens the file through the exact same
-		// native lime::fopen()/SDL_IOFromFile() path as Sound.fromFile() --
-		// see androidStoragePath()'s own doc comment. Only meaningful once a
-		// loose file is confirmed to exist; a bundled/APK-relative key
-		// passes through unchanged.
-		#if (MODS_ALLOWED || ASSET_REDIRECT)
-		final loadPath = FileSystem.exists(key) ? androidStoragePath(key) : key;
-		#else
-		final loadPath = key;
-		#end
-
-		final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(loadPath);
-
+		final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(key);
+		
 		if (vorbisFile == null) return null;
 		
 		final buffer = lime.media.AudioBuffer.fromVorbisFile(vorbisFile);

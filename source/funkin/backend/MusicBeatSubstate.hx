@@ -18,24 +18,10 @@ class MusicBeatSubstate extends FlxSubState
 {
 	public static var instance:MusicBeatSubstate;
 
-	/**
-	 * What `instance` pointed at before this substate's constructor ran --
-	 * null if this is the outermost one. `instance` is a single static field,
-	 * not a stack, so without saving/restoring this, closing a substate
-	 * opened on top of another substate (e.g. VirtualPadCustomizerSubState on
-	 * top of MobileSettingsSubState) left `instance` dangling on the
-	 * destroyed inner substate forever, with no path back to the still-open
-	 * outer one. See destroy() below and Controls.hx's `requested` getter,
-	 * which is what actually reads `instance` to route virtual-pad input.
-	 */
-	var _previousInstance:MusicBeatSubstate;
-
 	public function new()
 	{
 		super();
-		_previousInstance = instance;
 		instance = this;
-		#if mobile controls.isInSubstate = true; #end
 	}
 	
 	public var curSection:Int = 0;
@@ -149,12 +135,7 @@ class MusicBeatSubstate extends FlxSubState
 		}
 		if (virtualPadCam != null)
 		{
-			// Same guard as MusicBeatState.removeVirtualPad(): a full state
-			// switch happening while this substate is still open would have
-			// already wiped this camera via FlxG.cameras.reset(), so check
-			// before removing again to avoid the "not a part of the game"
-			// warning.
-			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
+			FlxG.cameras.remove(virtualPadCam);
 			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
 		}
 	}
@@ -212,7 +193,7 @@ class MusicBeatSubstate extends FlxSubState
 		}
 		if (hitboxCam != null)
 		{
-			if (FlxG.cameras.list.indexOf(hitboxCam) != -1) FlxG.cameras.remove(hitboxCam);
+			FlxG.cameras.remove(hitboxCam);
 			hitboxCam = FlxDestroyUtil.destroy(hitboxCam);
 		}
 	}
@@ -371,19 +352,9 @@ class MusicBeatSubstate extends FlxSubState
 		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
 
 		#if mobile
+		controls.isInSubstate = false;
 		removeVirtualPad();
 		removeMobileControls();
-
-		// Restore the previous substate (if any) as the active one instead of
-		// leaving `instance` pointing at this now-destroyed object -- see
-		// _previousInstance's doc comment. Guarded by the `instance == this`
-		// check in case something else already reassigned `instance` (e.g. a
-		// new substate opened before this one finished tearing down).
-		if (instance == this)
-		{
-			instance = _previousInstance;
-			controls.isInSubstate = (instance != null);
-		}
 		#end
 
 		super.destroy();

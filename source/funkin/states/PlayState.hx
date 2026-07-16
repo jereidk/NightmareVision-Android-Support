@@ -54,20 +54,17 @@ import funkin.video.FunkinVideoSprite;
 #end
 
 // Shared by every deferred tail segment queued from the same head note (see
-// PlayState._pendingTails). `headQueueNote` lets a deferred entry detect
-// that its head's pool slot has since been reused for a different note
-// (see spawnPendingTail()).
-private typedef PendingTailChain = {headQueueNote:QueueNote};
+// PlayState._pendingTails) so they can chain prevNote correctly even though
+// they're no longer recycled back-to-back in a single call. `headQueueNote`
+// lets a deferred entry detect that its head's pool slot has since been
+// reused for a different note (see spawnPendingTail()).
+private typedef PendingTailChain = {lastNote:Note, headQueueNote:QueueNote};
 
 private typedef PendingTail =
 {
 	qn:QueueNote,
 	parentNote:Note,
-	chain:PendingTailChain,
-	// Known upfront from this segment's position in its hold's tail array --
-	// stamped onto the spawned Note as isFirstTailSegment once it exists
-	// (see spawnPendingTail()).
-	isFirst:Bool
+	chain:PendingTailChain
 };
 
 class PlayState extends MusicBeatState
@@ -202,23 +199,7 @@ class PlayState extends MusicBeatState
 		Reference to the current girlfriend
 	**/
 	public var boyfriend:Character;
-
-	/**
-	 * Off-screen, never-added-to-any-group Character for `boyfriend`'s
-	 * gameover character, built right after `boyfriend` itself so its
-	 * atlas/animations are already warm in FunkinAssets.cache by the time
-	 * the player can actually die. Without this, GameOverSubstate.create()
-	 * calls `new Character(...)` for the FIRST time only at the moment of
-	 * death, and for any gameover character that isn't literally the same
-	 * model as `boyfriend` (the common case -- see resetVariables()'s
-	 * 'genericDeath' default) that's a cold synchronous atlas load/decode
-	 * landing exactly when the game is supposed to freeze-frame into the
-	 * death animation, not before. Consumed (and nulled) by
-	 * GameOverSubstate.new() if the player actually dies; disposed in
-	 * destroy() below otherwise.
-	 */
-	public var preloadedGameoverChar:Null<Character> = null;
-
+	
 	/**
 		scary
 	**/
@@ -297,12 +278,13 @@ class PlayState extends MusicBeatState
 	// builds the head immediately and queues the rest here, letting them
 	// drain a few at a time (see the second noteSpawn loop in update()) as
 	// each segment's OWN strumTime actually earns it. `chain` is shared by
-	// every entry queued from the same head and carries `headQueueNote`,
-	// the QueueNote the head was originally recycled against -- preRecycle()
-	// always re-stamps `note.queueNote` on every recycle, so comparing that
-	// back against this lets a deferred entry detect "my head's pool slot
-	// became a different note" instead of corrupting a stranger's state
-	// (see spawnPendingTail()).
+	// every entry queued from the same head so they keep chaining prevNote
+	// correctly even though they're no longer built back-to-back; it also
+	// carries `headQueueNote`, the QueueNote the head was originally
+	// recycled against -- preRecycle() always re-stamps `note.queueNote` on
+	// every recycle, so comparing that back against this lets a deferred
+	// entry detect "my head's pool slot became a different note" instead of
+	// corrupting a stranger's state (see spawnPendingTail()).
 	static inline final MAX_NOTE_SPAWNS_PER_FRAME:Int = 12;
 	var _pendingTails:Array<PendingTail> = [];
 	var _pendingTailIdx:Int = 0;
@@ -494,10 +476,6 @@ class PlayState extends MusicBeatState
 	#end
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
-
-	/** In story mode, true when this is the last song of the week.
-	 *  Set by endSong() just before the score popup. */
-	var _isLastSongOfWeek:Bool = false;
 
 	/**
 	 * Default camera zoom the game will attempt to return to.
@@ -902,21 +880,6 @@ class PlayState extends MusicBeatState
 		boyfriendGroup.parent = boyfriend;
 		startCharacterScript(boyfriend.curCharacter, boyfriend);
 		trace('[PlayState] BF OK');
-
-		// See preloadedGameoverChar's own doc comment: warm the gameover
-		// character's atlas now instead of letting GameOverSubstate.create()
-		// load it cold at the moment of death. Matches the exact name
-		// resolution GameOverSubstate.new() itself does (gameoverCharacter,
-		// falling back to the 'genericDeath' default set by
-		// resetVariables() above) -- if that resolves to the same model as
-		// boyfriend, no separate preload is needed since GameOverSubstate
-		// already reuses `boyfriend` directly for that case.
-		final gameoverCharName = boyfriend.gameoverCharacter ?? GameOverSubstate.characterName;
-		if (gameoverCharName != null && gameoverCharName != boyfriend.curCharacter)
-		{
-			preloadedGameoverChar = new Character(0, 0, gameoverCharName, true);
-			preloadedGameoverChar.visible = false;
-		}
 
 		_logPhase('boyfriend');
 
@@ -2749,17 +2712,7 @@ class PlayState extends MusicBeatState
 				if (trail == null || !trail.alive) continue;
 
 				final headNote = trail.headNote;
-				// headNote.alive alone can't tell "this is still my hold's
-				// head" -- once the real head is disposed, its pool slot can
-				// be handed straight back out to a totally unrelated note
-				// before this loop's next pass ever sees it dead, at which
-				// point .alive reads true again for someone else's hold.
-				// queueNote is re-stamped on every single preRecycle() call,
-				// so comparing it against what was captured when this trail
-				// was set up (see setupSustainTrail()) catches that reuse
-				// reliably -- same mechanism spawnPendingTail()'s Guards 1/2
-				// already use for the same reason.
-				if (headNote == null || !headNote.alive || headNote.queueNote != trail.headQueueNote)
+				if (headNote == null || !headNote.alive)
 				{
 					trail.kill();
 					continue;
@@ -2926,7 +2879,7 @@ class PlayState extends MusicBeatState
 		scripts.call('onUpdatePost', _scriptUpdateArgs);
 	}
 	
-	public function recycleNote(queueNote:QueueNote, ?parent:Note):Note
+	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
 	{
 		final targetField:Null<PlayField> = getFieldFromID(queueNote.playField);
 
@@ -2934,10 +2887,10 @@ class PlayState extends MusicBeatState
 			? recycleCompatibleNote(targetField._skin, queueNote.noteData)
 			: notes.recycle(Note, () -> new Note());
 
-		note.preRecycle(queueNote, parent);
-
+		note.preRecycle(queueNote, parent, prevNote);
+		
 		if (parent != null) return note;
-
+		
 		if (queueNote.tail != null)
 		{
 			final note:Note = spawnNote(note);
@@ -2958,9 +2911,8 @@ class PlayState extends MusicBeatState
 
 	function enqueuePendingTails(headNote:Note, headQueueNote:QueueNote, tails:Array<QueueNote>):Void
 	{
-		final chain:PendingTailChain = {headQueueNote: headQueueNote};
-		for (i in 0...tails.length)
-			_pendingTails.push({qn: tails[i], parentNote: headNote, chain: chain, isFirst: i == 0});
+		final chain:PendingTailChain = {lastNote: headNote, headQueueNote: headQueueNote};
+		for (tail in tails) _pendingTails.push({qn: tail, parentNote: headNote, chain: chain});
 	}
 
 	// Always spawns a trail alongside the head. Whether it actually RENDERS
@@ -2979,14 +2931,13 @@ class PlayState extends MusicBeatState
 
 		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
 		trail.setupTrail(headNote, field);
-		trail.headQueueNote = headNote.queueNote;
 		headNote.sustainTrail = trail;
 	}
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in
-	// recycleNote() used to do (recycle against the shared parent chain,
-	// append to the parent's tail array, spawn it), with two guards verified
-	// against the CURRENT code (not assumed from history):
+	// recycleNote() used to do (recycle against the shared parent/prevNote
+	// chain, append to the parent's tail array, spawn it), with four guards
+	// verified against the CURRENT code (not assumed from history):
 	function spawnPendingTail(entry:PendingTail):Void
 	{
 		// Guard 1: the head's pool slot has been reused for a totally
@@ -3011,10 +2962,26 @@ class PlayState extends MusicBeatState
 		// identical to it never having lagged.
 		if (entry.qn.strumTime + entry.qn.sustainLength + noteKillOffset < Conductor.songPosition) return;
 
-		final tailNote:Note = recycleNote(entry.qn, entry.parentNote);
-		tailNote.isFirstTailSegment = entry.isFirst;
+		// Guard 4: entry.chain.lastNote is only trustworthy as prevNote if it's
+		// still actually linked into THIS hold's chain. Unlike parentNote (Guards
+		// 1/2 above), nothing re-validates chain.lastNote between segments -- it's
+		// just reassigned to whatever Note preRecycle() returns each time
+		// (below). A tail segment has its own independent pool lifecycle from the
+		// head, so by the time a later staggered segment finally drains here,
+		// chain.lastNote's underlying object can already have been recycled for
+		// an unrelated note (e.g. a simultaneous opponent note) -- same class of
+		// bug preRecycle()'s own prevNote-self-loop comment describes, just
+		// reachable from a different angle. Mirrors the .parent identity check
+		// PlayField.noteHit() already uses for the same reason ("ignore notes
+		// that have already been recycled"). The == entry.parentNote branch
+		// covers the first tail segment of a hold, where chain.lastNote starts
+		// out as the head itself (whose own .parent is null, not itself).
+		final lastNoteValid:Bool = entry.chain.lastNote == entry.parentNote || entry.chain.lastNote.parent == entry.parentNote;
+
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote, lastNoteValid ? entry.chain.lastNote : null);
 
 		entry.parentNote.tail.push(tailNote);
+		entry.chain.lastNote = tailNote;
 
 		// Replay whatever state the parent is CURRENTLY in onto a segment
 		// that didn't exist yet when that state was decided -- mirrors
@@ -3811,7 +3778,6 @@ class PlayState extends MusicBeatState
 				
 				if (storyMeta.playlist.length <= 0)
 				{
-					_isLastSongOfWeek = true;
 					if (WeekData.weeksList[storyMeta.curWeek] != null)
 					{
 						unlockJsonAwards(curSong, [WeekData.weeksList[storyMeta.curWeek]]);
@@ -3861,30 +3827,13 @@ class PlayState extends MusicBeatState
 					
 					PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
 					
-					// Prefetch next song's assets in background while the player
-					// watches the score popup.  LoadingState will pick up the
-					// work on the next switch and show real progress.
-					#if (android && sys)
-					funkin.states.LoadingState.prefetchSong(PlayState.SONG);
-					#end
-					
 					popUpEndCallback = function() {
 						if (!ScriptConstants.stopping(scripts.call('postEndSong')))
 						{
 							CoolUtil.cancelMusicFadeTween();
 							FlxG.sound.music.stop();
 							
-							// Hybrid: if prefetch already finished, go straight
-							// to PlayState (assets are cache-warm).  Otherwise
-							// show LoadingState with real progress.
-							#if (android && sys)
-							if (funkin.states.LoadingState.prefetchComplete)
-								FlxG.switchState(PlayState.new);
-							else
-								funkin.states.LoadingState.loadAndSwitchState(() -> new PlayState());
-							#else
 							FlxG.switchState(PlayState.new);
-							#end
 						}
 					}
 				}
@@ -4310,10 +4259,6 @@ class PlayState extends MusicBeatState
 	{
 		instance = null;
 
-		// Only reached if the player never died (GameOverSubstate.new()
-		// would have nulled this on its way to taking ownership otherwise).
-		preloadedGameoverChar = FlxDestroyUtil.destroy(preloadedGameoverChar);
-
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
 		mobile.backend.AndroidUtils.setGameplayState(false);
@@ -4337,17 +4282,11 @@ class PlayState extends MusicBeatState
 
 		super.destroy();
 
-	// In Story Mode, keep assets warm between songs of the same week
-	// so the next LoadingState → PlayState transition is instant.
-	// Only flush the cache when leaving the week entirely or on Freeplay.
-	if (_bitmapSnapshotAtCreate != null)
-	{
-		if (!isStoryMode || _isLastSongOfWeek)
+		if (_bitmapSnapshotAtCreate != null)
 		{
 			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			_bitmapSnapshotAtCreate = null;
 		}
-		_bitmapSnapshotAtCreate = null;
-	}
 	}
 	
 	override function stepHit()

@@ -51,14 +51,3 @@ with open(build_gradle, 'w') as f: f.write(c)
 PYTHON_EOF
 
 echo "[INFO] Done! ABI filter: $ABI_FILTER"
-
-# NOTE: this used to also inject an extra Gradle sourceSet here to work
-# around GameActivity.java's mobile.backend.java.* imports going missing
-# (lime's own <java path> copy in AndroidPlatform.hx wraps recursiveCopy()
-# in a try/catch with no throw/log, so it can silently no-op). That's now
-# fixed at the actual source of the problem instead: Project.xml's <java
-# path> was pointed at the whole "source" tree (~300 unrelated Haxe files,
-# any one of which hiccuping during copy would silently drop the entire
-# path including the real extension classes) and has been narrowed to a
-# dedicated androidJava/ root containing only the 6 files that need to be
-# there. No CI-side template patching needed for this anymore.

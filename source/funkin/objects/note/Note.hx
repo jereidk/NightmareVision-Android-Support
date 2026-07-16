@@ -147,22 +147,9 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	public var ignoreNote:Bool = false;
 	public var hitByOpponent:Bool = false;
 	public var noteWasHit:Bool = false;
-
-	// Set (only for tail segments) by PlayState.enqueuePendingTails() at
-	// construction time from the segment's own known position in its hold's
-	// tail array -- true for exactly the first one. Replaces a prevNote/
-	// nextNote pointer chain that used to answer this same "was I preceded
-	// by another segment of this same hold" question (PlayField.hx's own
-	// characterSing() ghost-anim check is the only place that ever asked):
-	// prevNote pointed at a pooled Note that staggered/deferred tail
-	// spawning could have already recycled for a totally unrelated hold by
-	// the time a later segment's turn to spawn came up (three rounds of
-	// "detect staleness, drop the segment" guards accumulated in
-	// spawnPendingTail() trying to keep that pointer trustworthy). This
-	// field needs no such guarding -- it's decided once, from data already
-	// known at construction, never chases another object's identity.
-	public var isFirstTailSegment:Bool = false;
-
+	public var prevNote:Note;
+	public var nextNote:Note;
+	
 	public var spawned:Bool = false;
 	
 	public var tailState:NoteSharedTailState; // shared between a note and its tail to prevent some issues
@@ -331,7 +318,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		return noteType = value;
 	}
 	
-	public function new(strumTime:Float = 0, noteData:Int = 0, sustainNote:Bool = false, inEditor:Bool = false, player:Int = 0)
+	public function new(strumTime:Float = 0, noteData:Int = 0, ?prevNote:Note, sustainNote:Bool = false, inEditor:Bool = false, player:Int = 0)
 	{
 		super();
 
@@ -344,6 +331,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		this.moves = false;
 
 		this.player = player;
+		this.prevNote = prevNote;
 		this.isSustainNote = sustainNote;
 		this.strumTime = strumTime;
 		this.noteData = noteData;
@@ -376,7 +364,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		owner = null;
 		singers?.resize(0);
 		
-		parent = null;
+		parent = prevNote = nextNote = null;
 		color = FlxColor.WHITE;
 		sustainSplash = null;
 		noteSplash = null;
@@ -399,14 +387,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	// the constructor) keep the default `false` so their result stays final.
 	inline function _resetTexture(skipHitbox:Bool = false):Void
 	{
-		// parent (not a prevNote chain) -- every tail segment inherits its
-		// quant directly from its hold's head, always correct and always
-		// already set by this point in preRecycle() (right below _reset()),
-		// instead of transitively re-reading whatever the PREVIOUS segment
-		// happened to compute -- which, if that segment's own prevNote link
-		// had gone stale, used to silently give it (and everything after it)
-		// a freshly-recomputed, inconsistent quant instead of the hold's own.
-		if (ClientPrefs.quants && canQuant) quant = (parent?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
+		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
 
 		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
@@ -448,13 +429,12 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		}
 	}
 	
-	public function preRecycle(?queueNote:QueueNote, ?parent:Note):Void
+	public function preRecycle(?queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Void
 	{
 		_reset();
-
+		
 		this.parent = parent;
-		this.isFirstTailSegment = false;
-
+		
 		if (parent != null)
 		{
 			tailState = parent.tailState;
@@ -468,7 +448,19 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 			tailState.missed = false;
 			tailState.splash = null;
 		}
-
+		
+		// prevNote != this: with deferred tail spawning (PlayState._pendingTails),
+		// a long hold's earlier segment can be consumed+disposed before its next
+		// segment drains from the pending queue, and the pool (notes.recycle()/
+		// recycleCompatibleNote()) can then hand that exact dead object back as
+		// the NEXT segment, arriving here with prevNote pointing at ourselves.
+		// Linking would create a self-loop (this.prevNote == this.nextNote == this).
+		if (prevNote != null && prevNote != this)
+		{
+			this.prevNote = prevNote;
+			prevNote.nextNote = this;
+		}
+		
 		if (queueNote != null)
 		{
 			this.queueNote = queueNote;
@@ -702,7 +694,7 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 	{
 		playField?.removeNote(this);
 		
-		parent = null;
+		prevNote = nextNote = parent = null;
 		tailState = null;
 		
 		_cacheRect?.put();

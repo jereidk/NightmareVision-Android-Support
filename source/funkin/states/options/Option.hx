@@ -4,17 +4,6 @@ import flixel.text.FlxText;
 
 import funkin.objects.*;
 
-/**
- * Optional per-row override for TouchOptionList's value-column text/color
- * (see Option.badgeProvider). Kept as a plain typedef, same convention as
- * DLCManager.hx's DLCEntry/DLCRegistry.
- */
-typedef OptionBadge =
-{
-	var text:String;
-	var color:Int;
-}
-
 class Option
 {
 	private var child:FlxText;
@@ -46,18 +35,6 @@ class Option
 	public var name:String = 'Unknown';
 	
 	public var callback:Void->Void = null; // Pressed enter (on button type)
-
-	/**
-	 * Optional per-frame override for this row's value-column text/color,
-	 * read by TouchOptionList.refreshRows() only -- never affects `type`,
-	 * so click/nav dispatch (resolveRowTap/adjustValue/isAdjustable) is
-	 * completely untouched by this. Return null to fall back to the normal
-	 * type-based display (e.g. '[ TAP ]' for a 'button' row). Called fresh
-	 * every frame for every visible row, so it can reflect live state (e.g.
-	 * an in-flight download's progress%) without the owning screen ever
-	 * needing to call setOptions() again.
-	 */
-	public var badgeProvider:Void->Null<OptionBadge> = null;
 	
 	public function new(name:String, description:String = '', variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null,
 			?storedValues:Array<String> = null)

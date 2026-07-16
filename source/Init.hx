@@ -116,46 +116,6 @@ class Init extends FlxState
 			// text in PopUp's dialog.
 			if (_pendingCrashMessage != null && _pendingCrashMessage.length > 2000)
 				_pendingCrashMessage = _pendingCrashMessage.substr(0, 2000) + '\n[truncated…]';
-
-			// Persist immediately, independent of the popup below and of
-			// GameLogger (which isn't initialized yet -- it waits on
-			// ClientPrefs.load(), see the comment near the top of this
-			// function). readPreviousNativeCrash() already marked this
-			// exit as "seen" on the Java side the instant it was read
-			// (JavaCrashHandler.java's saveLastSeenTimestamp()), so if
-			// THIS session also crashes before ever reaching the popup
-			// at super.create() below -- a real observed case, back-to-
-			// back crashes a few seconds apart -- the summary would
-			// otherwise be gone for good: Android's own history never
-			// re-reports an exit once its timestamp has been consumed.
-			if (_pendingCrashMessage != null)
-			{
-				try
-				{
-					// Timestamped filename, not a single fixed "last_crash_summary.log" --
-					// same reasoning as JavaCrashHandler.java's own per-pid+timestamp
-					// trace/logcat files: a second crash before this one gets read
-					// would otherwise silently overwrite it.
-					final dir = mobile.backend.StorageSystem.getDirectory();
-					final stamp = Std.int(Date.now().getTime());
-					sys.io.File.saveContent(
-						dir + 'last_crash_summary_$stamp.log',
-						'[' + Date.now().toString() + ']\n' + _pendingCrashMessage
-					);
-
-					// Keep only the newest few -- these are small, but there's no
-					// reason to let them accumulate forever on a device that crashes
-					// occasionally over a long install.
-					final summaries = sys.FileSystem.readDirectory(dir).filter(
-						f -> f.startsWith('last_crash_summary_') && f.endsWith('.log'));
-					summaries.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
-					while (summaries.length > 10)
-					{
-						try sys.FileSystem.deleteFile(dir + summaries.shift()) catch (e:Dynamic) {}
-					}
-				}
-				catch (e:Dynamic) {}
-			}
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end
@@ -252,7 +212,6 @@ class Init extends FlxState
 
 		funkin.backend.GameLogger.init();
 		funkin.backend.SystemMonitor.init();
-		funkin.backend.ReflectLog.init();
 		funkin.data.Highscore.load();
 		
 		if (FlxG.save.data.weekCompleted != null) funkin.states.StoryMenuState.weekCompleted = FlxG.save.data.weekCompleted;

@@ -54,7 +54,6 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "saveFile failed: " + e);
                 }
             }
         });
@@ -75,7 +74,6 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "browseFiles failed: " + e);
                 }
             }
         });
@@ -97,7 +95,6 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     Log.e("FileUtils", "Error opening selector: " + e.toString());
-                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "browseForMultipleFiles failed: " + e);
                 }
             }
         });
@@ -187,7 +184,6 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "writeFileToUri failed: " + e);
                 }
             }
         }).start();
@@ -240,7 +236,6 @@ public class FileUtils extends Extension {
             return tempFile.getAbsolutePath(); 
         } catch (Exception e) {
             Log.e("FileUtils", "Error on copying to root: " + e.toString());
-            JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "copyFileToExternal failed: " + e);
             return null;
         }
     }
@@ -276,7 +271,6 @@ public class FileUtils extends Extension {
                     byteBuffer.close();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "readBytesFromUri failed: " + e);
                 }
             }
         }).start();
@@ -309,7 +303,6 @@ public class FileUtils extends Extension {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "downloadFile failed: " + e);
             return false;
         }
     }
