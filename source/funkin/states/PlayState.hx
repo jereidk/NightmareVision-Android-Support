@@ -202,7 +202,23 @@ class PlayState extends MusicBeatState
 		Reference to the current girlfriend
 	**/
 	public var boyfriend:Character;
-	
+
+	/**
+	 * Off-screen, never-added-to-any-group Character for `boyfriend`'s
+	 * gameover character, built right after `boyfriend` itself so its
+	 * atlas/animations are already warm in FunkinAssets.cache by the time
+	 * the player can actually die. Without this, GameOverSubstate.create()
+	 * calls `new Character(...)` for the FIRST time only at the moment of
+	 * death, and for any gameover character that isn't literally the same
+	 * model as `boyfriend` (the common case -- see resetVariables()'s
+	 * 'genericDeath' default) that's a cold synchronous atlas load/decode
+	 * landing exactly when the game is supposed to freeze-frame into the
+	 * death animation, not before. Consumed (and nulled) by
+	 * GameOverSubstate.new() if the player actually dies; disposed in
+	 * destroy() below otherwise.
+	 */
+	public var preloadedGameoverChar:Null<Character> = null;
+
 	/**
 		scary
 	**/
@@ -882,6 +898,21 @@ class PlayState extends MusicBeatState
 		boyfriendGroup.parent = boyfriend;
 		startCharacterScript(boyfriend.curCharacter, boyfriend);
 		trace('[PlayState] BF OK');
+
+		// See preloadedGameoverChar's own doc comment: warm the gameover
+		// character's atlas now instead of letting GameOverSubstate.create()
+		// load it cold at the moment of death. Matches the exact name
+		// resolution GameOverSubstate.new() itself does (gameoverCharacter,
+		// falling back to the 'genericDeath' default set by
+		// resetVariables() above) -- if that resolves to the same model as
+		// boyfriend, no separate preload is needed since GameOverSubstate
+		// already reuses `boyfriend` directly for that case.
+		final gameoverCharName = boyfriend.gameoverCharacter ?? GameOverSubstate.characterName;
+		if (gameoverCharName != null && gameoverCharName != boyfriend.curCharacter)
+		{
+			preloadedGameoverChar = new Character(0, 0, gameoverCharName, true);
+			preloadedGameoverChar.visible = false;
+		}
 
 		_logPhase('boyfriend');
 
@@ -4256,6 +4287,10 @@ class PlayState extends MusicBeatState
 	override function destroy()
 	{
 		instance = null;
+
+		// Only reached if the player never died (GameOverSubstate.new()
+		// would have nulled this on its way to taking ownership otherwise).
+		preloadedGameoverChar = FlxDestroyUtil.destroy(preloadedGameoverChar);
 
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
