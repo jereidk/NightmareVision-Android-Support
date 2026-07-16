@@ -103,10 +103,14 @@ class GameOverSubstate extends MusicBeatSubstate
 				// Came from PlayState.preloadedGameoverChar -- built off-screen
 				// at (0, 0) ahead of time, so (unlike the "reuse the live
 				// PlayState.instance.boyfriend in place" branch above) it still
-				// needs the same positioning the cold path just did.
+				// needs the same positioning the cold path just did. Also still
+				// has PlayState's own `.visible = false` (kept hidden while
+				// warming off-screen) -- nothing else here ever flips that back
+				// on, so without this it stays invisible forever.
 				boyfriend.setPosition(PlayState.instance.boyfriend.getScreenPosition().x, PlayState.instance.boyfriend.getScreenPosition().y);
 				boyfriend.x += boyfriend.positionArray[0] - PlayState.instance.boyfriend.positionArray[0];
 				boyfriend.y += boyfriend.positionArray[1] - PlayState.instance.boyfriend.positionArray[1];
+				boyfriend.visible = true;
 			}
 			boyfriend.skipDance = true;
 			add(boyfriend);
