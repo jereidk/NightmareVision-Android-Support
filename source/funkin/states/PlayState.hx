@@ -3874,11 +3874,12 @@ class PlayState extends MusicBeatState
 							CoolUtil.cancelMusicFadeTween();
 							FlxG.sound.music.stop();
 							
-							// Hybrid: if prefetch already finished, go straight
-							// to PlayState (assets are cache-warm).  Otherwise
-							// show LoadingState with real progress.
+							// Hybrid: if prefetch already finished FOR THIS EXACT
+							// song, go straight to PlayState (assets are
+							// cache-warm). Otherwise show LoadingState with
+							// real progress.
 							#if (android && sys)
-							if (funkin.states.LoadingState.prefetchComplete)
+							if (PlayState.SONG != null && funkin.states.LoadingState.isPrefetchedFor(PlayState.SONG.song))
 								FlxG.switchState(PlayState.new);
 							else
 								funkin.states.LoadingState.loadAndSwitchState(() -> new PlayState());

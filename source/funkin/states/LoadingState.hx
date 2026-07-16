@@ -89,14 +89,26 @@ class LoadingState extends MusicBeatState
 	static var _prefetchForSongId:String = '';
 	static var _prefetchTotal:Int = 0;
 	static var _prefetchDone:Int = 0;
-	public static var prefetchComplete(get, never):Bool;
-	static function get_prefetchComplete():Bool
+
+	/**
+	 * True only when a prefetch for THIS EXACT songId already finished --
+	 * checking _prefetchComplete alone isn't enough, since it stays true
+	 * (stale) after a completed prefetch until the NEXT prefetchSong() call
+	 * resets it, which only happens if the player lingers long enough to
+	 * trigger one. Picking a different song faster than that (the common
+	 * Freeplay case) would otherwise read a leftover true from a previous,
+	 * unrelated song and skip LoadingState for a song that was never
+	 * actually prefetched.
+	 */
+	public static function isPrefetchedFor(songId:String):Bool
 	{
 		var done = false;
+		var forId = '';
 		_mutex.acquire();
 		done = _prefetchComplete;
+		forId = _prefetchForSongId;
 		_mutex.release();
-		return done;
+		return done && forId == songId;
 	}
 	static var _prefetchComplete:Bool = false;
 	#end
@@ -263,8 +275,7 @@ class LoadingState extends MusicBeatState
 	}
 	#else
 	public static function prefetchSong(song:funkin.data.Song):Bool return true;
-	public static var prefetchComplete(get, never):Bool;
-	static function get_prefetchComplete():Bool return true;
+	public static function isPrefetchedFor(songId:String):Bool return true;
 	#end
 
 	public function new(nextState:NextState)
@@ -389,8 +400,13 @@ class LoadingState extends MusicBeatState
 		finalizePendingAssets();
 
 		// ── Phase B: read progress ──────────────────────────────────────
-		var p:Float = 1.0;
-		var label:String = 'Ready!';
+		// Defaults to 0, not 1 -- _totalTasks stays 0 until startPreload()'s
+		// synchronous path-collection finishes, right before the background
+		// Thread launches. Defaulting to "done" during that window made the
+		// bar jump to nearly-full on the very first frame and stay there
+		// (looked frozen/stuck) instead of showing real progress from 0%.
+		var p:Float = 0.0;
+		var label:String = '';
 		var done:Bool = false;
 		_mutex.acquire();
 		if (_totalTasks > 0)

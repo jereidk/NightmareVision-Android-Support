@@ -904,10 +904,12 @@ class FreeplayState extends AmongUIState
 		}
 		else
 		{
-			// Hybrid: skip LoadingState if the player lingered long enough
-			// for the prefetch to finish.
+			// Hybrid: skip LoadingState only if THIS exact song was the one
+			// prefetched and lingered long enough to finish -- picking a
+			// different (or never-lingered-on) song must never read a
+			// stale "complete" flag left over from an unrelated song.
 			#if (android && sys)
-			if (funkin.states.LoadingState.prefetchComplete)
+			if (PlayState.SONG != null && funkin.states.LoadingState.isPrefetchedFor(PlayState.SONG.song))
 				FlxG.switchState(PlayState.new);
 			else
 				LoadingState.loadAndSwitchState(PlayState.new);
