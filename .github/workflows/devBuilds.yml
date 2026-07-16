@@ -404,9 +404,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.hxcpp_cache
-          key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
 
       # v2 bump (was hxcpp-cache-android-fat-): restore-keys seeds
       # HXCPP_COMPILE_CACHE from the closest OLD entry under the prefix,
@@ -430,7 +430,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -819,9 +819,9 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
@@ -832,7 +832,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1225,9 +1225,9 @@ jobs:
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
             obj
-          key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
+            hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}
 
       # v2 bump: see the matching comment on "Prune stale hxcpp compile
       # caches" in the fat build job above -- same restore-keys-seeded
@@ -1238,7 +1238,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v4-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || 'release-' }}" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1650,15 +1650,15 @@ jobs:
             export/release/android/obj
             export/release/android/haxe
             obj
-          key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          key: hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
           restore-keys: |
-            hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-
+            hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-
 
       - name: Prune stale hxcpp compile caches
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-" "${{ github.ref }}"
 
       - name: Compile
         env:
@@ -1770,4 +1770,4 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v2-${{ runner.os }}-" "${{ github.ref }}"
