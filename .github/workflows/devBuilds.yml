@@ -340,7 +340,7 @@ jobs:
           while IFS= read -r JNI_FILE; do
             echo "Found: $JNI_FILE"
             python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -path "*lime/project/src/system/JNI.cpp" -type f 2>/dev/null)
+          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
 
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
@@ -779,7 +779,7 @@ jobs:
           while IFS= read -r JNI_FILE; do
             echo "Found: $JNI_FILE"
             python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -path "*lime/project/src/system/JNI.cpp" -type f 2>/dev/null)
+          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
 
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
@@ -1206,7 +1206,7 @@ jobs:
           while IFS= read -r JNI_FILE; do
             echo "Found: $JNI_FILE"
             python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -path "*lime/project/src/system/JNI.cpp" -type f 2>/dev/null)
+          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
 
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
@@ -1661,7 +1661,7 @@ jobs:
           while IFS= read -r JNI_FILE; do
             echo "Found: $JNI_FILE"
             python3 .github/scripts/patch-lime-jni-boxed-methodid.py "$JNI_FILE"
-          done < <(find .haxelib/lime -path "*lime/project/src/system/JNI.cpp" -type f 2>/dev/null)
+          done < <(find .haxelib/lime -name "JNI.cpp" -type f 2>/dev/null)
 
       - name: Patch hscript-iris Iris.call() to reuse its result object
         run: |
