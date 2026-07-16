@@ -59,7 +59,7 @@ public class KizzyHelper extends Extension {
         });
     }
 
-    public static void updateStatus(final String title, final String artist, final String imagePath) {
+    public static void updateStatus(final String title, final String artist, final String imagePath, final boolean isPlaying) {
         if (Extension.mainActivity == null) return;
 
         Extension.mainActivity.runOnUiThread(new Runnable() {
@@ -111,9 +111,14 @@ public class KizzyHelper extends Extension {
                             .build();
                     mediaSession.setMetadata(metadata);
 
+                    // isPlaying=false (menus, or a paused song) must report STATE_PAUSED,
+                    // not just skip the update -- Kizzy's own Media RPC polls this
+                    // MediaSession independently of when we last called updateStatus(),
+                    // so leaving it on STATE_PLAYING would keep showing "still playing"
+                    // in Discord indefinitely after the player actually paused.
                     PlaybackState state = new PlaybackState.Builder()
                             .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT)
-                            .setState(PlaybackState.STATE_PLAYING, 0, 1.0f)
+                            .setState(isPlaying ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, 0, isPlaying ? 1.0f : 0f)
                             .build();
                     mediaSession.setPlaybackState(state);
 
