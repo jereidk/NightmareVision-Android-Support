@@ -24,7 +24,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	
 	var pauseMusic:FlxSound;
 	var pauseGroup:FlxSpriteGroup;
-	var options:Array<String> = ['resumesong', 'restartsong', 'gameplaychangers', 'options', 'backtomenu'];
+	var options:Array<String> = ['resumesong', 'restartsong', 'options', 'backtomenu'];
 	
 	var pauseBG:FlxSprite;
 	var optionText:Array<FlxText> = [];
@@ -132,7 +132,16 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 			options.insert(2, 'skiptotime');
 			options.insert(3, 'leavechartingmode');
 		}
-		
+
+		// Live-toggleable straight from the pause menu -- label reflects
+		// current state, selecting it flips ClientPrefs.gameplaySettings and
+		// closes; PlayState.closeSubState()'s paused-resume branch already
+		// calls refreshGameplaySettings() on every close, so this takes
+		// effect the instant gameplay resumes.
+		final gameplayTogglesIndex = options.indexOf('options');
+		options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('practice', false) ? 'practice_off' : 'practice_on');
+		options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
+
 		var scale:Float = Math.min(300 / (options.length * 60), 1);
 		
 		for (i in 0...options.length)
@@ -389,9 +398,15 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 				OptionsState.onPlayState = true;
 				FlxG.switchState(() -> new OptionsState());
 
-			case 'gameplaychangers':
-				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
-				openSubState(new GameplayChangersSubstate());
+			case 'botplay_on' | 'botplay_off':
+				ClientPrefs.gameplaySettings.set('botplay', options[curSelect] == 'botplay_on');
+				ClientPrefs.flush();
+				close();
+
+			case 'practice_on' | 'practice_off':
+				ClientPrefs.gameplaySettings.set('practice', options[curSelect] == 'practice_on');
+				ClientPrefs.flush();
+				close();
 
 			case '[DEV] debug info':
                                 PlayState.instance.scriptGroup.call('onToggleDebugInfo');
