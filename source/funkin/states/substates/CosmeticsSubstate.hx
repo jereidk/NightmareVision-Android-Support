@@ -194,18 +194,28 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		gridCameras = [gridCamera];
 		refreshGridLayout('create');
 
-		menuBackButton = new FlxSprite(950, 90).loadGraphic(Paths.image('menu/common/menuBack'));
+		// Same half-cutout shift closeGrid()/openGridForCategory() already
+		// apply to menuBackButton/titleText on every grid toggle (see those
+		// functions' own comments) -- applied here too so the base Locker
+		// view is correctly positioned from the very first frame instead of
+		// only after the player has opened and closed a category grid once.
+		// randomButton/resetButton (and their labels, derived from these
+		// buttons' position below) never got this shift anywhere in the
+		// file before; extended to them for the same reason.
+		final cutoutShiftX:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+
+		menuBackButton = new FlxSprite(950 + cutoutShiftX, 90).loadGraphic(Paths.image('menu/common/menuBack'));
 		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 		menuBackButton.cameras = overlayCameras;
 		add(menuBackButton);
-		
-		randomButton = new FlxSprite(1025, 390).loadGraphic(Paths.image('menu/common/random'));
+
+		randomButton = new FlxSprite(1025 + cutoutShiftX, 390).loadGraphic(Paths.image('menu/common/random'));
 		randomButton.antialiasing = ClientPrefs.globalAntialiasing;
 		randomButton.scale.set(0.5, 0.5);
 		randomButton.updateHitbox();
 		randomButton.cameras = overlayCameras;
 		add(randomButton);
-		
+
 		// labels are attached to buttons because i changed where they were positioned 9billiontrillion times
 		randomLabel = new FlxText(0, 0, 0, Lang.str('rand', 'RANDOM'), 30);
 		randomLabel.setFormat(Paths.font('AmaticSC-Bold.ttf'), 30, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
@@ -214,14 +224,14 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		randomLabel.x = randomButton.x + (randomButton.width - randomLabel.width) * 0.5;
 		randomLabel.y = randomButton.y + randomButton.height + 2;
 		add(randomLabel);
-		
-		resetButton = new FlxSprite(1025, 515).loadGraphic(Paths.image('menu/common/reset'));
+
+		resetButton = new FlxSprite(1025 + cutoutShiftX, 515).loadGraphic(Paths.image('menu/common/reset'));
 		resetButton.antialiasing = ClientPrefs.globalAntialiasing;
 		resetButton.scale.set(0.5, 0.5);
 		resetButton.updateHitbox();
 		resetButton.cameras = overlayCameras;
 		add(resetButton);
-		
+
 		resetLabel = new FlxText(0, 0, 0, Lang.str('reset', 'RESET'), 30);
 		resetLabel.setFormat(Paths.font('AmaticSC-Bold.ttf'), 30, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		resetLabel.borderSize = 2;
@@ -229,8 +239,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		resetLabel.x = resetButton.x + (resetButton.width - resetLabel.width) * 0.5;
 		resetLabel.y = resetButton.y + resetButton.height + 2;
 		add(resetLabel);
-		
-		titleText = new FlxText(280, 88, 0, Lang.str('locker', 'LOCKER'), 62);
+
+		titleText = new FlxText(280 + cutoutShiftX, 88, 0, Lang.str('locker', 'LOCKER'), 62);
 		titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 50, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		titleText.borderSize = 2;
 		titleText.cameras = overlayCameras;
@@ -278,7 +288,9 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		
 		gridScrollBar = new ScrollBar(scrollBarX, scrollBarY, SCROLLBAR_WIDTH, scrollBarHeight, 0xFF2C3F3F, 0xFF6B999B);
 		gridScrollBar.minThumbHeight = 40;
-		gridScrollBar.cameras = overlayCameras = gridScrollBar.track.cameras = overlayCameras = gridScrollBar.thumb.cameras = overlayCameras;
+		gridScrollBar.cameras = overlayCameras;
+		gridScrollBar.track.cameras = overlayCameras;
+		gridScrollBar.thumb.cameras = overlayCameras;
 		gridScrollBar.onScroll.add(function(scroll:Float, _) gridTargetScrollY = gridScrollY = (scroll * getGridMaxScroll()));
 		gridScrollBar.onInteract.add(function() autoScroll = false);
 		gridScrollBar.visible = false;
@@ -409,8 +421,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		overlaySprite.color = cardColor;
 		whiteSprite.color = FlxColor.WHITE;
 		
-		var portraitId:String = null;
-		if (id != null && id.length > 0) portraitId = (id == 'default') ? (index == 1 ? 'defaultgf' : (index == 0 ? 'default' : null)) : id;
+		var portraitId:String = getPortraitId(id, index);
 		
 		var hasPortrait:Bool = false;
 		if (portraitId != null && portraitId.length > 0)
@@ -730,7 +741,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		overlaySpr.color = color;
 		whiteSpr.color = FlxColor.WHITE;
 		
-		final portraitId = (id == null || id.length == 0) ? null : (id == 'default' ? (selectedCategory == 1 ? 'defaultgf' : (selectedCategory == 0 ? 'default' : null)) : id);
+		final portraitId = getPortraitId(id, selectedCategory);
 		var hasPortrait = false;
 		if (portraitId != null && portraitId.length > 0)
 		{
@@ -956,6 +967,14 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		updateGridHighlights();
 	}
 	
+	/**
+	 * Resolves which portrait image id to actually load for a cosmetic id,
+	 * given which category (0=BF, 1=GF, 2=Pet) it's shown in -- 'default'
+	 * maps to a different portrait per category (BF and GF share the same
+	 * cosmetic id but not the same default look), everything else is used
+	 * as-is. Shared by updatePreviewCard() and updateCardVisuals(), which
+	 * used to each carry their own copy of this exact ternary chain.
+	 */
 	function getPortraitId(id:String, catIndex:Int):String
 	{
 		if (id == null || id.length == 0) return null;
@@ -965,16 +984,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		}
 		return id;
 	}
-	
-	// not used anymore but keeping it around just in case
-	function checkPortraitExists(portraitId:String):Bool
-	{
-		if (_portraitCache.exists(portraitId)) return _portraitCache.get(portraitId);
-		var exists = Paths.fileExists('images/menu/cosmicube/items/$portraitId.png', LOOSE);
-		_portraitCache.set(portraitId, exists);
-		return exists;
-	}
-	
+
 	function isCurrentlyEquipped(id:String):Bool
 	{
 		switch (selectedCategory)
