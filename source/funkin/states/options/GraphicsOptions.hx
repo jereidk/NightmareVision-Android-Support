@@ -65,7 +65,7 @@ class GraphicsOptions
 		final gpuCachingOption = new Option(Lang.str('opt_gpucaching', 'GPU Caching'),
 			#if android
 			Lang.str('opt_gpucaching_desc_android',
-				'[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nWARNING: If the app is minimized or a call comes in,\nthe OpenGL context is lost and textures may appear\nblank until the game is restarted.\nDisabled by default. Enable only if you know the risk.'),
+				'[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nIf the app is minimized or a call comes in, the OpenGL context is lost -- affected textures are automatically re-uploaded when you return, but this recovery is untested on real hardware.\nDisabled by default. Enable only if you don\'t mind the risk.'),
 			#else
 			Lang.str('opt_gpucaching_desc', 'If checked, GPU caching will be enabled.'),
 			#end

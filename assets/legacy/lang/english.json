@@ -742,7 +742,7 @@
 		"choice_preset_medium": "Medium",
 		"choice_preset_high": "High",
 		"choice_generic_custom": "Custom",
-		"opt_gpucaching_desc_android": "[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nWARNING: If the app is minimized or a call comes in,\nthe OpenGL context is lost and textures may appear\nblank until the game is restarted.\nDisabled by default. Enable only if you know the risk.",
+		"opt_gpucaching_desc_android": "[EXPERIMENTAL — ANDROID]\nFrees RAM after uploading textures to the GPU.\nIf the app is minimized or a call comes in, the OpenGL context is lost -- affected textures are automatically re-uploaded when you return, but this recovery is untested on real hardware.\nDisabled by default. Enable only if you don't mind the risk.",
 		"opt_drs": "Dynamic Resolution (DRS)",
 		"opt_drs_desc": "Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.",
 		"opt_fpsrgb": "Animate FPS Color (RGB)",

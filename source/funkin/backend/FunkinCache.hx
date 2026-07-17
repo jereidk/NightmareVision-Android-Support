@@ -148,6 +148,7 @@ class FunkinCache
 			currentTrackedGraphics.remove(key);
 			#if (android && cpp)
 			mobile.backend.AstcLoader.removeTracking(key);
+			mobile.backend.AstcLoader.untrackGpuCached(key);
 			#end
 			
 			// #if VERBOSE_LOGS
@@ -255,6 +256,14 @@ class FunkinCache
 
 		if (allowGPU && ClientPrefs.gpuCaching)
 		{
+			// bitmap.image == null already means this came from AstcLoader
+			// (BitmapData.fromTexture() never sets .image at all -- it was
+			// GPU-only from the start) -- that path already tracks its own
+			// context-loss recovery via a real GL texture handle, so
+			// there's no CPU image to lose here and nothing new to track.
+			#if (android && cpp)
+			if (bitmap.image != null) mobile.backend.AstcLoader.trackGpuCached(key, bitmap);
+			#end
 			bitmap.disposeImage();
 		}
 

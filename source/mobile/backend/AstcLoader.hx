@@ -70,6 +70,13 @@ class AstcLoader
 		cachedBytes: Null<haxe.io.Bytes>
 	}> = [];
 	static var _listenerInstalled:Bool = false;
+
+	// Regular (non-ASTC) bitmaps whose CPU pixel buffer FunkinCache's
+	// `gpuCaching` freed via disposeImage(). Unlike the ASTC map above,
+	// these were never GPU-only -- they have a real source file, so recovery
+	// doesn't need the RectangleTexture-handle-stealing dance the ASTC path
+	// requires. See _restoreGpuCachedBitmap().
+	static var _gpuCachedBitmaps:Map<String, BitmapData> = [];
 	#end
 
 	/**
@@ -84,6 +91,31 @@ class AstcLoader
 		if (_listenerInstalled) return;
 		_listenerInstalled = true;
 		FlxG.stage.stage3Ds[0].addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		#end
+	}
+
+	/**
+	 * Registers a regular (non-ASTC) BitmapData for context-loss recovery.
+	 * Call from FunkinCache.cacheBitmap() right before bitmap.disposeImage()
+	 * -- once that runs, OpenFL frees this BitmapData's CPU pixels the next
+	 * time it uploads to the GPU (see BitmapData.getTexture()'s own
+	 * `if (!readable && image != null) image = null;`), so a later context
+	 * loss recreates an empty texture with nothing left to re-upload from.
+	 * Tracking it here means _onContextRestored() can re-decode the
+	 * original file and hand it a fresh `image` to upload instead.
+	 */
+	public static function trackGpuCached(key:String, bitmap:BitmapData):Void
+	{
+		#if (android && cpp)
+		_gpuCachedBitmaps.set(key, bitmap);
+		#end
+	}
+
+	/** Stops tracking a gpuCaching'd bitmap -- call when it's evicted from FunkinCache. */
+	public static function untrackGpuCached(key:String):Void
+	{
+		#if (android && cpp)
+		_gpuCachedBitmaps.remove(key);
 		#end
 	}
 
@@ -443,6 +475,86 @@ class AstcLoader
 
 		if (restored > 0 || failed > 0)
 			Logger.log('AstcLoader: context restored — $restored textures re-uploaded, $failed failed', WARN);
+
+		// Same context-restore pass also re-primes gpuCaching's regular
+		// bitmaps -- separate loop since these were never tracked via the
+		// ASTC/RectangleTexture path above and don't need context3D at all
+		// (see _restoreGpuCachedBitmap()).
+		var gpuRestored = 0;
+		var gpuFailed = 0;
+		var gpuToRemove:Array<String> = [];
+
+		for (key => bitmap in _gpuCachedBitmaps)
+		{
+			// Same "sprite destroyed outside FunkinCache.removeFromCache()"
+			// case as the ASTC loop above -- nothing left to restore.
+			if (!FlxG.bitmap.checkCache(key))
+			{
+				gpuToRemove.push(key);
+				continue;
+			}
+
+			if (_restoreGpuCachedBitmap(key, bitmap))
+				gpuRestored++;
+			else
+			{
+				gpuToRemove.push(key);
+				gpuFailed++;
+			}
+		}
+
+		for (key in gpuToRemove)
+			_gpuCachedBitmaps.remove(key);
+
+		if (gpuRestored > 0 || gpuFailed > 0)
+			Logger.log('AstcLoader: gpuCaching context restore — $gpuRestored bitmap(s) re-primed, $gpuFailed failed', WARN);
+	}
+
+	/**
+	 * Re-decodes the original asset at `key` and hands its fresh pixel data
+	 * to the SAME BitmapData object already tracked for that key -- same
+	 * object identity, so every FlxGraphic/sprite already holding a
+	 * reference to it picks up the change automatically, no need to touch
+	 * them individually.
+	 *
+	 * Unlike _restoreFromPng() (which manually recreates and patches a GL
+	 * texture handle because ASTC BitmapDatas are GPU-only with no `image`
+	 * to fall back on), this bitmap DOES still have its own texture
+	 * management -- BitmapData.getTexture() already re-uploads on its own
+	 * whenever `image` is non-null and the context changed. Explicitly
+	 * clearing the stale texture fields forces that recreate-and-upload path
+	 * to run on the very next draw instead of relying on its own
+	 * __textureContext check to notice on its own.
+	 */
+	static function _restoreGpuCachedBitmap(key:String, bitmap:BitmapData):Bool
+	{
+		var fresh:Null<BitmapData> = null;
+		try
+		{
+			// Mirrors _restoreFromPng(): filesystem first (external storage /
+			// mods, absolute path), then OflAssets for APK-bundled assets.
+			if (sys.FileSystem.exists(key))
+				fresh = BitmapData.fromFile(key);
+			else if (OflAssets.exists(key))
+				// useCache=false: always decode fresh, never the cached
+				// copy -- it may be this exact same disposed bitmap.
+				fresh = OflAssets.getBitmapData(key, false);
+		}
+		catch (e:Dynamic) {}
+
+		if (fresh == null || fresh.image == null)
+		{
+			Logger.log('AstcLoader: gpuCaching restore failed for $key — source unreadable', WARN);
+			return false;
+		}
+
+		bitmap.image = fresh.image;
+		bitmap.__isValid = true;
+		bitmap.__texture = null;
+		bitmap.__textureContext = null;
+		bitmap.__textureVersion = -1;
+
+		return true;
 	}
 
 	/**
