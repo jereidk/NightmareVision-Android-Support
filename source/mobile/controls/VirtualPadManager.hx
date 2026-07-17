@@ -48,26 +48,36 @@ class VirtualPadManager
 		pad.visible = false;
 		FlxG.plugins.addPlugin(pad);
 
-		cam = new FlxCamera();
-		cam.bgColor.alpha = 0;
-		pad.cameras = [cam];
-		_addCameraIfMissing();
+		_ensureCamera();
 
 		if (!_cameraHookBound)
 		{
 			_cameraHookBound = true;
-			// FunkinGame.switchState() wipes every camera via
-			// FlxG.cameras.reset() on every full state switch -- re-add ours
-			// right after so it survives switches the same way the
-			// plugin-registered pad itself already does.
-			FlxG.signals.postStateSwitch.add(_addCameraIfMissing);
+			// FunkinGame.switchState() calls FlxG.cameras.reset() on every full
+			// state switch -- and CameraFrontEnd.remove()'s default Destroy =
+			// true means that doesn't just clear the list, it fully destroys
+			// every camera in it (FlxCamera.destroy() nulls out flashSprite,
+			// the OpenFL display object CameraFrontEnd.add() re-attaches via
+			// addChildAt()). Re-adding that same, now-destroyed camera object
+			// crashed immediately -- "Error #2007: Parameter child must be
+			// non-null" -- the instant Flixel tried to addChildAt(null). Needs
+			// a genuinely fresh FlxCamera every switch, not a re-add of the
+			// old one; see _ensureCamera(). preStateSwitch fires right after
+			// FlxG.cameras.reset() but before the new state's create() runs,
+			// so the pad already has a working camera by the time anything
+			// calls request() during that create().
+			FlxG.signals.preStateSwitch.add(_ensureCamera);
 		}
 	}
 
-	static function _addCameraIfMissing():Void
+	static function _ensureCamera():Void
 	{
-		if (cam != null && FlxG.cameras.list.indexOf(cam) == -1)
-			FlxG.cameras.add(cam, false);
+		if (cam != null && FlxG.cameras.list.indexOf(cam) != -1) return; // still alive and registered
+
+		cam = new FlxCamera();
+		cam.bgColor.alpha = 0;
+		FlxG.cameras.add(cam, false);
+		if (pad != null) pad.cameras = [cam];
 	}
 
 	public static function request(owner:Dynamic, dpad:MobileDPadMode, action:MobileActionMode, forGameplay:Bool = false, forceShow:Bool = false):Void
