@@ -60,57 +60,9 @@ class MusicBeatSubstate extends FlxSubState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	/** True when virtualPad is an ancestor's pad borrowed via reconfigure(), not one this substate created and owns. */
-	var _borrowedVirtualPad:Bool = false;
-
-	/**
-	 * Walks up the substate chain (FlxSubState._parentState) looking for the
-	 * nearest ancestor that already has an active virtualPad -- a state or
-	 * substate can only ever be reached through one live parent chain at a
-	 * time, so there's exactly one such pad to find, if any.
-	 */
-	function _findAncestorPad():Null<MobileVirtualPad>
-	{
-		var p:flixel.FlxState = _parentState;
-		while (p != null)
-		{
-			final asState = Std.downcast(p, funkin.backend.MusicBeatState);
-			if (asState != null) return asState.virtualPad;
-
-			final asSubstate = Std.downcast(p, funkin.backend.MusicBeatSubstate);
-			if (asSubstate != null)
-			{
-				if (asSubstate.virtualPad != null) return asSubstate.virtualPad;
-				p = @:privateAccess asSubstate._parentState;
-				continue;
-			}
-
-			return null;
-		}
-		return null;
-	}
-
-	/**
-	 * Prefers reshaping an already-live ancestor pad (see _findAncestorPad())
-	 * over creating a second one -- e.g. opening the pause menu on top of
-	 * PlayState's own gameplay pad used to either leave both active at once
-	 * or hide the gameplay one, when the pause menu could just borrow and
-	 * reshape it instead. Falls back to creating a fresh pad (the old
-	 * behaviour) when there's no ancestor pad to borrow.
-	 */
 	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
-
-		final ancestorPad = _findAncestorPad();
-		if (ancestorPad != null)
-		{
-			ancestorPad.reconfigure(DPad, Action, forGameplay);
-			virtualPad = ancestorPad;
-			_borrowedVirtualPad = true;
-			return;
-		}
-
 		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
 	}
@@ -119,12 +71,6 @@ class MusicBeatSubstate extends FlxSubState
 	{
 		if (virtualPad != null)
 		{
-			// A borrowed pad already has a camera from its owner -- swapping
-			// in a fresh one here would leave the old one orphaned (never
-			// removed) and pointing this substate's camera list at a pad it
-			// doesn't actually own.
-			if (_borrowedVirtualPad) return;
-
 			virtualPadCam = new FlxCamera();
 			virtualPadCam.bgColor.alpha = 0;
 			FlxG.cameras.add(virtualPadCam, DefaultDrawTarget);
@@ -134,14 +80,6 @@ class MusicBeatSubstate extends FlxSubState
 
 	public function removeVirtualPad()
 	{
-		if (_borrowedVirtualPad)
-		{
-			virtualPad?.restorePrevious();
-			virtualPad = null;
-			_borrowedVirtualPad = false;
-			return;
-		}
-
 		if (virtualPad != null)
 		{
 			remove(virtualPad);
