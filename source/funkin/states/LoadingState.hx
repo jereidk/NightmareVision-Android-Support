@@ -20,6 +20,19 @@ import sys.thread.Mutex;
 #end
 
 /**
+ * A single background-preloadable file backing one logical asset (a
+ * character, a stage prop, a noteskin...). `cacheKey` is the string
+ * FunkinAssets.getGraphicUnsafe() / FlxAnimateFrames.getGraphic() will
+ * look this decoded data up under LATER, during PlayState's own
+ * (synchronous) load -- normally identical to `realPath` (the file this
+ * actually reads off disk), except when `realPath` is a `.astc` file
+ * standing in for a spritemap that Init.hx's FlxAnimateAssets.list()
+ * override always reports under its `.png` name (see
+ * LoadingState.resolveAssetTasks()'s own doc comment for why).
+ */
+typedef PreloadTask = {realPath:String, cacheKey:String, label:String};
+
+/**
  * Sits between picking a song and PlayState.create() actually running.
  *
  * On Android: launches a background Thread that opens files and decodes
@@ -204,19 +217,6 @@ class LoadingState extends MusicBeatState
 	 */
 	static inline function resolveLoadPath(rawPath:String):String
 		return sys.FileSystem.exists(rawPath) ? FunkinAssets.androidStoragePath(rawPath) : rawPath;
-
-	/**
-	 * A single background-preloadable file backing one logical asset (a
-	 * character, a stage prop, a noteskin...). `cacheKey` is the string
-	 * FunkinAssets.getGraphicUnsafe() / FlxAnimateFrames.getGraphic() will
-	 * look this decoded data up under LATER, during PlayState's own
-	 * (synchronous) load -- normally identical to `realPath` (the file this
-	 * actually reads off disk), except when `realPath` is a `.astc` file
-	 * standing in for a spritemap that Init.hx's FlxAnimateAssets.list()
-	 * override always reports under its `.png` name (see
-	 * resolveAssetTasks()'s own doc comment for why).
-	 */
-	typedef PreloadTask = {realPath:String, cacheKey:String, label:String};
 
 	/**
 	 * Resolves a character/stage/noteskin asset key (e.g.
