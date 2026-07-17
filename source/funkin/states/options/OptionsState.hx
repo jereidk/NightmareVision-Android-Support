@@ -38,7 +38,7 @@ class OptionsState extends MusicBeatState
 	public static var onPlayState:Bool = false;
 
 	static final TAB_BUILDERS:Map<String, Void->Array<Option>> = [
-		'language' => LanguageOptions.build,
+		'language' => () -> LanguageOptions.build(),
 		'gameplay' => GameplayOptions.build,
 		'graphics' => () -> GraphicsOptions.build(refreshSceneAntialiasing),
 		'visualsui' => VisualsUIOptions.build,

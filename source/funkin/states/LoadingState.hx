@@ -330,7 +330,7 @@ class LoadingState extends MusicBeatState
 		final tasks:Array<PreloadTask> = [];
 
 		function addAtlas(assetKey:String):Void
-			tasks.push(...resolveAssetTasks(assetKey, assetKey));
+			for (t in resolveAssetTasks(assetKey, assetKey)) tasks.push(t);
 
 		function addSound(basePath:String):Void
 		{
@@ -789,7 +789,7 @@ class LoadingState extends MusicBeatState
 		final tasks:Array<PreloadTask> = [];
 
 		function addAtlas(assetKey:String, label:String):Void
-			tasks.push(...resolveAssetTasks(assetKey, label));
+			for (t in resolveAssetTasks(assetKey, label)) tasks.push(t);
 
 		function addSound(basePath:String, label:String):Void
 		{
