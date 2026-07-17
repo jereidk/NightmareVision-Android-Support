@@ -181,8 +181,12 @@ class FreeplayState extends AmongUIState
 	static inline final PREFETCH_DELAY:Float = 2.0;
 	var _lastPrefetchedSong:String = '';
 
-	/** Set right before actually switching to the prefetched song -- see destroy(). */
-	var _committingToSongId:Null<String> = null;
+	/**
+	 * Set right before actually switching to the prefetched song -- see
+	 * destroy(). Static because loadSong() (which sets this) is itself
+	 * static -- there's only ever one live FreeplayState anyway.
+	 */
+	static var _committingToSongId:Null<String> = null;
 	#end
 
 	override function create()
@@ -942,6 +946,11 @@ class FreeplayState extends AmongUIState
 		// own doc comment for why an orphaned Thread left running matters.
 		#if (android && sys)
 		funkin.states.LoadingState.cancelPendingPrefetch(_committingToSongId);
+		// _committingToSongId is static (loadSong() that sets it is static
+		// too) -- clear it now so a LATER FreeplayState destroyed without
+		// ever calling loadSong() again can't accidentally read this stale
+		// value as an exception and skip cancelling an unrelated prefetch.
+		_committingToSongId = null;
 		#end
 
 		// super.destroy() (AmongUIState) handles disposeNewSince(_bitmapSnapshotAtCreate).
