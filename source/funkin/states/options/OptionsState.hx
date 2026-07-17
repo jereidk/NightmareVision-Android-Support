@@ -13,6 +13,7 @@ import funkin.states.*;
 import funkin.objects.*;
 import funkin.objects.menu.AmongControls;
 import funkin.objects.menu.TouchOptionList;
+import funkin.objects.menu.NineSlice;
 
 /**
  * Categories used to be a single vertical sidebar list, each opening its own
@@ -134,6 +135,11 @@ class OptionsState extends MusicBeatState
 	// stay readable instead of scattering the same two magic numbers around.
 	static final DESC_GAP:Float = 6;
 	static final DESC_H:Float = 74;
+
+	// menu/freeplay/card.png's own corner radius measures ~16-17px (scanned
+	// its alpha channel) -- 20 gives NineSlice.build() a couple px of buffer
+	// so the corner curve is always fully inside the unscaled slice.
+	static final CARD_MARGIN:Int = 20;
 
 	// However many ROW_H-tall rows actually fit between the list's top and
 	// the canvas bottom, after reserving room for the description box below
@@ -311,8 +317,11 @@ class OptionsState extends MusicBeatState
 			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
 			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + DESC_GAP);
-			descBg.loadGraphic(Paths.image('menu/freeplay/card'));
-			descBg.setGraphicSize(Std.int(listW + 12), Std.int(DESC_H));
+			// 9-sliced instead of a plain stretch -- at this box's actual size
+			// (~11:1, vs. the source card's own ~5:1) a naive setGraphicSize()
+			// squashed the rounded corner/border noticeably flatter here than
+			// on the narrower tab/button cards using the exact same bitmap.
+			descBg.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, listW + 12, DESC_H), false, 0, 0, true);
 			descBg.updateHitbox();
 			descBg.antialiasing = ClientPrefs.globalAntialiasing;
 			descBg.color = 0xFF1A1A2E;
@@ -419,10 +428,13 @@ class OptionsState extends MusicBeatState
 			// Real card sprite instead of a flat makeGraphic() rect -- same
 			// rounded panel MobileSettingsSubState uses, so both options
 			// screens share one UI language instead of each inventing its own
-			// flat rectangles.
+			// flat rectangles. 9-sliced (see NineSlice's own doc comment) so
+			// the corner radius/border stay the same actual size here as on
+			// every other card using this bitmap, instead of a plain stretch
+			// squashing or stretching them to whatever this row's aspect
+			// ratio happens to be.
 			final bg = new FlxSprite(bx, HEADER_Y);
-			bg.loadGraphic(Paths.image('menu/freeplay/card'));
-			bg.setGraphicSize(Std.int(btnW), Std.int(BTN_H));
+			bg.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, btnW, BTN_H), false, 0, 0, true);
 			bg.updateHitbox();
 			bg.antialiasing = ClientPrefs.globalAntialiasing;
 			bg.color = 0xFF35354F;
@@ -479,8 +491,7 @@ class OptionsState extends MusicBeatState
 			// Real card sprite instead of a flat makeGraphic() rect -- see
 			// buildActionButtons() above for why.
 			final bg = new FlxSprite(tx, TAB_Y);
-			bg.loadGraphic(Paths.image('menu/freeplay/card'));
-			bg.setGraphicSize(Std.int(tabW), Std.int(TAB_H));
+			bg.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, tabW, TAB_H), false, 0, 0, true);
 			bg.updateHitbox();
 			bg.antialiasing = ClientPrefs.globalAntialiasing;
 			bg.color = 0xFF2A2A3A;

@@ -1,6 +1,7 @@
 package funkin.states.options;
 
 import funkin.backend.MusicBeatSubstate;
+import funkin.objects.menu.NineSlice;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -420,8 +421,10 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	function _makeButton(x:Float, y:Float, text:String, color:Int):FlxSprite
 	{
 		var spr = new FlxSprite(x, y);
-		spr.loadGraphic(Paths.image('menu/freeplay/card'));
-		spr.setGraphicSize(150, 36);
+		// 9-sliced (see NineSlice's own doc comment / OptionsState.CARD_MARGIN)
+		// so this button's corner radius/border match every other screen using
+		// this same card bitmap instead of getting its own one-off stretch.
+		spr.loadGraphic(NineSlice.build('menu/freeplay/card', 20, 150, 36), false, 0, 0, true);
 		spr.updateHitbox();
 		spr.color = color;
 		spr.antialiasing = ClientPrefs.globalAntialiasing;

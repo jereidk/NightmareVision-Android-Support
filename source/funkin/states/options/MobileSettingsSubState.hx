@@ -12,6 +12,7 @@ import flixel.graphics.frames.FlxTileFrames;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import openfl.display.BitmapData;
+import funkin.objects.menu.NineSlice;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
@@ -107,6 +108,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// one definition instead of three independently hardcoded copies.
 	static final COLOR_ACCENT:Int     = OptionsTheme.PINK;
 	static final COLOR_ACCENT_DIM:Int = OptionsTheme.PINK_DIM;
+
+	// menu/freeplay/card.png's own corner radius measures ~16-17px -- 20
+	// gives NineSlice.build() a couple px of buffer. Same value OptionsState
+	// uses for the same source image.
+	static final CARD_MARGIN:Int = 20;
 
 	// ── UI: preview ──────────────────────────────────────────────────────────
 	var _canvasBg:FlxSprite;
@@ -209,8 +215,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 			// Highlight background for selected row
 			var hi = new FlxSprite(OPT_X - 6, rowY - 2);
-			hi.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
-			hi.setGraphicSize(OPT_W + 12, Std.int(OPT_H - 4));
+			hi.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, OPT_W + 12, OPT_H - 4, NONE), false, 0, 0, true);
 			hi.updateHitbox();
 			hi.antialiasing = ClientPrefs.globalAntialiasing;
 			hi.visible = false;
@@ -272,8 +277,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// makeGraphic() rect, so every panel on this screen reads as the
 		// same UI language.
 		_descBg = new FlxSprite(OPT_X - 6, OPT_Y0 + MAX_OPT * OPT_H + 4);
-		_descBg.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
-		_descBg.setGraphicSize(OPT_W + 12, 70);
+		_descBg.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, OPT_W + 12, 70, NONE), false, 0, 0, true);
 		_descBg.updateHitbox();
 		_descBg.color = 0xFF1A1A2E;
 		_descBg.alpha = 0.9;
@@ -309,8 +313,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Touch-mode back button — only visible when navInputMode is Touch.
 		final backBtnY:Float = OPT_Y0 + MAX_OPT * OPT_H + 80;
 		_backBtn = new FlxSprite(OPT_X, backBtnY);
-		_backBtn.loadGraphic(Paths.image('menu/freeplay/card', null, true, NONE));
-		_backBtn.setGraphicSize(160, 42);
+		_backBtn.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, 160, 42, NONE), false, 0, 0, true);
 		_backBtn.updateHitbox();
 		_backBtn.antialiasing = ClientPrefs.globalAntialiasing;
 		_backBtn.color = 0xFF3D2430;
