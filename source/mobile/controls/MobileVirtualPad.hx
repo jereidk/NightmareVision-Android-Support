@@ -108,6 +108,23 @@ class MobileVirtualPad extends TouchInputManager
 		_configStack.push({dpad: currentDPad, action: currentAction, forGameplay: this.forGameplay});
 		_clearButtons();
 		_build(DPad, Action, forGameplay ?? false);
+
+		// update()'s "forGameplay && FlxG.state.subState != null" check hides
+		// this pad (this.visible = false, every button .active/.visible =
+		// false) the instant a substate opens over the gameplay pad's owner --
+		// which is exactly the moment a substate borrows the pad via THIS
+		// function to use for its own navigation. _build() only creates fresh
+		// buttons (individually visible by default); it never touched this
+		// group's own .visible, so a pad that happened to be mid-hide when
+		// borrowed stayed invisible until some unrelated touch elsewhere on
+		// screen happened to flip it back on -- the pause menu/game over pad
+		// could be fully invisible with no visual cue it was even there.
+		this.visible = true;
+		for (btn in buttons)
+		{
+			btn.active = true;
+			btn.visible = true;
+		}
 	}
 
 	/**
