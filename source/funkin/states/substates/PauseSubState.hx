@@ -24,7 +24,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	
 	var pauseMusic:FlxSound;
 	var pauseGroup:FlxSpriteGroup;
-	var options:Array<String> = ['resumesong', 'restartsong', 'options', 'backtomenu'];
+	var options:Array<String> = ['resumesong', 'restartsong', 'options', 'gameplaychangers', 'backtomenu'];
 	
 	var pauseBG:FlxSprite;
 	var optionText:Array<FlxText> = [];
@@ -388,7 +388,11 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 				if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
 				OptionsState.onPlayState = true;
 				FlxG.switchState(() -> new OptionsState());
-				
+
+			case 'gameplaychangers':
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+				openSubState(new GameplayChangersSubstate());
+
 			case '[DEV] debug info':
                                 PlayState.instance.scriptGroup.call('onToggleDebugInfo');
                                 close();
