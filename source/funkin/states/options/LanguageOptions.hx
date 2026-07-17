@@ -29,27 +29,42 @@ class LanguageOptions
 	 */
 	public static var currentLanguageRowIndex(default, null):Int = -1;
 
-	public static function build():Array<Option>
+	/**
+	 * @param filter Case-insensitive substring match against each language's
+	 * display name. Empty/null shows the full alphabetized list, same as
+	 * before this param existed. While actively filtering, the Subtitles
+	 * toggle/credits row and the A/B/C... section headers are skipped --
+	 * they're just noise once the list is already narrowed down to a
+	 * handful of matches, and skipping them keeps the actual results in
+	 * view without scrolling past unrelated rows first.
+	 */
+	public static function build(?filter:String):Array<Option>
 	{
 		final opts:Array<Option> = [];
 		currentLanguageRowIndex = -1;
+
+		final searching = filter != null && filter.length > 0;
+		final needle = searching ? filter.toLowerCase() : '';
 
 		// Subtitles + credits at the top -- with 30+ language rows now
 		// inline below, leaving them at the bottom (where the old 4-row
 		// list had them) would bury a frequently-toggled, unrelated setting
 		// behind a full scroll of the alphabet.
-		opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'),
-			Lang.str('opt_subtitles_desc', "Show subtitles for songs that have them."), 'subtitles', 'bool', true));
-
-		final creditsOption = new Option('', '', '', 'label');
-		opts.push(creditsOption);
-
-		function refreshCredits()
+		var refreshCredits:Void->Void = () -> {};
+		if (!searching)
 		{
-			final tc:String = Lang.current?.translationCredits ?? '';
-			creditsOption.name = (tc.length > 0) ? 'Localization Credits: $tc' : '';
+			opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'),
+				Lang.str('opt_subtitles_desc', "Show subtitles for songs that have them."), 'subtitles', 'bool', true));
+
+			final creditsOption = new Option('', '', '', 'label');
+			opts.push(creditsOption);
+
+			refreshCredits = () -> {
+				final tc:String = Lang.current?.translationCredits ?? '';
+				creditsOption.name = (tc.length > 0) ? 'Localization Credits: $tc' : '';
+			};
+			refreshCredits();
 		}
-		refreshCredits();
 
 		final codes = Lang.getAvailableLanguages();
 		final displayNames = [for (code in codes) (Lang.loadLang(code)?.name ?? code)];
@@ -59,13 +74,20 @@ class LanguageOptions
 		// A/B/C... section headers -- same TouchOptionList 'label' row +
 		// divider rule every other tab's list already uses for these.
 		var lastLetter = '';
+		var matchCount = 0;
 		for (entry in entries)
 		{
-			final letter = entry.name.substr(0, 1).toUpperCase();
-			if (letter != lastLetter)
+			if (searching && entry.name.toLowerCase().indexOf(needle) == -1) continue;
+			matchCount++;
+
+			if (!searching)
 			{
-				opts.push(new Option(letter, '', '', 'label'));
-				lastLetter = letter;
+				final letter = entry.name.substr(0, 1).toUpperCase();
+				if (letter != lastLetter)
+				{
+					opts.push(new Option(letter, '', '', 'label'));
+					lastLetter = letter;
+				}
 			}
 
 			if (entry.code == ClientPrefs.language) currentLanguageRowIndex = opts.length;
@@ -82,11 +104,21 @@ class LanguageOptions
 				// Re-checked live every call (not snapshotted here at build
 				// time) so this self-corrects the moment a download
 				// finishes or starts, without the tab needing a rebuild.
+				// getInstalledDLCs() (behind isInstalled()) is now cached
+				// (see DLCManager.hx) so this is cheap to call every frame
+				// for every visible row -- it used to hit disk (list a
+				// directory, open+parse every installed DLC's meta.json)
+				// on every single one of those calls.
 				opt.badgeProvider = () ->
 				{
 					if (LangFontPacks.isDownloading(entry.code)) return ({text: 'Downloading... ${DLCManager.taskProgress}%', color: 0xFFF59E0B} : OptionBadge);
 					if (!LangFontPacks.isInstalled(entry.code)) return ({text: '• ${pack.sizeMb} MB', color: 0xFF38BDF8} : OptionBadge);
-					return null;
+					// Downloaded but not yet the active language -- explicit
+					// positive confirmation instead of silently showing no
+					// badge at all, which read as "still hasn't finished
+					// downloading" / "didn't notice it's there" rather than
+					// "already got this one".
+					return ({text: Lang.str('opt_language_downloaded', 'Downloaded'), color: 0xFF22C55E} : OptionBadge);
 				};
 			}
 
@@ -111,6 +143,9 @@ class LanguageOptions
 			};
 			opts.push(opt);
 		}
+
+		if (searching && matchCount == 0)
+			opts.push(new Option(Lang.str('opt_language_noresults', 'No languages match:') + ' "' + filter + '"', '', '', 'label'));
 
 		return opts;
 	}
