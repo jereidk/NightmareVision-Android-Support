@@ -11,6 +11,7 @@ import flixel.math.FlxPoint;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
+import flixel.addons.display.FlxBackdrop;
 import openfl.display.BitmapData;
 import funkin.objects.menu.NineSlice;
 
@@ -68,6 +69,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	static final CANVAS_Y:Float = 120;
 	static final CANVAS_W:Int   = 500;
 	static final CANVAS_H:Int   = 280;
+	// The canvas's own background is the same starFG image the screen behind
+	// it now uses too (see create()) -- without a frame the canvas would
+	// visually melt into the surrounding background instead of reading as
+	// its own distinct panel.
+	static final CANVAS_BORDER:Float = 3;
 
 	// ── Options column ───────────────────────────────────────────────────────
 	// Was `static final` like its siblings, but that's exactly wrong for a
@@ -174,8 +180,25 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	override function create()
 	{
-		// Dim the menu behind us.
-		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(0, 0, 8, 210));
+		// Same starBG/starFG/dim stack as OptionsState (which is what opened
+		// this substate) instead of a single semi-transparent rect -- that
+		// rect let OptionsState's own already-dark background bleed through
+		// at reduced opacity, visibly inconsistent with the rest of the
+		// Options subsystem. OptionsState itself no longer bothers drawing
+		// its own copy while this is open (see its persistentDraw = false
+		// below), so this isn't drawing on top of anything -- it's the only
+		// thing drawing here.
+		var starsBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
+		starsBG.scrollFactor.set();
+		starsBG.velocity.x = -4.5;
+		add(starsBG);
+
+		var starsFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
+		starsFG.scrollFactor.set();
+		starsFG.velocity.x = -9;
+		add(starsFG);
+
+		var bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xAA0A0A14);
 		add(bg);
 
 		// Header bar behind the title.
@@ -198,6 +221,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_modeText.borderSize = 1.5;
 		_modeText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_modeText);
+
+		// White frame, drawn one CANVAS_BORDER larger on every side so
+		// _canvasBg (added right after, same size the preview zones already
+		// align to) covers everything except a thin border ring.
+		var canvasFrame = new FlxSprite(CANVAS_X - CANVAS_BORDER, CANVAS_Y - CANVAS_BORDER)
+			.makeGraphic(CANVAS_W + Std.int(CANVAS_BORDER * 2), CANVAS_H + Std.int(CANVAS_BORDER * 2), FlxColor.WHITE);
+		add(canvasFrame);
 
 		// Canvas background — star field scaled to preview area.
 		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y);
@@ -751,6 +781,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 		else if (opt.id == 'vpadCustomize')
 		{
+			// Same reasoning as OptionsState skipping its own draw while
+			// THIS substate is open: VirtualPadCustomizerSubState now draws
+			// its own full starBG/starFG/dim stack too, so this substate's
+			// copy underneath would just be redundant render.
+			persistentDraw = false;
 			openSubState(new funkin.states.options.VirtualPadCustomizerSubState());
 		}
 		else if (opt.id == 'openDataFolder')

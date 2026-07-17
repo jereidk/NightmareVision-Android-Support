@@ -195,6 +195,16 @@ class OptionsState extends MusicBeatState
 
 		scriptGroup.call('onOptionsSubmenu', [label]);
 
+		// ControlsSubState has no starfield of its own -- just a 50%-alpha
+		// dim -- so it actually relies on this state's own background
+		// staying drawn underneath it to look fully opaque; leave
+		// persistentDraw at its default (true) for that case and any other
+		// substate opened from here. MobileSettingsSubState is the one
+		// exception: it now draws its own full starBG/starFG/dim stack (see
+		// that file), so this state's copy underneath is pure redundant
+		// render -- skip it while that substate is open.
+		persistentDraw = true;
+
 		switch (label)
 		{
 			case 'controls':
@@ -202,6 +212,7 @@ class OptionsState extends MusicBeatState
 				openSubState(new funkin.states.options.ControlsSubState(gamepad != null ? Gamepad(gamepad.id) : Keys));
 			#if mobile
 			case 'mobile':
+				persistentDraw = false;
 				openSubState(new funkin.states.options.MobileSettingsSubState());
 			case 'dlc':
 				openSubState(new funkin.states.options.MobileDLCSubState());

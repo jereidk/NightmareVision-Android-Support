@@ -65,6 +65,16 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		starsFG.velocity.x = -9;
 		add(starsFG);
 
+		// starBG/starFG alone are mostly-transparent decoration (sparse star
+		// dots), never meant to stand in as an opaque background by
+		// themselves -- OptionsState always pairs them with this same dim
+		// rect on top. This substate is opened from inside
+		// MobileSettingsSubState, itself opened from inside OptionsState, so
+		// without this, whatever MobileSettingsSubState's own UI was doing
+		// showed through underneath at near-full visibility.
+		var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xAA0A0A14);
+		add(dim);
+
 		// ── Header bar ──
 		var topBar = new FlxSprite(0, 0);
 		topBar.loadGraphic(Paths.image('menu/common/topBar'));
