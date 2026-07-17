@@ -159,7 +159,7 @@ class AstcLoader
 			{
 				var bytes = sys.io.File.getBytes(astcPath);
 
-				return _loadAndTrack(pngPath, astcPath, bytes);
+				return loadAndTrack(pngPath, astcPath, bytes);
 			}
 			catch (e:Dynamic)
 			{
@@ -174,7 +174,7 @@ class AstcLoader
 		{
 			var bytes = OflAssets.getBytes(astcPath);
 			if (bytes != null) {
-				return _loadAndTrack(pngPath, astcPath, bytes);
+				return loadAndTrack(pngPath, astcPath, bytes);
 			}
 		}
 
@@ -238,8 +238,17 @@ class AstcLoader
 	/**
 	 * Loads ASTC bytes, wraps in BitmapData, and registers in the recovery map
 	 * so the texture survives an OpenGL context loss/restore cycle.
+	 *
+	 * Public (unlike the other internal helpers in this file) because
+	 * LoadingState's background preload thread reads ASTC bytes off disk
+	 * ahead of time (safe, no GL involved) and hands them to this function
+	 * on the MAIN thread during its per-frame finalize step -- the actual
+	 * GL upload this does can only ever run there. `pngPath` doubles as the
+	 * FunkinCache/FlxG.bitmap cache key the caller should register the
+	 * result under (see _loadInternal()'s own GL-upload code for why that
+	 * doesn't happen automatically here).
 	 */
-	static function _loadAndTrack(pngPath:String, astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
+	public static function loadAndTrack(pngPath:String, astcPath:String, bytes:haxe.io.Bytes):Null<BitmapData>
 	{
 		try
 		{

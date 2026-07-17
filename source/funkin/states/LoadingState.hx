@@ -86,6 +86,12 @@ class LoadingState extends MusicBeatState
 	#if (sys && cpp)
 	static var _pendingBitmaps:Array<{key:String, bmd:BitmapData}> = [];
 	static var _pendingAudioBuffers:Array<{key:String, buffer:AudioBuffer}> = [];
+	// .astc files can only be read (bytes off disk) on the worker thread --
+	// the actual GL upload needs the render context, so it's deferred to
+	// finalizePendingAssets() same as the two queues above. `cacheKey` is
+	// what the resulting bitmap gets registered under (see PreloadTask's own
+	// doc comment for why that isn't always the same string as `astcPath`).
+	static var _pendingAstcTextures:Array<{cacheKey:String, astcPath:String, bytes:haxe.io.Bytes}> = [];
 	#end
 
 	// Progress bar
@@ -158,6 +164,7 @@ class LoadingState extends MusicBeatState
 			_threadGeneration++;
 			_pendingBitmaps.resize(0);
 			_pendingAudioBuffers.resize(0);
+			_pendingAstcTextures.resize(0);
 			_prefetchComplete = false;
 			_prefetchForSongId = '';
 			_prefetchTotal = 0;
@@ -198,6 +205,108 @@ class LoadingState extends MusicBeatState
 	static inline function resolveLoadPath(rawPath:String):String
 		return sys.FileSystem.exists(rawPath) ? FunkinAssets.androidStoragePath(rawPath) : rawPath;
 
+	/**
+	 * A single background-preloadable file backing one logical asset (a
+	 * character, a stage prop, a noteskin...). `cacheKey` is the string
+	 * FunkinAssets.getGraphicUnsafe() / FlxAnimateFrames.getGraphic() will
+	 * look this decoded data up under LATER, during PlayState's own
+	 * (synchronous) load -- normally identical to `realPath` (the file this
+	 * actually reads off disk), except when `realPath` is a `.astc` file
+	 * standing in for a spritemap that Init.hx's FlxAnimateAssets.list()
+	 * override always reports under its `.png` name (see
+	 * resolveAssetTasks()'s own doc comment for why).
+	 */
+	typedef PreloadTask = {realPath:String, cacheKey:String, label:String};
+
+	/**
+	 * Resolves a character/stage/noteskin asset key (e.g.
+	 * "characters/GF_assets", or a bare stage asset like "stageback") into
+	 * every file that actually needs to be read off disk to warm it.
+	 *
+	 * Two shapes exist in this fork's real asset tree (confirmed directly
+	 * against it, not assumed):
+	 *  - Flat sparrow atlas: a single `images/$assetKey.png` (+ .xml
+	 *    alongside, tiny, loaded on-the-fly later -- not preloaded here),
+	 *    optionally with a `.astc` GPU-compressed override next to it.
+	 *  - Adobe Animate export: a FOLDER at `images/$assetKey/` holding
+	 *    Animation.json plus one or more spritemapN(.astc|.png) +
+	 *    spritemapN.json pairs. This is what the MAJORITY of this fork's
+	 *    actual characters use -- and the spritemap NAMING isn't uniform
+	 *    (this asset tree has both "spritemap1", "spritemap2"... and
+	 *    "spritemap-0", "spritemap-1"... conventions), so it can't be
+	 *    guessed by sequential probing. This re-uses
+	 *    animate.FlxAnimateAssets.list() -- the SAME, already-correct
+	 *    function FlxAnimateFrames itself calls internally -- to discover
+	 *    them for real, instead of reimplementing that discovery here.
+	 *
+	 * Before this function existed, callers just assumed
+	 * `images/$assetKey.png` unconditionally, which is why this preload
+	 * never actually warmed anything for an Animate-format character (the
+	 * overwhelming majority of them): that file simply doesn't exist, the
+	 * background thread's own try/catch silently swallowed the resulting
+	 * miss, and the loading bar kept advancing anyway without having
+	 * cached a single byte for it.
+	 */
+	static function resolveAssetTasks(assetKey:String, label:String):Array<PreloadTask>
+	{
+		final tasks:Array<PreloadTask> = [];
+		final folderKey = Paths.getPath('images/$assetKey', null, LOOSE);
+
+		if (FunkinAssets.exists('$folderKey/Animation.json'))
+		{
+			// Mirrors FlxAnimateFrames._fromAnimatePath()'s own spritemap
+			// discovery exactly (same listWithFilter() call shape), so this
+			// finds precisely what that function will look for later.
+			final libraryPrefix = folderKey.substring(0, folderKey.indexOf(':'));
+			final entries:Array<String> = animate.FlxAnimateAssets.list(folderKey, null, libraryPrefix, false);
+			final spriteFiles = entries.filter(f -> f.startsWith('spritemap'));
+			final jsonFiles = spriteFiles.filter(f -> f.endsWith('.json'));
+
+			for (sm in jsonFiles)
+			{
+				final id = sm.split('spritemap')[1].split('.')[0];
+				final imageFile = spriteFiles.filter(f -> f.startsWith('spritemap$id') && !f.endsWith('.json'))[0];
+				if (imageFile == null) continue;
+
+				// FlxAnimateAssets.list() (Init.hx's override) always
+				// reports spritemap images under their .png name, even when
+				// the real file on disk is .astc -- that's also the exact
+				// string FlxAnimateFrames.getGraphic() will request later,
+				// so it's this task's cacheKey regardless of which file
+				// resolveSingleImageTask() actually decides to read.
+				tasks.push(resolveSingleImageTask('$folderKey/$imageFile', '$label:sm$id'));
+			}
+		}
+		else
+		{
+			tasks.push(resolveSingleImageTask(Paths.getPath('images/$assetKey.png', null, LOOSE), label));
+		}
+
+		return tasks;
+	}
+
+	/**
+	 * Resolves one image key (always ending in .png, whether or not that's
+	 * the real file on disk) to the task that actually loads it --
+	 * preferring a .astc GPU-compressed sibling when one exists AND the
+	 * device actually supports ASTC, matching FunkinAssets.getBitmapData()'s
+	 * (via AstcLoader.tryLoad()) own preference exactly, so this preload
+	 * warms the same representation PlayState will really end up using
+	 * instead of wastefully decoding one this device will never render.
+	 */
+	static function resolveSingleImageTask(pngKey:String, label:String):PreloadTask
+	{
+		#if (android && cpp)
+		if (mobile.backend.AstcSupport.isSupported)
+		{
+			final astcPath = mobile.backend.AstcLoader.deriveAstcPath(pngKey);
+			if (astcPath != null && FunkinAssets.exists(astcPath))
+				return {realPath: resolveLoadPath(astcPath), cacheKey: pngKey, label: label};
+		}
+		#end
+		return {realPath: resolveLoadPath(pngKey), cacheKey: pngKey, label: label};
+	}
+
 	public static function prefetchSong(song:funkin.data.Song):Bool
 	{
 		if (song == null) return true;
@@ -209,6 +318,7 @@ class LoadingState extends MusicBeatState
 		{
 			_pendingBitmaps.resize(0);
 			_pendingAudioBuffers.resize(0);
+			_pendingAstcTextures.resize(0);
 			_prefetchComplete = false;
 			_prefetchTotal = 0;
 			_prefetchDone  = 0;
@@ -216,14 +326,11 @@ class LoadingState extends MusicBeatState
 		_prefetchForSongId = song.song;
 		_mutex.release();
 
-		// Collect paths the same way startPreload() does.
-		final paths:Array<String> = [];
+		// Collect tasks the same way startPreload() does.
+		final tasks:Array<PreloadTask> = [];
 
 		function addAtlas(assetKey:String):Void
-		{
-			final pngPath = resolveLoadPath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
-			paths.push(pngPath);
-		}
+			tasks.push(...resolveAssetTasks(assetKey, assetKey));
 
 		function addSound(basePath:String):Void
 		{
@@ -232,7 +339,8 @@ class LoadingState extends MusicBeatState
 				final p = '$basePath.$ext';
 				if (FunkinAssets.exists(p))
 				{
-					paths.push(resolveLoadPath(p));
+					final resolved = resolveLoadPath(p);
+					tasks.push({realPath: resolved, cacheKey: resolved, label: ''});
 					return;
 				}
 			}
@@ -277,7 +385,7 @@ class LoadingState extends MusicBeatState
 		addAtlas('NOTE_assets');
 		addAtlas('noteskins/default');
 
-		if (paths.length == 0)
+		if (tasks.length == 0)
 		{
 			_mutex.acquire();
 			_prefetchComplete = true;
@@ -286,7 +394,7 @@ class LoadingState extends MusicBeatState
 		}
 
 		_mutex.acquire();
-		_prefetchTotal = paths.length;
+		_prefetchTotal = tasks.length;
 		_prefetchDone  = 0;
 		_prefetchComplete = false;
 		_mutex.release();
@@ -295,9 +403,10 @@ class LoadingState extends MusicBeatState
 
 		Thread.create(() ->
 		{
-			for (path in paths)
+			for (task in tasks)
 			{
 				if (_threadGeneration != myGen) return;
+				final path = task.realPath;
 				try
 				{
 					final lower = path.toLowerCase();
@@ -312,7 +421,26 @@ class LoadingState extends MusicBeatState
 						if (bmd != null)
 						{
 							_mutex.acquire();
-							_pendingBitmaps.push({key: path, bmd: bmd});
+							_pendingBitmaps.push({key: task.cacheKey, bmd: bmd});
+							_mutex.release();
+						}
+					}
+					else if (StringTools.endsWith(lower, '.astc'))
+					{
+						// Phase 1 (thread-safe): just read the raw compressed
+						// bytes -- the actual GL upload can only run on the
+						// main thread (see AstcLoader.loadAndTrack(), called
+						// from finalizePendingAssets()).
+						var bytes:Null<haxe.io.Bytes> = null;
+						if (sys.FileSystem.exists(path))
+							bytes = sys.io.File.getBytes(path);
+						else if (openfl.Assets.exists(path, BINARY))
+							bytes = openfl.Assets.getBytes(path);
+
+						if (bytes != null)
+						{
+							_mutex.acquire();
+							_pendingAstcTextures.push({cacheKey: task.cacheKey, astcPath: path, bytes: bytes});
 							_mutex.release();
 						}
 					}
@@ -325,7 +453,7 @@ class LoadingState extends MusicBeatState
 							if (buffer != null)
 							{
 								_mutex.acquire();
-								_pendingAudioBuffers.push({key: path, buffer: buffer});
+								_pendingAudioBuffers.push({key: task.cacheKey, buffer: buffer});
 								_mutex.release();
 							}
 						}
@@ -589,8 +717,41 @@ class LoadingState extends MusicBeatState
 			done++;
 		}
 
+		#if (android && cpp)
+		// Upload ASTC (GPU-compressed) textures. This can only ever run here,
+		// on the main thread that owns the GL context -- the worker thread
+		// already did the safe part (reading the raw bytes off disk).
+		while (done < MAX_FINALIZE_PER_FRAME)
+		{
+			_mutex.acquire();
+			if (_pendingAstcTextures.length == 0)
+			{
+				_mutex.release();
+				break;
+			}
+			final entry = _pendingAstcTextures.shift();
+			_mutex.release();
+
+			try
+			{
+				final bitmap = mobile.backend.AstcLoader.loadAndTrack(entry.cacheKey, entry.astcPath, entry.bytes);
+				if (bitmap != null)
+					cache.cacheBitmap(entry.cacheKey, bitmap, false);
+			}
+			catch (e:Dynamic)
+			{
+				Logger.log('LoadingState: ASTC upload failed for ${entry.cacheKey}: $e', WARN);
+			}
+
+			_mutex.acquire();
+			_completedFinalizes++;
+			_mutex.release();
+			done++;
+		}
+		#end
+
 		// All done?
-		if (_allFilesOpened && _pendingBitmaps.length == 0 && _pendingAudioBuffers.length == 0)
+		if (_allFilesOpened && _pendingBitmaps.length == 0 && _pendingAudioBuffers.length == 0 && _pendingAstcTextures.length == 0)
 		{
 			_mutex.acquire();
 			_allFinalized = true;
@@ -610,30 +771,25 @@ class LoadingState extends MusicBeatState
 		if (song == null) return;
 
 		// Reset static state from any previous run, but keep any
-		// BitmapData / AudioBuffer that prefetchSong() already decoded.
+		// BitmapData / AudioBuffer / ASTC bytes that prefetchSong() already
+		// decoded.
 		_mutex.acquire();
 		_totalTasks = 0;
-		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length; // prefetched
+		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length; // prefetched
 		_completedFinalizes = 0;
 		_allFilesOpened = false;
 		_allFinalized = false;
 		_progress = 0.0;
 		_label = '';
-		// Do NOT clear _pendingBitmaps or _pendingAudioBuffers —
+		// Do NOT clear _pendingBitmaps / _pendingAudioBuffers / _pendingAstcTextures —
 		// prefetchSong() may have already populated them.
 		_mutex.release();
 
-		// Collect every asset path.
-		final paths:Array<String> = [];
-		final labels:Array<String> = [];
+		// Collect every asset task the same way prefetchSong() does.
+		final tasks:Array<PreloadTask> = [];
 
 		function addAtlas(assetKey:String, label:String):Void
-		{
-			final pngPath = resolveLoadPath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
-			// XML is tiny, loaded on-the-fly later. Only precache the PNG.
-			paths.push(pngPath);
-			labels.push('$label.png');
-		}
+			tasks.push(...resolveAssetTasks(assetKey, label));
 
 		function addSound(basePath:String, label:String):Void
 		{
@@ -642,8 +798,8 @@ class LoadingState extends MusicBeatState
 				final p = '$basePath.$ext';
 				if (FunkinAssets.exists(p))
 				{
-					paths.push(resolveLoadPath(p));
-					labels.push(label);
+					final resolved = resolveLoadPath(p);
+					tasks.push({realPath: resolved, cacheKey: resolved, label: label});
 					return;
 				}
 			}
@@ -688,7 +844,7 @@ class LoadingState extends MusicBeatState
 		addAtlas('NOTE_assets', 'notes');
 		addAtlas('noteskins/default', 'noteskin');
 
-		if (paths.length == 0)
+		if (tasks.length == 0)
 		{
 			_mutex.acquire();
 			_allFilesOpened = true;
@@ -699,11 +855,11 @@ class LoadingState extends MusicBeatState
 			return;
 		}
 
-		_totalTasks = paths.length;
+		_totalTasks = tasks.length;
 
 		// Count already-prefetched items so the progress bar doesn't reset.
 		_mutex.acquire();
-		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length;
+		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length;
 		if (_totalTasks > 0 && _completedDecodes > 0)
 			_progress = _completedDecodes / (_totalTasks * 2.0);
 		_mutex.release();
@@ -712,31 +868,39 @@ class LoadingState extends MusicBeatState
 
 		Thread.create(() ->
 		{
-			for (i in 0...paths.length)
+			for (i in 0...tasks.length)
 			{
 				// Abandon ship: a newer startPreload() / prefetchSong() has
 				// reset the static state — our work would pollute it.
 				if (_threadGeneration != myGen) return;
 
-				final path = paths[i];
+				final task = tasks[i];
+				final path = task.realPath;
 				final lower = path.toLowerCase();
 
 				_mutex.acquire();
-				_label = 'Loading ${labels[i]}… (${i + 1}/${paths.length})';
+				_label = 'Loading ${task.label}… (${i + 1}/${tasks.length})';
 				_mutex.release();
 
-				// Skip if prefetchSong() already decoded this exact path.
+				// Skip if prefetchSong() already decoded this exact cache key.
 				var alreadyDecoded = false;
 				_mutex.acquire();
 				for (entry in _pendingBitmaps)
 				{
-					if (entry.key == path) { alreadyDecoded = true; break; }
+					if (entry.key == task.cacheKey) { alreadyDecoded = true; break; }
 				}
 				if (!alreadyDecoded)
 				{
 					for (entry in _pendingAudioBuffers)
 					{
-						if (entry.key == path) { alreadyDecoded = true; break; }
+						if (entry.key == task.cacheKey) { alreadyDecoded = true; break; }
+					}
+				}
+				if (!alreadyDecoded)
+				{
+					for (entry in _pendingAstcTextures)
+					{
+						if (entry.cacheKey == task.cacheKey) { alreadyDecoded = true; break; }
 					}
 				}
 				_mutex.release();
@@ -763,7 +927,27 @@ class LoadingState extends MusicBeatState
 						if (bmd != null)
 						{
 							_mutex.acquire();
-							_pendingBitmaps.push({key: path, bmd: bmd});
+							_pendingBitmaps.push({key: task.cacheKey, bmd: bmd});
+							_completedDecodes++;
+							_mutex.release();
+						}
+					}
+					else if (StringTools.endsWith(lower, '.astc'))
+					{
+						// Phase 1 (thread-safe): just read the raw compressed
+						// bytes -- the actual GL upload can only run on the
+						// main thread (see AstcLoader.loadAndTrack(), called
+						// from finalizePendingAssets()).
+						var bytes:Null<haxe.io.Bytes> = null;
+						if (sys.FileSystem.exists(path))
+							bytes = sys.io.File.getBytes(path);
+						else if (openfl.Assets.exists(path, BINARY))
+							bytes = openfl.Assets.getBytes(path);
+
+						if (bytes != null)
+						{
+							_mutex.acquire();
+							_pendingAstcTextures.push({cacheKey: task.cacheKey, astcPath: path, bytes: bytes});
 							_completedDecodes++;
 							_mutex.release();
 						}
@@ -778,7 +962,7 @@ class LoadingState extends MusicBeatState
 							if (buffer != null)
 							{
 								_mutex.acquire();
-								_pendingAudioBuffers.push({key: path, buffer: buffer});
+								_pendingAudioBuffers.push({key: task.cacheKey, buffer: buffer});
 								_completedDecodes++;
 								_mutex.release();
 							}
