@@ -175,6 +175,19 @@ class ClientPrefs
 	/** JSON map of all custom button positions (name -> [x, y]) for VirtualPadCustomizer. */
 	@saveVar public static var customPadPositionsJson:String = "";
 
+	/**
+	 * Where mods/DLC/saves/logs live on Android. 'Shared': the classic
+	 * .ImpostorLegacy folder on shared external storage (visible to any file
+	 * manager, needs "All files access"). 'Scoped': the app-private
+	 * Android/data/<package>/files/ folder (no special permission, but only
+	 * reachable from this app or a SAF-aware file manager). See
+	 * StorageSystem.hx -- this value alone isn't enough to resolve the actual
+	 * path at boot (it loads after StorageSystem.getPermissions() already
+	 * needs an answer), so a duplicate of it is also bootstrapped into a flat
+	 * file in the OS's always-available internal app storage.
+	 */
+	@saveVar public static var storageMode:String = 'Shared';
+
 	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
 	@saveVar public static var drsEnabled:Bool = false;
 

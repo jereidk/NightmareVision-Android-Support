@@ -56,7 +56,7 @@ public class ModFolderDocumentsProvider extends DocumentsProvider {
 
     @Override
     public boolean onCreate() {
-        modFolder = new File(Environment.getExternalStorageDirectory(), ".ImpostorLegacy");
+        modFolder = resolveModFolder();
         if (!modFolder.exists()) modFolder.mkdirs();
         try {
             modFolderPath = modFolder.getCanonicalPath();
@@ -64,6 +64,30 @@ public class ModFolderDocumentsProvider extends DocumentsProvider {
             modFolderPath = modFolder.getAbsolutePath();
         }
         return true;
+    }
+
+    /**
+     * Same folder mobile.backend.StorageSystem.hx resolves (Haxe side), read
+     * from the identical bootstrap flag file (getFilesDir()/storageMode.txt)
+     * both sides agree on without any IPC -- otherwise this Files-app
+     * shortcut would keep showing the (possibly empty/stale) Shared folder
+     * even while the player is actually running in Scoped mode.
+     */
+    private File resolveModFolder() {
+        String mode = "Shared";
+        try {
+            File flag = new File(getContext().getFilesDir(), "storageMode.txt");
+            if (flag.exists()) {
+                byte[] data = java.nio.file.Files.readAllBytes(flag.toPath());
+                mode = new String(data).trim();
+            }
+        } catch (Exception e) { /* default to Shared */ }
+
+        if ("Scoped".equals(mode)) {
+            File scoped = getContext().getExternalFilesDir(null);
+            if (scoped != null) return scoped;
+        }
+        return new File(Environment.getExternalStorageDirectory(), ".ImpostorLegacy");
     }
 
     @Override

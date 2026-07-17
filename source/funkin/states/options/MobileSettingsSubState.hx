@@ -387,6 +387,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			}
 		}
 
+		// storageMode's actual effect (StorageSystem's cached path + bootstrap
+		// flag file) doesn't follow from the ClientPrefs write above the way
+		// every other row here does -- see the 'storageMode' branch of
+		// _changeSelected() for why applyStorageMode() has to be called
+		// explicitly. No restart popup here though: Reset already touches
+		// every row at once, and a "storage changed, restart" alert on top of
+		// that would read as noise rather than useful feedback.
+		#if android
+		mobile.backend.StorageSystem.applyStorageMode(ClientPrefs.storageMode);
+		#end
+
 		FunkinSound.play(Paths.sound('cancelMenu'));
 
 		#if mobile
@@ -746,6 +757,16 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			mobile.backend.AndroidUtils.openDataFolder();
 		}
+		#if android
+		else if (opt.id == 'storageMode')
+		{
+			mobile.backend.StorageSystem.applyStorageMode(ClientPrefs.storageMode);
+			mobile.backend.utils.PopUp.showAlert(Lang.str('opt_storagemode_alert_title', 'Storage Location Changed'),
+				Lang.str('opt_storagemode_alert_msg',
+					'Restart the game for this to fully take effect -- any mods/DLC already loaded this session will still be from the old location until you do.'),
+				'OK');
+		}
+		#end
 
 		_updateRows();
 	}
@@ -800,6 +821,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'vpadLayout': ClientPrefs.virtualPadLayout;
 			case 'noteLayout': ClientPrefs.noteLayout;
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
+			case 'storageMode': ClientPrefs.storageMode;
 			default: '';
 		};
 
@@ -814,6 +836,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
+			case 'storageMode': ClientPrefs.storageMode = v;
 		}
 
 	function _getFloat(id:String):Float
@@ -923,6 +946,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
                         stored:  ['fit', 'stretch', 'expand'],
 			defaultVal: 'fit'
 		});
+
+		#if android
+		_opts.push({
+			id: 'storageMode', kind: 'string',
+			label: Lang.str('opt_storagemode', 'Storage Location'),
+			desc:  Lang.str('opt_storagemode_desc', 'Where mods/DLC/saves are stored.\nShared: the classic folder, visible to any file manager, needs "All files access". App-Only: no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nExisting mods/DLC only reappear after switching back and restarting.'),
+			choices: [Lang.str('choice_storagemode_shared', 'Shared'), Lang.str('choice_storagemode_scoped', 'App-Only')],
+			stored:  ['Shared', 'Scoped'],
+			defaultVal: 'Shared'
+		});
+		#end
 
 		_opts.push({
 			id: 'openDataFolder', kind: 'button',

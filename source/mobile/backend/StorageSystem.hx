@@ -27,12 +27,12 @@ class StorageSystem
 		return Application.current.meta.get('file');
 	}
 
-	// Both getters below end up calling Environment.getExternalStorageDirectory()
-	// on Android, a JNI round-trip into Java, for a value that's constant for
-	// the whole process (the OS storage root + a fixed app folder name never
-	// change mid-session, regardless of whether storage permission has been
-	// granted yet — permission only gates actual file I/O on this path, not
-	// the path string itself). Several call sites (CrashHandler, GameLogger,
+	// Both getters below end up resolving the Android storage root (either a
+	// JNI round-trip to Environment.getExternalStorageDirectory(), or to
+	// Context.getInternalFilesDir()/getExternalFilesDir() -- see
+	// _androidRoot()) for a value that's constant for the whole process once
+	// resolved (it only changes if applyStorageMode() explicitly clears the
+	// cache below). Several call sites (CrashHandler, GameLogger,
 	// SystemMonitor, GlobalScriptManager, FunkinAssets, AndroidUtils) call
 	// getDirectory() well after startup, some potentially repeatedly during a
 	// burst of external asset/mod loading — cache each result after the first
@@ -41,6 +41,86 @@ class StorageSystem
 	// harmless (worst case: computed twice, both give the identical string).
 	static var _cachedStorageDirectory:String = null;
 	static var _cachedDirectory:String = null;
+
+	#if android
+	// Mirrors ClientPrefs.storageMode, but persisted separately as a flat
+	// file in Context.getInternalFilesDir() -- real app-private internal
+	// storage, always accessible with zero permissions, so it can be read
+	// this early. This exists because getPermissions() (called from Main.hx
+	// before ClientPrefs.tryBindingSave() has even run) already needs to
+	// know the mode to decide whether to prompt for "All files access" at
+	// all -- ClientPrefs.storageMode itself isn't loaded yet at that point.
+	// FileUtils.java / ModFolderDocumentsProvider.java read this exact same
+	// file (via their own getFilesDir(), the same real Android directory
+	// Context.getInternalFilesDir() resolves to) so the native import/"open
+	// mod folder" paths agree with whatever this class resolves to.
+	static inline final MODE_FLAG_FILE:String = 'storageMode.txt';
+
+	static function _modeFlagPath():String
+		return Path.addTrailingSlash(Context.getInternalFilesDir()) + MODE_FLAG_FILE;
+
+	/**
+	 * Reads the bootstrapped mode straight from disk, bypassing ClientPrefs
+	 * entirely -- safe to call before ClientPrefs has loaded. Defaults to
+	 * 'Shared' (the only mode that ever existed before this option), so
+	 * upgrading players who never touch the new setting keep landing on the
+	 * exact folder they already have mods/saves/DLC in.
+	 */
+	static function _readBootstrapMode():String
+	{
+		try
+		{
+			final path = _modeFlagPath();
+			if (FileSystem.exists(path)) return File.getContent(path).trim();
+		}
+		catch (e:Dynamic) {}
+		return 'Shared';
+	}
+
+	/** 'Shared': classic .<folderName> folder on shared external storage. 'Scoped': app-private Android/data/<package>/files/ folder. */
+	static function _androidRoot():String
+	{
+		return (_readBootstrapMode() == 'Scoped')
+			? Context.getExternalFilesDir()
+			: Environment.getExternalStorageDirectory() + '/.' + folderName;
+	}
+	#end
+
+	/**
+	 * Switches the active storage mode: rewrites the bootstrap flag file (so
+	 * the very next boot's getPermissions() sees it before ClientPrefs is
+	 * even loaded) and invalidates the cached directory strings so every one
+	 * of this class's callers picks up the new path on their very next call
+	 * -- no restart needed for the path itself. What this does NOT do:
+	 * migrate any files from the old folder to the new one, or reload
+	 * anything (mods/scripts/DLC state) already read into memory this
+	 * session from the old folder -- by design, same trade-off ShadowEngine's
+	 * own equivalent (useExternal.txt) makes. Callers should tell the player
+	 * a restart is needed for existing mods/DLC to actually reappear.
+	 */
+	public static function applyStorageMode(mode:String):Void
+	{
+		#if android
+		try
+		{
+			File.saveContent(_modeFlagPath(), mode);
+		}
+		catch (e:Dynamic)
+		{
+			trace('StorageSystem: failed to persist storage mode: $e');
+		}
+
+		_cachedStorageDirectory = null;
+		_cachedDirectory = null;
+
+		try
+		{
+			if (!FileSystem.exists(getDirectory())) FileSystem.createDirectory(getDirectory());
+			Sys.setCwd(getStorageDirectory());
+		}
+		catch (e:Dynamic) {}
+		#end
+	}
 
 	/**
 	 * Returns the base storage directory path without forcing a trailing slash.
@@ -51,7 +131,7 @@ class StorageSystem
 		if (_cachedStorageDirectory == null)
 		{
 			#if android
-			_cachedStorageDirectory = Path.addTrailingSlash(Environment.getExternalStorageDirectory() + '/.' + folderName);
+			_cachedStorageDirectory = Path.addTrailingSlash(_androidRoot());
 			#else
 			_cachedStorageDirectory = lime.system.System.documentsDirectory;
 			#end
@@ -73,7 +153,7 @@ class StorageSystem
 		if (_cachedDirectory == null)
 		{
 			#if android
-			_cachedDirectory = Environment.getExternalStorageDirectory() + '/.' + folderName + '/';
+			_cachedDirectory = Path.addTrailingSlash(_androidRoot());
 			#else
 			_cachedDirectory = lime.system.System.documentsDirectory;
 			#end
@@ -118,7 +198,7 @@ class StorageSystem
 			PermissionUtils.requestPermissions(['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE']);
 		}
 
-		if (VERSION.SDK_INT >= VERSION_CODES.R && !Environment.isExternalStorageManager())
+		if (_readBootstrapMode() == 'Shared' && VERSION.SDK_INT >= VERSION_CODES.R && !Environment.isExternalStorageManager())
 		{
 			Interface.requestSetting('MANAGE_APP_ALL_FILES_ACCESS_PERMISSION');
 		}

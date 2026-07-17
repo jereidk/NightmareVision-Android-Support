@@ -193,6 +193,33 @@ public class FileUtils extends Extension {
         }).start();
     }
 
+    /**
+     * Resolves the same root folder mobile.backend.StorageSystem.hx resolves
+     * (Haxe side) -- reads the identical bootstrap flag file
+     * (getFilesDir()/storageMode.txt, real internal app storage both sides
+     * agree on without any IPC) so a manually-imported file via this picker
+     * lands in whichever folder (Shared .ImpostorLegacy, or Scoped
+     * Android/data/<package>/files/) the player actually has active,
+     * instead of a third, always-Shared, previously-misnamed
+     * ".NightmareVision" folder nothing else in the app ever used.
+     */
+    private static java.io.File resolveRootDir() {
+        String mode = "Shared";
+        try {
+            java.io.File flag = new java.io.File(Extension.mainActivity.getFilesDir(), "storageMode.txt");
+            if (flag.exists()) {
+                byte[] data = java.nio.file.Files.readAllBytes(flag.toPath());
+                mode = new String(data).trim();
+            }
+        } catch (Exception e) { /* default to Shared */ }
+
+        if ("Scoped".equals(mode)) {
+            java.io.File scoped = Extension.mainActivity.getExternalFilesDir(null);
+            if (scoped != null) return scoped;
+        }
+        return new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".ImpostorLegacy");
+    }
+
   private static String copyFileToExternal(Uri uri) {
         try {
             String fileName = null;
@@ -217,7 +244,7 @@ public class FileUtils extends Extension {
                 fileName = "temp_" + System.currentTimeMillis() + ".zip";
             }
 
-            java.io.File rootDir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".NightmareVision");
+            java.io.File rootDir = resolveRootDir();
             java.io.File tempDir = new java.io.File(rootDir, ".temp");
             if (!tempDir.exists()) tempDir.mkdirs();
 
