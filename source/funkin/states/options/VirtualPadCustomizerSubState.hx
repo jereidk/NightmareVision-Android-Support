@@ -233,53 +233,56 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		var bw = dragButtons[idx].width;
 		var bh = dragButtons[idx].height;
 
-		// Build current bounding rect for the dragged button
-		var dragRect = FlxRect.get(newX - MIN_GAP, newY - MIN_GAP, bw + MIN_GAP * 2, bh + MIN_GAP * 2);
-
 		var bestX = newX;
 		var bestY = newY;
-		var bestOverlap:Float = Math.POSITIVE_INFINITY;
 
-		for (i in 0...dragButtons.length)
+		// One resolution pass: pushes (bestX, bestY) away from whichever other
+		// button's bounds the CURRENT (bestX, bestY) overlaps, rebuilding the
+		// drag rect fresh each call instead of reusing the one from the
+		// caller's original newX/newY -- so a second call after bestX/bestY
+		// has already moved actually re-checks from where it moved TO, not
+		// from where it started.
+		function resolvePass():Void
 		{
-			if (i == idx) continue;
+			var dragRect = FlxRect.get(bestX - MIN_GAP, bestY - MIN_GAP, bw + MIN_GAP * 2, bh + MIN_GAP * 2);
 
-			var other = _boundsList[i];
-			if (other == null) continue;
-
-			// Check if rects overlap
-			if (dragRect.overlaps(other))
+			for (i in 0...dragButtons.length)
 			{
+				if (i == idx) continue;
+
+				var other = _boundsList[i];
+				if (other == null || !dragRect.overlaps(other)) continue;
+
 				// Calculate overlap on each axis
 				var overlapLeft   = (dragRect.x + dragRect.width)  - other.x;
 				var overlapRight  = (other.x + other.width) - dragRect.x;
 				var overlapTop    = (dragRect.y + dragRect.height) - other.y;
 				var overlapBottom = (other.y + other.height) - dragRect.y;
 
-				// Find the smallest overlap axis to resolve
-				var minOverlapX = Math.min(overlapLeft, overlapRight);
-				var minOverlapY = Math.min(overlapTop, overlapBottom);
-
-				if (minOverlapX < minOverlapY)
-				{
-					// Resolve horizontally
-					if (overlapLeft < overlapRight)
-						bestX = other.x - bw - MIN_GAP;
-					else
-						bestX = other.x + other.width + MIN_GAP;
-				}
+				// Resolve along whichever axis needs the smaller push
+				if (Math.min(overlapLeft, overlapRight) < Math.min(overlapTop, overlapBottom))
+					bestX = (overlapLeft < overlapRight) ? (other.x - bw - MIN_GAP) : (other.x + other.width + MIN_GAP);
 				else
-				{
-					// Resolve vertically
-					if (overlapTop < overlapBottom)
-						bestY = other.y - bh - MIN_GAP;
-					else
-						bestY = other.y + other.height + MIN_GAP;
-				}
+					bestY = (overlapTop < overlapBottom) ? (other.y - bh - MIN_GAP) : (other.y + other.height + MIN_GAP);
 			}
+
+			dragRect.put();
 		}
 
-		// Clamp to screen
+		resolvePass();
+		bestX = Math.max(0, Math.min(FlxG.width - bw, bestX));
+		bestY = Math.max(0, Math.min(FlxG.height - bh, bestY));
+
+		// Clamping to the screen edge above can undo the push resolvePass()
+		// just made (e.g. it pushed the button off-screen to clear another
+		// one, then the clamp pulls it right back into that same button) --
+		// one more pass against the now-clamped position catches that
+		// specific case. Deliberately NOT looped to convergence: a hand-
+		// rolled solver that keeps iterating until nothing overlaps can end
+		// up oscillating between two constraints forever, which would be a
+		// worse bug than the rare 3-buttons-crowded-into-one-corner case
+		// this is narrowing. Two bounded passes, always terminates.
+		resolvePass();
 		bestX = Math.max(0, Math.min(FlxG.width - bw, bestX));
 		bestY = Math.max(0, Math.min(FlxG.height - bh, bestY));
 
