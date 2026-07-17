@@ -93,7 +93,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	static final ZONE_LABELS = ["LEFT", "DOWN", "UP", "RIGHT"];
 
 	// Color palette for modern FNF style
-	static final COLOR_HIGHLIGHT:Int = 0xFFFFD700;
+	static final COLOR_HIGHLIGHT:Int = OptionsTheme.GOLD;
 	static final COLOR_SELECTED:Int  = 0xFFFFA500;
 	static final COLOR_TEXT:Int      = 0xFFFFFFFF;
 	static final COLOR_DESC:Int      = 0xFFB0B0B0;
@@ -102,12 +102,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// Accent color for interactive bits (arrows, selected state) -- reuses the
 	// same hot pink as ZONE_COLORS[0] (LEFT) instead of the neon cyan this
 	// screen used before, which read more like a generic dev-tool palette
-	// than FNF's own (MainMenuState's actual reds/pinks/golds).
-	static final COLOR_ACCENT:Int     = 0xFFFF6B9D;
-	// 0x8C5062 measured at only ~3.2:1 against this screen's dark background
-	// and worse (2.16:1, fails WCAG's 3:1 large-text minimum) against
-	// TouchOptionList's arrow-pill background -- lightened so both clear it.
-	static final COLOR_ACCENT_DIM:Int = 0xFFAB6C7F;
+	// than FNF's own (MainMenuState's actual reds/pinks/golds). Sourced from
+	// OptionsTheme now so this, TouchOptionList, and OptionsState all share
+	// one definition instead of three independently hardcoded copies.
+	static final COLOR_ACCENT:Int     = OptionsTheme.PINK;
+	static final COLOR_ACCENT_DIM:Int = OptionsTheme.PINK_DIM;
 
 	// ── UI: preview ──────────────────────────────────────────────────────────
 	var _canvasBg:FlxSprite;
@@ -229,7 +228,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// Left arrow  (must be added AFTER value so it draws on top)
 			// Value display (centre of the right block)
 			var v = new FlxText(OPT_X + OPT_W - 192, rowY + 6, 134, '');
-			v.setFormat(Paths.font('vcr.ttf'), 22, 0xFFFFD700, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			v.setFormat(Paths.font('vcr.ttf'), 22, COLOR_HIGHLIGHT, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			v.borderSize = 1.5;
 			v.visible = false;
 			_rowValue.push(v);

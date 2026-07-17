@@ -10,6 +10,7 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 
 import funkin.states.options.Option;
+import funkin.states.options.OptionsTheme;
 import funkin.input.Controls;
 import funkin.data.ClientPrefs;
 
@@ -34,15 +35,13 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 {
 	public static inline var ROW_H:Float = 56;
 
-	// Same accent pink as MobileSettingsSubState/OptionsState now use -- was
-	// a neon cyan (0xFF3DE0FF/0xFF9FCBE8) here, same "generic dev tool" clash
-	// fixed in those two screens.
-	static inline var COLOR_ACCENT:Int     = 0xFFFF6B9D;
-	// 0x8C5062 measured at only 2.16:1 contrast against the arrow-pill
-	// background (0x2E2E44) -- fails WCAG's 3:1 minimum for large text.
-	// This is lightened to clear ~3.3:1 there (and ~4.9:1 against the plain
-	// dark screen background MobileSettingsSubState uses it on).
-	static inline var COLOR_ACCENT_DIM:Int = 0xFFAB6C7F;
+	// Same accent pink as MobileSettingsSubState/OptionsState use -- was a
+	// neon cyan (0xFF3DE0FF/0xFF9FCBE8) here, same "generic dev tool" clash
+	// fixed in those two screens. Sourced from OptionsTheme now so all three
+	// screens actually share one definition instead of three independently
+	// hardcoded copies of the same two values.
+	static inline var COLOR_ACCENT:Int     = OptionsTheme.PINK;
+	static inline var COLOR_ACCENT_DIM:Int = OptionsTheme.PINK_DIM;
 
 	public var optionsArray:Array<Option> = [];
 	public var curSelected(default, null):Int = 0;
@@ -146,7 +145,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			// Border sits behind the fill, 2px larger on every side, so only a
 			// thin bright ring shows around the selected row instead of a flat
 			// single-tone block.
-			final hiBorder = new FlxSprite(x0 - 8, rowY - 5).makeGraphic(Std.int(w + 16), Std.int(ROW_H - 2), 0xFFFFD700);
+			final hiBorder = new FlxSprite(x0 - 8, rowY - 5).makeGraphic(Std.int(w + 16), Std.int(ROW_H - 2), OptionsTheme.GOLD);
 			hiBorder.alpha = 0;
 			add(hiBorder);
 			_rowHiBorder.push(hiBorder);
@@ -161,7 +160,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			// produces that exact color, same reasoning as _rowLeftBg/
 			// _rowRightBg below.
 			final accent = new FlxSprite(x0 - 6, rowY - 3).makeGraphic(5, Std.int(ROW_H - 6), FlxColor.WHITE);
-			accent.color = 0xFFFFD700;
+			accent.color = OptionsTheme.GOLD;
 			accent.alpha = 0;
 			add(accent);
 			_rowAccent.push(accent);
@@ -178,7 +177,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			_rowLabel.push(lbl);
 
 			final val = new FlxText(valueLeft, rowY + 8, valueRight - valueLeft, '');
-			val.setFormat(Paths.font('vcr.ttf'), 20, 0xFFFFD700, FlxTextAlign.RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			val.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.GOLD, FlxTextAlign.RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			val.borderSize = 1.5;
 			add(val);
 			_rowValue.push(val);
@@ -613,7 +612,7 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			_rowAccent[i].y = rowTopY;
 			if (selected)
 			{
-				_rowAccent[i].color = 0xFFFFD700;
+				_rowAccent[i].color = OptionsTheme.GOLD;
 				_rowAccent[i].alpha = 1;
 			}
 			else if (badge != null)
@@ -660,14 +659,14 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			// Section headers: warm amber instead of the old cyan, matching
 			// the same accent family (gold selected-state, pink interactive
 			// accent) instead of a third, unrelated hue.
-			_rowLabel[i].color = isLabel ? 0xFFFFB84D : (selected ? 0xFFFFE066 : FlxColor.WHITE);
+			_rowLabel[i].color = isLabel ? 0xFFFFB84D : (selected ? OptionsTheme.GOLD : FlxColor.WHITE);
 			_rowLabel[i].size = isLabel ? 19 : 22;
 			_rowLabel[i].bold = isLabel;
 
 			if (isLabel) continue;
 
 			_rowValue[i].text = (badge != null) ? badge.text : displayValue(opt);
-			_rowValue[i].color = selected ? 0xFFFFE066 : (badge != null ? badge.color : 0xFFCCCCCC);
+			_rowValue[i].color = selected ? OptionsTheme.GOLD : (badge != null ? badge.color : 0xFFCCCCCC);
 
 			if (isBool)
 			{

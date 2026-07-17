@@ -647,7 +647,7 @@ class ControlsOption extends FlxSpriteContainer
 			for (i => bind in binds.members)
 			{
 				bind.alpha = (i == index ? 1.0 : 0.6);
-				bind.color = (i == index ? 0xffffe066 : FlxColor.WHITE);
+				bind.color = (i == index ? OptionsTheme.GOLD : FlxColor.WHITE);
 			}
 			this.index = index;
 		}

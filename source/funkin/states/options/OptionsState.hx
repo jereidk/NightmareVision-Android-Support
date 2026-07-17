@@ -634,23 +634,45 @@ class OptionsState extends MusicBeatState
 	function refreshVisuals():Void
 	{
 		if (blockAllInput) return;
+
+		// Slow breathing glow on whichever card is currently selected -- a
+		// plain FlxTween(PINGPONG) (the idiom MainMenuState's own breathing
+		// pulse uses) doesn't fit here since selection moves between cards
+		// dynamically; nothing else in this loop touches .alpha (the entrance
+		// drop-in tweens only ever animate .y), so driving it here every frame
+		// alongside the rest of the selection-state refresh can't fight
+		// anything else for ownership of it.
+		final glow = 0.85 + 0.15 * Math.sin(FlxG.game.ticks * 0.004);
+
 		for (i in 0...tabBg.length)
 		{
 			final isSel = (i == curTab) && (focus != 'buttons');
-			tabBg[i].color = isSel ? 0xFF4A4A6A : (i == hoveredTab ? 0xFF35354A : 0xFF2A2A3A);
+			// Gold = "selected in a list", the same language TouchOptionList's
+			// row highlight already uses below -- tabs filter that list, so
+			// they share its meaning instead of the unrelated blue-purple this
+			// screen used to invent on its own (see OptionsTheme's doc comment).
+			tabBg[i].color = isSel ? 0xFF4A4020 : (i == hoveredTab ? 0xFF35354A : 0xFF2A2A3A);
+			tabBg[i].alpha = isSel ? glow : 1;
 			// 3 states like upstream's category list: gold selected, white
 			// hovered-but-not-selected, dim gray otherwise -- was just a 2-state
 			// white/gold before, with no way to tell "moused over" from "neither".
-			tabLabels[i].color = isSel ? 0xFFFFE066 : (i == hoveredTab ? FlxColor.WHITE : 0xFFC9C9C9);
+			tabLabels[i].color = isSel ? OptionsTheme.GOLD : (i == hoveredTab ? OptionsTheme.TEXT_HOVER : OptionsTheme.TEXT_IDLE);
 		}
 		for (i in 0...btnBg.length)
 		{
 			final isSel = (i == curButton) && (focus == 'buttons');
-			btnBg[i].color = isSel ? 0xFF5A5A7A : (i == hoveredButton ? 0xFF45455F : 0xFF35354F);
-			btnLabels[i].color = isSel ? 0xFFFFE066 : (i == hoveredButton ? FlxColor.WHITE : 0xFFC9C9C9);
+			// Pink = "standalone interactive accent" (MobileSettingsSubState's
+			// own COLOR_ACCENT, TouchOptionList's arrows/scrollbar) -- action
+			// buttons jump to a whole different screen instead of filtering the
+			// list below, so a different hue from the tabs' gold is the one cue
+			// that actually tells the two apart at a glance instead of both
+			// reading as the same kind of button.
+			btnBg[i].color = isSel ? 0xFF4F2A3A : (i == hoveredButton ? 0xFF45455F : 0xFF35354F);
+			btnBg[i].alpha = isSel ? glow : 1;
+			btnLabels[i].color = isSel ? OptionsTheme.PINK : (i == hoveredButton ? OptionsTheme.TEXT_HOVER : OptionsTheme.TEXT_IDLE);
 		}
 		resetIcon.alpha = hoveredReset ? 1 : 0.8;
-		resetLabel.color = hoveredReset ? 0xFFFFE066 : FlxColor.WHITE;
+		resetLabel.color = hoveredReset ? OptionsTheme.PINK : FlxColor.WHITE;
 	}
 
 	override function update(elapsed:Float)
