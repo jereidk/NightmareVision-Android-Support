@@ -36,6 +36,10 @@ class VirtualPadManager
 	public static var instance(get, never):MobileVirtualPad;
 	static function get_instance():MobileVirtualPad return pad;
 
+	/** The pad's dedicated overlay camera -- e.g. so a caller can sync its alpha to a fade. Null until the first request(). */
+	public static var camera(get, never):FlxCamera;
+	static function get_camera():FlxCamera return cam;
+
 	static function _ensure():Void
 	{
 		if (pad != null) return;
