@@ -104,6 +104,18 @@ class MobileVirtualPad extends TouchInputManager
 		_clearButtons();
 		_build(DPad, Action, forGameplay);
 
+		// FlxSpriteGroup.cameras' setter only cascades to members that already
+		// exist at the moment it's assigned (transformChildren()) -- the fresh
+		// buttons _build() just created above were add()'d AFTER that, so
+		// without this they'd silently fall back to FlxCamera.defaultCameras
+		// (the main game camera) instead of this pad's own overlay camera.
+		// Reassigning with a genuinely new array (not the same reference --
+		// the setter no-ops on `cameras = cameras`) re-triggers the cascade
+		// onto the buttons that exist right now. Harmless/no-op before the
+		// very first rebuild(), when `cameras` is still null.
+		if (this.cameras != null)
+			this.cameras = this.cameras.copy();
+
 		// update()'s "forGameplay && FlxG.state.subState != null" check hides
 		// this pad (this.visible = false, every button .active/.visible =
 		// false) the instant a substate opens over the gameplay pad's owner --
