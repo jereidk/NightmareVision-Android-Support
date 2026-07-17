@@ -90,31 +90,48 @@ class DLCManager {
 
     // ── Installed-DLC queries (sync, main thread safe) ─────────────────────
 
+    static var _installedCache:Null<Array<{id:String, name:String, folder:String}>> = null;
+    static var _installedCacheTime:Float = 0;
+    // Short enough that "just finished downloading" reflects within half a
+    // second; long enough to matter. isDLCInstalled() (and anything that
+    // calls it, e.g. a per-row badge check re-evaluated every frame for
+    // every visible row -- see LanguageOptions.hx) used to re-run this full
+    // directory listing + open+parse every installed DLC's meta.json on
+    // EVERY call, unconditionally -- dozens of times a second, real disk I/O
+    // each time, while just sitting on the Language tab.
+    static inline final INSTALLED_CACHE_TTL:Float = 0.5;
+
     /**
      * Returns all installed DLCs — folders in content/ whose meta.json has a
      * `dlcId` field, which is the marker we write on install.
      */
     public static function getInstalledDLCs():Array<{id:String, name:String, folder:String}> {
+        final now = haxe.Timer.stamp();
+        if (_installedCache != null && (now - _installedCacheTime) < INSTALLED_CACHE_TTL) return _installedCache;
+
         var result:Array<{id:String, name:String, folder:String}> = [];
         #if sys
         var base = getContentPath();
-        if (!FileSystem.exists(base)) return result;
-        for (dir in FileSystem.readDirectory(base)) {
-            var full = base + dir;
-            if (!FileSystem.isDirectory(full)) continue;
-            var metaPath = full + "/meta.json";
-            if (!FileSystem.exists(metaPath)) continue;
-            try {
-                var meta:Dynamic = Json.parse(File.getContent(metaPath));
-                if (meta.dlcId != null)
-                    result.push({
-                        id:     Std.string(meta.dlcId),
-                        name:   meta.name != null ? Std.string(meta.name) : dir,
-                        folder: full
-                    });
-            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to parse meta.json for $dir: $e', WARN); }
+        if (FileSystem.exists(base)) {
+            for (dir in FileSystem.readDirectory(base)) {
+                var full = base + dir;
+                if (!FileSystem.isDirectory(full)) continue;
+                var metaPath = full + "/meta.json";
+                if (!FileSystem.exists(metaPath)) continue;
+                try {
+                    var meta:Dynamic = Json.parse(File.getContent(metaPath));
+                    if (meta.dlcId != null)
+                        result.push({
+                            id:     Std.string(meta.dlcId),
+                            name:   meta.name != null ? Std.string(meta.name) : dir,
+                            folder: full
+                        });
+                } catch (e:Dynamic) { Logger.log('DLCManager: Failed to parse meta.json for $dir: $e', WARN); }
+            }
         }
         #end
+        _installedCache = result;
+        _installedCacheTime = now;
         return result;
     }
 
@@ -128,7 +145,7 @@ class DLCManager {
         for (d in getInstalledDLCs()) {
             if (d.id != id) continue;
             #if sys
-            try { _deleteDir(d.folder); return true; } catch (e:Dynamic) { Logger.log('DLCManager: Failed to uninstall DLC $id: $e', WARN); }
+            try { _deleteDir(d.folder); _installedCache = null; return true; } catch (e:Dynamic) { Logger.log('DLCManager: Failed to uninstall DLC $id: $e', WARN); }
             #end
         }
         return false;
