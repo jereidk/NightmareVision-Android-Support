@@ -195,8 +195,14 @@ class LoadingState extends MusicBeatState
 	 * the score popup is showing, so by the time LoadingState appears
 	 * and calls startPreload(), the heaviest files are already decoded.
 	 *
-	 * @return true if all assets were already decoded (prefetch complete),
-	 *         false if a background Thread was launched and is still working.
+	 * @return true only for the trivial `song == null` case (nothing to do).
+	 *         Otherwise always false -- a Thread was launched and is
+	 *         resolving/decoding in the background; even figuring out
+	 *         whether there's anything to preload at all now happens on
+	 *         that Thread (see its own comment), so this can no longer
+	 *         answer synchronously. Callers already treat this as
+	 *         fire-and-forget and don't read the return value -- use
+	 *         isPrefetchedFor() to poll actual completion.
 	 */
 	#if (sys && cpp)
 	/**
@@ -326,83 +332,97 @@ class LoadingState extends MusicBeatState
 		_prefetchForSongId = song.song;
 		_mutex.release();
 
-		// Collect tasks the same way startPreload() does.
-		final tasks:Array<PreloadTask> = [];
-
-		function addAtlas(assetKey:String):Void
-			for (t in resolveAssetTasks(assetKey, assetKey)) tasks.push(t);
-
-		function addSound(basePath:String):Void
-		{
-			for (ext in ['ogg', 'wav'])
-			{
-				final p = '$basePath.$ext';
-				if (FunkinAssets.exists(p))
-				{
-					final resolved = resolveLoadPath(p);
-					tasks.push({realPath: resolved, cacheKey: resolved, label: ''});
-					return;
-				}
-			}
-		}
-
-		// Stage
-		final stageFile = funkin.data.StageData.getStageFile(song.stage);
-		if (stageFile != null && stageFile.stageObjects != null)
-		{
-			for (obj in stageFile.stageObjects)
-			{
-				if (obj.asset == null) continue;
-				for (asset in obj.asset.split(','))
-				{
-					final t = StringTools.trim(asset);
-					if (t.length > 0) addAtlas(t);
-				}
-			}
-		}
-
-		// Characters
-		final chars:Array<String> = [song.player1, song.player2];
-		if (song.gfVersion != null && song.gfVersion.length > 0)
-			chars.push(song.gfVersion);
-		for (charName in chars)
-		{
-			final info = CharacterParser.fetchInfoUnsafe(charName);
-			if (info == null || info.image == null) continue;
-			for (img in info.image.split(','))
-			{
-				final t = StringTools.trim(img);
-				if (t.length > 0) addAtlas(t);
-			}
-		}
-
-		// Audio
-		final songName = Paths.sanitize(song.song);
-		addSound(Paths.getPath('songs/$songName/Inst', null, LOOSE));
-		addSound(Paths.getPath('songs/$songName/Voices', null, LOOSE));
-
-		// Notes
-		addAtlas('NOTE_assets');
-		addAtlas('noteskins/default');
-
-		if (tasks.length == 0)
-		{
-			_mutex.acquire();
-			_prefetchComplete = true;
-			_mutex.release();
-			return true;
-		}
-
-		_mutex.acquire();
-		_prefetchTotal = tasks.length;
-		_prefetchDone  = 0;
-		_prefetchComplete = false;
-		_mutex.release();
-
 		final myGen = ++_threadGeneration;
 
 		Thread.create(() ->
 		{
+			// Resolving each asset key into real file tasks (resolveAssetTasks())
+			// probes the filesystem/asset manifest -- FunkinAssets.exists() and,
+			// for every Animate-format character/stage prop, a real directory
+			// listing via animate.FlxAnimateAssets.list(). That's cheap for a
+			// flat sparrow atlas but not for a roster of Animate characters, and
+			// this used to run synchronously on the CALLER's thread (here, the
+			// main thread, since prefetchSong() is called from PlayState.endSong()
+			// while the score popup is showing) before ever spawning this Thread
+			// -- freezing the game for however long collection took. Collecting
+			// inside the Thread instead means the caller returns immediately and
+			// the freeze is gone; see the same fix in startPreload() below.
+			if (_threadGeneration != myGen) return;
+
+			final tasks:Array<PreloadTask> = [];
+
+			function addAtlas(assetKey:String):Void
+				for (t in resolveAssetTasks(assetKey, assetKey)) tasks.push(t);
+
+			function addSound(basePath:String):Void
+			{
+				for (ext in ['ogg', 'wav'])
+				{
+					final p = '$basePath.$ext';
+					if (FunkinAssets.exists(p))
+					{
+						final resolved = resolveLoadPath(p);
+						tasks.push({realPath: resolved, cacheKey: resolved, label: ''});
+						return;
+					}
+				}
+			}
+
+			// Stage
+			final stageFile = funkin.data.StageData.getStageFile(song.stage);
+			if (stageFile != null && stageFile.stageObjects != null)
+			{
+				for (obj in stageFile.stageObjects)
+				{
+					if (obj.asset == null) continue;
+					for (asset in obj.asset.split(','))
+					{
+						final t = StringTools.trim(asset);
+						if (t.length > 0) addAtlas(t);
+					}
+				}
+			}
+
+			// Characters
+			final chars:Array<String> = [song.player1, song.player2];
+			if (song.gfVersion != null && song.gfVersion.length > 0)
+				chars.push(song.gfVersion);
+			for (charName in chars)
+			{
+				final info = CharacterParser.fetchInfoUnsafe(charName);
+				if (info == null || info.image == null) continue;
+				for (img in info.image.split(','))
+				{
+					final t = StringTools.trim(img);
+					if (t.length > 0) addAtlas(t);
+				}
+			}
+
+			// Audio
+			final songName = Paths.sanitize(song.song);
+			addSound(Paths.getPath('songs/$songName/Inst', null, LOOSE));
+			addSound(Paths.getPath('songs/$songName/Voices', null, LOOSE));
+
+			// Notes
+			addAtlas('NOTE_assets');
+			addAtlas('noteskins/default');
+
+			if (_threadGeneration != myGen) return;
+
+			if (tasks.length == 0)
+			{
+				_mutex.acquire();
+				_prefetchComplete = true;
+				_mutex.release();
+				return;
+			}
+
+			_mutex.acquire();
+			_prefetchTotal = tasks.length;
+			_prefetchDone  = 0;
+			_prefetchComplete = false;
+			_mutex.release();
+
 			for (task in tasks)
 			{
 				if (_threadGeneration != myGen) return;
@@ -780,94 +800,110 @@ class LoadingState extends MusicBeatState
 		_allFilesOpened = false;
 		_allFinalized = false;
 		_progress = 0.0;
-		_label = '';
+		_label = 'Preparing…';
 		// Do NOT clear _pendingBitmaps / _pendingAudioBuffers / _pendingAstcTextures —
 		// prefetchSong() may have already populated them.
-		_mutex.release();
-
-		// Collect every asset task the same way prefetchSong() does.
-		final tasks:Array<PreloadTask> = [];
-
-		function addAtlas(assetKey:String, label:String):Void
-			for (t in resolveAssetTasks(assetKey, label)) tasks.push(t);
-
-		function addSound(basePath:String, label:String):Void
-		{
-			for (ext in ['ogg', 'wav'])
-			{
-				final p = '$basePath.$ext';
-				if (FunkinAssets.exists(p))
-				{
-					final resolved = resolveLoadPath(p);
-					tasks.push({realPath: resolved, cacheKey: resolved, label: label});
-					return;
-				}
-			}
-		}
-
-		// Stage
-		final stageFile = funkin.data.StageData.getStageFile(song.stage);
-		if (stageFile != null && stageFile.stageObjects != null)
-		{
-			for (obj in stageFile.stageObjects)
-			{
-				if (obj.asset == null) continue;
-				for (asset in obj.asset.split(','))
-				{
-					final t = StringTools.trim(asset);
-					if (t.length > 0) addAtlas(t, 'stage:$t');
-				}
-			}
-		}
-
-		// Characters
-		final chars:Array<String> = [song.player1, song.player2];
-		if (song.gfVersion != null && song.gfVersion.length > 0)
-			chars.push(song.gfVersion);
-		for (charName in chars)
-		{
-			final info = CharacterParser.fetchInfoUnsafe(charName);
-			if (info == null || info.image == null) continue;
-			for (img in info.image.split(','))
-			{
-				final t = StringTools.trim(img);
-				if (t.length > 0) addAtlas(t, '$charName:$t');
-			}
-		}
-
-		// Audio
-		final songName = Paths.sanitize(song.song);
-		addSound(Paths.getPath('songs/$songName/Inst', null, LOOSE), 'Inst');
-		addSound(Paths.getPath('songs/$songName/Voices', null, LOOSE), 'Voices');
-
-		// Notes
-		addAtlas('NOTE_assets', 'notes');
-		addAtlas('noteskins/default', 'noteskin');
-
-		if (tasks.length == 0)
-		{
-			_mutex.acquire();
-			_allFilesOpened = true;
-			_allFinalized = true;
-			_progress = 1.0;
-			_label = 'Nothing to preload';
-			_mutex.release();
-			return;
-		}
-
-		_totalTasks = tasks.length;
-
-		// Count already-prefetched items so the progress bar doesn't reset.
-		_mutex.acquire();
-		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length;
-		if (_totalTasks > 0 && _completedDecodes > 0)
-			_progress = _completedDecodes / (_totalTasks * 2.0);
 		_mutex.release();
 
 		final myGen = ++_threadGeneration;
 
 		Thread.create(() ->
 		{
+			// Resolving each asset key into real file tasks (resolveAssetTasks())
+			// probes the filesystem/asset manifest -- FunkinAssets.exists() and,
+			// for every Animate-format character/stage prop, a real directory
+			// listing via animate.FlxAnimateAssets.list(). That's cheap for a
+			// flat sparrow atlas but not for a roster of Animate characters, and
+			// this used to run synchronously in create() -- on the main thread,
+			// before this Thread was even spawned -- blocking the whole render
+			// loop (progress bar included) for however long collection took.
+			// Long enough on a song with several Animate characters to look
+			// exactly like a hang: the "Loading" screen would just sit there,
+			// frozen, not yet animating, because the frame that would have
+			// drawn it hadn't happened yet. Collecting inside the Thread
+			// instead means create() returns immediately and the screen
+			// actually renders/animates while this work happens.
+			if (_threadGeneration != myGen) return;
+
+			final tasks:Array<PreloadTask> = [];
+
+			function addAtlas(assetKey:String, label:String):Void
+				for (t in resolveAssetTasks(assetKey, label)) tasks.push(t);
+
+			function addSound(basePath:String, label:String):Void
+			{
+				for (ext in ['ogg', 'wav'])
+				{
+					final p = '$basePath.$ext';
+					if (FunkinAssets.exists(p))
+					{
+						final resolved = resolveLoadPath(p);
+						tasks.push({realPath: resolved, cacheKey: resolved, label: label});
+						return;
+					}
+				}
+			}
+
+			// Stage
+			final stageFile = funkin.data.StageData.getStageFile(song.stage);
+			if (stageFile != null && stageFile.stageObjects != null)
+			{
+				for (obj in stageFile.stageObjects)
+				{
+					if (obj.asset == null) continue;
+					for (asset in obj.asset.split(','))
+					{
+						final t = StringTools.trim(asset);
+						if (t.length > 0) addAtlas(t, 'stage:$t');
+					}
+				}
+			}
+
+			// Characters
+			final chars:Array<String> = [song.player1, song.player2];
+			if (song.gfVersion != null && song.gfVersion.length > 0)
+				chars.push(song.gfVersion);
+			for (charName in chars)
+			{
+				final info = CharacterParser.fetchInfoUnsafe(charName);
+				if (info == null || info.image == null) continue;
+				for (img in info.image.split(','))
+				{
+					final t = StringTools.trim(img);
+					if (t.length > 0) addAtlas(t, '$charName:$t');
+				}
+			}
+
+			// Audio
+			final songName = Paths.sanitize(song.song);
+			addSound(Paths.getPath('songs/$songName/Inst', null, LOOSE), 'Inst');
+			addSound(Paths.getPath('songs/$songName/Voices', null, LOOSE), 'Voices');
+
+			// Notes
+			addAtlas('NOTE_assets', 'notes');
+			addAtlas('noteskins/default', 'noteskin');
+
+			if (_threadGeneration != myGen) return;
+
+			if (tasks.length == 0)
+			{
+				_mutex.acquire();
+				_allFilesOpened = true;
+				_allFinalized = true;
+				_progress = 1.0;
+				_label = 'Nothing to preload';
+				_mutex.release();
+				return;
+			}
+
+			// Count already-prefetched items so the progress bar doesn't reset.
+			_mutex.acquire();
+			_totalTasks = tasks.length;
+			_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length;
+			if (_totalTasks > 0 && _completedDecodes > 0)
+				_progress = _completedDecodes / (_totalTasks * 2.0);
+			_mutex.release();
+
 			for (i in 0...tasks.length)
 			{
 				// Abandon ship: a newer startPreload() / prefetchSong() has
