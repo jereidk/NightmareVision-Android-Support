@@ -164,6 +164,25 @@ class LoadingState extends MusicBeatState
 	 *         false if a background Thread was launched and is still working.
 	 */
 	#if (sys && cpp)
+	/**
+	 * Only prefix with the external-storage directory when `rawPath` is a
+	 * CONFIRMED loose/mod/DLC file (sys.FileSystem.exists() true for the
+	 * plain relative path). Bundled (embed="false") assets -- the common
+	 * case for any regular, non-DLC song -- were never extracted there;
+	 * lime's own asset resolution expects the plain relative path (it tries
+	 * that first, only falling back to its own APK base path, never to
+	 * external storage). Same gate FunkinAssets.getBitmapData()/
+	 * getSoundUnsafe()/Paths.font() already use -- unconditionally prefixing
+	 * every atlas/audio path here (as this used to) made BitmapData.fromFile()/
+	 * VorbisFile.fromFile() fail for every bundled asset, silently and near-
+	 * instantly (caught by the thread's own try/catch), so the "prefetch"
+	 * finished in milliseconds having warmed nothing -- PlayState.create()
+	 * ended up loading everything itself synchronously anyway, defeating the
+	 * entire point of this feature without ever throwing a visible error.
+	 */
+	static inline function resolveLoadPath(rawPath:String):String
+		return sys.FileSystem.exists(rawPath) ? FunkinAssets.androidStoragePath(rawPath) : rawPath;
+
 	public static function prefetchSong(song:funkin.data.Song):Bool
 	{
 		if (song == null) return true;
@@ -187,7 +206,7 @@ class LoadingState extends MusicBeatState
 
 		function addAtlas(assetKey:String):Void
 		{
-			final pngPath = FunkinAssets.androidStoragePath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
+			final pngPath = resolveLoadPath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
 			paths.push(pngPath);
 		}
 
@@ -198,7 +217,7 @@ class LoadingState extends MusicBeatState
 				final p = '$basePath.$ext';
 				if (FunkinAssets.exists(p))
 				{
-					paths.push(FunkinAssets.androidStoragePath(p));
+					paths.push(resolveLoadPath(p));
 					return;
 				}
 			}
@@ -591,8 +610,7 @@ class LoadingState extends MusicBeatState
 
 		function addAtlas(assetKey:String, label:String):Void
 		{
-			final pngPath = FunkinAssets.androidStoragePath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
-			final xmlPath = FunkinAssets.androidStoragePath(Paths.getPath('images/$assetKey.xml', 'characters', LOOSE));
+			final pngPath = resolveLoadPath(Paths.getPath('images/$assetKey.png', 'characters', LOOSE));
 			// XML is tiny, loaded on-the-fly later. Only precache the PNG.
 			paths.push(pngPath);
 			labels.push('$label.png');
@@ -605,7 +623,7 @@ class LoadingState extends MusicBeatState
 				final p = '$basePath.$ext';
 				if (FunkinAssets.exists(p))
 				{
-					paths.push(FunkinAssets.androidStoragePath(p));
+					paths.push(resolveLoadPath(p));
 					labels.push(label);
 					return;
 				}
