@@ -4,6 +4,7 @@ import openfl.filters.ShaderFilter;
 
 import flixel.addons.display.FlxBackdrop;
 import flixel.addons.text.FlxTypeText;
+import flixel.text.FlxInputText;
 
 import funkin.backend.FunkinShader.FunkinRuntimeShader;
 import funkin.FunkinAssets;
@@ -71,6 +72,19 @@ class FNAFState extends MusicBeatState
 	var compTitle:FlxText;
 	var compInput:FlxText;
 	var compCursor:FlxText;
+	/**
+	 * Fully transparent proxy field -- the terminal already draws its own
+	 * enteredCode/compCursor visuals, this exists purely so mobile players
+	 * get a real OS on-screen keyboard. FlxInputText's manager listens to
+	 * the Stage's own TextEvent.TEXT_INPUT (see MainMenuState.hx's dev-code
+	 * field for the same pattern/reasoning), which is the only thing that
+	 * actually raises Android's IME -- the original FlxG.keys.firstJustPressed()
+	 * polling below only ever worked with a physical keyboard attached.
+	 * Left that polling in place for desktop/Bluetooth-keyboard players;
+	 * update() just adopts codeInput.text into enteredCode whenever it
+	 * changes, so both input paths feed the same string.
+	 */
+	var codeInput:FlxInputText;
 	var compStatus:FlxText;
 	var compImage:FlxSprite;
 	var compLoader:FlxSprite;
@@ -481,6 +495,7 @@ class FNAFState extends MusicBeatState
 		applyCameraFilters();
 		passwordReady = false;
 		enteredCode = "";
+		if (codeInput != null) { codeInput.text = ""; codeInput.startFocus(); }
 		glowHovering = false;
 		
 		FlxTween.cancelTweensOf(glow);
@@ -546,6 +561,7 @@ class FNAFState extends MusicBeatState
 		vhsOn = false;
 		applyCameraFilters();
 		enteredCode = "";
+		if (codeInput != null) { codeInput.text = ""; codeInput.endFocus(); }
 		inputCooldown = 0;
 		cursorTimer = 0;
 		cursorVisible = true;
@@ -582,13 +598,15 @@ class FNAFState extends MusicBeatState
 		applyCameraFilters();
 		showPC();
 		resetPC();
+		if (codeInput != null) codeInput.startFocus();
 	}
-	
+
 	function pauseComputer()
 	{
 		passwordActive = false;
 		enteredCode = "";
-		
+		if (codeInput != null) { codeInput.text = ""; codeInput.endFocus(); }
+
 		compPanel.visible = true;
 		compPanel.alpha = 1;
 		compTitle.visible = false;
@@ -653,6 +671,16 @@ class FNAFState extends MusicBeatState
 		compCursor = hudText(56, "left");
 		compCursor.text = "|";
 		compStatus = hudText(30, "center");
+
+		codeInput = new FlxInputText(0, 0, Std.int(FlxG.width * 0.6), '', 32, FlxColor.TRANSPARENT, FlxColor.TRANSPARENT);
+		codeInput.caretColor = FlxColor.TRANSPARENT;
+		codeInput.maxChars = 16; // matches appendChar()'s own cap
+		codeInput.filterMode = ALPHANUMERIC; // matches the (k >= 65 && k <= 90) || (k >= 48 && k <= 57) keycode check below
+		codeInput.forceCase = UPPER_CASE;
+		codeInput.scrollFactor.set(0, 0);
+		codeInput.cameras = [hudCam];
+		add(codeInput);
+		codeInput.onEnter.add(_ -> submitCode());
 		
 		compMusicLabel = hudText(26, "center");
 		compMusicLabel.visible = false;
@@ -713,6 +741,7 @@ class FNAFState extends MusicBeatState
 	function resetPC()
 	{
 		enteredCode = "";
+		if (codeInput != null) codeInput.text = "";
 		cursorTimer = 0;
 		cursorVisible = true;
 		inputCooldown = 0;
@@ -841,11 +870,12 @@ class FNAFState extends MusicBeatState
 		{
 			FlxG.sound.play(Paths.sound('type'));
 			enteredCode = enteredCode.substr(0, enteredCode.length - 1);
+			if (codeInput != null) codeInput.text = enteredCode;
 			inputCooldown = 0.06;
 			cursorTimer = 0;
 			cursorVisible = true;
 		}
-		
+
 		if (inputCooldown <= 0 && FlxG.keys.justPressed.ENTER)
 		{
 			submitCode();
@@ -853,19 +883,33 @@ class FNAFState extends MusicBeatState
 			cursorTimer = 0;
 			cursorVisible = true;
 		}
-		
+
 		if (inputCooldown <= 0)
 		{
 			var k = FlxG.keys.firstJustPressed();
 			if ((k >= 65 && k <= 90) || (k >= 48 && k <= 57))
 			{
 				appendChar(String.fromCharCode(k));
+				if (codeInput != null) codeInput.text = enteredCode;
 				inputCooldown = 0.06;
 				cursorTimer = 0;
 				cursorVisible = true;
 			}
 		}
-		
+
+		// Mobile: codeInput's own manager is what actually raises Android's
+		// on-screen keyboard (see its doc comment above) -- adopt whatever it
+		// typed/erased into enteredCode the same way the physical-keyboard
+		// branches above do it in reverse, so either input source drives the
+		// same string regardless of which one the player is actually using.
+		if (codeInput != null && codeInput.text != enteredCode)
+		{
+			enteredCode = codeInput.text;
+			FlxG.sound.play(Paths.sound('type'));
+			cursorTimer = 0;
+			cursorVisible = true;
+		}
+
 		compInput.text = " " + enteredCode + (cursorVisible ? "|" : " ");
 		updateInputLayout();
 	}
@@ -913,6 +957,7 @@ class FNAFState extends MusicBeatState
 		switch (code)
 		{
 			case "DANKBARS":
+				if (codeInput != null) codeInput.endFocus();
 				PlayState.prepareForSong('dank-bars');
 				FlxG.switchState(PlayState.new);
 			case "SECRET":
