@@ -10,7 +10,11 @@ class MiscOptions
 		opts.push(new Option(Lang.str('opt_splashscreen', 'NMV Splash Screen'),
 			Lang.str('opt_splashscreen_desc', "If unchecked, it will completely skip the splash screen upon the engine's boot up."), 'toggleSplashScreen', 'bool', true));
 
-		opts.push(new Option(Lang.str('opt_devmode', 'Dev Mode'), Lang.str('opt_devmode_desc', "If checked, traces & developer hotkeys will become available."), 'inDevMode', 'bool', true));
+		// defaultValue was 'true' (inherited from upstream) -- ClientPrefs.
+		// inDevMode's own declared default is 'false', so Reset to Default
+		// here actually TURNED ON dev mode (traces + developer hotkeys)
+		// instead of resetting it off.
+		opts.push(new Option(Lang.str('opt_devmode', 'Dev Mode'), Lang.str('opt_devmode_desc', "If checked, traces & developer hotkeys will become available."), 'inDevMode', 'bool', false));
 
 		opts.push(new Option(Lang.str('opt_streamedsongfiles', 'Streamed Song files'),
 			Lang.str('opt_streamedsongfiles_desc',

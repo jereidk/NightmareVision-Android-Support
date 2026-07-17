@@ -15,7 +15,11 @@ class VisualsUIOptions
 
 		opts.push(new Option(Lang.str('opt_hidehud', 'Hide HUD'), Lang.str('opt_hidehud_desc', 'If checked, hides most HUD elements.'), 'hideHud', 'bool', false));
 
-		opts.push(new Option(Lang.str('opt_timebar', 'Time Bar:'), Lang.str('opt_timebar_desc', "What should the Time Bar display?"), 'timeBarType', 'string', 'Time Left',
+		// defaultValue was 'Time Left' (inherited from upstream) --
+		// ClientPrefs.timeBarType's own declared default is 'Song Name', so
+		// Reset to Default here switched the Time Bar to a different display
+		// than what a fresh install/reset actually starts with.
+		opts.push(new Option(Lang.str('opt_timebar', 'Time Bar:'), Lang.str('opt_timebar_desc', "What should the Time Bar display?"), 'timeBarType', 'string', 'Song Name',
 			[Lang.str('choice_timebar_timeleft',
 				'Time Left'), Lang.str('choice_timebar_timeelapsed', 'Time Elapsed'), Lang.str('choice_timebar_songname', 'Song Name'), Lang.str('choice_generic_disabled', 'Disabled')],
 			['Time Left', 'Time Elapsed', 'Song Name', 'Disabled']));
