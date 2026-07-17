@@ -24,7 +24,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	
 	var pauseMusic:FlxSound;
 	var pauseGroup:FlxSpriteGroup;
-	var options:Array<String> = ['resumesong', 'restartsong', 'options', 'gameplaychangers', 'backtomenu'];
+	var options:Array<String> = ['resumesong', 'restartsong', 'gameplaychangers', 'options', 'backtomenu'];
 	
 	var pauseBG:FlxSprite;
 	var optionText:Array<FlxText> = [];

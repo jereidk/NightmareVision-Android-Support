@@ -685,7 +685,18 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 				openSubState(new WeekPickerSubstate(this, curMonth));
 			}
-			
+
+			// Same Gameplay Options screen the pause menu opens (Botplay/Practice/
+			// Instakill/Scroll Speed/health multipliers) -- reachable here too so
+			// these can be set up before actually starting a song, not just paused
+			// mid-song.
+			if (FlxG.keys.justPressed.G #if mobile || virtualPad?.buttonD?.justPressed == true #end)
+			{
+				lockMovement = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+				openSubState(new GameplayChangersSubstate());
+			}
+
 			if (controls.RESET #if mobile || virtualPad?.buttonR?.justPressed == true #end) resetScorePrompt();
 			
 			if (FlxG.sound.music.volume < 0.7)
