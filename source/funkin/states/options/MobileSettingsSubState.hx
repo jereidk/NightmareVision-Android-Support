@@ -533,9 +533,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// id-dispatch below already makes for a touch tap on this same row
 			// (via _resolveRowTap()), so keyboard/gamepad ACCEPT and a touch tap
 			// were two separately-written copies of the same action. Routing
-			// 'customize' through _changeSelected() too (like 'bool'/'button'
-			// already do) removes that duplicate.
-			if (opt != null && (opt.kind == 'bool' || opt.kind == 'button' || opt.kind == 'customize')) _changeSelected(1);
+			// 'customize' through _changeSelected() too (like 'button' already
+			// does) removes that duplicate. No row here is ever kind == 'bool'
+			// (see _rebuildOptions() -- every row is 'string'/'percent'/'button'/
+			// 'customize') so that case never actually applied; not included.
+			if (opt != null && (opt.kind == 'button' || opt.kind == 'customize')) _changeSelected(1);
 		}
 
 		if (controls.RESET) _resetToDefault();
@@ -1129,27 +1131,27 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		else if (ClientPrefs.hitboxLayout == 'Two Thumb')
 		{
 			_buildTwoThumbPreview();
-			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_2t', 'Two Thumb');
+			_modeText.text = Lang.str('choice_gameinput_hitbox', 'Hitbox') + '  ·  ' + Lang.str('choice_hitboxlayout_2t', 'Two Thumb');
 		}
 		else if (ClientPrefs.hitboxLayout == 'DPad')
 		{
 			_buildDPadPreview();
-			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_dpad', 'DPad');
+			_modeText.text = Lang.str('choice_gameinput_hitbox', 'Hitbox') + '  ·  ' + Lang.str('choice_hitboxlayout_dpad', 'DPad');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Arrows')
 		{
 			_buildArrowsPreview();
-			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_arrows', 'Arrows');
+			_modeText.text = Lang.str('choice_gameinput_hitbox', 'Hitbox') + '  ·  ' + Lang.str('choice_hitboxlayout_arrows', 'Arrows');
 		}
 		else if (ClientPrefs.hitboxLayout == 'Triangle')
 		{
 			_buildTrianglePreview();
-			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_triangle', 'Triangle');
+			_modeText.text = Lang.str('choice_gameinput_hitbox', 'Hitbox') + '  ·  ' + Lang.str('choice_hitboxlayout_triangle', 'Triangle');
 		}
 		else
 		{
 			_buildFourLanesPreview();
-			_modeText.text = 'Hitbox  ·  ' + Lang.str('choice_hitboxlayout_4l', 'Four Lanes');
+			_modeText.text = Lang.str('choice_gameinput_hitbox', 'Hitbox') + '  ·  ' + Lang.str('choice_hitboxlayout_4l', 'Four Lanes');
 		}
 
 		_demoIdx = 0;
