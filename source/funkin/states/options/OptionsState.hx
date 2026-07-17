@@ -46,6 +46,11 @@ class OptionsState extends MusicBeatState
 	var tabs:Array<String> = ['language', 'gameplay', 'graphics', 'visualsui', 'misc'];
 
 	var actionButtons:Array<String> = [
+		// Upstream's vertical sidebar always had this reachable ('controls' was
+		// its very first entry) -- this fork's tabs/action-buttons redesign
+		// (see the class doc comment) dropped it without a replacement, leaving
+		// key/gamepad rebinding completely unreachable from this screen.
+		'controls',
 		'adjustdelay',
 		#if mobile
 		'mobile',
@@ -136,6 +141,9 @@ class OptionsState extends MusicBeatState
 
 		switch (label)
 		{
+			case 'controls':
+				final gamepad = FlxG.gamepads.getFirstActiveGamepad();
+				openSubState(new funkin.states.options.ControlsSubState(gamepad != null ? Gamepad(gamepad.id) : Keys));
 			#if mobile
 			case 'mobile':
 				openSubState(new funkin.states.options.MobileSettingsSubState());
