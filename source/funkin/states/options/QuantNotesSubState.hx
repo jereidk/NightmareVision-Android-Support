@@ -46,20 +46,6 @@ class QuantNotesSubState extends MusicBeatSubstate
 		[-120, -70, -35], // 96th
 		[-120, -70, -35] // 192nd
 	];
-	public static var quantStepmania:Array<Array<Int>> = [
-		[10, -20, 0], // 4th
-		[-110, -40, 0], // 8th
-		[140, -20, 0], // 12th
-		[50, 25, 0], // 16th
-		[0, -100, -50], // 20th
-		[-80, -40, 0], // 24th
-		[-180, 10, -10], // 32nd
-		[-35, 50, 30], // 48th
-		[160, -15, 0], // 64th
-		[-120, -70, -35], // 96th
-		[-120, -70, -35] // 192nd
-	];
-	
 	public static var quantizations:Array<String> = [
 		"4th", "8th", "12th", "16th", "20th", "24th", "32nd", "48th", "64th", "96th", "192nd"
 	];
@@ -276,7 +262,15 @@ class QuantNotesSubState extends MusicBeatSubstate
 			var item = grpNotes.members[i];
 			if (curSelected > 2) yIndex -= curSelected - 2;
 			
-			var lerpVal:Float = 0.4 * (elapsed / (1 / 120));
+			// FlxMath.getElapsedLerp() instead of a raw "0.4 * (elapsed / (1/120))"
+			// scale -- that naive version has no ceiling, so a lag spike
+			// (elapsed well past a 120fps frame) pushed the ratio past 1.0 and
+			// overshot the target position instead of just closing the gap
+			// faster. getElapsedLerp() asymptotically approaches 1.0 for any
+			// elapsed, same framerate-independent-smoothing pattern already
+			// used elsewhere (TouchOptionList, MobileSettingsSubState). 0.65
+			// picked to match the old formula's speed at a normal framerate.
+			var lerpVal:Float = FlxMath.getElapsedLerp(0.65, elapsed);
 			
 			var yPos:Float = (165 * yIndex) + 35;
 			
