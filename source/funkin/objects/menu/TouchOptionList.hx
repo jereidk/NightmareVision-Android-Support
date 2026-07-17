@@ -33,7 +33,11 @@ import funkin.data.ClientPrefs;
  */
 class TouchOptionList extends FlxTypedGroup<FlxSprite>
 {
-	public static inline var ROW_H:Float = 56;
+	// Was 56 -- shrunk for a denser, less appliance-y list (still clears the
+	// ~44px minimum touch target). OptionsState.hx's LIST_MAX_VISIBLE derives
+	// from this, so a smaller row here also means more rows fit on screen at
+	// once instead of just leaving the extra space unused.
+	public static inline var ROW_H:Float = 50;
 
 	// Same accent pink as MobileSettingsSubState/OptionsState use -- was a
 	// neon cyan (0xFF3DE0FF/0xFF9FCBE8) here, same "generic dev tool" clash

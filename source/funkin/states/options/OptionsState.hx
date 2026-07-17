@@ -103,15 +103,44 @@ class OptionsState extends MusicBeatState
 
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
+	// Design canvas is a fixed 1280x720 (Project.xml's <window>) no matter the
+	// device's real resolution/DPI -- RenderScale.hx/FunkinRatioScaleMode
+	// handle actual device scaling separately, this screen (like upstream's)
+	// always lays out against this fixed logical size.
+	static final CANVAS_H:Float = 720;
+
+	// One shared vertical gap between every stacked row (header -> tabs ->
+	// list) instead of the two different hand-picked gaps (24, then 18) that
+	// used to be baked silently into TAB_Y/LIST_Y as opaque absolute numbers.
+	static final SECTION_GAP:Float = 16;
+
+	// Unchanged from before -- matches optionsHeader/menuBackButton's own
+	// hardcoded y (18/20 respectively, set independently below in create())
+	// so action buttons' cards still start flush with that row instead of
+	// introducing a few px of new misalignment against them.
 	static final HEADER_Y:Float = 20;
-	static final BTN_H:Float = 46;
-	static final TAB_Y:Float = 90;
-	// Generous enough for a 2-line wrapped label at fitLabel()'s largest font
-	// size in any language -- a long translated category name (e.g. "Visuals
-	// and UI") needs the headroom.
-	static final TAB_H:Float = 74;
-	static final LIST_Y:Float = 182;
-	static final LIST_MAX_VISIBLE:Int = 8;
+	static final BTN_H:Float = 38;
+	// fitLabel() now also shrinks a label further if its rendered height
+	// alone exceeds its box (see fitLabel()'s own comment) rather than only
+	// watching line count, so this no longer has to stay this generous just
+	// to guarantee a 2-line label in some language never spills past it.
+	static final TAB_H:Float = 60;
+	static final TAB_Y:Float = HEADER_Y + BTN_H + SECTION_GAP;
+	static final LIST_Y:Float = TAB_Y + TAB_H + SECTION_GAP;
+
+	// Gap between the last visible option row and the description box below
+	// it, and that box's own fixed height -- named here so LIST_MAX_VISIBLE's
+	// math (and the couple of places that used to repeat "6"/"74" inline)
+	// stay readable instead of scattering the same two magic numbers around.
+	static final DESC_GAP:Float = 6;
+	static final DESC_H:Float = 74;
+
+	// However many ROW_H-tall rows actually fit between the list's top and
+	// the canvas bottom, after reserving room for the description box below
+	// them and one more SECTION_GAP of bottom clearance -- derived instead of
+	// a hand-picked "8" that would silently go stale (too tall, or leaving
+	// unused space) the moment ROW_H/TAB_H/BTN_H/SECTION_GAP above change.
+	static final LIST_MAX_VISIBLE:Int = Std.int((CANVAS_H - LIST_Y - DESC_GAP - DESC_H - SECTION_GAP) / TouchOptionList.ROW_H);
 
 	// Same left-edge clearance the Virtual Pad's LEFT_FULL layout needs
 	// (buttons span roughly x:0-339, see MobileVirtualPad.hx) -- this is the
@@ -267,7 +296,7 @@ class OptionsState extends MusicBeatState
 			// focus-based toggle in update().
 			final panelX = LIST_X - 6;
 			final panelY = LIST_Y - 6;
-			final panelH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6 + 74;
+			final panelH = LIST_MAX_VISIBLE * TouchOptionList.ROW_H + DESC_GAP + DESC_H;
 
 			artPanelBg = new FlxSprite(panelX, panelY).loadGraphic(Paths.image('menu/options/artPanel'));
 			artPanelBg.setGraphicSize(Std.int(listW + 12), Std.int(panelH));
@@ -281,16 +310,16 @@ class OptionsState extends MusicBeatState
 			optionList.onDatasetChanged = (opt) -> descText.text = opt.description;
 			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
-			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 6);
+			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + DESC_GAP);
 			descBg.loadGraphic(Paths.image('menu/freeplay/card'));
-			descBg.setGraphicSize(Std.int(listW + 12), 74);
+			descBg.setGraphicSize(Std.int(listW + 12), Std.int(DESC_H));
 			descBg.updateHitbox();
 			descBg.antialiasing = ClientPrefs.globalAntialiasing;
 			descBg.color = 0xFF1A1A2E;
 			descBg.alpha = 0.9;
 			add(descBg);
 
-			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + 12, listW - 16 - RESET_W, '');
+			descText = new FlxText(LIST_X + 8, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + DESC_GAP + 6, listW - 16 - RESET_W, '');
 			descText.setFormat(Paths.font('vcr.ttf'), 18, 0xFFB0B0B0, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			descText.borderSize = 1.2;
 			descText.wordWrap = true;
@@ -506,12 +535,21 @@ class OptionsState extends MusicBeatState
 		}
 	}
 
+	/**
+	 * Shrinks `txt` until it both wraps to at most 2 lines AND its actual
+	 * rendered height clears `boxH` -- the old version only watched line
+	 * count, so a 2-line label could still be taller than a given boxH and
+	 * spill past its card's edges without ever triggering a further
+	 * reduction. Watching real height too means TAB_H/BTN_H above can be
+	 * sized for how much text actually needs to show, instead of having to
+	 * stay permanently oversized "just in case" a longer translation shows up.
+	 */
 	function fitLabel(txt:FlxText, fieldW:Float, boxH:Float, boxY:Float, maxSize:Int):Void
 	{
 		var size = maxSize;
 		txt.fieldWidth = fieldW;
 		txt.wordWrap = true;
-		while (size > 9 && txt.textField.numLines > 2)
+		while (size > 9 && (txt.textField.numLines > 2 || txt.height > boxH))
 		{
 			size--;
 			txt.setFormat(Paths.font('vcr.ttf'), size, txt.color, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
