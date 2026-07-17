@@ -669,7 +669,26 @@ class PlayState extends MusicBeatState
 		}
 		return (cpuControlled = val);
 	}
-	
+
+	/**
+	 * Re-reads healthGain/healthLoss/instakillOnMiss/practiceMode/cpuControlled
+	 * from ClientPrefs.gameplaySettings. Called once at create(), and again
+	 * from closeSubState() whenever resuming from a pause -- GameplayChangersSubstate
+	 * (reachable from the pause menu) writes straight into gameplaySettings, but
+	 * these fields are only ever cached copies, so a change made while paused
+	 * would otherwise silently do nothing until the song restarts. scrollspeed/
+	 * scrolltype don't need this: everywhere they're used already calls
+	 * ClientPrefs.getGameplaySetting() live instead of caching into a field.
+	 */
+	function refreshGameplaySettings():Void
+	{
+		healthGain = ClientPrefs.getGameplaySetting('healthgain', 1);
+		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
+		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
+		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
+		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
+	}
+
 	function applyStageData(file:Null<StageFile>):Void
 	{
 		if (file == null) return;
@@ -765,12 +784,8 @@ class PlayState extends MusicBeatState
 		if (ClientPrefs.useEpicRankings) ratingsData.unshift(new Rating('epic'));
 		
 		// Gameplay settings
-		healthGain = ClientPrefs.getGameplaySetting('healthgain', 1);
-		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
-		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
-		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
-		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
-		
+		refreshGameplaySettings();
+
 		camGame = FlxG.camera;
 		camHUD = new FlxCamera();
 		camOther = new FlxCamera();
@@ -2312,19 +2327,25 @@ class PlayState extends MusicBeatState
 				audio.time = Conductor.songPosition;
 				audio.play();
 			}
-			
+
 			FlxTimer.globalManager.forEach((i:FlxTimer) -> if (!i.finished) i.active = true);
 			FlxTween.globalManager.forEach((i:FlxTween) -> if (!i.finished) i.active = true);
-			
+
 			#if VIDEOS_ALLOWED
 			FunkinVideoSprite.forEachAlive((video) -> if (video.tiedToGame) video.resume());
 			#end
-			
+
 			paused = false;
 					playbackRate = playbackRate;
 			scripts.call('onResume', _scriptEmptyArgs);
-			
+
 			resetDiscordRPC(startTimer != null && startTimer.finished);
+
+			// Picks up any Botplay/Practice/Instakill/health-multiplier change
+			// made via the pause menu's Gameplay Options screen -- those write
+			// straight into ClientPrefs.gameplaySettings, but the fields above
+			// are only cached copies (see refreshGameplaySettings()'s own doc).
+			refreshGameplaySettings();
 		}
 		#if mobile controls.isInSubstate = false; #end
 		scripts.call('onSubstateClose', _scriptEmptyArgs);
