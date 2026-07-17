@@ -46,6 +46,20 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	var titleText:FlxText;
 	var languageTextYOffset:Float = 0;
+
+	// Shown only while state == REBIND. REBIND only ever completes via a
+	// PHYSICAL FlxG.keys/FlxG.gamepads press -- the on-screen Virtual Pad
+	// doesn't generate those (it's a separate touch system, not a real input
+	// device), so a touch-only Android player with no keyboard/gamepad
+	// attached can select a bind and have nothing visibly happen for 5
+	// seconds (the REBIND timeout) with zero explanation why. Upstream never
+	// had a "press a key" prompt at all (even on desktop, where it's less
+	// necessary since the previously-visible bind text just disappearing is
+	// a reasonably clear enough cue there), so this fills that gap for both,
+	// with a mobile-specific message spelling out that a physical device is
+	// required.
+	var rebindHintBg:FlxSprite;
+	var rebindHintText:FlxText;
 	
 	// Same 676px-wide, asymmetrically-placed panel as BaseOptionsMenu (480
 	// left margin / 124 right margin on the 1280 canvas) — this substate
@@ -78,7 +92,29 @@ class ControlsSubState extends MusicBeatSubstate
 		titleText.antialiasing = ClientPrefs.globalAntialiasing;
 		titleText.camera = FlxG.camera;
 		add(titleText);
-		
+
+		// A banner just under topBound instead of squeezed into the header row
+		// (there's only a couple px between titleText's bottom and topBound) --
+		// own background so it stays legible over whatever list content is
+		// scrolled underneath, and uses FlxG.camera (not the scrolling `camera`
+		// built below) so it stays put regardless of scroll position.
+		rebindHintBg = new FlxSprite(panelX, topBound + 8).makeGraphic(676, 40, FlxColor.BLACK);
+		rebindHintBg.alpha = 0.75;
+		rebindHintBg.camera = FlxG.camera;
+		rebindHintBg.visible = false;
+		add(rebindHintBg);
+
+		rebindHintText = new FlxText(panelX, topBound + 8, 676,
+			#if mobile Lang.str('opt_controls_rebind_hint_mobile', 'Connect a keyboard or gamepad to rebind')
+			#else Lang.str('opt_controls_rebind_hint', 'Press a key or button...') #end);
+		rebindHintText.setFormat(Paths.font('vcr.ttf'), 18, OptionsTheme.GOLD, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		rebindHintText.borderSize = 1.5;
+		rebindHintText.y += Math.round((40 - rebindHintText.height) * .5);
+		rebindHintText.antialiasing = ClientPrefs.globalAntialiasing;
+		rebindHintText.camera = FlxG.camera;
+		rebindHintText.visible = false;
+		add(rebindHintText);
+
 		(camera = new FlxCamera(panelX, topBound, 676, Std.int(bottomBound - topBound))).bgColor = 0;
 		FlxG.cameras.add(camera, false);
 		
@@ -146,7 +182,8 @@ class ControlsSubState extends MusicBeatSubstate
 		scriptGroup.call('onCreatePost', []);
 
 		#if mobile
-		controls.isInSubstate = true;
+		// isInSubstate is already set by MusicBeatSubstate's own constructor
+		// (via super() above) -- no need to set it again here.
 		addVirtualPad(LEFT_FULL, A_B);
 		addVirtualPadCamera();
 		#end
@@ -302,7 +339,9 @@ class ControlsSubState extends MusicBeatSubstate
 					if (currentBind != null) currentBind.visible = true;
 				}
 		}
-		
+
+		rebindHintBg.visible = rebindHintText.visible = (state == REBIND);
+
 		// Gate mouse input on mobile: only allow when navInputMode == 'Touch'
 		#if mobile
 		var allowMouseInput = MobileNavUtil.allowPointerNav();

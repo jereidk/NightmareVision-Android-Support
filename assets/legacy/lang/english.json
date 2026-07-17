@@ -594,6 +594,8 @@
 
 		"opt_category_adjustdelay": "Adjust Delay",
 		"opt_category_controls": "Controls",
+		"opt_controls_rebind_hint": "Press a key or button...",
+		"opt_controls_rebind_hint_mobile": "Connect a keyboard or gamepad to rebind",
 		"opt_category_gameplay": "Gameplay",
 		"opt_category_graphics": "Graphics",
 		"opt_category_visualsui": "Visuals and UI",
