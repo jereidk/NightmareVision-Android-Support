@@ -1,7 +1,6 @@
 package mobile.controls;
 
 import flixel.FlxG;
-import flixel.input.FlxInput.FlxInputState;
 import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.math.FlxPoint;
@@ -77,22 +76,7 @@ class MobileVirtualPad extends TouchInputManager
 	public var buttonY:FlxButton;
 	public var buttonZ:FlxButton;
 	public var buttonS:FlxButton;
-	
-	// Instance fields, not static -- each state/substate owns its own pad now
-	// (no more sharing/borrowing a single ancestor pad), so these must track
-	// THIS pad's own hide-on-alternate-input state independently. They were
-	// static right up until that borrowing mechanism was removed, which left
-	// a real cross-instance leak: gamepadPressed only ever gets reset back to
-	// false inside the "a touch arrived while this pad was hidden" branch
-	// below, so once ANY pad's update() ever saw a gamepad press (including a
-	// gameplay pad about to be destroyed when leaving PlayState), every
-	// SUBSEQUENT pad -- in a totally different, later state -- inherited that
-	// same stuck-true static flag and hid itself on its very first frame,
-	// looking exactly like "the pad doesn't work anymore after leaving
-	// PlayState/a song."
-	var keyboardPressed:Bool = false;
-	var gamepadPressed:Bool = false;
-	
+
 	/** If true, this pad is for gameplay (not navigation) */
 	public var forGameplay(default, null):Bool = false;
 
@@ -383,89 +367,6 @@ class MobileVirtualPad extends TouchInputManager
 		
 		buttons.push(button);
 		return button;
-	}
-	
-	override public function update(elapsed:Float):Void
-	{
-		super.update(elapsed);
-
-		// Hide the gameplay pad entirely whenever a substate covers PlayState
-		// (pause menu, cosmetics locker, etc.) -- PlayState keeps ticking this
-		// pad underneath any open substate via persistentUpdate, but every one
-		// of those substates already brings its own dedicated pad/touch UI for
-		// its own navigation, so the gameplay D-pad has nothing useful to do
-		// there regardless of navInputMode.
-		// This used to only special-case navInputMode == 'Touch' (with a
-		// keyboard/gamepad press bringing the pad back) -- for 'Virtual Pad'
-		// nav mode specifically, that left the gameplay D-pad fully visible
-		// and active AT THE SAME TIME as the substate's own pad (e.g. the
-		// pause menu's addVirtualPad(UP_DOWN, A_B)), both receiving touches
-		// and likely overlapping on screen. And for 'Touch' mode, the escape
-		// hatch back to the gameplay pad via keyboard/gamepad was never
-		// actually needed once inside a substate -- that substate's own UI
-		// already covers its own input needs. (The Touch-mode softlock this
-		// replaced -- the gameplay pad staying hidden during ordinary,
-		// unpaused gameplay -- is fixed by requiring subState != null here,
-		// same as before.)
-		if (forGameplay && FlxG.state.subState != null)
-		{
-			if (this.visible)
-			{
-				this.visible = false;
-				for (btn in buttons)
-				{
-					btn.active = false;
-					btn.visible = false;
-				}
-			}
-			return;
-		}
-
-		// Normal behavior for non-gameplay pads or when Virtual Pad navigation is enabled
-		// (FlxG.touches.justStarted() would allocate a fresh Array every frame just to check
-		// its length and immediately discard it - scan the existing touch list instead)
-		var anyTouchJustStarted = false;
-		for (touch in FlxG.touches.list)
-		{
-			if (touch.justPressed)
-			{
-				anyTouchJustStarted = true;
-				break;
-			}
-		}
-		if (anyTouchJustStarted)
-		{
-			if (!this.visible)
-			{
-				this.visible = true;
-				keyboardPressed = false;
-				gamepadPressed = false;
-				for (btn in buttons)
-				{
-					btn.active = true;
-					btn.visible = true;
-				}
-			}
-		}
-
-		keyboardPressed = FlxG.keys.justPressed.ANY;
-
-		// FlxG.gamepads.getActiveGamepads() would allocate a fresh Array every frame just to
-		// scan it for a justPressed button; anyButton() checks the same state with no allocation.
-		if (FlxG.gamepads.anyButton(JUST_PRESSED)) gamepadPressed = true;
-
-		if (keyboardPressed || gamepadPressed)
-		{
-			if (this.visible)
-			{
-				this.visible = false;
-				for (btn in buttons)
-				{
-					btn.active = false;
-					btn.visible = false;
-				}
-			}
-		}
 	}
 	
 	override public function destroy():Void
