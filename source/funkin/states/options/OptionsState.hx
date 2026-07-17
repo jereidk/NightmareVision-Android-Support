@@ -86,6 +86,19 @@ class OptionsState extends MusicBeatState
 	var descText:FlxText;
 	var descBg:FlxSprite;
 
+	// Only actually shown/usable on the 'language' tab (see refreshVisuals())
+	// -- Touch nav mode only, since there's no D-pad-driven way to type.
+	// languageSearchText is the source of truth; languageSearchDisplay just
+	// mirrors it (or the placeholder when empty) since FlxText itself can't
+	// show a cursor/placeholder swap on its own.
+	var languageSearchBg:FlxSprite;
+	var languageSearchDisplay:FlxText;
+	var languageSearchClear:FlxText;
+	var languageSearchText:String = '';
+	var languageSearchFocused:Bool = false;
+	var _languageOnTextInput:String->Void;
+	var _languageOnKeyDown:lime.ui.KeyCode->lime.ui.KeyModifier->Void;
+
 	var resetIcon:FlxSprite;
 	var resetLabel:FlxText;
 
@@ -127,7 +140,16 @@ class OptionsState extends MusicBeatState
 	// to guarantee a 2-line label in some language never spills past it.
 	static final TAB_H:Float = 60;
 	static final TAB_Y:Float = HEADER_Y + BTN_H + SECTION_GAP;
-	static final LIST_Y:Float = TAB_Y + TAB_H + SECTION_GAP;
+
+	// Reserved on every tab (not just Language) so the list's own y0/
+	// maxVisible stay one single derived value shared by all 5 tabs instead
+	// of needing a different layout per tab -- costs one fewer visible row
+	// everywhere else, in exchange for never having to resize/reposition the
+	// shared TouchOptionList instance when switching to/from Language.
+	// Content only actually appears here on the Language tab (see
+	// buildLanguageSearch()/refreshVisuals()).
+	static final SEARCH_H:Float = 44;
+	static final LIST_Y:Float = TAB_Y + TAB_H + SECTION_GAP + SEARCH_H + SECTION_GAP;
 
 	// Gap between the last visible option row and the description box below
 	// it, and that box's own fixed height -- named here so LIST_MAX_VISIBLE's
@@ -289,6 +311,8 @@ class OptionsState extends MusicBeatState
 			add(tabsPanelBg);
 
 			buildTabs(tabsAreaStart, tabsAreaEnd);
+
+			buildLanguageSearch(tabsAreaStart, tabsAreaEnd);
 
 			final listW = (1160 + cutout) - LIST_X;
 
@@ -537,6 +561,114 @@ class OptionsState extends MusicBeatState
 		}
 	}
 
+	/**
+	 * The Language tab's search bar -- built once here like every other
+	 * tab's chrome, its own .visible toggled in refreshVisuals() (Touch nav
+	 * mode + the language tab only -- Virtual Pad users have no way to type,
+	 * same reasoning as the tap-to-reset icon being Touch-only).
+	 *
+	 * FlxText's own TextField never sits in OpenFL's real interactive
+	 * display list (Flixel renders it to a bitmap and draws that instead),
+	 * so setting textField.type = INPUT on it doesn't get a device's on-
+	 * screen keyboard to appear or deliver anything. lime.ui.Window's
+	 * onTextInput/textInputEnabled (used the same way PopUp.hx already
+	 * drives lime.app.Application.current.window for native dialogs) is the
+	 * actual mechanism mobile OSes deliver IME/soft-keyboard text through,
+	 * independent of whatever's on the display list -- so typed characters
+	 * get appended to languageSearchText by hand and re-rendered onto a
+	 * plain FlxText, instead of trying to make a real editable text field.
+	 */
+	function buildLanguageSearch(areaStart:Float, areaEnd:Float):Void
+	{
+		final y = TAB_Y + TAB_H + SECTION_GAP;
+		final w = areaEnd - areaStart;
+
+		languageSearchBg = new FlxSprite(areaStart, y);
+		languageSearchBg.loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, w, SEARCH_H), false, 0, 0, true);
+		languageSearchBg.updateHitbox();
+		languageSearchBg.antialiasing = ClientPrefs.globalAntialiasing;
+		languageSearchBg.color = 0xFF2A2A3A;
+		add(languageSearchBg);
+
+		languageSearchDisplay = new FlxText(areaStart + 16, y, w - 70, '');
+		languageSearchDisplay.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.TEXT_IDLE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		languageSearchDisplay.borderSize = 1.5;
+		languageSearchDisplay.y += Math.round((SEARCH_H - languageSearchDisplay.height) * .5);
+		languageSearchDisplay.antialiasing = ClientPrefs.globalAntialiasing;
+		add(languageSearchDisplay);
+
+		// Tap to clear -- plain text glyph instead of a new icon asset, same
+		// low-risk approach MobileSettingsSubState's '<  BACK' button uses.
+		languageSearchClear = new FlxText(areaEnd - 50, y, 40, 'X');
+		languageSearchClear.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.PINK, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		languageSearchClear.borderSize = 1.5;
+		languageSearchClear.y += Math.round((SEARCH_H - languageSearchClear.height) * .5);
+		languageSearchClear.antialiasing = ClientPrefs.globalAntialiasing;
+		languageSearchClear.visible = false;
+		add(languageSearchClear);
+
+		refreshLanguageSearchDisplay();
+
+		#if mobile
+		_languageOnTextInput = (text:String) -> {
+			if (!languageSearchFocused) return;
+			languageSearchText += text;
+			refreshLanguageSearchDisplay();
+			refreshLanguageResults();
+		};
+		_languageOnKeyDown = (key:lime.ui.KeyCode, _) -> {
+			if (!languageSearchFocused) return;
+			if (key == lime.ui.KeyCode.BACKSPACE)
+			{
+				if (languageSearchText.length > 0)
+				{
+					languageSearchText = languageSearchText.substr(0, languageSearchText.length - 1);
+					refreshLanguageSearchDisplay();
+					refreshLanguageResults();
+				}
+			}
+			else if (key == lime.ui.KeyCode.RETURN || key == lime.ui.KeyCode.ESCAPE)
+			{
+				setLanguageSearchFocused(false);
+			}
+		};
+		lime.app.Application.current.window.onTextInput.add(_languageOnTextInput);
+		lime.app.Application.current.window.onKeyDown.add(_languageOnKeyDown);
+		#end
+	}
+
+	function refreshLanguageSearchDisplay():Void
+	{
+		if (languageSearchText.length > 0)
+		{
+			languageSearchDisplay.text = languageSearchText;
+			languageSearchDisplay.color = OptionsTheme.TEXT_HOVER;
+		}
+		else
+		{
+			languageSearchDisplay.text = Lang.str('opt_language_search_placeholder', 'Search languages...');
+			languageSearchDisplay.color = OptionsTheme.TEXT_IDLE;
+		}
+		// Visibility (this row and the clear button) is owned by update()'s
+		// searchVisible/focus checks -- this only ever touches text/color.
+	}
+
+	/** Rebuilds the language tab's own rows from the current search text -- separate from refreshLanguageTabInPlace() (language-switch confirm), which must NOT re-apply the filter/reset scroll the way a real search edit should. */
+	function refreshLanguageResults():Void
+	{
+		optionList.setOptions(LanguageOptions.build(languageSearchText));
+	}
+
+	#if mobile
+	function setLanguageSearchFocused(focused:Bool):Void
+	{
+		if (languageSearchFocused == focused) return;
+		languageSearchFocused = focused;
+		lime.app.Application.current.window.textInputEnabled = focused;
+		refreshLanguageSearchDisplay();
+	}
+	#end
+
 	function refreshTabText():Void
 	{
 		for (lbl in tabLabels)
@@ -643,6 +775,17 @@ class OptionsState extends MusicBeatState
 	{
 		ClientPrefs.flush();
 		ClientPrefs.reloadControls();
+
+		#if mobile
+		// Leaving these registered would fire into a destroyed OptionsState's
+		// fields (and leak the closures themselves) the next time the player
+		// types anywhere else that happens to enable text input, and leaving
+		// the OS keyboard open on the way out is its own bug.
+		if (_languageOnTextInput != null) lime.app.Application.current.window.onTextInput.remove(_languageOnTextInput);
+		if (_languageOnKeyDown != null) lime.app.Application.current.window.onKeyDown.remove(_languageOnKeyDown);
+		if (languageSearchFocused) lime.app.Application.current.window.textInputEnabled = false;
+		#end
+
 		super.destroy();
 
 		if (instance == this) instance = null;
@@ -677,7 +820,11 @@ class OptionsState extends MusicBeatState
 		// their scroll position for no reason related to what actually changed.
 		// setOptions()'s initialIndex param already exists for exactly this
 		// "keep the thing you already have" case (see its own doc comment).
-		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])(), optionList.curSelected);
+		// Same reasoning for the Language tab's own search text below --
+		// closing e.g. Credits and coming straight back to a filtered list
+		// shouldn't silently drop the filter the search box is still showing.
+		final rebuiltOpts = (tabs[curTab] == 'language') ? LanguageOptions.build(languageSearchText) : TAB_BUILDERS.get(tabs[curTab])();
+		optionList.setOptions(rebuiltOpts, optionList.curSelected);
 	}
 
 	function refreshVisuals():Void
@@ -758,6 +905,18 @@ class OptionsState extends MusicBeatState
 		// mode resets via the pad's own C button instead, see below) -- hide it
 		// rather than leave a dead, untappable icon sitting in the corner.
 		resetIcon.visible = resetLabel.visible = pointerNavAllowed;
+
+		// Mobile-only (see buildLanguageSearch()'s own doc comment for why) --
+		// desktop already has a real physical keyboard driving Controls'
+		// normal navigation, and typing search text there risks colliding
+		// with whatever's bound to those same keys, so this stays a touch-
+		// specific affordance rather than a universal one.
+		final searchVisible = #if mobile (pointerNavAllowed && tabs[curTab] == 'language') #else false #end;
+		languageSearchBg.visible = languageSearchDisplay.visible = searchVisible;
+		languageSearchClear.visible = searchVisible && languageSearchFocused && languageSearchText.length > 0;
+		#if mobile
+		if (!searchVisible) setLanguageSearchFocused(false);
+		#end
 
 		// The navInputMode check only makes sense on mobile (Virtual Pad users
 		// shouldn't have a stray touch re-enable mouse hover) -- on desktop
@@ -842,6 +1001,29 @@ class OptionsState extends MusicBeatState
 				hoveredReset = true;
 				if (FlxG.mouse.justPressed) optionList.resetAllToDefault();
 			}
+
+			#if mobile
+			if (searchVisible && FlxG.mouse.justPressed)
+			{
+				if (languageSearchClear.visible && FlxG.mouse.overlaps(languageSearchClear))
+				{
+					languageSearchText = '';
+					refreshLanguageSearchDisplay();
+					refreshLanguageResults();
+				}
+				else if (FlxG.mouse.overlaps(languageSearchBg))
+				{
+					setLanguageSearchFocused(true);
+				}
+				else if (languageSearchFocused)
+				{
+					// Tapped elsewhere on screen while the keyboard was open --
+					// dismiss it instead of leaving it open indefinitely (this
+					// screen has no other "done typing" affordance otherwise).
+					setLanguageSearchFocused(false);
+				}
+			}
+			#end
 		}
 
 		// Virtual Pad nav mode has no mouse/touch overlap to tap resetIcon with
@@ -931,6 +1113,13 @@ class OptionsState extends MusicBeatState
 	{
 		curTab = index;
 		focus = 'tabs';
+
+		// Fresh search every visit to (or away from) the Language tab --
+		// also dismisses the keyboard if it was still open from before.
+		#if mobile setLanguageSearchFocused(false); #end
+		languageSearchText = '';
+		refreshLanguageSearchDisplay();
+
 		refreshVisuals();
 		// A genuine tab switch starts fresh (top of the list) for every tab
 		// except 'language' -- that one opens pre-scrolled to your current
