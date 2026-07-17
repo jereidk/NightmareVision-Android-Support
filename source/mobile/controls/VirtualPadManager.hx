@@ -4,6 +4,7 @@ import flixel.FlxG;
 import flixel.FlxCamera;
 
 import funkin.data.ClientPrefs;
+import mobile.controls.MobileVirtualPad;
 
 /**
  * Owns the single, app-lifetime MobileVirtualPad instance and its overlay
