@@ -302,26 +302,39 @@ class MobileDLCSubState extends MusicBeatSubstate
     {
         var bmp = new BitmapData(w, h, true, 0x00000000);
         var r = radius;
+        final rgb = color & 0x00FFFFFF;
+        final baseAlpha = (color >>> 24) & 0xFF;
 
         for (px in 0...w) {
             for (py in 0...h) {
-                var inside = true;
+                // -1 (i.e. "fully inside, nowhere near a corner") unless this
+                // pixel falls in one of the four r×r corner boxes, in which
+                // case it's this pixel's actual distance from that corner's
+                // circular boundary (negative = inside it).
+                var dist = -1.0;
 
                 if (px < r && py < r) {
                     var dx = r - px, dy = r - py;
-                    if (dx * dx + dy * dy > r * r) inside = false;
+                    dist = Math.sqrt(dx * dx + dy * dy) - r;
                 } else if (px >= w - r && py < r) {
                     var dx = px - (w - r - 1), dy = r - py;
-                    if (dx * dx + dy * dy > r * r) inside = false;
+                    dist = Math.sqrt(dx * dx + dy * dy) - r;
                 } else if (px < r && py >= h - r) {
                     var dx = r - px, dy = py - (h - r - 1);
-                    if (dx * dx + dy * dy > r * r) inside = false;
+                    dist = Math.sqrt(dx * dx + dy * dy) - r;
                 } else if (px >= w - r && py >= h - r) {
                     var dx = px - (w - r - 1), dy = py - (h - r - 1);
-                    if (dx * dx + dy * dy > r * r) inside = false;
+                    dist = Math.sqrt(dx * dx + dy * dy) - r;
                 }
 
-                if (inside) bmp.setPixel32(px, py, color);
+                // 1px-wide soft edge instead of the old hard inside/outside
+                // cutoff -- at the 10-14px radius this screen's cards/badges
+                // actually use, a hard cutoff left every corner visibly
+                // jagged/stair-stepped, the one place in the whole Options
+                // subsystem not using a real anti-aliased source image
+                // (card.png, used everywhere else -- see NineSlice.hx).
+                final coverage = dist <= -0.5 ? 1.0 : (dist >= 0.5 ? 0.0 : 0.5 - dist);
+                if (coverage > 0) bmp.setPixel32(px, py, (Std.int(baseAlpha * coverage) << 24) | rgb);
             }
         }
 
