@@ -800,7 +800,21 @@ class OptionsState extends MusicBeatState
 			{
 				if (!FlxG.mouse.overlaps(tabBg[i])) continue;
 				hoveredTab = i;
-				if (FlxG.mouse.justPressed && i != curTab) changeTab(i);
+				if (FlxG.mouse.justPressed)
+				{
+					if (i != curTab) changeTab(i);
+					else if (focus != 'tabs')
+					{
+						// Clicking the tab that's already active (e.g. while
+						// focus is 'list') just returns focus to the tab row,
+						// same as BACK already does from 'list' -- doesn't call
+						// changeTab() since that resets the list's scroll/
+						// selection, which a same-tab click has no reason to
+						// discard.
+						focus = 'tabs';
+						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+					}
+				}
 				break;
 			}
 
