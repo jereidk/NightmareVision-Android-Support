@@ -314,10 +314,18 @@ class ControlsSubState extends MusicBeatSubstate
 				}
 				
 			case REBIND:
+				// getByID() returns null once the gamepad that opened this
+				// rebind has disconnected mid-wait (battery died, Bluetooth
+				// dropped, USB unplugged) -- calling firstJustPressedID() on
+				// that null crashed this screen instead of just treating it
+				// as "no input yet" and letting the existing 5s timeout below
+				// return to SELECT like it already does for any other stall.
 				var inputID:Int = switch device
 				{
 					case Keys: FlxG.keys.firstJustPressed();
-					case Gamepad(id): FlxG.gamepads.getByID(id).firstJustPressedID();
+					case Gamepad(id):
+						final pad = FlxG.gamepads.getByID(id);
+						(pad != null) ? pad.firstJustPressedID() : -1;
 				}
 				
 				if (inputID > -1)
@@ -352,7 +360,14 @@ class ControlsSubState extends MusicBeatSubstate
 		#end
 		if (controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.ACCEPT || controls.BACK) mouseControlActive = false;
 		
-		if (mouseControlActive && state == SELECT && FlxG.mouse.justMoved)
+		// justMoved alone missed a tap that lands at the exact same position
+		// the pointer was already at -- the common case being two taps in a
+		// row on the same bind slot (retry a rebind, or select then tap
+		// again to confirm), where a real finger rarely moves between them.
+		// justPressed always fires on its own frame regardless of position,
+		// so checking either lets a stationary tap still be found and acted
+		// on below, not just a hover that happened to also move.
+		if (mouseControlActive && state == SELECT && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
 		{
 			for (i => option in optionsList)
 			{
@@ -650,7 +665,15 @@ class ControlsOption extends FlxSpriteContainer
 		binds.members[index].text = switch (device)
 		{
 			case Keys: InputFormatter.getKeyName(inputID);
-			case Gamepad(id): FlxG.gamepads.getByID(id).getInputLabel(inputID).toUpperCase();
+			case Gamepad(id):
+				// Same disconnect-mid-session crash as REBIND's input read
+				// (see ControlsSubState.update()) -- `device` doesn't switch
+				// away from a Gamepad(id) on its own just because that
+				// gamepad vanished (only a keypress or a DIFFERENT gamepad
+				// triggers that), so any refresh in between (Reset to
+				// Default, re-opening this screen) hit a null gamepad here.
+				final pad = FlxG.gamepads.getByID(id);
+				(pad != null) ? pad.getInputLabel(inputID).toUpperCase() : '?';
 		};
 		binds.members[index].alpha = alpha;
 	}
