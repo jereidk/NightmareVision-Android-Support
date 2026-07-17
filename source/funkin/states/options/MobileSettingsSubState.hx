@@ -839,7 +839,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
 			addVirtualPad(LEFT_FULL, A_B_C);
-			addVirtualPadCamera();
 		}
 		_updateNavModeUI();
 	}

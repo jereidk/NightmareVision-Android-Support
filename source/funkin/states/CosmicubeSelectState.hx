@@ -87,7 +87,6 @@ class CosmicubeSelectState extends AmongUIState
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B_C);
-		addVirtualPadCamera();
 		#end
 	}
 

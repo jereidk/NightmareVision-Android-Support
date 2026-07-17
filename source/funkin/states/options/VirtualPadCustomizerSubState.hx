@@ -151,7 +151,6 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
 			addVirtualPad(NONE, A_B);
-			addVirtualPadCamera();
 		}
 		#end
 	}

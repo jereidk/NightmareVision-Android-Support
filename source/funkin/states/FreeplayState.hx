@@ -247,7 +247,6 @@ class FreeplayState extends AmongUIState
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, FREEPLAY);
-		addVirtualPadCamera();
 		#end
 		
 		porGlow = new FlxSprite(-11.1 + 496, -12.65).loadGraphic(Paths.image(ext + 'backGlow', null, true, STRICT));

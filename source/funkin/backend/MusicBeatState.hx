@@ -49,49 +49,19 @@ class MusicBeatState extends FlxUIState
 
 	#if mobile
 	public var hitbox:MobileHitbox;
-	public var virtualPad:MobileVirtualPad;
 	public var noteTapInput:Null<NoteTapInput> = null;
 
-	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
-	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
-	{
-		if (!forceShow && ClientPrefs.navInputMode != 'Virtual Pad') return;
-		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
-		add(virtualPad);
-	}
+	/** The single, app-lifetime virtual pad -- see mobile.controls.VirtualPadManager. */
+	public var virtualPad(get, never):MobileVirtualPad;
+	inline function get_virtualPad():MobileVirtualPad return mobile.controls.VirtualPadManager.instance;
 
-	public function addVirtualPadCamera(DefaultDrawTarget:Bool = false)
-	{
-		if (virtualPad != null)
-		{
-			virtualPadCam = new FlxCamera();
-			virtualPadCam.bgColor.alpha = 0;
-			FlxG.cameras.add(virtualPadCam, DefaultDrawTarget);
+	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false):Void
+		mobile.controls.VirtualPadManager.request(this, DPad, Action, forGameplay, forceShow);
 
-			virtualPad.cameras = [virtualPadCam];
-		}
-	}
-
-	public function removeVirtualPad()
-	{
-		if (virtualPad != null)
-		{
-			remove(virtualPad);
-			virtualPad = FlxDestroyUtil.destroy(virtualPad);
-		}
-
-		if (virtualPadCam != null)
-		{
-			// FunkinGame.switchState() already wipes every camera via
-			// FlxG.cameras.reset() before this state's own destroy() runs --
-			// check before removing again to avoid the "not a part of the
-			// game" warning (same fix as ControlsSubState.hx's destroy()).
-			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
-			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
-		}
-	}
+	public function removeVirtualPad():Void
+		mobile.controls.VirtualPadManager.release(this);
 
 	public function addMobileControls(DefaultDrawTarget:Bool = false, forGameplay:Bool = false)
 	{
@@ -100,7 +70,6 @@ class MusicBeatState extends FlxUIState
 			if (ClientPrefs.gameInputMode == 'Virtual Pad')
 			{
 				addVirtualPad(LEFT_FULL, NONE, true, true); // last true = forGameplay
-				addVirtualPadCamera(DefaultDrawTarget);
 				return;
 			}
 
@@ -131,10 +100,7 @@ class MusicBeatState extends FlxUIState
 
 		// Navigation: native touch handles it by default; virtual pad only if explicitly chosen.
 		if (ClientPrefs.navInputMode == 'Virtual Pad')
-		{
 			addVirtualPad(LEFT_FULL, NONE);
-			addVirtualPadCamera(DefaultDrawTarget);
-		}
 	}
 
 	public function removeMobileControls()

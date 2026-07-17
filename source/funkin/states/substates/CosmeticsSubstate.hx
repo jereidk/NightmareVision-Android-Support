@@ -344,7 +344,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, STORYMENU);
-		addVirtualPadCamera();
 		#end
 	}
 

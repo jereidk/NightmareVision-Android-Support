@@ -174,7 +174,6 @@ class DialogueBox extends FlxSpriteGroup
 			{
 				var musicBeatState = cast(parentState, MusicBeatSubstate);
 				musicBeatState.addVirtualPad(LEFT_FULL, A_B);
-				musicBeatState.addVirtualPadCamera();
 			}
 		}
 		#end

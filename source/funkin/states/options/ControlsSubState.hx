@@ -185,7 +185,6 @@ class ControlsSubState extends MusicBeatSubstate
 		// isInSubstate is already set by MusicBeatSubstate's own constructor
 		// (via super() above) -- no need to set it again here.
 		addVirtualPad(LEFT_FULL, A_B);
-		addVirtualPadCamera();
 		#end
 	}
 

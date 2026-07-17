@@ -127,7 +127,6 @@ class GameOverSubstate extends MusicBeatSubstate
 			#if mobile
 			controls.isInSubstate = true;
 			addVirtualPad(NONE, A_B);
-			addVirtualPadCamera();
 			#end
 
 			FlxG.camera.follow(camFollow, LOCKON, 0);

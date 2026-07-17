@@ -128,7 +128,6 @@ class NoteOffsetState extends MusicBeatState
 		// Only left/right adjust the offset here — up/down have no function
 		// on this screen, so don't show a full diamond D-pad.
 		addVirtualPad(LEFT_RIGHT, A_B_C);
-		addVirtualPadCamera();
 		#end
 	}
 
