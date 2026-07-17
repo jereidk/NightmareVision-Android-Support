@@ -78,8 +78,20 @@ class MobileVirtualPad extends TouchInputManager
 	public var buttonZ:FlxButton;
 	public var buttonS:FlxButton;
 	
-	static var keyboardPressed:Bool = false;
-	static var gamepadPressed:Bool = false;
+	// Instance fields, not static -- each state/substate owns its own pad now
+	// (no more sharing/borrowing a single ancestor pad), so these must track
+	// THIS pad's own hide-on-alternate-input state independently. They were
+	// static right up until that borrowing mechanism was removed, which left
+	// a real cross-instance leak: gamepadPressed only ever gets reset back to
+	// false inside the "a touch arrived while this pad was hidden" branch
+	// below, so once ANY pad's update() ever saw a gamepad press (including a
+	// gameplay pad about to be destroyed when leaving PlayState), every
+	// SUBSEQUENT pad -- in a totally different, later state -- inherited that
+	// same stuck-true static flag and hid itself on its very first frame,
+	// looking exactly like "the pad doesn't work anymore after leaving
+	// PlayState/a song."
+	var keyboardPressed:Bool = false;
+	var gamepadPressed:Bool = false;
 	
 	/** If true, this pad is for gameplay (not navigation) */
 	public var forGameplay(default, null):Bool = false;
