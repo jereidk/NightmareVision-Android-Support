@@ -177,6 +177,7 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
                 #if mobile
                 controls.isInSubstate = true;
                 addVirtualPad(UP_DOWN, A_B);
+                addVirtualPadCamera();
                 #end
 		
 		FlxG.sound.play(Paths.sound('panelAppear'), 0.5);

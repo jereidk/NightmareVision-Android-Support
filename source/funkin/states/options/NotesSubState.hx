@@ -110,6 +110,7 @@ class NotesSubState extends MusicBeatSubstate
 		// driven with no touch-tap equivalent, so a 'Touch' nav mode user
 		// would otherwise have no way to use this screen at all.
 		addVirtualPad(LEFT_FULL, A_B_C, true);
+		addVirtualPadCamera();
 		#end
 	}
 

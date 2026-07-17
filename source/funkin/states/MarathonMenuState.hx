@@ -130,6 +130,7 @@ class MarathonMenuState extends AmongUIState
 
 		#if mobile
 		addVirtualPad(NONE, A_B);
+		addVirtualPadCamera();
 		#end
 	}
 

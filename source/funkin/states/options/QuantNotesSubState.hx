@@ -120,6 +120,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 		// equivalent exists here, so a 'Touch' nav mode user needs the pad
 		// to interact with this screen at all.
 		addVirtualPad(LEFT_FULL, A_B_C, true);
+		addVirtualPadCamera();
 		#end
 	}
 

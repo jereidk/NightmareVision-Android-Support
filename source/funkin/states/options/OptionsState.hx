@@ -427,6 +427,7 @@ class OptionsState extends MusicBeatState
 		// shortcut for Virtual Pad nav mode (see the buttonC check in update()),
 		// same convention CosmeticsSubstate already uses for its own reset button.
 		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
 	}
 

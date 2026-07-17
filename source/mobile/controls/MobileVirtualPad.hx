@@ -83,7 +83,9 @@ class MobileVirtualPad extends TouchInputManager
 	
 	/** If true, this pad is for gameplay (not navigation) */
 	public var forGameplay(default, null):Bool = false;
-
+	
+	/** Config this pad was last built with, pushed here each time reconfigure() borrows it for a substate. */
+	var _configStack:Array<{dpad:MobileDPadMode, action:MobileActionMode, forGameplay:Bool}> = [];
 	public var currentDPad(default, null):MobileDPadMode;
 	public var currentAction(default, null):MobileActionMode;
 
@@ -94,45 +96,49 @@ class MobileVirtualPad extends TouchInputManager
 	}
 
 	/**
-	 * Rebuilds this pad's buttons in place for a new DPad/Action combination.
-	 * VirtualPadManager (the only caller) keeps the real ownership stack --
-	 * this just applies whatever shape it's told to, with no memory of its
-	 * own of what came before.
+	 * Rebuilds this pad's buttons in place for a new DPad/Action combination,
+	 * remembering the current one so restorePrevious() can bring it back --
+	 * lets a substate borrow and reshape an ancestor's already-existing pad
+	 * instead of creating (and the ancestor's hiding) a second one. See
+	 * MusicBeatSubstate.addVirtualPad()/removeVirtualPad() for the borrowing
+	 * side of this.
 	 */
-	public function rebuild(DPad:MobileDPadMode, Action:MobileActionMode, forGameplay:Bool = false):Void
+	public function reconfigure(DPad:MobileDPadMode, Action:MobileActionMode, ?forGameplay:Bool):Void
 	{
+		_configStack.push({dpad: currentDPad, action: currentAction, forGameplay: this.forGameplay});
 		_clearButtons();
-		_build(DPad, Action, forGameplay);
-
-		// FlxSpriteGroup.cameras' setter only cascades to members that already
-		// exist at the moment it's assigned (transformChildren()) -- the fresh
-		// buttons _build() just created above were add()'d AFTER that, so
-		// without this they'd silently fall back to FlxCamera.defaultCameras
-		// (the main game camera) instead of this pad's own overlay camera.
-		// Reassigning with a genuinely new array (not the same reference --
-		// the setter no-ops on `cameras = cameras`) re-triggers the cascade
-		// onto the buttons that exist right now. Harmless/no-op before the
-		// very first rebuild(), when `cameras` is still null.
-		if (this.cameras != null)
-			this.cameras = this.cameras.copy();
+		_build(DPad, Action, forGameplay ?? false);
 
 		// update()'s "forGameplay && FlxG.state.subState != null" check hides
 		// this pad (this.visible = false, every button .active/.visible =
 		// false) the instant a substate opens over the gameplay pad's owner --
-		// which is exactly the moment a substate requests this same pad for
-		// its own navigation via VirtualPadManager. _build() only creates
-		// fresh buttons (individually visible by default); it never touches
-		// this group's own .visible, so a pad that happened to be mid-hide
-		// when re-requested stayed invisible until some unrelated touch
-		// elsewhere on screen happened to flip it back on -- the pause
-		// menu/game over pad could be fully invisible with no visual cue it
-		// was even there.
+		// which is exactly the moment a substate borrows the pad via THIS
+		// function to use for its own navigation. _build() only creates fresh
+		// buttons (individually visible by default); it never touched this
+		// group's own .visible, so a pad that happened to be mid-hide when
+		// borrowed stayed invisible until some unrelated touch elsewhere on
+		// screen happened to flip it back on -- the pause menu/game over pad
+		// could be fully invisible with no visual cue it was even there.
 		this.visible = true;
 		for (btn in buttons)
 		{
 			btn.active = true;
 			btn.visible = true;
 		}
+	}
+
+	/**
+	 * Undoes the most recent reconfigure(), restoring this pad's previous
+	 * button layout. Returns false (no-op) if there was nothing to restore --
+	 * callers should fall back to their own cleanup in that case.
+	 */
+	public function restorePrevious():Bool
+	{
+		if (_configStack.length == 0) return false;
+		final prev = _configStack.pop();
+		_clearButtons();
+		_build(prev.dpad, prev.action, prev.forGameplay);
+		return true;
 	}
 
 	/** Destroys every current button/reference without destroying this pad itself. */
@@ -145,9 +151,9 @@ class MobileVirtualPad extends TouchInputManager
 			// from the `buttons` array below. Destroying without splicing them
 			// out of `members` left every previously-live button as a dangling,
 			// destroyed reference there -- the next update()/draw() pass over
-			// the group iterates into it and crashes. This runs on every single
-			// rebuild(), i.e. every substate open/close, so `members` would
-			// otherwise pile up dead entries fast.
+			// the group iterates into it and crashes. This ran on every single
+			// reconfigure()/restorePrevious(), i.e. every substate open/close
+			// once a pad could be shared, so `members` piled up dead entries fast.
 			remove(btn, true);
 			FlxDestroyUtil.destroy(btn);
 		}
@@ -444,16 +450,11 @@ class MobileVirtualPad extends TouchInputManager
 		super.update(elapsed);
 
 		// Hide the gameplay pad entirely whenever a substate covers PlayState
-		// (pause menu, cosmetics locker, etc.). This pad is a FlxG.plugins
-		// entry now (see VirtualPadManager), so it keeps ticking regardless
-		// of PlayState's own persistentUpdate/subState state -- but the
-		// instant a substate actually wants pad input for its own navigation
-		// it calls VirtualPadManager.request(), which rebuild()s this same
-		// object with forGameplay = false, so this check no longer fires for
-		// it at all. What's left here only covers substates that DON'T
-		// request the pad (a purely visual overlay with no pad UI of its
-		// own) -- for those, the gameplay D-pad has nothing useful to do
-		// while they're covering the screen, regardless of navInputMode.
+		// (pause menu, cosmetics locker, etc.) -- PlayState keeps ticking this
+		// pad underneath any open substate via persistentUpdate, but every one
+		// of those substates already brings its own dedicated pad/touch UI for
+		// its own navigation, so the gameplay D-pad has nothing useful to do
+		// there regardless of navInputMode.
 		// This used to only special-case navInputMode == 'Touch' (with a
 		// keyboard/gamepad press bringing the pad back) -- for 'Virtual Pad'
 		// nav mode specifically, that left the gameplay D-pad fully visible
