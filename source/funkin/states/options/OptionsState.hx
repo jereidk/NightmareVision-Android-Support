@@ -219,7 +219,25 @@ class OptionsState extends MusicBeatState
 			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
 			add(menuBackButton);
 
-			buildActionButtons(cutout);
+			// The tab row (and its backing panel) spans the same left/right
+			// bounds as the title/close-button row above it -- optionsHeader.x
+			// on the left, menuBackButton's right edge on the right -- read off
+			// those two widgets instead of repeating "40 + cutout * 0.5" and
+			// "1160 + cutout" as separate hand-typed magic numbers in three
+			// different places (tabsPanelBg's own math and buildTabs() used to
+			// each hardcode this independently; nothing enforced they'd stay in
+			// sync if either widget's position/size ever changed).
+			final tabsAreaStart = optionsHeader.x;
+			final tabsAreaEnd = menuBackButton.x + menuBackButton.width;
+
+			// Action buttons sit on the SAME row as the title and the close
+			// button, so their span has to be read off those two widgets' actual
+			// rendered bounds too -- this used to be a hardcoded "340" left edge
+			// that assumed the (untranslated, unshrunk) title never got wider
+			// than ~276px. A longer translation of "Options" -- or, as of the
+			// Controls button just added, five buttons squeezed into the same
+			// row -- had no guarantee of actually clearing the title text.
+			buildActionButtons(optionsHeader.x + optionsHeader.width + 24, menuBackButton.x - 10);
 
 			// Same thingy.png-derived gradient as artPanelBg below (the "options"
 			// panel), cropped to a short strip instead -- unifies tabs with the
@@ -227,15 +245,15 @@ class OptionsState extends MusicBeatState
 			// pills floating directly over the dim/starfield with nothing behind
 			// their own row, the way action buttons above (still on topBar/the
 			// header row, not this) and everything below already have.
-			final tabsPanelX = 40 + cutout * 0.5 - 8;
-			final tabsPanelW = ((1160 + cutout) - 40) + 16;
+			final tabsPanelX = tabsAreaStart - 8;
+			final tabsPanelW = (tabsAreaEnd - tabsAreaStart) + 16;
 			var tabsPanelBg = new FlxSprite(tabsPanelX, TAB_Y - 8).loadGraphic(Paths.image('menu/options/tabsPanel'));
 			tabsPanelBg.antialiasing = ClientPrefs.globalAntialiasing;
 			tabsPanelBg.setGraphicSize(Std.int(tabsPanelW), Std.int(TAB_H + 16));
 			tabsPanelBg.updateHitbox();
 			add(tabsPanelBg);
 
-			buildTabs(cutout);
+			buildTabs(tabsAreaStart, tabsAreaEnd);
 
 			final listW = (1160 + cutout) - LIST_X;
 
@@ -342,18 +360,28 @@ class OptionsState extends MusicBeatState
 	}
 
 	/**
+	 * Evenly distributes `count` equal-width cards across [areaStart, areaEnd]
+	 * with `gap` between neighbors -- the one spacing algorithm buildTabs()
+	 * and buildActionButtons() both use, instead of each row hand-rolling its
+	 * own slightly different math (the tabs used to fake their gap by just
+	 * shrinking the card 4px inside its slot; action buttons already did a
+	 * real gap-based split). Same algorithm for both means the two stacked
+	 * rows actually line up card-edge-to-card-edge instead of drifting.
+	 */
+	static inline function rowCardWidth(areaStart:Float, areaEnd:Float, count:Int, gap:Float):Float
+		return (areaEnd - areaStart - gap * (count - 1)) / count;
+
+	/**
 	 * Small pill buttons in the header, between the title and the close
 	 * button -- tapping one navigates straight to its screen, no selection
 	 * step. Only reachable by keyboard/D-pad via the 'buttons' focus state
 	 * (UP from the tab row), since there's no separate touch affordance for
 	 * "select without opening" that would make sense for these.
 	 */
-	function buildActionButtons(cutout:Float):Void
+	function buildActionButtons(areaStart:Float, areaEnd:Float):Void
 	{
-		final areaStart = 340 + cutout * 0.5;
-		final areaEnd = 1090 + cutout;
 		final gap = 10.0;
-		final btnW = (areaEnd - areaStart - gap * (actionButtons.length - 1)) / actionButtons.length;
+		final btnW = rowCardWidth(areaStart, areaEnd, actionButtons.length, gap);
 
 		for (i in 0...actionButtons.length)
 		{
@@ -410,27 +438,32 @@ class OptionsState extends MusicBeatState
 		}
 	}
 
-	function buildTabs(cutout:Float):Void
+	function buildTabs(areaStart:Float, areaEnd:Float):Void
 	{
-		final totalW = (1160 + cutout) - 40;
-		final tabW = totalW / tabs.length;
+		final gap = 4.0;
+		final tabW = rowCardWidth(areaStart, areaEnd, tabs.length, gap);
 
 		for (i in 0...tabs.length)
 		{
-			final tx = 40 + cutout * 0.5 + tabW * i;
+			final tx = areaStart + (tabW + gap) * i;
 
 			// Real card sprite instead of a flat makeGraphic() rect -- see
 			// buildActionButtons() above for why.
 			final bg = new FlxSprite(tx, TAB_Y);
 			bg.loadGraphic(Paths.image('menu/freeplay/card'));
-			bg.setGraphicSize(Std.int(tabW - 4), Std.int(TAB_H));
+			bg.setGraphicSize(Std.int(tabW), Std.int(TAB_H));
 			bg.updateHitbox();
 			bg.antialiasing = ClientPrefs.globalAntialiasing;
 			bg.color = 0xFF2A2A3A;
 			add(bg);
 			tabBg.push(bg);
 
-			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 12, '');
+			// Same 4px label inset on both sides as buildActionButtons() uses
+			// (bx + 4, width - 8) -- tabW here is already the card's own width
+			// (rowCardWidth already subtracted the gap), unlike the old tabW
+			// that meant "card + gutter" and needed a bigger, differently-sized
+			// inset (tabW - 12) to land in the same visual spot.
+			final lbl = new FlxText(tx + 4, TAB_Y, tabW - 8, '');
 			lbl.setFormat(Paths.font('vcr.ttf'), 17, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			lbl.borderSize = 1.5;
 			lbl.antialiasing = ClientPrefs.globalAntialiasing;
