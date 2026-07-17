@@ -37,6 +37,21 @@ class LoadingState extends MusicBeatState
 	static inline final MIN_SHOW_TIME:Float = 1.1;
 	static inline final ACCENT:FlxColor = 0xFFFF4444;
 
+	/**
+	 * Absolute upper bound on how long this screen waits for the background
+	 * preload before giving up on it and switching anyway. Without this, a
+	 * worker Thread that dies mid-file (a native decoder hang, a genuinely
+	 * corrupt asset, anything that doesn't hit one of the try/catch blocks
+	 * below) leaves `done` false forever -- update()'s switch condition never
+	 * fires, and the player is stuck on this screen permanently with no BACK
+	 * handling to escape it. Firing the switch anyway once this elapses isn't
+	 * free of a real load: PlayState.create() falls back to loading whatever
+	 * wasn't finished synchronously, the exact same path it already used
+	 * before this background-preload feature existed -- worst case is one
+	 * slow frame, not a stuck game.
+	 */
+	static inline final MAX_WAIT_TIME:Float = 15.0;
+
 	/** Max GPU uploads per frame to avoid a single-frame stall. */
 	static inline final MAX_FINALIZE_PER_FRAME:Int = 3;
 
@@ -486,8 +501,12 @@ class LoadingState extends MusicBeatState
 
 		// ── Phase C: switch when ready ──────────────────────────────────
 		shownTime += elapsed;
-		if (!switching && shownTime >= MIN_SHOW_TIME && done)
+		final timedOut = shownTime >= MAX_WAIT_TIME;
+		if (!switching && ((shownTime >= MIN_SHOW_TIME && done) || timedOut))
 		{
+			if (timedOut && !done)
+				Logger.log('LoadingState: preload did not finish after ${MAX_WAIT_TIME}s (progress ${Std.int(p * 100)}%) — switching anyway, PlayState will load the rest synchronously', WARN);
+
 			switching = true;
 			FlxTransitionableState.skipNextTransIn = true;
 			FlxG.switchState(nextState);
@@ -779,8 +798,20 @@ class LoadingState extends MusicBeatState
 				}
 			}
 
+			// Every write inside the loop above bails out via the
+			// _threadGeneration check at its top the moment a newer
+			// startPreload()/prefetchSong() supersedes this run -- but this
+			// tail line sat outside that loop, unguarded, so a thread that
+			// legitimately finished its OWN last iteration (generation still
+			// matched at that point) could still reach here and stamp
+			// _allFilesOpened = true onto a NEWER generation's fresh state if
+			// that newer run started in the split second before this line
+			// executes. finalizePendingAssets() would then see "all files
+			// opened" with empty pending queues (the new thread hasn't
+			// decoded anything yet) and conclude the NEW load is done --
+			// switching to PlayState before its assets are actually ready.
 			_mutex.acquire();
-			_allFilesOpened = true;
+			if (_threadGeneration == myGen) _allFilesOpened = true;
 			_mutex.release();
 		});
 	}

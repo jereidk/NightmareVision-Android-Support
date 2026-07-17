@@ -155,9 +155,18 @@ class DLCManager {
 
     /**
      * For each DLC entry that has a `releaseTag`, fetch the GitHub release API
-     * and overwrite name/description/author/version/sizeMb/downloadUrl/sha256
-     * with the live release data. Registry fields serve as fallback when the
-     * API call fails (rate limit, no network, etc.).
+     * and overwrite name/description/author/version/sizeMb/downloadUrl with
+     * the live release data. Registry fields serve as fallback when the API
+     * call fails (rate limit, no network, etc.).
+     *
+     * Deliberately does NOT touch `entry.sha256` -- the release API has no
+     * checksum field to pull from, so downloadAndInstallAsync()'s integrity
+     * check always validates against whatever hash is hand-written in
+     * dlc-registry.json, even though `downloadUrl` itself just got replaced
+     * with whatever asset is live under `releaseTag` right now. Whoever edits
+     * the registry is responsible for keeping that hash in sync with the
+     * actual release asset -- a mismatch fails the download closed (safe),
+     * it just means the DLC won't install until the registry is fixed.
      *
      * Runs inside the background thread created by fetchRegistryAsync() —
      * no mutex needed for `reg.dlcs` because only this thread touches it.
