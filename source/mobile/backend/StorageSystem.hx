@@ -80,9 +80,22 @@ class StorageSystem
 	/** 'Shared': classic .<folderName> folder on shared external storage. 'Scoped': app-private Android/data/<package>/files/ folder. */
 	static function _androidRoot():String
 	{
-		return (_readBootstrapMode() == 'Scoped')
-			? Context.getExternalFilesDir()
-			: Environment.getExternalStorageDirectory() + '/.' + folderName;
+		if (_readBootstrapMode() != 'Scoped')
+			return Environment.getExternalStorageDirectory() + '/.' + folderName;
+
+		// android-manager 1.0.1's Java ContextManager$Storage class only ever
+		// implemented getExternalFilesDirs() (plural) -- the singular
+		// getExternalFilesDir() Context.hx calls has no matching Java method,
+		// so that JNI lookup always fails (silently, logged once as a trace)
+		// and falls back to getInternalFilesDir(). That's not equivalent: it
+		// silently downgrades "Scoped" mode to real internal storage, which
+		// isn't browsable from a file manager without root -- defeating the
+		// entire reason this mode exists. getExternalFilesDirs() IS
+		// implemented on the Java side and returns the exact same directory
+		// (plus any secondary storage volumes) that the singular call would
+		// have, so use that instead and take the primary (first) entry.
+		final dirs = Context.getExternalFilesDirs(null);
+		return (dirs.length > 0 && dirs[0] != null && dirs[0].length > 0) ? dirs[0] : Context.getInternalFilesDir();
 	}
 	#end
 
