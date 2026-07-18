@@ -64,8 +64,9 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	var mouseMode:Bool = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
 	var overlayCameras:Array<FlxCamera>;
 	var overlayCamera:FlxCamera;
-	var gridCamera:FlxCamera;
 	var gridCameras:Array<FlxCamera>;
+	var gridClipTop:Float = 0;
+	var gridClipBottom:Float = 0;
 	
 	var bg:FlxSprite;
 	var selectSprite:FlxSprite;
@@ -187,11 +188,21 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		skinTop.visible = false;
 		add(skinTop);
 		
-		gridCamera = new FlxCamera();
-		gridCamera.bgColor = 0x00000000;
-		gridCamera.antialiasing = ClientPrefs.globalAntialiasing;
-		FlxG.cameras.add(gridCamera, false);
-		gridCameras = [gridCamera];
+		// Grid sprites render on the SAME overlay camera as everything else
+		// and get masked to the panel's inner window via per-sprite clipRect
+		// (see applyGridClip()). The previous approach -- a dedicated
+		// sub-rect FlxCamera positioned/sized over the panel as a crop
+		// window -- never rendered correctly on device despite the math
+		// checking out (see the old [CosmeticsGridDebug] logging this
+		// replaces): a viewport-sized camera has to agree with
+		// FunkinRatioScaleMode's cutout math AND the render-scale blit
+		// pipeline about where "the panel" is on the physical screen, and
+		// full-screen cameras (like overlayCamera itself, which the Locker
+		// view renders on just fine) are the only ones this project's stack
+		// handles reliably. clipRect is computed in sprite-local frame
+		// space, so it's completely independent of scale modes and render
+		// scale.
+		gridCameras = overlayCameras;
 		refreshGridLayout('create');
 
 		// Same half-cutout shift closeGrid()/openGridForCategory() already
@@ -493,8 +504,8 @@ class CosmeticsSubstate extends MusicBeatSubstate
 	}
 	
 	/**
-	 * Recomputes skinThingBg/skinTop's centering and gridCamera's crop
-	 * window + gridOriginX/Y from the CURRENT FlxG.width/height and
+	 * Recomputes skinThingBg/skinTop's centering and the grid's clip
+	 * window (gridClipTop/Bottom) + gridOriginX/Y from the CURRENT FlxG.width/height and
 	 * gameCutoutSize. Called once in create() and again every time the
 	 * grid opens (mirrors menuBackButton.x/titleText.x below, which
 	 * already re-apply gameCutoutSize.x on every open because 'expand'
@@ -510,9 +521,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		var maskInsetRight:Float = 31;
 		var maskInsetTop:Float = 35;
 		var maskInsetBottom:Float = 32;
-		gridCamera.setPosition(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
-		gridCamera.setSize(Std.int(skinThingBg.width - maskInsetLeft - maskInsetRight), Std.int(skinThingBg.height - maskInsetTop - maskInsetBottom));
-		gridCamera.scroll.set(skinThingBg.x + maskInsetLeft, skinThingBg.y + maskInsetTop);
+
+		// World-space window the grid is masked to (via per-sprite clipRect
+		// in applyGridClip(), not a sub-rect camera -- see create()).
+		gridClipTop = skinThingBg.y + maskInsetTop;
+		gridClipBottom = skinThingBg.y + skinThingBg.height - maskInsetBottom;
 
 		gridOriginY = (skinThingBg.y + skinThingBg.height * 0.5) - GRID_SPACING_Y;
 
@@ -532,9 +545,25 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			gridScrollBar.x = skinThingBg.x + (370 - (1280 - skinThingBg.width) * 0.5);
 			gridScrollBar.y = skinThingBg.y + SCROLLBAR_MARGIN;
 		}
+	}
 
-		funkin.backend.Logger.log('[CosmeticsGridDebug] refreshGridLayout($source): FlxG.width=${FlxG.width} FlxG.height=${FlxG.height} gameCutoutSize=${funkin.backend.FunkinRatioScaleMode.gameCutoutSize} skinThingBg.x=${skinThingBg.x} skinThingBg.y=${skinThingBg.y} gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
-		funkin.backend.Logger.log('[CosmeticsGridCamDebug] refreshGridLayout($source): cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll}');
+	/**
+	 * Masks a grid sprite to the panel's inner window by converting the
+	 * world-space clip band (gridClipTop..gridClipBottom, from
+	 * refreshGridLayout()) into the sprite's own unscaled frame space --
+	 * for an updateHitbox()-aligned sprite the visual top-left is exactly
+	 * (x, y) and one frame pixel spans scale.y world pixels. Only clips
+	 * vertically: the grid never overflows the panel horizontally.
+	 * Reuses the sprite's own clipRect instance (set_clipRect stores the
+	 * reference, so each sprite must own a distinct rect).
+	 */
+	function applyGridClip(spr:FlxSprite):Void
+	{
+		final sy = spr.scale.y != 0 ? Math.abs(spr.scale.y) : 1.0;
+		final localTop = (gridClipTop - spr.y) / sy;
+		final localBottom = (gridClipBottom - spr.y) / sy;
+		final r = (spr.clipRect != null) ? spr.clipRect : flixel.math.FlxRect.get();
+		spr.clipRect = r.set(-8192, localTop, 16384, Math.max(localBottom - localTop, 0));
 	}
 
 	function openGridForCategory(cat:Int):Void
@@ -640,8 +669,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 
 		var nodeAtlas = Paths.getSparrowAtlas('menu/cosmicube/node');
 
-		funkin.backend.Logger.log('[CosmeticsGridDebug] setupGridCards: gridItemIds.length=${gridItemIds.length} GRID_COLS=$GRID_COLS gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
-
 		for (i in 0...gridItemIds.length)
 		{
 			var col:Int = i % GRID_COLS;
@@ -661,20 +688,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			bgSpr.cameras = gridCameras;
 			add(bgSpr);
 			gridNodes.push(bgSpr);
-
-			funkin.backend.Logger.log('[CosmeticsGridDebug] card i=$i col=$col row=$row cx=$cx cy=$cy bgSpr.x=${bgSpr.x} bgSpr.y=${bgSpr.y} bgSpr.width=${bgSpr.width}');
-
-			// Position/atlas math both check out on paper (see comment above)
-			// yet cards still don't render on-device. Log the things a naive
-			// "coordinates look right" check can't catch: whether the sprite
-			// itself thinks it's drawable, and whether gridCamera is actually
-			// registered/visible at the moment we draw to it.
-			if (i == 0)
-			{
-				final camIdx = FlxG.cameras.list.indexOf(gridCamera);
-				funkin.backend.Logger.log('[CosmeticsGridSprDebug] bgSpr.visible=${bgSpr.visible} bgSpr.alpha=${bgSpr.alpha} bgSpr.exists=${bgSpr.exists} bgSpr.color=${bgSpr.color} bgSpr.cameras.length=${bgSpr.cameras.length} bgSpr.animation.name=${bgSpr.animation.name} bgSpr.numFrames=${bgSpr.frames != null ? bgSpr.frames.numFrames : -1}');
-				funkin.backend.Logger.log('[CosmeticsGridCamDebug2] gridCamera.visible=${gridCamera.visible} gridCamera.alpha=${gridCamera.alpha} gridCamera.exists=${gridCamera.exists} camIndexInList=$camIdx camerasListLength=${FlxG.cameras.list.length} substate.visible=$visible substate.cameras.length=${cameras != null ? cameras.length : -1}');
-			}
 
 			var whiteSpr = new FlxSprite();
 			whiteSpr.frames = nodeAtlas;
@@ -912,12 +925,24 @@ class CosmeticsSubstate extends MusicBeatSubstate
 			gridFallbacks[i].x = bgSpr.x;
 			gridFallbacks[i].y = bgSpr.y + ((bgSpr.height - gridFallbacks[i].height) * 0.5);
 			
-			var onScreen = (cy > 100 && cy < FlxG.height - 40);
+			// Card is worth drawing if any part of it overlaps the panel's
+			// inner window; the exact edge crop is applyGridClip()'s job.
+			var halfH:Float = bgSpr.height * 0.5;
+			var onScreen = (cy + halfH > gridClipTop && cy - halfH < gridClipBottom);
 			gridNodes[i].visible = onScreen;
 			gridWhites[i].visible = onScreen;
 			gridOverlays[i].visible = onScreen;
 			gridPortraits[i].visible = onScreen && gridPortraits[i].graphic != null && gridPortraitIds[i].length > 0;
 			gridFallbacks[i].visible = onScreen && gridFallbacks[i].text.length > 0;
+
+			if (onScreen)
+			{
+				applyGridClip(gridNodes[i]);
+				applyGridClip(gridWhites[i]);
+				applyGridClip(gridOverlays[i]);
+				if (gridPortraits[i].visible) applyGridClip(gridPortraits[i]);
+				if (gridFallbacks[i].visible) applyGridClip(gridFallbacks[i]);
+			}
 		}
 		
 		updateGridScrollBar();
@@ -1301,7 +1326,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 					var hovered:Int = -1;
 					for (i in 0...gridNodes.length)
 					{
-						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], gridCamera))
+						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], overlayCamera))
 						{
 							hovered = i;
 							break;
@@ -1321,7 +1346,7 @@ class CosmeticsSubstate extends MusicBeatSubstate
 				{
 					for (i in 0...gridNodes.length)
 					{
-						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], gridCamera))
+						if (gridNodes[i].visible && FlxG.mouse.overlaps(gridNodes[i], overlayCamera))
 						{
 							if (gridCursorIndex == i)
 							{
@@ -1433,12 +1458,6 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		{
 			FlxG.cameras.remove(overlayCamera, true);
 			overlayCamera = null;
-		}
-		
-		if (gridCamera != null)
-		{
-			FlxG.cameras.remove(gridCamera, true);
-			gridCamera = null;
 		}
 		
 		super.destroy();
