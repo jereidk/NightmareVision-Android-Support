@@ -24,7 +24,7 @@ class Splash extends FlxState
 	// couple seconds -- feeling like a frozen game. Holding the skip off until
 	// the splash has been up a moment keeps that early input on the splash
 	// (where it visibly does nothing) instead.
-	static inline final SKIP_LOCK_TIME:Float = 3.0;
+	static inline final SKIP_LOCK_TIME:Float = 1.0;
 	var canSkip:Bool = false;
 
 	var initialTimer:Null<FlxTimer> = null;

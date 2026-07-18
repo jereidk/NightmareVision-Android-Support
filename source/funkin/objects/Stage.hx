@@ -298,20 +298,66 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 
 		if (biggest == null || biggest.graphic == null) return;
 
-		// biggest.pixels can't be sampled directly: on Android its graphic is
-		// almost always GPU-only (ASTC textures upload straight to the GPU via
-		// BitmapData.fromTexture(), which has no CPU-side pixels — see
-		// AstcLoader's doc comment). Decode a separate, PNG-only, CPU-readable
-		// copy purely for sampling, using the same key this sprite's own
-		// graphic was cached under.
 		final key:String = biggest.graphic.key;
 		if (key == null || key.length == 0) return;
 
+		// Precomputed-color path (the only one that works for the ASTC-only
+		// stage backgrounds this game ships). The runtime pixel sampling below
+		// needs CPU-readable pixels, but stage backgrounds are converted to
+		// ASTC and their source PNGs are removed -- so getBitmapData(skipAstc)
+		// finds nothing to decode and returns null, leaving the fringe black.
+		// tools/gen_bgcolors precomputes the same dominant color offline (by
+		// decoding each stage .astc) into assets/data/expandBgColors.json,
+		// keyed by this exact graphic.key. See that file / the generator.
+		// -1 = "not in the manifest"; a real entry is a 0xRRGGBB value (stored
+		// without alpha so it stays inside Haxe's signed 32-bit Int range --
+		// a full 0xFFRRGGBB would overflow on parse). OR the opaque alpha back
+		// on here, in 32-bit int space, to get the ARGB the camera wants.
+		final precomputed:Int = _expandBgColorFor(key);
+		if (precomputed != -1)
+		{
+			camera.bgColor = 0xFF000000 | precomputed;
+			return;
+		}
+
+		// Fallback for anything still shipping a real PNG (desktop, or the
+		// handful of stage images not converted to ASTC): decode a separate,
+		// PNG-only, CPU-readable copy purely for sampling.
 		final bitmap:Null<openfl.display.BitmapData> = funkin.FunkinAssets.getBitmapData(key, false, true);
 		if (bitmap == null) return;
 
 		camera.bgColor = sampleDominantColor(bitmap);
 		bitmap.dispose();
+	}
+
+	// Lazily-loaded map of graphic.key -> ARGB color, built offline (see
+	// fillExpandModeBackdrop). null until first load; empty map if the
+	// manifest is missing/unreadable so we only ever try to load it once.
+	static var _expandBgColors:Null<Map<String, Int>> = null;
+
+	static function _expandBgColorFor(key:String):Int
+	{
+		if (_expandBgColors == null)
+		{
+			_expandBgColors = new Map<String, Int>();
+			try
+			{
+				final path = 'assets/data/expandBgColors.json';
+				if (funkin.FunkinAssets.exists(path))
+				{
+					final raw = funkin.FunkinAssets.getContent(path);
+					final parsed:Dynamic = haxe.Json.parse(raw);
+					for (field in Reflect.fields(parsed))
+						_expandBgColors.set(field, Std.int(Reflect.field(parsed, field)));
+				}
+			}
+			catch (e:Dynamic)
+			{
+				funkin.backend.Logger.log('[Stage] expandBgColors load failed: $e', WARN);
+			}
+		}
+		final c = _expandBgColors.get(key);
+		return c == null ? -1 : c;
 	}
 
 	// Same idea as CoolUtil.dominantColor (most-used opaque-ish color, ignoring
