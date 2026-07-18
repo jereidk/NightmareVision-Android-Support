@@ -818,6 +818,19 @@ class FNAFState extends MusicBeatState
 		compInput.x = monX;
 		compInput.y = fieldY;
 		compCursor.visible = false;
+
+		// Keep the invisible IME proxy sitting exactly on the visible input
+		// row. It was constructed at (0,0) and never moved, so tapping the
+		// on-screen text line landed nowhere near the actual FlxInputText --
+		// and a pointer press inside its bounds is the only thing that
+		// re-raises Android's keyboard once the player has dismissed it
+		// (startFocus() only runs when the terminal opens).
+		if (codeInput != null)
+		{
+			codeInput.fieldWidth = Std.int(monW);
+			codeInput.x = monX;
+			codeInput.y = fieldY - 4;
+		}
 	}
 	
 	function showLoader()
