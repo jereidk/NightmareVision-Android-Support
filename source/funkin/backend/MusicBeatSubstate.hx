@@ -60,11 +60,28 @@ class MusicBeatSubstate extends FlxSubState
 	public var virtualPadCam:FlxCamera;
 	public var hitboxCam:FlxCamera;
 
+	/**
+	 * True while THIS substate is the one that hid its parent state's pad --
+	 * so only the hider restores it, and only if it actually hid it.
+	 */
+	var _hidParentPad:Bool = false;
+
 	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
 		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
+
+		// A substate's pad REPLACES the parent state's on screen -- input is
+		// already routed to this one (Controls.get_requested via
+		// isInSubstate), so leaving the parent's visible just stacks two
+		// overlapping pads where only one works.
+		final parent = funkin.backend.MusicBeatState.instance;
+		if (parent != null && parent.virtualPad != null && parent.virtualPad.visible)
+		{
+			parent.virtualPad.visible = false;
+			_hidParentPad = true;
+		}
 	}
 
 	public function addVirtualPadCamera(DefaultDrawTarget:Bool = false)
@@ -84,6 +101,17 @@ class MusicBeatSubstate extends FlxSubState
 		{
 			remove(virtualPad);
 			virtualPad = FlxDestroyUtil.destroy(virtualPad);
+		}
+
+		// Un-hide the parent state's pad if we were the one hiding it (see
+		// addVirtualPad). exists-guarded: on a full state switch the parent
+		// (and its pad) may already be destroyed by the time this runs.
+		if (_hidParentPad)
+		{
+			_hidParentPad = false;
+			final parent = funkin.backend.MusicBeatState.instance;
+			if (parent != null && parent.virtualPad != null && parent.virtualPad.exists)
+				parent.virtualPad.visible = true;
 		}
 		if (virtualPadCam != null)
 		{
