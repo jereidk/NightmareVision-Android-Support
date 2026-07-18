@@ -81,8 +81,8 @@ class MainMenuState extends MusicBeatState
 	// neither failure point exists here. It also lives in Flixel's normal
 	// logical coordinate space, removing the raw-window-vs-logical-pixel
 	// mismatch the old field's manual x/y positioning had to account for.
-	static inline final DEV_CODE:String = 'jereidk';
-	static inline final FNAF_CODE:String = 'itsmeputz';
+	static inline final DEV_CODE:String = 'devconsole';
+	static inline final FNAF_CODE:String = 'backdoor';
 	static inline final CODE_TRIGGER_SIZE:Int = 64;
 	static inline final CODE_TRIGGER_MARGIN:Int = 12;
 	// Warm near-black + the same red FreeplayCard/LoadingState already use as
