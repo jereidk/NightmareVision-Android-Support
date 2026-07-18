@@ -66,7 +66,19 @@ class LoadingState extends MusicBeatState
 	static inline final MAX_WAIT_TIME:Float = 15.0;
 
 	/** Max GPU uploads per frame to avoid a single-frame stall. */
-	static inline final MAX_FINALIZE_PER_FRAME:Int = 3;
+	/**
+	 * Per-frame TIME budget for main-thread finalization (GPU uploads /
+	 * mixer registration), in seconds. The old cap was a fixed COUNT
+	 * (3 per frame), which doesn't bound frame time at all: one 4096-class
+	 * atlas upload can cost 50-100ms on a mobile GPU, so a frame that
+	 * happened to pull three of those stalled the render loop for a third
+	 * of a second -- with several big characters that repeated frame after
+	 * frame, and the "threaded" loading screen still looked frozen. 6ms
+	 * leaves most of a 60fps frame (16.6ms) for update+render so the bar
+	 * and tips actually animate; at least one item is always processed per
+	 * frame so progress can never stall entirely.
+	 */
+	static inline final FINALIZE_FRAME_BUDGET_S:Float = 0.006;
 
 	var nextState:NextState;
 	var shownTime:Float = 0;
@@ -676,10 +688,15 @@ class LoadingState extends MusicBeatState
 	function finalizePendingAssets():Void
 	{
 		final cache = FunkinAssets.cache;
+		final budgetEnd = haxe.Timer.stamp() + FINALIZE_FRAME_BUDGET_S;
 		var done = 0;
+		// Shared across all three queues: keep pulling while inside the time
+		// budget, but always finalize at least ONE item per frame overall.
+		inline function budgetLeft():Bool
+			return done == 0 || haxe.Timer.stamp() < budgetEnd;
 
 		// Upload bitmaps to GPU
-		while (done < MAX_FINALIZE_PER_FRAME)
+		while (budgetLeft())
 		{
 			_mutex.acquire();
 			if (_pendingBitmaps.length == 0)
@@ -708,7 +725,7 @@ class LoadingState extends MusicBeatState
 		}
 
 		// Register audio buffers as Sounds in the mixer
-		while (done < MAX_FINALIZE_PER_FRAME)
+		while (budgetLeft())
 		{
 			_mutex.acquire();
 			if (_pendingAudioBuffers.length == 0)
@@ -741,7 +758,7 @@ class LoadingState extends MusicBeatState
 		// Upload ASTC (GPU-compressed) textures. This can only ever run here,
 		// on the main thread that owns the GL context -- the worker thread
 		// already did the safe part (reading the raw bytes off disk).
-		while (done < MAX_FINALIZE_PER_FRAME)
+		while (budgetLeft())
 		{
 			_mutex.acquire();
 			if (_pendingAstcTextures.length == 0)
