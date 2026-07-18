@@ -350,12 +350,9 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		#if android
-		if (ClientPrefs.inDevMode)
-		{
-			createDevCodeTrigger();
-			createDevPanelAccess();
-			buildDevPanel();
-		}
+		createDevCodeTrigger();
+		createDevPanelAccess();
+		buildDevPanel();
 		#end
 
 		// This state just loaded ~40 new textures; forcing the GC pass here
@@ -826,8 +823,6 @@ class MainMenuState extends MusicBeatState
 
 	function updateDevCodeGate():Void
 	{
-		if (!ClientPrefs.inDevMode) return;
-
 		// Only the trigger toggles the box -- deliberately no "tap elsewhere
 		// closes it" check, since the field itself would count as "elsewhere".
 		if (!devCodeBoxOpen)
@@ -1314,8 +1309,6 @@ class MainMenuState extends MusicBeatState
 
 	function updateDevPanel():Void
 	{
-		if (!ClientPrefs.inDevMode) return;
-
 		// ── Desktop keyboard shortcuts (dev convenience on PC/editor) ──────
 		if (FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.SEVEN)
 		{
