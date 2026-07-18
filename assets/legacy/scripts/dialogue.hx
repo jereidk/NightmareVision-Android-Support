@@ -307,12 +307,17 @@ function v4SpeakerShit()
 	if (!speaker.visible)
 	{
 		speaker.visible = true;
+		// Entrance tweens must land on cutout-shifted targets too — these
+		// hardcoded x values were silently undoing the half-cutout shift the
+		// portraits spawn with (port0/port2 above), so in 'expand' mode every
+		// side portrait drifted left of the box the moment it first spoke.
+		// portrait[1] only tweens y, so it keeps its screenCenter(X) as-is.
 		switch (speaker)
 		{
 			case portrait[2]:
-				FlxTween.tween(speaker, {alpha: 1, x: 865}, 0.5, {ease: FlxEase.quadInOut});
+				FlxTween.tween(speaker, {alpha: 1, x: 865 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5}, 0.5, {ease: FlxEase.quadInOut});
 			case portrait[0]:
-				FlxTween.tween(speaker, {alpha: 1, x: 247}, 0.5, {ease: FlxEase.quadInOut});
+				FlxTween.tween(speaker, {alpha: 1, x: 247 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5}, 0.5, {ease: FlxEase.quadInOut});
 			case portrait[1]:
 				FlxTween.tween(speaker, {alpha: 1, y: 148}, 0.5, {ease: FlxEase.quadInOut});
 		}

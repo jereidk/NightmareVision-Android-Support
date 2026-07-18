@@ -251,8 +251,13 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		final rowSpacing:Float = 140;
 		final rowCount:Int = 3;
 		final startY:Float = Math.round((FlxG.height - rowSpacing * (rowCount - 1)) * 0.5);
-		final cardCenterX:Float = 395;
-		final textX:Float = 510;
+		// Both hardcoded against selectSprite's default-canvas position, which
+		// recenters dynamically ((FlxG.width - w) * 0.5 moves by exactly half
+		// the cutout in 'expand' mode) -- same half-cutout shift as
+		// menuBackButton/titleText above, or the BF/GF/PET rows drift left off
+		// the panel they're supposed to sit on.
+		final cardCenterX:Float = 395 + cutoutShiftX;
+		final textX:Float = 510 + cutoutShiftX;
 		final textRowHeight:Float = 44; // fixed height of each row for predictable card alignment
 		final labels = ['BF', 'GF', 'PET'];
 		for (i in 0...rowCount)
@@ -514,6 +519,19 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		final gridInnerX0:Float = skinThingBg.x + maskInsetLeft;
 		final gridInnerWidth:Float = skinThingBg.width - maskInsetLeft - maskInsetRight;
 		gridOriginX = gridInnerX0 + (gridInnerWidth - GRID_COLS * GRID_SPACING_X) * 0.5 + GRID_SPACING_X * 0.5;
+
+		// The scrollbar was placed once at a hardcoded x=370 (its offset from
+		// skinThingBg on the default 1280 canvas) and never followed the
+		// panel's dynamic recentering, so in 'expand' mode it floated off the
+		// panel's left edge. Recompute it here as that same fixed offset from
+		// wherever the panel actually is; null-guarded because the first
+		// ('create') call runs before the scrollbar is constructed, and every
+		// grid open passes through here again before it turns visible.
+		if (gridScrollBar != null)
+		{
+			gridScrollBar.x = skinThingBg.x + (370 - (1280 - skinThingBg.width) * 0.5);
+			gridScrollBar.y = skinThingBg.y + SCROLLBAR_MARGIN;
+		}
 
 		funkin.backend.Logger.log('[CosmeticsGridDebug] refreshGridLayout($source): FlxG.width=${FlxG.width} FlxG.height=${FlxG.height} gameCutoutSize=${funkin.backend.FunkinRatioScaleMode.gameCutoutSize} skinThingBg.x=${skinThingBg.x} skinThingBg.y=${skinThingBg.y} gridOriginX=$gridOriginX gridOriginY=$gridOriginY');
 		funkin.backend.Logger.log('[CosmeticsGridCamDebug] refreshGridLayout($source): cam.x=${gridCamera.x} cam.y=${gridCamera.y} cam.width=${gridCamera.width} cam.height=${gridCamera.height} cam.scroll=${gridCamera.scroll}');

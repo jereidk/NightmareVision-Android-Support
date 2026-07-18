@@ -143,6 +143,14 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
 
 		var scale:Float = Math.min(300 / (options.length * 60), 1);
+
+		// 'expand' mode: on the widened canvas the option column reads too
+		// small and too far into the corner. Grow it in proportion to the
+		// revealed width (font size and the 60px row pitch both derive from
+		// `scale`, so rows can't overlap) -- ~11% on a typical 20:9 cutout,
+		// exactly 1.0 when the cutout is 0.
+		final cutoutX:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+		if (cutoutX > 0) scale *= 1 + Math.min(cutoutX / FlxG.width, 0.25) * 0.6;
 		
 		for (i in 0...options.length)
 		{
@@ -290,10 +298,11 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 			}
 			
 			// Menu options hug the left edge by design — in 'expand' mode nudge
-			// them toward center by a fraction of the revealed width, same
-			// treatment (and same factor) as FreeplayState's card row.
+			// them toward center by a fraction of the revealed width. 0.4 (was
+			// 0.25, FreeplayState's card-row factor) sits the now-larger texts
+			// (see the scale boost in create()) comfortably off the edge.
 			final menuCenterShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
-				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.25
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.4
 				: 0;
 			item.x = FlxMath.lerp(item.x, (curSelect == item.ID ? 75 : 55) + menuCenterShift, FlxMath.bound(elapsed * 15.6, 0, 1));
 			item.alpha = FlxMath.lerp(item.alpha, curSelect == item.ID ? 1 : 0.3, FlxMath.bound(elapsed * 15.6, 0, 1)) * pauseGroup.alpha;
