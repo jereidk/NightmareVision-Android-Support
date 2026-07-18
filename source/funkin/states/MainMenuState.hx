@@ -83,7 +83,7 @@ class MainMenuState extends MusicBeatState
 	// mismatch the old field's manual x/y positioning had to account for.
 	static inline final DEV_CODE:String = 'jereidk';
 	static inline final FNAF_CODE:String = 'itsmeputz';
-	static inline final CODE_TRIGGER_SIZE:Int = 40;
+	static inline final CODE_TRIGGER_SIZE:Int = 64;
 	static inline final CODE_TRIGGER_MARGIN:Int = 12;
 	// Warm near-black + the same red FreeplayCard/LoadingState already use as
 	// their selection accent (0xFFFF4444) -- was a cold blue-purple "hacker
