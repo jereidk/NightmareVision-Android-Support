@@ -331,15 +331,16 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 	}
 
 	// Lazily-loaded map of graphic.key -> ARGB color, built offline (see
-	// fillExpandModeBackdrop). null until first load; empty map if the
-	// manifest is missing/unreadable so we only ever try to load it once.
-	static var _expandBgColors:Null<Map<String, Int>> = null;
+	// fillExpandModeBackdrop). Non-null (empty until loaded); a separate flag
+	// gates the one-time load so null-safety stays happy on set()/get().
+	static var _expandBgColors:Map<String, Int> = new Map<String, Int>();
+	static var _expandBgColorsLoaded:Bool = false;
 
 	static function _expandBgColorFor(key:String):Int
 	{
-		if (_expandBgColors == null)
+		if (!_expandBgColorsLoaded)
 		{
-			_expandBgColors = new Map<String, Int>();
+			_expandBgColorsLoaded = true;
 			try
 			{
 				final path = 'assets/data/expandBgColors.json';
