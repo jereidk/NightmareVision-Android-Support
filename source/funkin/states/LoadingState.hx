@@ -926,7 +926,10 @@ class LoadingState extends MusicBeatState
 		// decoded.
 		_mutex.acquire();
 		_totalTasks = 0;
-		_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length; // prefetched
+		// (Re)seeded to 0 and authoritatively set once the task list is built
+		// below; the decode loop then counts every task exactly once. _totalTasks
+		// == 0 pins progress at 0 during this window, so these don't display yet.
+		_completedDecodes = 0;
 		_completedFinalizes = 0;
 		_allFilesOpened = false;
 		_allFinalized = false;
@@ -1074,12 +1077,18 @@ class LoadingState extends MusicBeatState
 				return;
 			}
 
-			// Count already-prefetched items so the progress bar doesn't reset.
+			// Start the decode count at 0 -- the loop below counts EVERY task
+			// exactly once (already-prefetched ones via the alreadyDecoded
+			// branch's ++, fresh ones after decoding), so it lands at
+			// tasks.length when done. Seeding it with the prefetched count here,
+			// as before, double-counted those items (seed + the loop's ++),
+			// pushing the bar ahead of the real progress -- worse the more the
+			// prefetch had covered. Prefetched items are processed instantly in
+			// the loop (no decode), so the bar still climbs to reflect them
+			// within the first pass rather than sitting at 0.
 			_mutex.acquire();
 			_totalTasks = tasks.length;
-			_completedDecodes = _pendingBitmaps.length + _pendingAudioBuffers.length + _pendingAstcTextures.length;
-			if (_totalTasks > 0 && _completedDecodes > 0)
-				_progress = _completedDecodes / (_totalTasks * 2.0);
+			_completedDecodes = 0;
 			_mutex.release();
 
 			for (i in 0...tasks.length)
