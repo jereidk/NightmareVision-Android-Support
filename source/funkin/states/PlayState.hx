@@ -705,7 +705,12 @@ class PlayState extends MusicBeatState
 		// and the mobile controls visible/animated -- see ClientPrefs.showcaseMode.
 		showcaseActive = ClientPrefs.inDevMode && ClientPrefs.showcaseMode;
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false) || showcaseActive;
-		if (botplayTxt != null) botplayTxt.visible = cpuControlled && !showcaseActive;
+		// Repaint the score line so toggling botplay from the pause menu's
+		// gameplay options swaps the BOTPLAY label / live score immediately on
+		// resume, instead of only after the next scored note. Guarded because
+		// refreshGameplaySettings() also runs once during create(), before the
+		// HUD exists.
+		if (playHUD != null) updateScoreBar();
 	}
 
 	function applyStageData(file:Null<StageFile>):Void
@@ -1017,11 +1022,16 @@ class PlayState extends MusicBeatState
 		
 		FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
 		
+		// The standalone BOTPLAY banner is retired -- the PsychHUD score line
+		// shows the BOTPLAY label now, so this was a duplicate. Kept as an
+		// always-invisible object because a few song scripts still reference
+		// botplayTxt cosmetically (e.g. top-10/sigh.hx's setFormat) and would
+		// NPE if it were removed outright.
 		botplayTxt = new FlxText(400, 55, FlxG.width - 800, "BOTPLAY", 32);
 		botplayTxt.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		
+
 		botplayTxt.borderSize = 1.25;
-		botplayTxt.visible = cpuControlled && !showcaseActive;
+		botplayTxt.visible = false;
 		if (ClientPrefs.downScroll) botplayTxt.y = FlxG.height - botplayTxt.height - 55;
 		add(botplayTxt);
 		
@@ -2993,7 +3003,9 @@ class PlayState extends MusicBeatState
 			if (FlxG.keys.justPressed.SIX)
 			{
 				cpuControlled = !cpuControlled;
-				botplayTxt.visible = cpuControlled && !showcaseActive;
+				// Repaint the score line so the BOTPLAY label appears/clears
+				// immediately instead of waiting for the next scored note.
+				updateScoreBar();
 			}
 		}
 		
@@ -4100,7 +4112,15 @@ class PlayState extends MusicBeatState
 		var field:PlayField = note.playField;
 
 		#if android SystemMonitor.profBegin('popUpRating'); #end
-		if (!practiceMode && !cpuControlled && !(field?.autoPlayed ?? false))
+		// Showcase rides botplay's autoplay but is meant to look like a real
+		// playthrough for footage, so it DOES accumulate score/accuracy here
+		// (the numbers just never get saved -- cpuControlled still guards
+		// Highscore). Plain botplay stays excluded. popUpScore is only ever
+		// called for the player-controls field (see the onNoteHit handler),
+		// so the autoPlayed check is purely the botplay exclusion, which
+		// showcase deliberately bypasses.
+		final scoreThisHit = showcaseActive || (!practiceMode && !cpuControlled && !(field?.autoPlayed ?? false));
+		if (scoreThisHit)
 		{
 			if (defaultScoreAddition) songScore += rating.score;
 			if (!note.ratingDisabled)

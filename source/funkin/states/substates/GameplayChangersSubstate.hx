@@ -66,12 +66,19 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		
 		var option:GameplayOption = new GameplayOption('Instakill on Miss', 'instakill', 'bool', false);
 		optionsArray.push(option);
-		
-		var option:GameplayOption = new GameplayOption('Practice Mode', 'practice', 'bool', false);
-		optionsArray.push(option);
-		
-		var option:GameplayOption = new GameplayOption('Botplay', 'botplay', 'bool', false);
-		optionsArray.push(option);
+
+		// Showcase (dev-only) forces botplay on and drives the HUD itself, so
+		// hide the Practice/Botplay toggles while it's enabled -- they'd only
+		// let the player fight that mode. Gated on the pref combo (not a live
+		// PlayState) since this substate also opens from FreeplayState.
+		if (!(ClientPrefs.inDevMode && ClientPrefs.showcaseMode))
+		{
+			var option:GameplayOption = new GameplayOption('Practice Mode', 'practice', 'bool', false);
+			optionsArray.push(option);
+
+			var option:GameplayOption = new GameplayOption('Botplay', 'botplay', 'bool', false);
+			optionsArray.push(option);
+		}
 	}
 	
 	public function getOptionByName(name:String)

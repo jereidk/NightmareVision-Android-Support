@@ -138,9 +138,16 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		// closes; PlayState.closeSubState()'s paused-resume branch already
 		// calls refreshGameplaySettings() on every close, so this takes
 		// effect the instant gameplay resumes.
-		final gameplayTogglesIndex = options.indexOf('options');
-		options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('practice', false) ? 'practice_off' : 'practice_on');
-		options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
+		// Showcase (dev-only) already forces botplay on and keeps the HUD
+		// live -- exposing the botplay/practice toggles here would let the
+		// player fight that mode mid-song, so hide them entirely while it's
+		// active.
+		if (!PlayState.instance.showcaseActive)
+		{
+			final gameplayTogglesIndex = options.indexOf('options');
+			options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('practice', false) ? 'practice_off' : 'practice_on');
+			options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
+		}
 
 		var scale:Float = Math.min(300 / (options.length * 60), 1);
 
