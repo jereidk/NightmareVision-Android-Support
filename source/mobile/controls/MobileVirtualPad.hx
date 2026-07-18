@@ -374,8 +374,12 @@ class MobileVirtualPad extends TouchInputManager
 	 * hits that column, so the pad looks played. Purely cosmetic -- no
 	 * input state is touched. Brightens from the player's configured rest
 	 * alpha and eases back down.
+	 *
+	 * @param held Pass true for sustain pieces: they retrigger every step,
+	 *             so a longer decay keeps the button solidly lit for the
+	 *             whole hold instead of strobing between pieces.
 	 */
-	public function flashButton(id:FlxMobileInputID):Void
+	public function flashButton(id:FlxMobileInputID, held:Bool = false):Void
 	{
 		for (btn in buttons)
 		{
@@ -383,7 +387,7 @@ class MobileVirtualPad extends TouchInputManager
 			final rest:Float = funkin.data.ClientPrefs.virtualPadAlpha;
 			flixel.tweens.FlxTween.cancelTweensOf(btn);
 			btn.alpha = Math.min(1.0, rest + 0.5);
-			flixel.tweens.FlxTween.tween(btn, {alpha: rest}, 0.18, {ease: flixel.tweens.FlxEase.quadOut});
+			flixel.tweens.FlxTween.tween(btn, {alpha: rest}, held ? 0.35 : 0.18, {ease: flixel.tweens.FlxEase.quadOut});
 			break;
 		}
 	}

@@ -66,6 +66,26 @@ class MobileHitbox extends TouchInputManager
 
 	private final alphaTarget:Float;
 
+	/**
+	 * Showcase mode: light up the hint mapped to `id` as the bot hits that
+	 * column, exactly like a real press does (alpha to the player's
+	 * configured hitboxAlpha, then decay back to invisible). Cosmetic only.
+	 *
+	 * @param held Pass true for sustain pieces -- they retrigger every step,
+	 *             so a slower decay keeps the hint lit through the hold.
+	 */
+	public function flashButton(id:FlxMobileInputID, held:Bool = false):Void
+	{
+		for (btn in buttons)
+		{
+			if (btn == null || btn.IDs == null || !btn.IDs.contains(id)) continue;
+			FlxTween.cancelTweensOf(btn);
+			btn.alpha = alphaTarget;
+			FlxTween.tween(btn, {alpha: 0.00001}, held ? 0.35 : 0.15, {ease: FlxEase.circInOut, startDelay: held ? 0.05 : 0.0});
+			break;
+		}
+	}
+
 	private var _cachedGraphics:Map<Int, flixel.graphics.FlxGraphic> = new Map();
 	private var _cachedTriangleGraphics:Map<String, flixel.graphics.FlxGraphic> = new Map();
 

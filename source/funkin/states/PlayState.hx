@@ -1422,16 +1422,22 @@ class PlayState extends MusicBeatState
 				}
 
 				#if mobile
-				// Showcase: the bot plays, the pad performs -- pulse the button
-				// mapped to the hit column so the controls animate along.
-				if (showcaseActive && field.playerControls && virtualPad != null && !note.isSustainNote)
-					virtualPad.flashButton(switch (note.noteData % 4)
+				// Showcase: the bot plays, the controls perform -- pulse the
+				// button/hint mapped to the hit column so the overlay animates
+				// along. Sustain pieces retrigger with held=true so the light
+				// stays solid through the hold instead of strobing per step.
+				if (showcaseActive && field.playerControls)
+				{
+					final flashId = switch (note.noteData % 4)
 					{
 						case 0: mobile.backend.flixel.input.FlxMobileInputID.noteLEFT;
 						case 1: mobile.backend.flixel.input.FlxMobileInputID.noteDOWN;
 						case 2: mobile.backend.flixel.input.FlxMobileInputID.noteUP;
 						default: mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT;
-					});
+					};
+					if (virtualPad != null) virtualPad.flashButton(flashId, note.isSustainNote);
+					if (hitbox != null) hitbox.flashButton(flashId, note.isSustainNote);
+				}
 				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
