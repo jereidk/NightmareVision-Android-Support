@@ -13,8 +13,6 @@ import flixel.util.FlxColor;
 
 import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
-import openfl.sensors.Accelerometer;
-import openfl.events.AccelerometerEvent;
 
 import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
@@ -103,33 +101,6 @@ class MainMenuState extends MusicBeatState
 	// gate above (one less interpreted-vs-compiled seam to reason about) and
 	// keeps the panel's existence out of the asset folder entirely, where a
 	// curious player poking through the APK/mod folder could stumble on it.
-
-	// ── Secret gesture: shake the device to open the panel ────────────────
-	// Deliberately NOT a tap/hold/touch gesture and NOT a typed code -- the
-	// panel is undocumented in-game. Values are in Gs (1.0 = standing still),
-	// the unit OpenFL's Accelerometer reports in.
-	//
-	// 1.6G was reachable by ordinary handling -- picking the phone up,
-	// tapping firmly through a menu, walking with it in hand -- which is
-	// exactly what a player is doing right as MainMenuState loads (tapping
-	// through the title screen), so the panel could pop open with no
-	// deliberate shake at all. Bumped to a jolt size + rep count more in
-	// line with standard "shake to undo"/"shake to report" gesture
-	// thresholds (~2.5-3G), which normal handling doesn't reach.
-	static inline final DEV_SHAKE_DELTA:Float = 2.8; // jolt size (Gs) to count as one shake peak
-	static inline final DEV_SHAKE_PEAK_COOLDOWN:Float = 0.22; // min gap between counted peaks
-	static inline final DEV_SHAKE_COUNT_NEEDED:Int = 5; // peaks required
-	static inline final DEV_SHAKE_WINDOW:Float = 2.2; // all peaks must land within this many seconds
-
-	var devAccel:Accelerometer = null;
-	var devLastAccelMag:Float = 1.0;
-	var devShakeTimestamps:Array<Float> = [];
-	var devShakeCooldownUntil:Float = 0;
-
-	// Ambient "charge" glow -- a small, unlabeled dot that quietly brightens
-	// with each shake. Nothing explains what it is; only someone who already
-	// knows the gesture will recognize it building.
-	var devChargeGlow:FlxSprite = null;
 
 	// ── Panel state ─────────────────────────────────────────────────────────
 	var devPanelOpen:Bool = false;
@@ -351,7 +322,6 @@ class MainMenuState extends MusicBeatState
 
 		#if android
 		createDevCodeTrigger();
-		createDevPanelAccess();
 		buildDevPanel();
 		#end
 
@@ -802,12 +772,6 @@ class MainMenuState extends MusicBeatState
 		// add()) -- just drop the stale references.
 		devCodeTriggerBg = null;
 		devCodeField = null;
-
-		if (devAccel != null)
-		{
-			devAccel.removeEventListener(AccelerometerEvent.UPDATE, onDevAccelUpdate);
-			devAccel = null;
-		}
 	}
 
 	// ── Dev-panel code-entry gate ────────────────────────────────────────────
@@ -1026,67 +990,6 @@ class MainMenuState extends MusicBeatState
 		}
 
 		return bmp;
-	}
-
-	// ── Dev panel access: shake gesture ─────────────────────────────────────
-
-	function createDevPanelAccess():Void
-	{
-		devChargeGlow = new FlxSprite(FlxG.width - 16, FlxG.height - 16);
-		devChargeGlow.makeGraphic(6, 6, DEV_COL_ACCENT);
-		devChargeGlow.alpha = 0;
-		devChargeGlow.scrollFactor.set();
-		add(devChargeGlow);
-
-		if (Accelerometer.isSupported)
-		{
-			devAccel = new Accelerometer();
-			devAccel.addEventListener(AccelerometerEvent.UPDATE, onDevAccelUpdate);
-		}
-	}
-
-	function onDevAccelUpdate(e:Dynamic):Void
-	{
-		if (devPanelOpen) return;
-
-		var mag = Math.sqrt(e.accelerationX * e.accelerationX + e.accelerationY * e.accelerationY + e.accelerationZ * e.accelerationZ);
-		var delta = Math.abs(mag - devLastAccelMag);
-		devLastAccelMag = mag;
-
-		var now = haxe.Timer.stamp();
-		if (delta < DEV_SHAKE_DELTA || now < devShakeCooldownUntil) return;
-
-		devShakeCooldownUntil = now + DEV_SHAKE_PEAK_COOLDOWN;
-
-		devShakeTimestamps.push(now);
-		while (devShakeTimestamps.length > 0 && now - devShakeTimestamps[0] > DEV_SHAKE_WINDOW)
-			devShakeTimestamps.shift();
-
-		pulseDevCharge(devShakeTimestamps.length / DEV_SHAKE_COUNT_NEEDED);
-
-		if (devShakeTimestamps.length >= DEV_SHAKE_COUNT_NEEDED)
-		{
-			devShakeTimestamps = [];
-			resetDevCharge();
-			openDevPanel();
-		}
-	}
-
-	function pulseDevCharge(progress:Float):Void
-	{
-		if (devChargeGlow == null) return;
-		FlxTween.cancelTweensOf(devChargeGlow);
-		devChargeGlow.alpha = Math.min(progress, 1.0);
-		devChargeGlow.scale.set(1 + progress, 1 + progress);
-		FlxTween.tween(devChargeGlow, {alpha: 0}, 0.7, {ease: FlxEase.quadOut});
-	}
-
-	function resetDevCharge():Void
-	{
-		if (devChargeGlow == null) return;
-		FlxTween.cancelTweensOf(devChargeGlow);
-		devChargeGlow.alpha = 0;
-		devChargeGlow.scale.set(1, 1);
 	}
 
 	// ── Dev panel content ────────────────────────────────────────────────────
