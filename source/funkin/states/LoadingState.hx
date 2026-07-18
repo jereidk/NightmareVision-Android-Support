@@ -667,6 +667,16 @@ class LoadingState extends MusicBeatState
 			if (timedOut && !done)
 				Logger.log('LoadingState: preload did not finish after ${MAX_WAIT_TIME}s (progress ${Std.int(p * 100)}%) — switching anyway, PlayState will load the rest synchronously', WARN);
 
+			// Compact the decode garbage the finalize phase just produced (the
+			// CPU-side BitmapData/AudioBuffer copies left over after each
+			// cacheBitmap/cacheSound) HERE, with the bar already full and the
+			// transition about to start -- a natural place for a pause. Left to
+			// PlayState.create()'s end-of-create GC alone, that same garbage
+			// got compacted later, at the create->countdown boundary, bundled
+			// with create's own; splitting it lands each pause where it's least
+			// noticeable instead of stacking both right before gameplay.
+			FunkinAssets.cache.forceGcPass();
+
 			switching = true;
 			FlxTransitionableState.skipNextTransIn = true;
 			FlxG.switchState(nextState);
@@ -891,10 +901,37 @@ class LoadingState extends MusicBeatState
 				}
 			}
 
-			// Audio
+			// Audio. Mirrors SyncedFlxSoundGroup.populate()'s own path
+			// resolution (Paths.inst/voices/trackSwap) so the exact files the
+			// song will actually load get decoded on this thread instead of
+			// synchronously in PlayState.create(). Previously only the flat
+			// Inst/Voices pair was covered, so a song using the songs/<name>/
+			// audio/ subfolder, split vocals (Voices-player/Voices-opp), or a
+			// trackSwap (Track-main/Track-miss) decoded all of it on the main
+			// thread mid-create -- a chunk of the post-bar hitch.
 			final songName = Paths.sanitize(song.song);
-			addSound(Paths.getPath('songs/$songName/Inst', null, LOOSE), 'Inst');
-			addSound(Paths.getPath('songs/$songName/Voices', null, LOOSE), 'Voices');
+			// audio/ subfolder variant takes precedence, same check populate() makes.
+			final audioBase = FunkinAssets.isDirectory(Paths.getPath('songs/$songName/audio', null, LOOSE))
+				? '$songName/audio' : '$songName';
+
+			if (song.trackSwap == true)
+			{
+				addSound(Paths.getPath('songs/$audioBase/Track-main', null, LOOSE), 'Track');
+				addSound(Paths.getPath('songs/$audioBase/Track-miss', null, LOOSE), 'Track-miss');
+			}
+			else
+			{
+				addSound(Paths.getPath('songs/$audioBase/Inst', null, LOOSE), 'Inst');
+				if (song.needsVoices)
+				{
+					// Flat Voices (mono) OR split Voices-player/Voices-opp --
+					// addSound() no-ops on any that don't exist, so covering all
+					// three is safe and matches whichever layout the song uses.
+					addSound(Paths.getPath('songs/$audioBase/Voices', null, LOOSE), 'Voices');
+					addSound(Paths.getPath('songs/$audioBase/Voices-player', null, LOOSE), 'Voices-player');
+					addSound(Paths.getPath('songs/$audioBase/Voices-opp', null, LOOSE), 'Voices-opp');
+				}
+			}
 
 			// Notes
 			addAtlas('NOTE_assets', 'notes');
