@@ -827,6 +827,17 @@ class OptionsState extends MusicBeatState
 
 		if (!isHardcodedState()) return;
 
+		// OptionsState keeps updating under any open substate (persistentUpdate
+		// = true), so its own list/handlers must not process input while one is
+		// up. openSelectedSubstate() sets blockInput for the submenus it opens,
+		// but Note Colors / Quant Colors are opened directly via
+		// openSubState() from VisualsUIOptions and bypass it -- their D-pad and
+		// OptionsState's list navigation were both firing on every press, which
+		// is why those two screens read as "extremely buggy". Treating any open
+		// (non-transition) substate as blockInput closes that gap uniformly;
+		// closeSubState() already clears blockInput on the way out.
+		if (subState != null && !(subState is funkin.backend.BaseTransitionState)) blockInput = true;
+
 		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
 
 		// Swap the option list for the hero art/title/version while still
