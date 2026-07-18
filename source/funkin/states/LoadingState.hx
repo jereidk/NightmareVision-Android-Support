@@ -304,22 +304,28 @@ class LoadingState extends MusicBeatState
 	}
 
 	/**
-	 * Statically scans a script-built stage's .hx for the image/atlas keys it
-	 * loads, so they can be warmed on the preload thread instead of decoding
-	 * synchronously in create(). Handles the three call shapes that cover
-	 * ~95% of real stage-script asset references in this fork:
-	 *   Paths.image(ext + 'name')     Paths.getSparrowAtlas(ext + 'name')
-	 *   Paths.image('${ext}name')     (string-interpolated ext prefix)
-	 *   Paths.image('literal/key')    (no variable at all)
-	 * where `ext` is the stage's own `ext = '...'` literal (its asset
-	 * subfolder). Anything with loop counters / random / other variables in
-	 * the key is skipped -- those just load on demand as before. Pure text
-	 * scan: no hscript is executed, and it runs off the main thread.
+	 * Statically scans a script-built stage's .hx for the assets it loads, so
+	 * they can be warmed on the preload thread instead of decoding
+	 * synchronously in create(). Covers the asset-loading call shapes that
+	 * account for ~95% of real references across this fork's stage scripts:
+	 *   images/atlases -- Paths.image(...), Paths.getSparrowAtlas(...),
+	 *                     and flixel-animate .loadAtlas(...)
+	 *   sounds         -- Paths.sound(...)
+	 * each with an argument that's one of:
+	 *   ext + 'name'    (ext = the stage's own `ext = '...'` subfolder literal)
+	 *   '${ext}name'    (string-interpolated ext prefix)
+	 *   'literal/key'   (no variable at all)
+	 * Keys built from loop counters / random / other variables are skipped --
+	 * they just load on demand as before. Pure text scan: no hscript runs, and
+	 * it happens off the main thread. Returns image keys and sound base paths
+	 * (the latter ready to hand straight to the preload's addSound()).
 	 */
-	static function resolveStageScriptAssetKeys(stage:String):Array<String>
+	static function resolveStageScriptAssets(stage:String):{images:Array<String>, sounds:Array<String>}
 	{
-		final out:Array<String> = [];
-		if (stage == null || stage.length == 0) return out;
+		final images:Array<String> = [];
+		final sounds:Array<String> = [];
+		final result = {images: images, sounds: sounds};
+		if (stage == null || stage.length == 0) return result;
 
 		// Mirror Stage.runScript()'s own script-file candidates.
 		var scriptPath:Null<String> = null;
@@ -328,57 +334,77 @@ class LoadingState extends MusicBeatState
 			final p = funkin.scripts.FunkinScript.getPath(cand);
 			if (FunkinAssets.exists(p, TEXT)) { scriptPath = p; break; }
 		}
-		if (scriptPath == null) return out;
+		if (scriptPath == null) return result;
 
 		final src:String = FunkinAssets.getContent(scriptPath);
-		if (src == null || src.length == 0) return out;
+		if (src == null || src.length == 0) return result;
 
 		// The stage's `ext = '...'` asset-subfolder literal, if any.
 		var ext:String = '';
 		final extRe = ~/\bext\s*=\s*['"]([^'"]+)['"]/;
 		if (extRe.match(src)) ext = extRe.matched(1);
 
-		final seen:Map<String, Bool> = new Map();
-		function push(key:String):Void
+		// arg-shape matchers, shared by the image and sound passes.
+		final concatRe = ~/^ext\s*\+\s*['"]([^'"$]+)['"]$/;   // ext + 'name'
+		final interpRe = ~/^['"]\$\{ext\}([^'"$]+)['"]$/;      // '${ext}name'
+		final literalRe = ~/^['"]([^'"$]+)['"]$/;              // 'literal'
+		function keyFromArg(arg:String):Null<String>
 		{
-			if (key == null || key.length == 0 || seen.exists(key)) return;
-			seen.set(key, true);
-			// Only keep keys that actually resolve to an asset -- a script may
-			// reference art conditionally, or a scanned literal may be a false
-			// positive. Feeding a nonexistent key into the preload would add a
-			// task that decodes nothing and never advances _completedDecodes,
-			// leaving the progress bar visibly short of 100%. Accept an Animate
-			// folder, a flat PNG, or (Android) its .astc sibling.
+			if (concatRe.match(arg)) return ext + concatRe.matched(1);
+			if (interpRe.match(arg)) return ext + interpRe.matched(1);
+			if (literalRe.match(arg)) return literalRe.matched(1);
+			return null; // dynamic (loop/random/other var)
+		}
+
+		final seenImg:Map<String, Bool> = new Map();
+		function pushImage(key:String):Void
+		{
+			if (key == null || key.length == 0 || seenImg.exists(key)) return;
+			seenImg.set(key, true);
+			// Only keep keys that actually resolve -- a script may reference art
+			// conditionally, or a scanned literal may be a false positive.
+			// Feeding a nonexistent image key into the preload adds a task that
+			// decodes nothing and never advances _completedDecodes, leaving the
+			// bar short of 100%. Accept an Animate folder, a flat PNG, or
+			// (Android) its .astc sibling. (addSound() self-filters, so sounds
+			// don't need this.)
 			final folder = Paths.getPath('images/$key', null, LOOSE);
 			final png = Paths.getPath('images/$key.png', null, LOOSE);
 			final exists = FunkinAssets.exists('$folder/Animation.json')
 				|| FunkinAssets.exists(png)
 				#if (android && cpp) || FunkinAssets.exists(png.substr(0, png.length - 4) + '.astc') #end;
-			if (exists) out.push(key);
+			if (exists) images.push(key);
 		}
 
-		// Grab the first argument of every Paths.image()/getSparrowAtlas() call.
-		final callRe = ~/Paths\.(?:image|getSparrowAtlas)\s*\(\s*([^,)\n]+)/;
-		// ext + 'name'  /  ext + "name"
-		final concatRe = ~/^ext\s*\+\s*['"]([^'"$]+)['"]$/;
-		// '${ext}name'  /  "${ext}name"
-		final interpRe = ~/^['"]\$\{ext\}([^'"$]+)['"]$/;
-		// 'literal'  /  "literal"  (no interpolation)
-		final literalRe = ~/^['"]([^'"$]+)['"]$/;
-
-		var rest = src;
-		while (callRe.match(rest))
+		final seenSnd:Map<String, Bool> = new Map();
+		function pushSound(key:String):Void
 		{
-			final arg = StringTools.trim(callRe.matched(1));
-			if (concatRe.match(arg)) push(ext + concatRe.matched(1));
-			else if (interpRe.match(arg)) push(ext + interpRe.matched(1));
-			else if (literalRe.match(arg)) push(literalRe.matched(1));
-			// else: dynamic key (loop/random/other var) -- skip.
-			rest = callRe.matchedRight();
-			if (out.length >= 128) break; // sanity cap
+			if (key == null || key.length == 0 || seenSnd.exists(key)) return;
+			seenSnd.set(key, true);
+			sounds.push(Paths.getPath('sounds/$key', null, LOOSE));
 		}
 
-		return out;
+		// Images / atlases: Paths.image, Paths.getSparrowAtlas, .loadAtlas.
+		final imgRe = ~/(?:Paths\.image|Paths\.getSparrowAtlas|\bloadAtlas)\s*\(\s*([^,)\n]+)/;
+		var rest = src;
+		while (imgRe.match(rest))
+		{
+			pushImage(keyFromArg(StringTools.trim(imgRe.matched(1))));
+			rest = imgRe.matchedRight();
+			if (images.length >= 128) break; // sanity cap
+		}
+
+		// Sounds: Paths.sound.
+		final sndRe = ~/Paths\.sound\s*\(\s*([^,)\n]+)/;
+		rest = src;
+		while (sndRe.match(rest))
+		{
+			pushSound(keyFromArg(StringTools.trim(sndRe.matched(1))));
+			rest = sndRe.matchedRight();
+			if (sounds.length >= 64) break; // sanity cap
+		}
+
+		return result;
 	}
 
 	/**
@@ -964,18 +990,24 @@ class LoadingState extends MusicBeatState
 				}
 			}
 
-			// Stage — script-built art. A script stage loads its sprites via
-			// Paths.image()/getSparrowAtlas() calls in its own .hx, so its art
-			// is invisible to the stageObjects loop above and used to decode
-			// synchronously in create(). Statically scan the script text for
-			// those calls and warm whatever it references with string-literal
-			// arguments (~95% of real calls in this fork; the few using loop/
-			// random/variable keys are left to load on demand as before). Runs
-			// on this worker thread -- no main-loop cost.
-			for (key in resolveStageScriptAssetKeys(song.stage))
+			// Stage — script-built art AND sound. A script stage loads its
+			// sprites/atlases (Paths.image/getSparrowAtlas/loadAtlas) and its
+			// SFX/ambience (Paths.sound) from its own .hx, all invisible to the
+			// stageObjects loop above and decoded synchronously in create().
+			// Statically scan the script text and warm whatever it references
+			// with string-literal arguments (~95% of real calls in this fork;
+			// loop/random/variable keys are left to load on demand as before).
+			// Runs on this worker thread -- no main-loop cost.
+			final stageAssets = resolveStageScriptAssets(song.stage);
+			for (key in stageAssets.images)
 			{
 				if (_threadGeneration != myGen) return;
 				addAtlas(key, 'stage:$key');
+			}
+			for (basePath in stageAssets.sounds)
+			{
+				if (_threadGeneration != myGen) return;
+				addSound(basePath, 'stagesfx');
 			}
 
 			// Characters
