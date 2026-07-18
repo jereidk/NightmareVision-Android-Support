@@ -18,8 +18,15 @@ class Splash extends FlxState
 	var logo:FlxSprite;
 	
 	var willSkip:Bool = false;
-	var canSkip:Bool = true;
-	
+	// Skipping is blocked for the first SKIP_LOCK_TIME seconds. The splash was
+	// skippable from frame 1, so a tap/keypress on boot dropped the player
+	// straight into the still-loading next state, where input sits dead for a
+	// couple seconds -- feeling like a frozen game. Holding the skip off until
+	// the splash has been up a moment keeps that early input on the splash
+	// (where it visibly does nothing) instead.
+	static inline final SKIP_LOCK_TIME:Float = 3.0;
+	var canSkip:Bool = false;
+
 	var initialTimer:Null<FlxTimer> = null;
 	
 	var spriteEvents:FlxTimer;
@@ -32,7 +39,11 @@ class Splash extends FlxState
 	{
 		_cachedAutoPause = FlxG.autoPause;
 		FlxG.autoPause = false;
-		
+
+		// Unlock skipping only after the splash has been visible a beat, so an
+		// on-boot tap can't blow past it into the input-dead loading window.
+		FlxTimer.wait(SKIP_LOCK_TIME, () -> canSkip = true);
+
 		#if VIDEOS_ALLOWED
 		var canPlayVid:Bool = false;
 		var video = new FunkinVideoSprite();
