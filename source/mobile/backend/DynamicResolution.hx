@@ -121,6 +121,14 @@ class DynamicResolution
 	public static function saveCurrentFrame():Void
 	{
 		if (_gl == null || _storageTex == null) return;
+		// The storage texture and the _winW/_winH used by reuseLastFrame()'s
+		// viewport were sized once at GL creation. If the window has since
+		// resized (split-screen, foldable unfold, a system-driven surface
+		// change), the stored frame would be the wrong size -- reused as a
+		// stretched/cropped smear until the next real render. Recreate at the
+		// current size before copying, mirroring RenderScaleBlit's own
+		// size-change recreation.
+		if (!_ensureStorageSize()) return;
 		final gl = _gl;
 		gl.bindTexture(gl.TEXTURE_2D, _storageTex);
 		// copyTexSubImage2D instead of copyTexImage2D: the storage was already
@@ -134,6 +142,44 @@ class DynamicResolution
 	}
 
 	// ── GL lifecycle ──────────────────────────────────────────────────────────
+
+	/**
+	 * Ensures _storageTex matches the current window size, reallocating it if
+	 * the window has resized since GL creation. Returns false if no usable GL
+	 * (caller should skip the copy this frame). Cheap on the common path --
+	 * just two field reads and an int compare.
+	 */
+	static function _ensureStorageSize():Bool
+	{
+		if (_gl == null) return false;
+		final w = FlxG.stage.window.width;
+		final h = FlxG.stage.window.height;
+		if (w <= 0 || h <= 0) return false;
+		if (w == _winW && h == _winH && _storageTex != null) return true;
+
+		final gl = _gl;
+		try
+		{
+			if (_storageTex != null) gl.deleteTexture(_storageTex);
+			_winW = w;
+			_winH = h;
+			_storageTex = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, _storageTex);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, _winW, _winH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+			Logger.log('[DRS] storage resized to ${_winW}×${_winH}', NOTICE);
+			return true;
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('[DRS] storage resize failed: $e', WARN);
+			return false;
+		}
+	}
 
 	static function _onContextCreate(_:Dynamic):Void
 	{

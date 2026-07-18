@@ -247,9 +247,17 @@ class RenderScaleBlit
 		_periodFrames++;
 		if (_periodFrames < PERIOD_FRAMES) return;
 
-		Logger.log('[RenderScaleBlit] last ${_periodFrames}f: begin ${_periodBeginOK}ok/${_periodBeginFail}fail, '
-			+ 'end ${_periodEndOK}ok/${_periodEndFail}fail, sizeChanges=$_periodSizeChanges, '
-			+ 'currentSize=${_periodLastW}x${_periodLastH}', NOTICE, true);
+		// This periodic report was diagnostic scaffolding for chasing a
+		// flicker/teleport symptom that turned out clean (100% begin/end
+		// success, stable size). Shipping it toasted on-screen every ~1.5s to
+		// any player running below 100% render scale -- gated behind dev mode
+		// now so the tuning telemetry survives for debugging without spamming
+		// end users. File logging is likewise dev-only to avoid churning the
+		// log during normal play.
+		if (funkin.data.ClientPrefs.inDevMode)
+			Logger.log('[RenderScaleBlit] last ${_periodFrames}f: begin ${_periodBeginOK}ok/${_periodBeginFail}fail, '
+				+ 'end ${_periodEndOK}ok/${_periodEndFail}fail, sizeChanges=$_periodSizeChanges, '
+				+ 'currentSize=${_periodLastW}x${_periodLastH}', NOTICE, true);
 
 		_periodFrames = 0;
 		_periodBeginOK = 0;
@@ -402,7 +410,13 @@ class RenderScaleBlit
 	{
 		if (_diagKeys.exists(key)) return;
 		_diagKeys.set(key, true);
-		Logger.log(msg, NOTICE, true);
+		// One-shot, but still an on-screen toast per distinct event -- fine
+		// while debugging, noise for players. Success/redirect notes are
+		// dev-only; genuine failures (anything mentioning 'failed') stay
+		// visible so a broken render-scale on a user's device is still
+		// reportable from a screenshot.
+		final isFailure = msg.indexOf('failed') != -1;
+		Logger.log(msg, isFailure ? WARN : NOTICE, isFailure || funkin.data.ClientPrefs.inDevMode);
 	}
 }
 #end
