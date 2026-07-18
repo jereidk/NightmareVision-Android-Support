@@ -872,7 +872,12 @@ class FNAFState extends MusicBeatState
 			if (inputCooldown < 0) inputCooldown = 0;
 		}
 		
-		if (FlxG.keys.justPressed.ESCAPE)
+		// controls.BACK covers Android's native back button (and virtual pad
+		// B) -- ESCAPE was the ONLY exit before, leaving mobile players
+		// permanently stuck in the terminal. Safe against the room-exit check
+		// below double-firing on the same frame: closeComputer() sets
+		// screenZooming = true synchronously, which that check requires false.
+		if (FlxG.keys.justPressed.ESCAPE || controls.BACK)
 		{
 			if (!passwordReady) return;
 			closeComputer();
@@ -1485,8 +1490,8 @@ class FNAFState extends MusicBeatState
 		
 		if (!cameraUnlocked || camTarget == null || camTarget.alpha <= 0 || monitorDialogueActive) return;
 		
-		// esc to leave
-		if (!exiting && !videoPlaying && !screenZooming && FlxG.keys.justPressed.ESCAPE)
+		// esc (or Android back) to leave
+		if (!exiting && !videoPlaying && !screenZooming && (FlxG.keys.justPressed.ESCAPE || controls.BACK))
 		{
 			exiting = true;
 			var fade = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
