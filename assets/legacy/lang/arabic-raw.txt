@@ -412,7 +412,7 @@
         "doubletrouble1": "(في قائمة الإختيار الحر! عند الأغاني الإضافية!)",
         "victory0": "من يهتم؟ لقد فزت بالفعل!",
         "opt_category_adjustdelay": "تعديل التباطؤ",
-        "opt_category_controls": "التحكم",
+        "opt_category_controls": "المفاتيح",
         "opt_category_gameplay": "اللعب",
         "opt_category_graphics": "الرسومات",
         "opt_category_visualsui": "الصورة والواجهة",
