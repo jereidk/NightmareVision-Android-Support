@@ -314,14 +314,46 @@ class MusicBeatSubstate extends FlxSubState
 
 		// Restore the previous substate (if any) as the active one instead of
 		// leaving `instance` pointing at this now-destroyed object -- see
-		// _previousInstance's doc comment. Guarded by the `instance == this`
-		// check in case something else already reassigned `instance` (e.g. a
-		// new substate opened before this one finished tearing down).
+		// _previousInstance's doc comment.
+		//
+		// Two traps here, both rooted in Flixel's openSubState() ordering: a
+		// replacement substate's CONSTRUCTOR runs at the openSubState() call,
+		// but the substate it replaces is only destroyed later in
+		// resetSubState(). So when A is replaced by B:
+		//   - B captured _previousInstance = A while A was still alive;
+		//   - A.destroy() then runs with instance == B (guard below fails),
+		//     leaving the destroyed A parked inside B's _previousInstance;
+		//   - B.destroy() would then "restore" instance = destroyed-A and set
+		//     isInSubstate = true, permanently routing Controls' virtual-pad
+		//     lookups at a corpse whose virtualPad is null. Every pad from
+		//     that moment on animates (FlxButton-local) but never triggers.
+		// Fix both directions: when we ARE the active instance, walk the chain
+		// past any already-destroyed entries (FlxBasic.destroy() sets
+		// exists = false) before restoring; when we are NOT (we're the A being
+		// replaced), splice ourselves out of the live chain so nobody can ever
+		// restore us.
 		if (instance == this)
 		{
-			instance = _previousInstance;
+			var prev = _previousInstance;
+			while (prev != null && !prev.exists)
+				prev = prev._previousInstance;
+			instance = prev;
 			controls.isInSubstate = (instance != null);
 		}
+		else
+		{
+			var cur = instance;
+			while (cur != null)
+			{
+				if (cur._previousInstance == this)
+				{
+					cur._previousInstance = _previousInstance;
+					break;
+				}
+				cur = cur._previousInstance;
+			}
+		}
+		_previousInstance = null;
 		#end
 
 		super.destroy();
