@@ -97,6 +97,14 @@ class ClientPrefs
 	
 	// debug ------------------------------------------------------------------------//
 	@saveVar public static var inDevMode:Bool = false;
+
+	/**
+	 * Dev-only (the option row is only built while inDevMode): autoplay like
+	 * botplay, but the mobile controls stay visible and animate with the
+	 * bot's hits, and nothing botplay normally disables (score text updates,
+	 * score bops) is turned off. For recording clean gameplay footage.
+	 */
+	@saveVar public static var showcaseMode:Bool = false;
 	
 	@saveVar public static var fpsDisplayType:String = 'Simple';
 	@saveVar public static var fpsRGB:Bool = false;

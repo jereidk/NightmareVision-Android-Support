@@ -153,6 +153,16 @@ class PsychHUD extends BaseHUD
 	
 	override function onUpdateScore(score:Int = 0, accuracy:Float = 0, misses:Int = 0, missed:Bool = false)
 	{
+		// Botplay: the numbers are meaningless (nothing is being scored), so
+		// the score line just states the mode. Showcase deliberately skips
+		// this and keeps the live score readout -- that's its whole point.
+		if (parent.cpuControlled && !parent.showcaseActive)
+		{
+			final label = Lang.str('botplay_label', 'BOTPLAY');
+			if (scoreTxt.text != label) scoreTxt.text = label;
+			return;
+		}
+
 		var rankText:String = getLetterRank(accuracy, misses);
 		var endEntry:String;
 		
@@ -173,7 +183,9 @@ class PsychHUD extends BaseHUD
 			+ (!parent.instakillOnMiss ? ' $textDivider ' + formatScoreField(scoreNames[1], missText) : "")
 			+ ' $textDivider $endEntry';
 			
-		if (!missed && !parent.cpuControlled) doScoreBop();
+		// Showcase keeps the bop -- with the early-return above, the only way
+		// to get here with cpuControlled on IS showcase.
+		if (!missed) doScoreBop();
 		
 		scoreTxt.text = '${tempScore}\n';
 	}

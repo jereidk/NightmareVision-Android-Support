@@ -452,6 +452,21 @@ class PlayState extends MusicBeatState
 	public var pressMissDamage:Float = .05;
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled(default, set):Bool = false;
+
+	/** Dev-only Showcase mode is active this song (see refreshGameplaySettings()). */
+	public var showcaseActive(default, null):Bool = false;
+
+	#if mobile
+	/**
+	 * Whether the gameplay touch overlay (hitbox / virtual pad) is inside its
+	 * "should be shown" window (post-countdown, not in a cutscene, song not
+	 * over). The actual .visible is resolved every frame from this AND
+	 * camHUD.visible AND the botplay/showcase rules -- the pad lives on its
+	 * own camera, so a modchart hiding camHUD would otherwise leave it
+	 * floating alone on screen.
+	 */
+	var mobileControlsActive:Bool = false;
+	#end
 	public var practiceMode:Bool = false;
 	
 	public var botplayTxt:FlxText;
@@ -686,7 +701,11 @@ class PlayState extends MusicBeatState
 		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
 		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
-		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
+		// Showcase (dev-only) rides botplay's autoplay but keeps the HUD live
+		// and the mobile controls visible/animated -- see ClientPrefs.showcaseMode.
+		showcaseActive = ClientPrefs.inDevMode && ClientPrefs.showcaseMode;
+		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false) || showcaseActive;
+		if (botplayTxt != null) botplayTxt.visible = cpuControlled && !showcaseActive;
 	}
 
 	function applyStageData(file:Null<StageFile>):Void
@@ -1002,7 +1021,7 @@ class PlayState extends MusicBeatState
 		botplayTxt.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		
 		botplayTxt.borderSize = 1.25;
-		botplayTxt.visible = cpuControlled;
+		botplayTxt.visible = cpuControlled && !showcaseActive;
 		if (ClientPrefs.downScroll) botplayTxt.y = FlxG.height - botplayTxt.height - 55;
 		add(botplayTxt);
 		
@@ -1017,6 +1036,7 @@ class PlayState extends MusicBeatState
 
 		#if mobile
 		addMobileControls(false, true);
+		mobileControlsActive = false;
 		if (hitbox != null) hitbox.visible = false;
 		if (virtualPad != null) virtualPad.visible = false;
 
@@ -1400,6 +1420,19 @@ class PlayState extends MusicBeatState
 					popUpScore(note);
 					#if android SystemMonitor.profEnd(); #end
 				}
+
+				#if mobile
+				// Showcase: the bot plays, the pad performs -- pulse the button
+				// mapped to the hit column so the controls animate along.
+				if (showcaseActive && field.playerControls && virtualPad != null && !note.isSustainNote)
+					virtualPad.flashButton(switch (note.noteData % 4)
+					{
+						case 0: mobile.backend.flixel.input.FlxMobileInputID.noteLEFT;
+						case 1: mobile.backend.flixel.input.FlxMobileInputID.noteDOWN;
+						case 2: mobile.backend.flixel.input.FlxMobileInputID.noteUP;
+						default: mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT;
+					});
+				#end
 			});
 			strums.onNoteMiss.add((note, field) -> {
 				setFocusPlayerFromNote(note);
@@ -1490,6 +1523,7 @@ class PlayState extends MusicBeatState
 		inCutscene = false;
 
 		#if mobile
+		mobileControlsActive = true;
 		if (hitbox != null) hitbox.visible = true;
 		if (virtualPad != null) virtualPad.visible = true;
 		#end
@@ -2415,6 +2449,19 @@ class PlayState extends MusicBeatState
 	{
 		canPlayAwardSound = true;
 
+		#if mobile
+		// Resolve the touch overlay's real visibility every frame from three
+		// independent conditions (see mobileControlsActive's doc):
+		//   - the show-window (post-countdown, no cutscene, song not over);
+		//   - camHUD.visible, so a modchart hiding the HUD takes the overlay
+		//     with it instead of leaving the pad floating on its own camera;
+		//   - botplay hides the controls outright (nothing to touch), while
+		//     Showcase keeps them up so the bot can animate them.
+		final overlayShown = mobileControlsActive && camHUD.visible && (!cpuControlled || showcaseActive);
+		if (hitbox != null && hitbox.visible != overlayShown) hitbox.visible = overlayShown;
+		if (virtualPad != null && virtualPad.visible != overlayShown) virtualPad.visible = overlayShown;
+		#end
+
 		#if android
 		_drsRing[_drsRingIdx % DRS_RING_SIZE] = elapsed;
 		_drsRingIdx++;
@@ -2940,7 +2987,7 @@ class PlayState extends MusicBeatState
 			if (FlxG.keys.justPressed.SIX)
 			{
 				cpuControlled = !cpuControlled;
-				botplayTxt.visible = !botplayTxt.visible;
+				botplayTxt.visible = cpuControlled && !showcaseActive;
 			}
 		}
 		
@@ -3800,6 +3847,7 @@ class PlayState extends MusicBeatState
 		updateTime = false;
 
 		#if mobile
+		mobileControlsActive = false;
 		if (hitbox != null) hitbox.visible = false;
 		if (virtualPad != null) virtualPad.visible = false;
 		#end

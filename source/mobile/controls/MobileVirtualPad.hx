@@ -369,11 +369,33 @@ class MobileVirtualPad extends TouchInputManager
 		return button;
 	}
 	
+	/**
+	 * Showcase mode: visually pulse the button mapped to `id` as the bot
+	 * hits that column, so the pad looks played. Purely cosmetic -- no
+	 * input state is touched. Brightens from the player's configured rest
+	 * alpha and eases back down.
+	 */
+	public function flashButton(id:FlxMobileInputID):Void
+	{
+		for (btn in buttons)
+		{
+			if (btn == null || btn.IDs == null || !btn.IDs.contains(id)) continue;
+			final rest:Float = funkin.data.ClientPrefs.virtualPadAlpha;
+			flixel.tweens.FlxTween.cancelTweensOf(btn);
+			btn.alpha = Math.min(1.0, rest + 0.5);
+			flixel.tweens.FlxTween.tween(btn, {alpha: rest}, 0.18, {ease: flixel.tweens.FlxEase.quadOut});
+			break;
+		}
+	}
+
 	override public function destroy():Void
 	{
 		for (btn in buttons)
+		{
+			flixel.tweens.FlxTween.cancelTweensOf(btn);
 			FlxDestroyUtil.destroy(btn);
-			
+		}
+
 		super.destroy();
 	}
 }
