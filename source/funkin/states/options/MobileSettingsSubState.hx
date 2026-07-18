@@ -222,19 +222,24 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_modeText.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_modeText);
 
-		// White frame, drawn one CANVAS_BORDER larger on every side so
-		// _canvasBg (added right after, same size the preview zones already
-		// align to) covers everything except a thin border ring.
+		// 50%-transparent white frame, drawn one CANVAS_BORDER larger on every
+		// side so _canvasBg (added right after, opaque) covers everything
+		// except a thin translucent border ring. Was a solid, fully-opaque
+		// white rect with the star image at 0.95 alpha on top -- so the white
+		// both formed a hard border AND bled through the whole preview area,
+		// which read as a plain white background instead of a bordered image.
 		var canvasFrame = new FlxSprite(CANVAS_X - CANVAS_BORDER, CANVAS_Y - CANVAS_BORDER)
 			.makeGraphic(CANVAS_W + Std.int(CANVAS_BORDER * 2), CANVAS_H + Std.int(CANVAS_BORDER * 2), FlxColor.WHITE);
+		canvasFrame.alpha = 0.5;
 		add(canvasFrame);
 
-		// Canvas background — star field scaled to preview area.
+		// Canvas background — star field scaled to preview area. Fully opaque
+		// so the white frame behind it can't show through the image itself.
 		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y);
 		_canvasBg.loadGraphic(Paths.image('menu/common/starFG'));
 		_canvasBg.setGraphicSize(CANVAS_W, CANVAS_H);
 		_canvasBg.updateHitbox();
-		_canvasBg.alpha = 0.95;
+		_canvasBg.alpha = 1.0;
 		_canvasBg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(_canvasBg);
 
@@ -778,6 +783,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		else if (opt.id == 'vpadLayout')
 		{
 			_rebuildOptions();
+			// The preview now mirrors the chosen pad layout/side, so it has to
+			// rebuild when that changes too -- this only rebuilt the option
+			// list before, leaving the canvas stuck on the old layout.
+			_rebuildPreview();
 		}
 		else if (opt.id == 'vpadCustomize')
 		{
@@ -1186,7 +1195,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (ClientPrefs.gameInputMode == 'Virtual Pad')
 		{
 			_buildPadPreview();
-			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad');
+			final layoutName = switch (ClientPrefs.virtualPadLayout)
+			{
+				case 'Custom':    Lang.str('choice_vpad_custom', 'Custom');
+				case 'RightFull': Lang.str('choice_vpad_rightfull', 'Right Side');
+				default:          Lang.str('choice_vpad_leftfull', 'Left Side');
+			};
+			_modeText.text = Lang.str('preview_mode_vpad', 'Virtual Pad') + '  ·  ' + layoutName;
 		}
 		else if (ClientPrefs.gameInputMode == 'Note Tap')
 		{
@@ -1356,7 +1371,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _buildPadPreview():Void
 	{
-		// Scale the real LEFT_FULL layout (game coords) into the canvas.
+		// Scale the real gameplay D-pad layout (game coords) into the canvas.
+		// Mirrors MobileVirtualPad's own placement so the preview matches what
+		// actually shows in-game for the chosen virtualPadLayout AND side --
+		// previously this hardcoded LEFT_FULL and ignored both the Custom
+		// layout and the RightFull (right-hand) side entirely.
 		final sx = CANVAS_W / FlxG.width;
 		final sy = CANVAS_H / FlxG.height;
 		final bw = 134 * sx;
@@ -1368,10 +1387,72 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		inline function place(gx:Float, gy:Float, ci:Int)
 			_addPadButtonZone(CANVAS_X + gx * sx, CANVAS_Y + gy * sy, bw, bh, btnNames[ci], ci);
 
-		place(105, FlxG.height - 345, 2); // UP
-		place(0,   FlxG.height - 243, 0); // LEFT
-		place(207, FlxG.height - 243, 3); // RIGHT
-		place(105, FlxG.height - 135, 1); // DOWN
+		// Preview ignores safe-area insets (safeLeft/safeRight/safeBottom = 0),
+		// same simplification the old LEFT_FULL preview already made -- the
+		// scaled thumbnail can't meaningfully show device notch padding anyway.
+		final baseY = FlxG.height;
+		final layout = ClientPrefs.virtualPadLayout;
+
+		if (layout == 'Custom')
+		{
+			// Absolute game coords from the customizer (JSON map first, then the
+			// legacy array, then the same defaults MobileVirtualPad falls back
+			// to). Indexed 0=left 1=down 2=up 3=right, matching colorIdx.
+			final jsonMap = _parseCustomPadJson();
+			final legacy = ClientPrefs.customPadPositions;
+			final defaults = [
+				[20.0, baseY - 220], // LEFT
+				[140.0, baseY - 140], // DOWN
+				[140.0, baseY - 300], // UP
+				[260.0, baseY - 220]  // RIGHT
+			];
+			final keys = ['buttonLeft', 'buttonDown', 'buttonUp', 'buttonRight'];
+			for (i in 0...4)
+			{
+				var pos:Array<Float>;
+				if (jsonMap.exists(keys[i])) pos = jsonMap.get(keys[i]);
+				else if (legacy != null && legacy[i] != null && legacy[i][0] >= 0) pos = [legacy[i][0], legacy[i][1]];
+				else pos = defaults[i];
+				place(pos[0], pos[1], i);
+			}
+		}
+		else if (layout == 'RightFull')
+		{
+			final w = FlxG.width;
+			place(w - 20,  baseY - 220, 0); // LEFT
+			place(w - 140, baseY - 140, 1); // DOWN
+			place(w - 260, baseY - 300, 2); // UP
+			place(w - 140, baseY - 220, 3); // RIGHT
+		}
+		else
+		{
+			// LeftFull / default.
+			place(0,   baseY - 243, 0); // LEFT
+			place(105, baseY - 135, 1); // DOWN
+			place(105, baseY - 345, 2); // UP
+			place(207, baseY - 243, 3); // RIGHT
+		}
+	}
+
+	/** Local copy of MobileVirtualPad's custom-position JSON parse (that one is
+	 *  private), keyed buttonLeft/Down/Up/Right → [x, y] in game coords. */
+	function _parseCustomPadJson():Map<String, Array<Float>>
+	{
+		var map = new Map<String, Array<Float>>();
+		final raw = ClientPrefs.customPadPositionsJson;
+		if (raw == null || raw == '') return map;
+		try
+		{
+			final parsed:Dynamic = haxe.Json.parse(raw);
+			if (parsed != null && Reflect.isObject(parsed))
+				for (field in Reflect.fields(parsed))
+				{
+					final arr:Array<Dynamic> = Reflect.field(parsed, field);
+					if (arr != null && arr.length >= 2) map.set(field, [arr[0] * 1.0, arr[1] * 1.0]);
+				}
+		}
+		catch (_:Dynamic) {}
+		return map;
 	}
 
 	function _addPadButtonZone(x:Float, y:Float, w:Float, h:Float, graphicName:String, colorIdx:Int):Void
