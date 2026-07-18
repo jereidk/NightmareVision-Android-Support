@@ -594,7 +594,7 @@
 		// i'm so sorry.... options!
 
 		"opt_category_adjustdelay": "Adjust Delay",
-		"opt_category_controls": "Controls",
+		"opt_category_controls": "Keybinds",
 		"opt_controls_rebind_hint": "Press a key or button...",
 		"opt_controls_rebind_hint_mobile": "Connect a keyboard or gamepad to rebind",
 		"opt_category_gameplay": "Gameplay",

@@ -48,17 +48,17 @@ class OptionsState extends MusicBeatState
 	var tabs:Array<String> = ['language', 'gameplay', 'graphics', 'visualsui', 'misc'];
 
 	var actionButtons:Array<String> = [
-		// Upstream's vertical sidebar always had this reachable ('controls' was
-		// its very first entry) -- this fork's tabs/action-buttons redesign
-		// (see the class doc comment) dropped it without a replacement, leaving
-		// key/gamepad rebinding completely unreachable from this screen.
-		'controls',
 		'adjustdelay',
 		#if mobile
 		'mobile',
 		'dlc',
 		#end
-		'credits'
+		'credits',
+		// The physical-key/gamepad rebinding screen. Kept last and labeled
+		// "Keybinds" (opt_category_controls) so it doesn't read as, or sit next
+		// to, "Mobile" (the touch-controls screen) -- upstream had it first and
+		// simply called it "Controls", which on a touch device is ambiguous.
+		'controls'
 	];
 
 	private static var curTab:Int = 0;
