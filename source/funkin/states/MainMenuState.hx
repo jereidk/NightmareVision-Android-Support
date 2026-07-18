@@ -844,8 +844,12 @@ class MainMenuState extends MusicBeatState
 			return;
 		}
 
-		// Auto-submit the moment the typed text matches -- no need to press Enter.
-		if (devCodeField != null && StringTools.trim(devCodeField.text).toLowerCase() == DEV_CODE) submitDevCode();
+		// Auto-submit the moment the typed text matches either code -- no need to press Enter.
+		if (devCodeField != null)
+		{
+			final typed = StringTools.trim(devCodeField.text).toLowerCase();
+			if (typed == DEV_CODE || typed == FNAF_CODE) submitDevCode();
+		}
 	}
 
 	function toggleDevCodeBox():Void
@@ -860,7 +864,7 @@ class MainMenuState extends MusicBeatState
 		devCodeBoxOpen = true;
 		pulseDevCodeTrigger(true);
 
-		devCodeField = new FlxInputText(FlxG.width - 272, 56, 260, '', 20, DEV_COL_TEXT, DEV_COL_BG);
+		devCodeField = new FlxInputText(FlxG.width - 272, CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 8, 260, '', 20, DEV_COL_TEXT, DEV_COL_BG);
 		devCodeField.font = Paths.font('vcr.ttf');
 		devCodeField.fieldBorderThickness = 2;
 		devCodeField.fieldBorderColor = DEV_COL_ACCENT;
