@@ -16,7 +16,12 @@ class NotesSubState extends MusicBeatSubstate
 	
 	private var grpNumbers:FlxTypedGroup<Alphabet>;
 	private var grpNotes:FlxTypedGroup<FlxSprite>;
-	private var shaderArray:Array<HSLColorSwap> = [];
+	// RGB palette per note -- the same coloring path gameplay uses (white note
+	// sprite recolored by an RGBShader), so the preview actually matches what
+	// falls in-game. Was an HSLColorSwap array over frames named purple0/blue0/
+	// green0/red0, which the VSlice note-assets update renamed out of existence
+	// (left/down/up/right note now), leaving the preview notes blank.
+	private var paletteArray:Array<funkin.game.shaders.RGBShader.RGBPalette> = [];
 	var curValue:Float = 0;
 	var holdTime:Float = 0;
 	var nextAccept:Int = 5;
@@ -70,17 +75,18 @@ class NotesSubState extends MusicBeatSubstate
 			
 			var note:FlxSprite = new FlxSprite(posX, yPos);
 			note.frames = Paths.getSparrowAtlas('NOTE_assets');
-			var animations:Array<String> = ['purple0', 'blue0', 'green0', 'red0'];
-			note.animation.addByPrefix('idle', animations[i]);
+			// VSlice note frames: one white note per direction. Index order
+			// matches arrowHSV / funkin.utils.NoteUtil.defaultColors (0=left 1=down 2=up
+			// 3=right).
+			var dirs:Array<String> = ['left note', 'down note', 'up note', 'right note'];
+			note.animation.addByPrefix('idle', dirs[i], 24, true);
 			note.animation.play('idle');
 			grpNotes.add(note);
-			
-			var newShader:HSLColorSwap = new HSLColorSwap();
-			note.shader = newShader.shader;
-			newShader.hue = ClientPrefs.arrowHSV[i][0] / 360;
-			newShader.saturation = ClientPrefs.arrowHSV[i][1] / 100;
-			newShader.lightness = ClientPrefs.arrowHSV[i][2] / 100;
-			shaderArray.push(newShader);
+
+			var palette = new funkin.game.shaders.RGBShader.RGBPalette();
+			note.shader = palette.shader;
+			paletteArray.push(palette);
+			_applyNoteColor(i);
 		}
 		
 		hsbText = new Alphabet(0, 0, "Hue    Saturation  Luminosity", false, false, 0, 0.65);
@@ -93,7 +99,7 @@ class NotesSubState extends MusicBeatSubstate
 		scriptGroup.set('typeSelected', typeSelected);
 		scriptGroup.set('grpNumbers', grpNumbers);
 		scriptGroup.set('grpNotes', grpNotes);
-		scriptGroup.set('shaderArray', shaderArray);
+		scriptGroup.set('paletteArray', paletteArray);
 		scriptGroup.set('curValue', curValue);
 		scriptGroup.set('holdTime', holdTime);
 		scriptGroup.set('nextAccept', nextAccept);
@@ -302,20 +308,21 @@ class NotesSubState extends MusicBeatSubstate
 		}
 	}
 	
+	// Recolors note `i`'s preview exactly as gameplay does: shift that arrow's
+	// base color trio by its current arrowHSV and push it to the RGB shader.
+	function _applyNoteColor(i:Int)
+	{
+		if (i < 0 || i >= paletteArray.length) return;
+		final shifted = funkin.utils.NoteUtil.applyHSVShift(funkin.utils.NoteUtil.defaultColors[i], ClientPrefs.arrowHSV[i]);
+		paletteArray[i].setColors(funkin.utils.NoteUtil.colorToArray(shifted));
+	}
+
 	function resetValue(selected:Int, type:Int)
 	{
 		curValue = 0;
 		ClientPrefs.arrowHSV[selected][type] = 0;
-		switch (type)
-		{
-			case 0:
-				shaderArray[selected].hue = 0;
-			case 1:
-				shaderArray[selected].saturation = 0;
-			case 2:
-				shaderArray[selected].lightness = 0;
-		}
-		
+		_applyNoteColor(selected);
+
 		var item = grpNumbers.members[(selected * 3) + type];
 		item.changeText('0');
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;
@@ -342,17 +349,9 @@ class NotesSubState extends MusicBeatSubstate
 		}
 		roundedValue = Math.round(curValue);
 		ClientPrefs.arrowHSV[curSelected][typeSelected] = roundedValue;
-		
-		switch (typeSelected)
-		{
-			case 0:
-				shaderArray[curSelected].hue = roundedValue / 360;
-			case 1:
-				shaderArray[curSelected].saturation = roundedValue / 100;
-			case 2:
-				shaderArray[curSelected].lightness = roundedValue / 100;
-		}
-		
+
+		_applyNoteColor(curSelected);
+
 		var item = grpNumbers.members[(curSelected * 3) + typeSelected];
 		item.changeText(Std.string(roundedValue));
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;

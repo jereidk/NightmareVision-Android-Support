@@ -21,7 +21,10 @@ class QuantNotesSubState extends MusicBeatSubstate
 	private var grpNumbers:FlxTypedGroup<Alphabet>;
 	private var grpNotes:FlxTypedGroup<FlxSprite>;
 	private var grpQuants:FlxTypedGroup<AttachedAlphabet>;
-	private var shaderArray:Array<HSLColorSwap> = [];
+	// Same gameplay-matching RGB coloring as NotesSubState. Was HSLColorSwap
+	// over frames from a 'QUANTNOTE_assets' atlas that doesn't exist in this
+	// fork at all -- so every preview note loaded no frames (blank / fallback).
+	private var paletteArray:Array<funkin.game.shaders.RGBShader.RGBPalette> = [];
 	var curValue:Float = 0;
 	var holdTime:Float = 0;
 	var nextAccept:Int = 5;
@@ -89,23 +92,25 @@ class QuantNotesSubState extends MusicBeatSubstate
 			}
 			
 			var note:FlxSprite = new FlxSprite(posX, yPos);
-			note.frames = Paths.getSparrowAtlas('QUANTNOTE_assets');
-			
+			// Quant notes use the same NOTE_assets sprites as regular notes,
+			// just recolored per quantization (there is no QUANTNOTE_assets
+			// atlas). Cycle the 4 directions so consecutive rows aren't all the
+			// same arrow shape.
+			note.frames = Paths.getSparrowAtlas('NOTE_assets');
+			var dirs:Array<String> = ['left note', 'down note', 'up note', 'right note'];
+			note.animation.addByPrefix('idle', dirs[i % 4], 24, true);
+			note.animation.play('idle');
+
 			var txt:AttachedAlphabet = new AttachedAlphabet(quantizations[i], 0, 0, true);
 			txt.sprTracker = note;
 			txt.copyAlpha = true;
 			add(txt);
-			var animations:Array<String> = ['purple0', 'blue0', 'green0', 'red0'];
-			note.animation.addByPrefix('idle', animations[i % 4]);
-			note.animation.play('idle');
 			grpNotes.add(note);
-			
-			var newShader:HSLColorSwap = new HSLColorSwap();
-			note.shader = newShader.shader;
-			newShader.hue = ClientPrefs.quantHSV[i][0] / 360;
-			newShader.saturation = ClientPrefs.quantHSV[i][1] / 100;
-			newShader.lightness = ClientPrefs.quantHSV[i][2] / 100;
-			shaderArray.push(newShader);
+
+			var palette = new funkin.game.shaders.RGBShader.RGBPalette();
+			note.shader = palette.shader;
+			paletteArray.push(palette);
+			_applyNoteColor(i);
 		}
 		
 		hsbText = new Alphabet(0, 0, "Hue    Saturation  Luminosity", false, false, 0, 0.65);
@@ -344,6 +349,17 @@ class QuantNotesSubState extends MusicBeatSubstate
 		}
 	}
 	
+	// Recolors quant `i`'s preview exactly as gameplay does: shift that
+	// quant's base color trio by its current quantHSV and push it to the shader.
+	function _applyNoteColor(i:Int)
+	{
+		if (i < 0 || i >= paletteArray.length) return;
+		final base = (i < funkin.utils.NoteUtil.quantDefaultColors.length)
+			? funkin.utils.NoteUtil.quantDefaultColors[i] : funkin.utils.NoteUtil.quantDefaultColors[0];
+		final shifted = funkin.utils.NoteUtil.applyHSVShift(base, ClientPrefs.quantHSV[i]);
+		paletteArray[i].setColors(funkin.utils.NoteUtil.colorToArray(shifted));
+	}
+
 	function resetValue(selected:Int, type:Int)
 	{
 		// Was unconditional on ClientPrefs.quants while updateValue() (the
@@ -352,19 +368,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 		// about it below (see the other two fixes in this function).
 		curValue = defaults[selected][type];
 		ClientPrefs.quantHSV[selected][type] = defaults[selected][type];
-		switch (type)
-		{
-			// Was missing the /360 and /100 normalization updateValue() uses
-			// for the exact same fields -- fed the shader raw degree/percent
-			// values (e.g. -120) instead of the 0..1 range it expects,
-			// scrambling the note's color on reset.
-			case 0:
-				shaderArray[selected].hue = defaults[selected][type] / 360;
-			case 1:
-				shaderArray[selected].saturation = defaults[selected][type] / 100;
-			case 2:
-				shaderArray[selected].lightness = defaults[selected][type] / 100;
-		}
+		_applyNoteColor(selected);
 
 		var item = grpNumbers.members[(selected * 3) + type];
 		// Was hardcoded '0' -- correct for NotesSubState (whose defaults are
@@ -396,17 +400,9 @@ class QuantNotesSubState extends MusicBeatSubstate
 		}
 		roundedValue = Math.round(curValue);
 		ClientPrefs.quantHSV[curSelected][typeSelected] = roundedValue;
-		
-		switch (typeSelected)
-		{
-			case 0:
-				shaderArray[curSelected].hue = roundedValue / 360;
-			case 1:
-				shaderArray[curSelected].saturation = roundedValue / 100;
-			case 2:
-				shaderArray[curSelected].lightness = roundedValue / 100;
-		}
-		
+
+		_applyNoteColor(curSelected);
+
 		var item = grpNumbers.members[(curSelected * 3) + typeSelected];
 		item.changeText(Std.string(roundedValue));
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;
