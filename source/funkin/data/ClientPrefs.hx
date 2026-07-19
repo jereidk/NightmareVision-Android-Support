@@ -187,6 +187,15 @@ class ClientPrefs
 
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
+	/**
+	 * Visual skin for the on-screen virtual pad buttons.
+	 * 'modern' (default): translucent glass circles with FNF-style note arrows,
+	 *   loaded from mobile/virtualpad/modern/. 'classic': the original button art
+	 *   at mobile/virtualpad/. Art is greyscale+alpha and tinted per-button at
+	 *   runtime, so both skins keep the same per-direction colours.
+	 */
+	@saveVar public static var virtualPadSkin:String = 'modern';
+
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	@saveVar public static var virtualPadLayout:String = 'LeftFull';

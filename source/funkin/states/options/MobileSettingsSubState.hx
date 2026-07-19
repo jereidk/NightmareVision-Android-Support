@@ -872,6 +872,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'game':   ClientPrefs.gameInputMode;
 			case 'layout': ClientPrefs.hitboxLayout;
 			case 'vpadLayout': ClientPrefs.virtualPadLayout;
+			case 'padSkin': ClientPrefs.virtualPadSkin;
 			case 'noteLayout': ClientPrefs.noteLayout;
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
 			case 'storageMode': ClientPrefs.storageMode;
@@ -885,6 +886,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'game':   ClientPrefs.gameInputMode = v;
 			case 'layout': ClientPrefs.hitboxLayout = v;
 			case 'vpadLayout': ClientPrefs.virtualPadLayout = v;
+			case 'padSkin':
+				ClientPrefs.virtualPadSkin = v;
+				#if mobile _refreshVirtualPadForNavMode(); #end // rebuild so the new skin shows immediately
 			case 'noteLayout': ClientPrefs.noteLayout = v;
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
@@ -942,6 +946,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			choices: [Lang.str('choice_notelayout_normal', 'Normal'), Lang.str('choice_notelayout_vslice', 'VSlice')],
 			stored:  ['Normal', 'VSlice'],
 			defaultVal: 'Normal'
+		});
+
+		// Visual skin for the on-screen pad buttons (applies to both menu-nav and
+		// gameplay pads). Modern = translucent glass circles + FNF note arrows.
+		_opts.push({
+			id: 'padSkin', kind: 'string',
+			label: Lang.str('opt_padskin', 'Pad Skin'),
+			desc:  Lang.str('opt_padskin_desc', 'Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.'),
+			choices: [Lang.str('choice_padskin_modern', 'Modern'), Lang.str('choice_padskin_classic', 'Classic')],
+			stored:  ['modern', 'classic'],
+			defaultVal: 'modern'
 		});
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')

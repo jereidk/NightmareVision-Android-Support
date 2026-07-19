@@ -325,7 +325,10 @@ class MobileVirtualPad extends TouchInputManager
 	private function createButton(X:Float, Y:Float, Graphic:String, Color:Int, IDs:Array<FlxMobileInputID>):FlxButton
 	{
 		var graphic:FlxGraphic = null;
-		var path:String = 'assets/mobile/virtualpad/${Graphic}.png';
+		// Skin folder: 'modern' -> mobile/virtualpad/modern/, 'classic' -> the
+		// original mobile/virtualpad/ root. Art is greyscale+alpha, tinted below.
+		final skinDir:String = (funkin.data.ClientPrefs.virtualPadSkin == 'classic') ? '' : funkin.data.ClientPrefs.virtualPadSkin + '/';
+		var path:String = 'assets/mobile/virtualpad/${skinDir}${Graphic}.png';
 		var cacheKey:String = path;
 
 		#if MODS_ALLOWED
@@ -340,11 +343,11 @@ class MobileVirtualPad extends TouchInputManager
 		else
 		#end
 		{
-			if (!Assets.exists(path))
-			{
-				path = 'assets/mobile/virtualpad/default.png';
-				cacheKey = path;
-			}
+			// Fall back to the classic root button, then the shared default, if the
+			// selected skin doesn't provide this particular graphic.
+			if (!Assets.exists(path)) path = 'assets/mobile/virtualpad/${Graphic}.png';
+			if (!Assets.exists(path)) path = 'assets/mobile/virtualpad/default.png';
+			cacheKey = path;
 
 			graphic = FunkinAssets.cache.currentTrackedGraphics.get(cacheKey);
 			if (graphic == null)

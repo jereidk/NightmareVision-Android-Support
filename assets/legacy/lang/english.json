@@ -770,6 +770,10 @@
 		"opt_notelayout_desc": "Visual arrangement of notes.\nNormal: standard FNF layout.\nVSlice: centered, wider spacing, bigger arrows.",
 		"choice_notelayout_normal": "Normal",
 		"choice_notelayout_vslice": "VSlice",
+		"opt_padskin": "Pad Skin",
+		"opt_padskin_desc": "Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.",
+		"choice_padskin_modern": "Modern",
+		"choice_padskin_classic": "Classic",
 
 		"opt_hitboxlayout": "Hitbox Layout",
 		"opt_hitboxlayout_desc": "Arrangement of the tap zones.\nFour Lanes: four columns. Two Thumb: 2×2 grid. DPad: circular buttons. Arrows: note-style arrows.",
