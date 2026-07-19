@@ -581,21 +581,6 @@ class SystemMonitor
 	// entirely (GPU/vsync/compositor).
 	static var _gameplayWindowStartStamp:Float = 0.0;
 
-	// DRS's own "[DRS] frame-cache on/off" log only goes to Logger (FLX_DEBUG
-	// console, invisible in release) — no way to tell from sysmon.log whether
-	// it ever actually engaged during a laggy section. Track state + how many
-	// times it flipped ON since the last report, folded into the [GAMEPLAY] line.
-	static var _drsActiveNow:Bool = false;
-	static var _drsActivations:Int = 0;
-
-	/** Call whenever PlayState updates _drsActive, so [GAMEPLAY] lines can show whether DRS was actually engaged. */
-	public static function reportDrsState(active:Bool):Void
-	{
-		if (!enabled) return;
-		if (active && !_drsActiveNow) _drsActivations++;
-		_drsActiveNow = active;
-	}
-
 	/**
 	 * Call once per frame from PlayState.update() during an active song.
 	 * Writes a one-line FPS + note-density snapshot roughly once a second —
@@ -643,12 +628,10 @@ class SystemMonitor
 		var allocSuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
-		var drsSuffix = '  drs=${_drsActiveNow ? "ON" : "off"}${_drsActivations > 0 ? " (x" + _drsActivations + " this window)" : ""}';
 		// noteCount is PlayState.notes.length — the note *pool* size (a
 		// fixed-size, reused set of Note objects once note pooling actually
 		// works), not the count of notes currently in flight.
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$drsSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
-		_drsActivations = 0;
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
 		profReset();
 	}
 

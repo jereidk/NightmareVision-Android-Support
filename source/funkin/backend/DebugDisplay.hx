@@ -243,17 +243,11 @@ class DebugDisplay extends Sprite
 			str += '\n|  Large Pool: ${FlxStringUtil.formatBytes(gcLargePool)}';
 			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(rss)}';
 			str += '\n|  Textures  : $cachedGraphics cached';
-			#if android
-			str += '\n|  DRS       : ${mobile.backend.DynamicResolution.active ? "active" : "idle"}';
-			#end
 			str += '\n+--------------------------------------+';
 			#elseif mobile
 			str += '\n+-- MEMORY --------------------------+';
 			str += '\n|  Textures  : $cachedGraphics cached';
 			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(taskMemory)}';
-			#if android
-			str += '\n|  DRS       : ${mobile.backend.DynamicResolution.active ? "active" : "idle"}';
-			#end
 			str += '\n+--------------------------------------+';
 			#else
 			str += '\n| Textures: $cachedGraphics cached';
@@ -287,7 +281,7 @@ class DebugDisplay extends Sprite
 			}
 
 			#if android
-			str += '\nDRS    : ${mobile.backend.DynamicResolution.active ? "ON" : "off"} | Tex: $cachedGraphics';
+			str += '\nTex    : $cachedGraphics cached';
 			final winW = FlxG.stage.window.width;
 			final winH = FlxG.stage.window.height;
 			str += '\nDevice : ${winW}×${winH} -> game ${FlxG.width}×${FlxG.height}';

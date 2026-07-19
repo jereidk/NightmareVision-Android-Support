@@ -196,30 +196,6 @@ class ClientPrefs
 	 */
 	@saveVar public static var storageMode:String = 'Shared';
 
-	/** Whether DRS (Dynamic Resolution Scaling) auto-activates when the game drops below 30fps. */
-	@saveVar public static var drsEnabled:Bool = false;
-
-	/** DRS activates once the rolling-average FPS drops below this value. */
-	@saveVar public static var drsActivateFps:Int = 30;
-
-	/** DRS deactivates once the rolling-average FPS rises above this value (must stay below drsActivateFps to avoid flapping). */
-	@saveVar public static var drsDeactivateFps:Int = 50;
-
-	/** Minimum seconds DRS stays engaged once triggered, regardless of the rolling average — prevents rapid on/off flapping. */
-	@saveVar public static var drsMinActiveSeconds:Float = 1.5;
-
-	/** Debug: forces DRS on for the whole song regardless of frame rate, to test whether the frame-cache mechanism itself helps independent of when it triggers. */
-	@saveVar public static var drsForceAlwaysOn:Bool = false;
-
-	/**
-	 * Render resolution scale (1.0 = native, 0.75 = 75%, etc). Unlike DRS, this
-	 * doesn't skip frames -- it shrinks every real frame via Android's hardware
-	 * surface scaler (mobile.backend.RenderScale), attacking GPU fill-rate cost
-	 * directly. Confirmed via Perfetto that this game is fill-rate bound, not
-	 * CPU-bound, so this is expected to help more than DRS on its own.
-	 */
-	@saveVar public static var renderScale:Float = 1.0;
-
 	/**
 	 * Fullscreen/immersive mode. 0=off, 1=status bar only, 2=full immersive
 	 */

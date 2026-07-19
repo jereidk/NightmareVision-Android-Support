@@ -7,12 +7,6 @@ import lime.app.Application as LimeApplication;
 import lime.ui.Window as LimeWindow;
 import lime.ui.WindowAttributes;
 #end
-#if (android && cpp)
-import mobile.backend.DynamicResolution;
-import mobile.backend.RenderScale;
-import mobile.backend.RenderScaleBlit;
-import lime.graphics.RenderContext;
-#end
 #if ((sys || air) && (!flash_doc_gen || air_doc_gen))
 import openfl.desktop.NativeApplication;
 #end
@@ -166,34 +160,7 @@ class Application #if lime extends LimeApplication #end
 	}
 	#end
 
-	#if (android && cpp)
-	@:noCompletion override public function render(context:RenderContext):Void
-	{
-		if (DynamicResolution.shouldSkipRender())
-		{
-			DynamicResolution.reuseLastFrame();
-			return;
-		}
-
-		// window.scale correctly shrinks the viewport and
-		// Context3D.backBufferWidth/Height together (see RenderScale.hx), but
-		// Context3D never actually creates an offscreen backbuffer texture
-		// for this game's primary (non-Stage3D) context -- confirmed via a
-		// device log showing __backBufferTexture stays null -- so normal
-		// rendering draws directly into an unstretched corner of the real
-		// window. beginFrame()/endFrame() redirect that rendering into our
-		// own correctly-sized offscreen texture and stretch-blit it onto the
-		// real window afterward (see RenderScaleBlit.hx).
-		final renderScaleActive = RenderScale.currentScale < 0.999;
-		if (renderScaleActive) RenderScaleBlit.beginFrame();
-		super.render(context);
-		if (renderScaleActive) RenderScaleBlit.endFrame();
-
-		DynamicResolution.saveCurrentFrame();
-	}
-	#end
-
-	#if (lime >= "8.1.0")
+#if (lime >= "8.1.0")
 	@:noCompletion override private function __checkForAllWindowsClosed():Void
 	{
 		if (__windows.length > 0)

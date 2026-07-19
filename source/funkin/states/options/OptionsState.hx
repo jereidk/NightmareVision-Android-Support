@@ -117,9 +117,9 @@ class OptionsState extends MusicBeatState
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
 	// Design canvas is a fixed 1280x720 (Project.xml's <window>) no matter the
-	// device's real resolution/DPI -- RenderScale.hx/FunkinRatioScaleMode
-	// handle actual device scaling separately, this screen (like upstream's)
-	// always lays out against this fixed logical size.
+	// device's real resolution/DPI -- FunkinRatioScaleMode handles actual device
+	// scaling separately, this screen (like upstream's) always lays out against
+	// this fixed logical size.
 	static final CANVAS_H:Float = 720;
 
 	// One shared vertical gap between every stacked row (header -> tabs ->

@@ -117,61 +117,6 @@ class GraphicsOptions
 		vsyncOption.onChange = () -> ClientPrefs.updateVsyncMode();
 		opts.push(vsyncOption);
 
-		#if android
-		final drsOption = new Option(Lang.str('opt_drs', 'Dynamic Resolution (DRS)'),
-			Lang.str('opt_drs_desc',
-				'Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.'),
-			'drsEnabled', 'bool', false);
-		drsOption.onChange = markCustomPreset;
-		opts.push(drsOption);
-
-		// The four options below tune DRS without needing a new build -- useful
-		// while we're still figuring out the right thresholds for real devices.
-		final drsActivate = new Option(Lang.str('opt_drsActivate', 'DRS Activate FPS'),
-			Lang.str('opt_drsActivate_desc', 'DRS turns on once the average fps drops below this.'),
-			'drsActivateFps', 'int', 30);
-		drsActivate.minValue = 15;
-		drsActivate.maxValue = 55;
-		drsActivate.displayFormat = 'below %v FPS';
-		opts.push(drsActivate);
-
-		final drsDeactivate = new Option(Lang.str('opt_drsDeactivate', 'DRS Deactivate FPS'),
-			Lang.str('opt_drsDeactivate_desc', 'DRS turns back off once the average fps rises above this.\nKeep this higher than the Activate value or DRS won\'t turn off.'),
-			'drsDeactivateFps', 'int', 50);
-		drsDeactivate.minValue = 20;
-		drsDeactivate.maxValue = 60;
-		drsDeactivate.displayFormat = 'above %v FPS';
-		opts.push(drsDeactivate);
-
-		final drsMinActive = new Option(Lang.str('opt_drsMinActive', 'DRS Minimum Active Time'),
-			Lang.str('opt_drsMinActive_desc', 'Once DRS turns on, it stays on for at least this long,\neven if fps recovers sooner — prevents rapid on/off flickering.'),
-			'drsMinActiveSeconds', 'float', 1.5);
-		drsMinActive.minValue = 0.5;
-		drsMinActive.maxValue = 5;
-		drsMinActive.displayFormat = '%v s';
-		opts.push(drsMinActive);
-
-		opts.push(new Option(Lang.str('opt_drsForceOn', 'DRS Force Always On'),
-			Lang.str('opt_drsForceOn_desc',
-				'[DEBUG] Keeps DRS on for the whole song regardless of framerate,\nignoring the Activate/Deactivate/Minimum settings above.\nUse to test whether DRS itself helps, separate from tuning when it triggers.'),
-			'drsForceAlwaysOn', 'bool', false));
-
-		// Different mechanism from DRS above: DRS skips whole frames, this shrinks
-		// every real frame via Android's hardware surface scaler (near-zero extra
-		// GPU cost, confirmed via on-device Perfetto traces to be the actual
-		// bottleneck — GPU fill-rate, not CPU/script/note-count). Applies live so
-		// you can feel the difference immediately.
-		final renderScaleOption = new Option(Lang.str('opt_renderScale', 'Render Scale'),
-			Lang.str('opt_renderScale_desc',
-				'Renders the game at a lower internal resolution and lets the\ndisplay scale it up — cheaper for the GPU on every single frame.\nLower = faster but softer image. 100% = native, no change.'),
-			'renderScale', 'percent', 1.0);
-		renderScaleOption.minValue = 0.5;
-		renderScaleOption.maxValue = 1.0;
-		renderScaleOption.changeValue = 0.05;
-		renderScaleOption.onChange = () -> mobile.backend.RenderScale.apply(ClientPrefs.renderScale);
-		opts.push(renderScaleOption);
-		#end
-
 		return opts;
 	}
 

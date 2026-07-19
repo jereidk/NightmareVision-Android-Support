@@ -487,27 +487,6 @@ class PlayState extends MusicBeatState
 	
 	public var defaultCamZoomAdd:Float = 0;
 
-	#if android
-	// 60 frames (~1s at full rate), not 10 — a 10-frame window let a single
-	// spike (~200ms) push the average over the activate threshold for one
-	// frame, then immediately fall back under the deactivate threshold the
-	// next frame once that spike aged out of the ring, so DRS was measured
-	// flapping on/off within the same second on a real device (see sysmon.log
-	// [DRS] on/off pairs one second apart) instead of staying engaged through
-	// a genuinely slow section.
-	static inline final DRS_RING_SIZE:Int = 60;
-	var _drsRing:Array<Float> = [for (_ in 0...DRS_RING_SIZE) 1 / 60];
-	var _drsRingIdx:Int = 0;
-	var _drsActive:Bool = false;
-	// Minimum active duration is a second line of defense against flapping,
-	// since even a 60-frame average can dip below the deactivate threshold
-	// for a frame or two during a brief lull inside an overall slow section.
-	// Both this and the activate/deactivate fps thresholds are exposed as
-	// ClientPrefs (Graphics settings) so they can be retuned in-game without
-	// a new build if the defaults turn out not to be right for a given device.
-	var _drsActivatedAt:Float = 0.0;
-	#end
-
 	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
 
 	/** In story mode, true when this is the last song of the week.
@@ -2486,47 +2465,6 @@ class PlayState extends MusicBeatState
 		if (virtualPad != null && virtualPad.visible != overlayShown) virtualPad.visible = overlayShown;
 		#end
 
-		#if android
-		_drsRing[_drsRingIdx % DRS_RING_SIZE] = elapsed;
-		_drsRingIdx++;
-		var _drsSum:Float = 0;
-		for (t in _drsRing) _drsSum += t;
-		final _drsAvg:Float = _drsSum / DRS_RING_SIZE;
-		final _drsNow:Float = haxe.Timer.stamp();
-		// DRS's frame-cache captures/blits at a fixed size taken once when it
-		// activates (DynamicResolution._winW/_winH, from the window's logical
-		// size) and never re-checked afterward. RenderScale shrinks the actual
-		// hardware surface buffer underneath that same window at any point,
-		// completely independently -- so a frame captured/blitted at the old
-		// (pre-RenderScale) size, once the real buffer is smaller, reads back
-		// only the small real content plus whatever garbage fills the rest of
-		// that now-oversized capture, exactly the "small render in a black
-		// box" glitch this was built to catch. Both were designed as
-		// alternative fixes for the same GPU-fill-rate problem (see each
-		// class's own doc comment), not to run together -- mutual exclusion is
-		// the safe fix instead of trying to make DRS track a live-resizing
-		// buffer it currently has no way to observe.
-		final renderScaleActive = mobile.backend.RenderScale.currentScale < 0.999;
-		// drsForceAlwaysOn bypasses the fps-triggered logic entirely, so we can
-		// test whether the frame-cache mechanism itself helps at all, isolated
-		// from whether the threshold/timing tuning is right.
-		if (ClientPrefs.drsForceAlwaysOn)
-		{
-			if (ClientPrefs.drsEnabled && !_drsActive && !renderScaleActive)
-				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
-			else if ((!ClientPrefs.drsEnabled || renderScaleActive) && _drsActive)
-				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
-		}
-		else
-		{
-			if (ClientPrefs.drsEnabled && !_drsActive && !renderScaleActive && _drsAvg > 1 / ClientPrefs.drsActivateFps)
-				{ _drsActive = true; _drsActivatedAt = _drsNow; mobile.backend.DynamicResolution.setActive(true); }
-			else if (_drsActive && (renderScaleActive || (_drsNow - _drsActivatedAt >= ClientPrefs.drsMinActiveSeconds) && (!ClientPrefs.drsEnabled || _drsAvg < 1 / ClientPrefs.drsDeactivateFps)))
-				{ _drsActive = false; mobile.backend.DynamicResolution.setActive(false); }
-		}
-		SystemMonitor.reportDrsState(_drsActive);
-		#end
-
 		if (cameraLerping && !inCutscene)
 		{
 			final lerpRate = 0.04 * cameraSpeed;
@@ -4421,7 +4359,6 @@ class PlayState extends MusicBeatState
 		#if android
 		mobile.backend.AndroidUtils.keepScreenOn(false);
 		mobile.backend.AndroidUtils.setGameplayState(false);
-		mobile.backend.DynamicResolution.setActive(false);
 		#end
 
 		scripts.call('onDestroy', _scriptEmptyArgs, true);
