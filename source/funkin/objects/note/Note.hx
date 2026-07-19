@@ -287,7 +287,19 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		final resolved:String = (value != null && value.length > 0) ? value : (skin?.noteTexture ?? 'NOTE_assets');
 		if (texture == resolved && skin == _lastLoadedSkin && noteData == _lastLoadedNoteData) return texture;
 
+		// Tagged separately from the surrounding 'noteSpawn' zone so a device
+		// log can show directly how much of that cost is genuinely "had to
+		// reload" (atlas-frame lookup via addAnimByPrefix, unavoidable here)
+		// vs. everything else recycleNote()/spawnNote() does per note
+		// (preRecycle's field resets, script hooks, sustain-trail setup) --
+		// _deadNotesByType (PlayState.hx) only changes how fast a compatible
+		// dead note is FOUND, not whether the chart's own note pattern
+		// actually has one sitting dead at that moment; if it usually
+		// doesn't, this fires just as often as before and dominates either
+		// way.
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload'); #end
 		reloadNote('', value);
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
 
 		_lastLoadedSkin = skin;
 		_lastLoadedNoteData = noteData;
