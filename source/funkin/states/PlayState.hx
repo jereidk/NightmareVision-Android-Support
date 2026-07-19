@@ -762,7 +762,15 @@ class PlayState extends MusicBeatState
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
 
 		FunkinAssets.cache.clearStoredMemory();
-		
+
+		// This whole create() is one long synchronous allocation burst (stage,
+		// characters, notes...) -- letting the collector fire mid-burst risks
+		// landing its pause during the countdown that plays right after create()
+		// returns. Suppress it for the burst's duration; forceGcPass() (inside
+		// clearUnusedMemory() below) sweeps everything in one deliberate pass
+		// once the burst is over instead of leaving it to fire on its own.
+		#if cpp cpp.vm.Gc.enable(false); #end
+
 		funkin.backend.DebugDisplay.addPlugin(() -> 'curStep: $curStep • curBeat: $curBeat • curSection: $curSection');
 		
 		skipCountdown = false;
@@ -1135,6 +1143,7 @@ class PlayState extends MusicBeatState
 		super.create();
 		trace('[PlayState] super.create() OK');
 
+		#if cpp cpp.vm.Gc.enable(true); #end
 		FunkinAssets.cache.clearUnusedMemory();
 
 		refreshZ(stage);
