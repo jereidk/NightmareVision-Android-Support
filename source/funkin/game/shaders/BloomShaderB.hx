@@ -20,13 +20,22 @@ class BloomShaderB extends FlxShader // BLOOM SHADER BY BBPANZU
 		float Pi = 6.28318530718; // Pi*2
 
 		vec4 Color = texture2D( bitmap, uv);
-		
-		for(float d=0.0; d<Pi; d+=Pi/Directions){
-			for(float i=1.0/Quality; i<=1.0; i+=1.0/Quality){
 
-				float ex = (cos(d)*Size*i)/openfl_TextureSize.x;
-				float why = (sin(d)*Size*i)/openfl_TextureSize.y;
-				Color += flixel_texture2D( bitmap, uv+vec2(ex,why));	
+		// Hoist the loop-invariant divides (Directions/Quality are uniforms) so
+		// they run once instead of every iteration of the tap loops.
+		float angleStep = Pi / Directions;
+		float qStep = 1.0 / Quality;
+
+		for(float d=0.0; d<Pi; d+=angleStep){
+			// cos(d)/sin(d) only depend on the outer loop -- pull them out of the
+			// inner loop so they are not recomputed for every Quality sample.
+			float cd = cos(d) * Size;
+			float sd = sin(d) * Size;
+			for(float i=qStep; i<=1.0; i+=qStep){
+
+				float ex = (cd*i)/openfl_TextureSize.x;
+				float why = (sd*i)/openfl_TextureSize.y;
+				Color += flixel_texture2D( bitmap, uv+vec2(ex,why));
 			}
 		}
 		

@@ -165,7 +165,8 @@ class Tiltshift extends FlxShader
 		void main() 
 		{
 			// Work out how much to blur based on the mid point 
-			float amount = pow((openfl_TextureCoordv.y * u_center) * 2.0 - 1.0, 2.0) * u_blur;
+			float mid = (openfl_TextureCoordv.y * u_center) * 2.0 - 1.0; // pow(x,2.0) -> x*x
+			float amount = mid * mid * u_blur;
 				
 			// This is the accumulation of color from the surrounding pixels in the texture
 			vec4 blurred = vec4(0.0, 0.0, 0.0, 1.0);
@@ -724,8 +725,10 @@ class VCRDistortionShader extends FlxShader // https://www.shadertoy.com/view/ld
 			{
 				uv = (uv - 0.5) * 2.0;
 				uv *= 1.1;
-				uv.x *= 1.0 + pow((abs(uv.y) / 5.0), 2.0);
-				uv.y *= 1.0 + pow((abs(uv.x) / 4.0), 2.0);
+				float dyv = abs(uv.y) / 5.0; // pow(x,2.0) -> x*x (uv.x still uses pre-warp uv.y)
+				uv.x *= 1.0 + dyv * dyv;
+				float dxv = abs(uv.x) / 4.0; // uses the just-warped uv.x, as before
+				uv.y *= 1.0 + dxv * dxv;
 				uv  = (uv / 2.0) + 0.5;
 				uv =  uv *0.92 + 0.04;
 				return uv;

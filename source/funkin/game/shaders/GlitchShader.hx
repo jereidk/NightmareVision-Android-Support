@@ -42,7 +42,7 @@ class GlitchShaderA extends FlxShader
         void main()
         {   
             vec2 uv = openfl_TextureCoordv;
-            float amount = pow(GlitchAmount, 2.0);
+            float amount = GlitchAmount * GlitchAmount; // pow(x,2.0) -> x*x
             vec2 pixel = 1.0 / iResolution.xy;    
             vec4 color = flixel_texture2D(bitmap, uv);
             float t = mod(mod(iTime, amount * 100.0 * (amount - 0.5)) * 109.0, 1.0);
@@ -175,7 +175,8 @@ vec4 distort(sampler2D sampler, vec2 uv, float edgeSize)
     vec3 rgb = col.rgb;
     vec3 hsv = rgb2hsv(rgb);
     // hsv.y = mod(hsv.y + shifty * pow(Amount, 5.0) * 0.25, 1.0);
-    return vec4(posterize(hsv2rgb(hsv), floor(mix(256.0, pow(1.0 - hsv.z - 0.5, 2.0) * 64.0 * shiftx + 4.0, 1.0 - pow(1.0 - Amount, 5.0)))), col.a);
+    float lz = 1.0 - hsv.z - 0.5; // pow(x,2.0) -> x*x
+    return vec4(posterize(hsv2rgb(hsv), floor(mix(256.0, lz * lz * 64.0 * shiftx + 4.0, 1.0 - pow(1.0 - Amount, 5.0)))), col.a);
 }
 
 void main()

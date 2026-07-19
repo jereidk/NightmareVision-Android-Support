@@ -191,24 +191,29 @@ void main() {
 	vec3 add = vec3(0);
 	float rainSum = 0.0;
 
-	const int numLayers = 4;
-	float scales[4];
-	scales[0] = 1.0;
-	scales[1] = 1.8;
-	scales[2] = 2.6;
-	scales[3] = 4.8;
-
-	for (int i = 0; i < numLayers; i++) {
-		float scale = scales[i];
-		float r = rainDist(wpos * scale / uScale + 500.0 * float(i), scale, intensity);
-		if (r < 0.0) {
-			float v = (1.0 - exp(r * 5.0)) / scale * 2.0;
-			wpos.x += v * 10.0 * uScale;
-			wpos.y -= v * 2.0 * uScale;
-			add += vec3(0.1, 0.15, 0.2) * v;
-			rainSum += (1.0 - rainSum) * 0.75;
+	// The 4 rain layers were driven by a dynamically-indexed `scales[i]` array
+	// (a perf cliff on mobile GPUs -- indexable temps spill to slow memory) and
+	// each iteration mutates wpos for the next, so the loop is inherently
+	// sequential. Unroll it with the scales/offsets as literals: no array, no
+	// dynamic indexing, identical math.
+	#define RAIN_LAYER(scale, layerOffset) \
+		{ \
+			float r = rainDist(wpos * (scale) / uScale + (layerOffset), (scale), intensity); \
+			if (r < 0.0) { \
+				float v = (1.0 - exp(r * 5.0)) / (scale) * 2.0; \
+				wpos.x += v * 10.0 * uScale; \
+				wpos.y -= v * 2.0 * uScale; \
+				add += vec3(0.1, 0.15, 0.2) * v; \
+				rainSum += (1.0 - rainSum) * 0.75; \
+			} \
 		}
-	}
+
+	RAIN_LAYER(1.0, 0.0)
+	RAIN_LAYER(1.8, 500.0)
+	RAIN_LAYER(2.6, 1000.0)
+	RAIN_LAYER(4.8, 1500.0)
+
+	#undef RAIN_LAYER
 
 	vec3 color = sampleBitmapWorld(wpos).xyz;
 

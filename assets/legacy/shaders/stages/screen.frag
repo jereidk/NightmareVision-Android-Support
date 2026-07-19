@@ -12,16 +12,20 @@ void main() {
 	vec2 px = (openfl_TextureSize / block);
 	
 	vec2 coord = (floor(openfl_TextureCoordv * px) / px);
-	
+
+	// Hoisted out of the 6x6 tap loop below (was recomputed for every tap):
+	// the per-tap step `x / px.x / 6.` and the constant divisor pow(5.,2.)=25.
+	vec2 sampleStep = 1.0 / (px * 6.0);
+
 	vec4 color = vec4(1., 1., 1., 0.);
 	for (int x = -3; x < 3; x ++)
 	{
 		for (int y = -3; y < 3; y ++)
 		{
 			// darkens 6*6 around to get like more "noticeable" outlines. its kinda butt but it wokrs
-			vec4 p = texture2D(bitmap, coord + vec2(x / px.x / 6., y / px.y / 6.));
+			vec4 p = texture2D(bitmap, coord + vec2(float(x), float(y)) * sampleStep);
 			color.rgb = (color.a == 0 ? p.rgb : mix(color.rgb, min(color.rgb, p.rgb), .1));
-			color.a = min(color.a + p.a / pow(5., 2.) * 3., 1.);
+			color.a = min(color.a + p.a / 25.0 * 3., 1.);
 		}
 	}
 	
