@@ -868,6 +868,19 @@ class Controls extends FlxActionSet
 		return best;
 	}
 
+	/**
+	 * The LIVE current state, read straight from Flixel instead of the mutable
+	 * `MusicBeatState.instance` static. A static that we assign by hand in
+	 * create() lingers on a destroyed state until the next state overwrites it,
+	 * so routing pad lookups through it can land on a corpse whose virtualPad is
+	 * null -- the pad then animates (FlxButton-local) but never triggers. FlxG's
+	 * own current state can never be stale. (Borrowed from Shadow Engine's
+	 * MusicBeatState.getState() == cast FlxG.state, made null-safe here so a
+	 * transition/non-MusicBeatState state returns null rather than throwing.)
+	 */
+	inline function liveState():funkin.backend.MusicBeatState
+		return Std.downcast(FlxG.state, funkin.backend.MusicBeatState);
+
 	@:noCompletion
 	private function get_requested():Dynamic
 	{
@@ -882,16 +895,16 @@ class Controls extends FlxActionSet
 			final sub = funkin.backend.MusicBeatSubstate.instance;
 			if (sub != null && sub.exists)
 				return sub;
-			return funkin.backend.MusicBeatState.instance;
+			return liveState();
 		}
 		else
-			return funkin.backend.MusicBeatState.instance;
+			return liveState();
 	}
 
 	@:noCompletion
 	private function get_gameplayRequest():Dynamic
 	{
-		final state = funkin.backend.MusicBeatState.instance;
+		final state = liveState();
 		if (state == null) return null;
 		if (state.hitbox != null) return state.hitbox;
 		if (state.noteTapInput != null) return state.noteTapInput;
