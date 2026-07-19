@@ -31,7 +31,7 @@ class MiscOptions
 
 		opts.push(new Option(Lang.str('opt_threadedpreload', 'Background Song Preload'),
 			Lang.str('opt_threadedpreload_desc',
-				'If checked, the loading screen decodes the next song\'s assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way. Turn this off if you notice stutters or audio glitches right as a song starts.'),
+				'If checked, the loading screen decodes the next song\'s assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way.'),
 			'threadedPreload', 'bool', true));
 
 		final pauseOption = new Option(Lang.str('opt_autopause', 'Auto-Pause Game'),

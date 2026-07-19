@@ -111,13 +111,12 @@ class ClientPrefs
 	
 	@saveVar public static var streamedMusic:Bool = false;
 
-	// Escape hatch for LoadingState's background-thread preload/prefetch
+	// Toggle for LoadingState's background-thread preload/prefetch
 	// (startPreload()/prefetchSong() in LoadingState.hx). Default ON since
 	// it's what avoids the freeze-on-transition this whole system exists
 	// for; OFF falls back to a plain "Preparing..." screen with no worker
 	// thread at all, letting PlayState.create() decode everything itself
-	// the old synchronous way. A real safety valve if a specific song's
-	// custom scripts/assets ever interact badly with the background thread.
+	// the old synchronous way.
 	@saveVar public static var threadedPreload:Bool = true;
 
 	@saveVar public static var autoPause:Bool = true;
