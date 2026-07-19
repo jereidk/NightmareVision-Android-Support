@@ -68,9 +68,16 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
 		add(otherTitleText);
 		
-		menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
-		menuBackButton.x -= menuBackButton.width;
-		add(menuBackButton);
+		// Touch-only close 'X' -- its tap test is gated to non-Virtual-Pad nav,
+		// so skip creating it entirely under Virtual Pad (B button goes back).
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
+			menuBackButton.x -= menuBackButton.width;
+			add(menuBackButton);
+		}
 	}
 	
 	override function create()
@@ -121,7 +128,10 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
 
 		// Slide in bgThing, otherTitleText, and menuBackButton from bottom
-		for (obj in [bgThing, otherTitleText, menuBackButton])
+		// (menuBackButton is absent under Virtual Pad nav -- skip it then).
+		final slideObjs:Array<flixel.FlxSprite> = [bgThing, otherTitleText];
+		if (menuBackButton != null) slideObjs.push(menuBackButton);
+		for (obj in slideObjs)
 		{
 			var alpha:Float = obj.alpha;
 			obj.alpha = 0;

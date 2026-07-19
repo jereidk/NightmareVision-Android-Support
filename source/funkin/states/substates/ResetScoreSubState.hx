@@ -87,9 +87,16 @@ class ResetScoreSubState extends MusicBeatSubstate
 		titleText.alpha = 1;
 		add(titleText);
 		
-		menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
-		menuBackButton.x -= menuBackButton.width;
-		add(menuBackButton);
+		// Touch-only close 'X' -- its tap test is gated to non-Virtual-Pad nav,
+		// so skip creating it entirely under Virtual Pad (B button goes back).
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
+			menuBackButton.x -= menuBackButton.width;
+			add(menuBackButton);
+		}
 		
 		yesText = new FlxText(0, titleText.y + 150, 0, Lang.str('choice_generic_yes'), 36);
 		yesText.setFormat(Paths.font('liber.ttf'), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);

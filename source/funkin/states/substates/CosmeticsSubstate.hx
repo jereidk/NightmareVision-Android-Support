@@ -215,10 +215,18 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		// file before; extended to them for the same reason.
 		final cutoutShiftX:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 
-		menuBackButton = new FlxSprite(950 + cutoutShiftX, 90).loadGraphic(Paths.image('menu/common/menuBack'));
-		menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
-		menuBackButton.cameras = overlayCameras;
-		add(menuBackButton);
+		// Touch-only close 'X' -- its tap test is gated to non-Virtual-Pad nav,
+		// so skip creating it entirely under Virtual Pad (B button goes back).
+		// The open/close-grid reposition sites below null-guard it accordingly.
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			menuBackButton = new FlxSprite(950 + cutoutShiftX, 90).loadGraphic(Paths.image('menu/common/menuBack'));
+			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
+			menuBackButton.cameras = overlayCameras;
+			add(menuBackButton);
+		}
 
 		randomButton = new FlxSprite(1025 + cutoutShiftX, 390).loadGraphic(Paths.image('menu/common/random'));
 		randomButton.antialiasing = ClientPrefs.globalAntialiasing;
@@ -619,8 +627,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		// position, but skinThingBg.x = (FlxG.width-width)*.5 recenters
 		// dynamically — same half-cutout shift as any element following a
 		// centered sibling (see DialogueBox.hx for the same trick).
-		menuBackButton.x = 850 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
-		menuBackButton.y = 60;
+		if (menuBackButton != null)
+		{
+			menuBackButton.x = 850 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+			menuBackButton.y = 60;
+		}
 		titleText.text = catName;
 		titleText.x = Math.round((FlxG.width - titleText.width) * 0.5);
 		titleText.y = 88 - 28;
@@ -651,8 +662,11 @@ class CosmeticsSubstate extends MusicBeatSubstate
 		gridScrollBar.visible = false;
 		// Both hardcoded to align with selectSprite's default-canvas position
 		// (selectSprite.x = (FlxG.width-750)*.5) — same half-cutout shift.
-		menuBackButton.x = 950 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
-		menuBackButton.y = 90;
+		if (menuBackButton != null)
+		{
+			menuBackButton.x = 950 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+			menuBackButton.y = 90;
+		}
 		titleText.text = Lang.str('locker', 'LOCKER');
 		titleText.x = 280 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 		titleText.y = 88;

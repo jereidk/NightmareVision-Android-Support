@@ -282,9 +282,17 @@ class OptionsState extends MusicBeatState
 			optionsHeader.antialiasing = ClientPrefs.globalAntialiasing;
 			add(optionsHeader);
 
-			menuBackButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
-			menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
-			add(menuBackButton);
+			// The close 'X' only does anything under touch nav (its tap test is
+			// gated behind pointerNavAllowed). Under Virtual Pad you go back with
+			// the B button, so don't even create it there. Desktop always gets it.
+			#if mobile
+			if (ClientPrefs.navInputMode != 'Virtual Pad')
+			#end
+			{
+				menuBackButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
+				menuBackButton.antialiasing = ClientPrefs.globalAntialiasing;
+				add(menuBackButton);
+			}
 
 			// The tab row (and its backing panel) spans the same left/right
 			// bounds as the title/close-button row above it -- optionsHeader.x
@@ -295,7 +303,10 @@ class OptionsState extends MusicBeatState
 			// each hardcode this independently; nothing enforced they'd stay in
 			// sync if either widget's position/size ever changed).
 			final tabsAreaStart = optionsHeader.x;
-			final tabsAreaEnd = menuBackButton.x + menuBackButton.width;
+			// Fall back to the close button's would-be right edge (x 1100 + width
+			// ~60) when it isn't created (Virtual Pad nav), so the tab row keeps
+			// the exact same bounds it had when the button was present.
+			final tabsAreaEnd = (menuBackButton != null) ? menuBackButton.x + menuBackButton.width : (1160 + cutout);
 
 			// Action buttons sit on the SAME row as the title and the close
 			// button, so their span has to be read off those two widgets' actual
@@ -304,7 +315,7 @@ class OptionsState extends MusicBeatState
 			// than ~276px. A longer translation of "Options" -- or, as of the
 			// Controls button just added, five buttons squeezed into the same
 			// row -- had no guarantee of actually clearing the title text.
-			buildActionButtons(optionsHeader.x + optionsHeader.width + 24, menuBackButton.x - 10);
+			buildActionButtons(optionsHeader.x + optionsHeader.width + 24, ((menuBackButton != null) ? menuBackButton.x : (1100 + cutout)) - 10);
 
 			// Same thingy.png-derived gradient as artPanelBg below (the "options"
 			// panel), cropped to a short strip instead -- unifies tabs with the

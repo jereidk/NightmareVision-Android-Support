@@ -128,8 +128,15 @@ class CosmicubeSubState extends MusicBeatSubstate
 		bg.setPosition(Math.round(FlxG.width - bg.width) * .5, Math.round(FlxG.height - bg.height) * .5);
 		pane.add(bg);
 
-		pane.add(menuBackButton = new FlxSprite(bg.x + bg.width - 6, bg.y + 3).loadGraphic(Paths.image('menu/common/menuBack')));
-		menuBackButton.x -= menuBackButton.width;
+		// Touch-only close 'X' -- its tap test is gated to non-Virtual-Pad nav,
+		// so skip creating it entirely under Virtual Pad (B button goes back).
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			pane.add(menuBackButton = new FlxSprite(bg.x + bg.width - 6, bg.y + 3).loadGraphic(Paths.image('menu/common/menuBack')));
+			menuBackButton.x -= menuBackButton.width;
+		}
 
 		// currencyIcon/currencyText/equipButton/charTitle/charKind/charDesc/charHint
 		// below were all hardcoded assuming bg.x lands at its default-canvas value
