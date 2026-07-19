@@ -539,6 +539,8 @@ class LoadingState extends MusicBeatState
 			_prefetchComplete = false;
 			_mutex.release();
 
+			Logger.log('[LoadingState] prefetch thread: song="${song.song}" — decoding ${tasks.length} asset task(s) in background (lingered on song in Freeplay)', NOTICE, true);
+
 			for (task in tasks)
 			{
 				if (_threadGeneration != myGen) return;
@@ -599,9 +601,14 @@ class LoadingState extends MusicBeatState
 
 				_mutex.acquire();
 				_prefetchDone++;
+				final _justCompleted = (_prefetchDone >= _prefetchTotal && !_prefetchComplete);
 				if (_prefetchDone >= _prefetchTotal)
 					_prefetchComplete = true;
+				final _pdone = _prefetchDone;
+				final _ptot = _prefetchTotal;
 				_mutex.release();
+				if (_justCompleted)
+					Logger.log('[LoadingState] prefetch thread: song="${song.song}" fully prefetched ($_pdone/$_ptot) — selecting it now will finalize instantly', NOTICE, true);
 			}
 		});
 
@@ -720,6 +727,15 @@ class LoadingState extends MusicBeatState
 
 		super.create();
 
+		#if (sys && cpp)
+		_mutex.acquire();
+		final _pb = _pendingBitmaps.length;
+		final _pa = _pendingAudioBuffers.length;
+		final _pt = _pendingAstcTextures.length;
+		_mutex.release();
+		Logger.log('[LoadingState] ── create: song="$songName" — starting preload. Carrying prefetched pending assets: bmp=$_pb audio=$_pa astc=$_pt', NOTICE, true);
+		#end
+
 		startPreload();
 	}
 
@@ -780,6 +796,8 @@ class LoadingState extends MusicBeatState
 			// with create's own; splitting it lands each pause where it's least
 			// noticeable instead of stacking both right before gameplay.
 			FunkinAssets.cache.forceGcPass();
+
+			Logger.log('[LoadingState] ── switching to gameplay after ${Std.int(shownTime * 1000)}ms on screen (progress ${Std.int(p * 100)}%, done=$done, timedOut=$timedOut)', NOTICE, true);
 
 			switching = true;
 			FlxTransitionableState.skipNextTransIn = true;
@@ -905,10 +923,16 @@ class LoadingState extends MusicBeatState
 		if (_allFilesOpened && _pendingBitmaps.length == 0 && _pendingAudioBuffers.length == 0 && _pendingAstcTextures.length == 0)
 		{
 			_mutex.acquire();
+			final _wasFinalized = _allFinalized;
 			_allFinalized = true;
 			_progress = 1.0;
 			_label = 'Ready!';
+			final _dec = _completedDecodes;
+			final _fin = _completedFinalizes;
+			final _tot = _totalTasks;
 			_mutex.release();
+			if (!_wasFinalized)
+				Logger.log('[LoadingState] finalize: all assets ready ("Ready!") — decoded=$_dec finalized=$_fin of $_tot task(s)', NOTICE, true);
 		}
 	}
 	#end
@@ -1074,6 +1098,7 @@ class LoadingState extends MusicBeatState
 				_progress = 1.0;
 				_label = 'Nothing to preload';
 				_mutex.release();
+				Logger.log('[LoadingState] preload thread: nothing to preload (0 tasks) — ready immediately', NOTICE, true);
 				return;
 			}
 
@@ -1090,6 +1115,8 @@ class LoadingState extends MusicBeatState
 			_totalTasks = tasks.length;
 			_completedDecodes = 0;
 			_mutex.release();
+
+			Logger.log('[LoadingState] preload thread: collected ${tasks.length} asset task(s) — decoding on background thread', NOTICE, true);
 
 			for (i in 0...tasks.length)
 			{
@@ -1218,8 +1245,13 @@ class LoadingState extends MusicBeatState
 			// decoded anything yet) and conclude the NEW load is done --
 			// switching to PlayState before its assets are actually ready.
 			_mutex.acquire();
-			if (_threadGeneration == myGen) _allFilesOpened = true;
+			final _stillCurrent = (_threadGeneration == myGen);
+			if (_stillCurrent) _allFilesOpened = true;
+			final _dec = _completedDecodes;
+			final _tot = _totalTasks;
 			_mutex.release();
+			if (_stillCurrent)
+				Logger.log('[LoadingState] preload thread: background decode finished ($_dec/$_tot) — main thread will finalize (GPU upload / audio register)', NOTICE, true);
 		});
 	}
 	#else
