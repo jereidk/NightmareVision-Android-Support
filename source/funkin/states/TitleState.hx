@@ -406,7 +406,7 @@ class TitleState extends MusicBeatState
 
 		if (_bitmapSnapshotAtCreate != null)
 		{
-			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			FunkinAssets.cache.disposeNewSinceIfDestructive(_bitmapSnapshotAtCreate);
 			_bitmapSnapshotAtCreate = null;
 		}
 	}

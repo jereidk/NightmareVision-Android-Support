@@ -4385,7 +4385,7 @@ class PlayState extends MusicBeatState
 	{
 		if (!isStoryMode || _isLastSongOfWeek)
 		{
-			FunkinAssets.cache.disposeNewSince(_bitmapSnapshotAtCreate);
+			FunkinAssets.cache.disposeNewSinceIfDestructive(_bitmapSnapshotAtCreate);
 		}
 		_bitmapSnapshotAtCreate = null;
 	}

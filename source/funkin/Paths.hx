@@ -204,14 +204,15 @@ class Paths
 		if (postFix != null) songKey += '-$postFix';
 		
 		songKey = findFileWithExts('songs/$songKey', ['ogg', 'wav'], null, mode);
-		
-		trace(songKey);
-		
-		if (ClientPrefs.streamedMusic) return FunkinAssets.getVorbisSound(songKey);
-		
+
+		// Streaming only works for .ogg and can fail (missing lime_vorbis, a bad
+		// handle, a .wav track) -- fall back to a normal fully-loaded Sound then
+		// instead of returning null, which left the track silent / crashed.
+		if (ClientPrefs.streamedMusic) return FunkinAssets.getVorbisSound(songKey) ?? FunkinAssets.getSoundUnsafe(songKey);
+
 		return FunkinAssets.getSoundUnsafe(songKey);
 	}
-	
+
 	public static inline function voices(song:String, ?postFix:String, mode:PathsTestMode = NORMAL):Null<Sound>
 	{
 		var name = sanitize(song);
@@ -222,12 +223,13 @@ class Paths
 		if (postFix != null) songKey += '-$postFix';
 		
 		songKey = findFileWithExts('songs/$songKey', ['ogg', 'wav'], null, mode);
-		
-		if (ClientPrefs.streamedMusic) return FunkinAssets.getVorbisSound(songKey);
-		
+
+		// Same streaming fallback as music() above.
+		if (ClientPrefs.streamedMusic) return FunkinAssets.getVorbisSound(songKey) ?? FunkinAssets.getSoundUnsafe(songKey);
+
 		return FunkinAssets.getSoundUnsafe(songKey);
 	}
-	
+
 	public static inline function inst(song:String, ?postFix:String, mode:PathsTestMode = NORMAL):Sound
 	{
 		var name = sanitize(song);

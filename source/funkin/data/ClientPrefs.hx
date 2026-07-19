@@ -121,6 +121,17 @@ class ClientPrefs
 	// Users can enable it explicitly at their own risk (see GPU Caching option warning).
 	@saveVar public static var gpuCaching:Bool = #if android false #else true #end;
 
+	/**
+	 * How the bitmap cache is managed across states.
+	 * 'Destructive' (default): each state frees the graphics it loaded when it's
+	 *   destroyed (disposeNewSince) -- lowest RAM, but returning to a screen or
+	 *   starting the next song re-decodes its art. Best on low-end devices.
+	 * 'Accumulative': keep every loaded graphic resident -- returning to a screen
+	 *   or the next song reuses it instantly, at the cost of ever-growing RAM.
+	 *   Best on high-end devices with memory to spare.
+	 */
+	@saveVar public static var cacheMode:String = 'Destructive';
+
 	// Aspect ratio mode for scaling: 'fit' = keep 16:9 with black bars, 'stretch' = fill screen
 	@saveVar public static var aspectRatioMode:String = 'fit';
 

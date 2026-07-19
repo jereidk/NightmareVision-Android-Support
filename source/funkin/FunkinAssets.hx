@@ -644,13 +644,24 @@ class FunkinAssets
 		final loadPath = key;
 		#end
 
-		final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(loadPath);
+		// Any failure here (bad/truncated file, unsupported layout, a decoder
+		// hiccup) returns null so the caller can fall back to a normal fully-
+		// loaded Sound instead of the whole stream throwing mid-load.
+		try
+		{
+			final vorbisFile = lime.media.vorbis.VorbisFile.fromFile(loadPath);
+			if (vorbisFile == null) return null;
 
-		if (vorbisFile == null) return null;
-		
-		final buffer = lime.media.AudioBuffer.fromVorbisFile(vorbisFile);
-		
-		return Sound.fromAudioBuffer(buffer);
+			final buffer = lime.media.AudioBuffer.fromVorbisFile(vorbisFile);
+			if (buffer == null) return null;
+
+			return Sound.fromAudioBuffer(buffer);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('getVorbisSound: streaming failed for "$key" ($e) -- falling back to normal load', WARN);
+			return null;
+		}
 		#end
 	}
 }

@@ -210,6 +210,20 @@ class FunkinCache
 	 * this state is being destroyed, nothing it created ephemerally should
 	 * legitimately outlive it, so this sweep ignores useCount entirely.
 	 */
+	/**
+	 * Same as disposeNewSince(), but a no-op when the user has chosen the
+	 * 'Accumulative' cache mode -- there, graphics loaded by a state are kept
+	 * resident after it's destroyed so returning to it (or the next song) reuses
+	 * them instantly, trading RAM for speed. 'Destructive' (default) frees them.
+	 * The single place the cache-mode preference gates per-state disposal, so
+	 * every call site stays a plain one-liner.
+	 */
+	public function disposeNewSinceIfDestructive(snapshot:haxe.ds.StringMap<Bool>):Int
+	{
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative') return 0;
+		return disposeNewSince(snapshot);
+	}
+
 	public function disposeNewSince(snapshot:haxe.ds.StringMap<Bool>):Int
 	{
 		var disposed = 0;

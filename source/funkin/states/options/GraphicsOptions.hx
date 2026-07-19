@@ -73,6 +73,15 @@ class GraphicsOptions
 		gpuCachingOption.onChange = markCustomPreset;
 		opts.push(gpuCachingOption);
 
+		// Independent of the quality preset -- a memory-vs-speed strategy, not a
+		// visual quality knob -- so it deliberately does not markCustomPreset.
+		opts.push(new Option(Lang.str('opt_cachemode', 'Cache Mode'),
+			Lang.str('opt_cachemode_desc',
+				'How loaded art is kept between screens.\nDestructive: free the art a screen loaded when you leave it — lowest RAM, best for low-end devices.\nAccumulative: keep everything loaded — faster returns and next-song loads, but RAM keeps growing. Best for high-end devices.'),
+			'cacheMode', 'string', 'Destructive',
+			[Lang.str('choice_cachemode_destructive', 'Destructive'), Lang.str('choice_cachemode_accumulative', 'Accumulative')],
+			['Destructive', 'Accumulative']));
+
 		final lowQualityOption = new Option(Lang.str('opt_lowquality', 'Low Quality'),
 			Lang.str('opt_lowquality_desc', 'If checked, disables some background details,\ndecreases loading times and improves performance.'),
 			'lowQuality', 'bool', false);
