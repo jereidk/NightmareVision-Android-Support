@@ -619,6 +619,8 @@ class SystemMonitor
 		var gcSuffix = _gcCollisions > 0 ? '  [GC hit noteHitDispatch x$_gcCollisions, ~${Std.int(_gcBytesFreed / 1024)}KB]' : '';
 		var gcHoldSuffix = _gcCollisionsHoldRelease > 0 ? '  [GC hit holdRelease x$_gcCollisionsHoldRelease, ~${Std.int(_gcBytesFreedHoldRelease / 1024)}KB]' : '';
 		var gcDrawSuffix = _gcCollisionsDraw > 0 ? '  [GC hit draw x$_gcCollisionsDraw, ~${Std.int(_gcBytesFreedDraw / 1024)}KB]' : '';
+		var gcSuperUpdateSuffix = _gcCollisionsSuperUpdate > 0 ? '  [GC hit superUpdate x$_gcCollisionsSuperUpdate, ~${Std.int(_gcBytesFreedSuperUpdate / 1024)}KB]' : '';
+		var gcScriptSuffix = _gcCollisionsScript > 0 ? '  [GC hit script x$_gcCollisionsScript, ~${Std.int(_gcBytesFreedScript / 1024)}KB]' : '';
 		#if cpp
 		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
 		var allocSuffix = realWindowMs > 0 ? '  alloc=${Std.int(_windowAllocBytes / 1024 / (realWindowMs / 1000))}KB/s' : '';
@@ -631,7 +633,7 @@ class SystemMonitor
 		// noteCount is PlayState.notes.length — the note *pool* size (a
 		// fixed-size, reused set of Note objects once note pooling actually
 		// works), not the count of notes currently in flight.
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcSuffix$gcHoldSuffix$gcDrawSuffix$gcSuperUpdateSuffix$gcScriptSuffix$gcAnySuffix');
 		profReset();
 	}
 
@@ -725,6 +727,10 @@ class SystemMonitor
 		_gcBytesFreedHoldRelease = 0;
 		_gcCollisionsDraw = 0;
 		_gcBytesFreedDraw = 0;
+		_gcCollisionsSuperUpdate = 0;
+		_gcBytesFreedSuperUpdate = 0;
+		_gcCollisionsScript = 0;
+		_gcBytesFreedScript = 0;
 		_frameGcCollisions = 0;
 		_frameGcBytesFreed = 0;
 	}
@@ -760,6 +766,28 @@ class SystemMonitor
 	// "was actually 100ms of rendering work" instead of guessing from correlation.
 	static var _gcCollisionsDraw:Int = 0;
 	static var _gcBytesFreedDraw:Int = 0;
+
+	// Same idea, applied to super.update() -- the "superUpdate" prof tag has
+	// been the largest single unexplained recurring cost in device logs
+	// (30-140ms+ nearly every second, regardless of note density), and
+	// unlike noteSpawn/draw it has no sub-breakdown at all: it's a single
+	// call that ticks every member (characters, notes, HUD, particles) plus
+	// their own scripted update() hooks. This confirms whether a GC
+	// collision landing inside that one call explains part of it, before
+	// spending effort trying to subdivide super.update() itself further
+	// (which FlxState/FlxGroup don't expose an easy seam for).
+	static var _gcCollisionsSuperUpdate:Int = 0;
+	static var _gcBytesFreedSuperUpdate:Int = 0;
+
+	// Same idea, applied to the 'script' span (scripts.call('onUpdate', ...)).
+	// Interpreted HScript's own onUpdate() hooks (this song alone runs 9 of
+	// them, several with their own onUpdate) are a classic source of GC
+	// pressure -- confirms whether a collision lands specifically inside
+	// script execution rather than guessing from the 'script' phase time
+	// alone, which can't distinguish "the script did real work" from "a
+	// collection happened to fire while we were in there".
+	static var _gcCollisionsScript:Int = 0;
+	static var _gcBytesFreedScript:Int = 0;
 
 	/** Snapshot heap usage right before a span you want to check for a GC collision. */
 	public static inline function gcUsageSnapshot():Float
@@ -803,6 +831,32 @@ class SystemMonitor
 		{
 			_gcCollisionsDraw++;
 			_gcBytesFreedDraw += Std.int(freed);
+		}
+	}
+
+	/** Same as noteGcCollision(), but tracked separately for the super.update() span. */
+	public static function superUpdateGcCollision(before:Float):Void
+	{
+		if (!enabled) return;
+		final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		final freed = before - after;
+		if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+		{
+			_gcCollisionsSuperUpdate++;
+			_gcBytesFreedSuperUpdate += Std.int(freed);
+		}
+	}
+
+	/** Same as noteGcCollision(), but tracked separately for the 'script' (scripts.call('onUpdate', ...)) span. */
+	public static function scriptGcCollision(before:Float):Void
+	{
+		if (!enabled) return;
+		final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		final freed = before - after;
+		if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+		{
+			_gcCollisionsScript++;
+			_gcBytesFreedScript += Std.int(freed);
 		}
 	}
 

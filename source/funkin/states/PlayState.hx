@@ -2945,8 +2945,10 @@ class PlayState extends MusicBeatState
 
 		_scriptUpdateArgs[0] = elapsed;
 		#if android SystemMonitor.profBegin('script'); #end
+		#if android final _gcBeforeScript = SystemMonitor.gcUsageSnapshot(); #end
 		scripts.call('onUpdate', _scriptUpdateArgs);
 		#if android SystemMonitor.profEnd(); #end
+		#if android SystemMonitor.scriptGcCollision(_gcBeforeScript); #end
 
 		// super.update() ticks every member of this state (characters, notes,
 		// receptors, HUD, particles) via their own FlxBasic.update() — none of
@@ -2954,8 +2956,10 @@ class PlayState extends MusicBeatState
 		// unaccounted chunk in every sample so far (profiled phases summed to
 		// a small fraction of the real per-second frame budget).
 		#if android SystemMonitor.profBegin('superUpdate'); #end
+		#if android final _gcBeforeSuperUpdate = SystemMonitor.gcUsageSnapshot(); #end
 		super.update(elapsed);
 		#if android SystemMonitor.profEnd(); #end
+		#if android SystemMonitor.superUpdateGcCollision(_gcBeforeSuperUpdate); #end
 
 		#if android SystemMonitor.profBegin('inputUpdate'); #end
 		input.update();
