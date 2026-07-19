@@ -57,6 +57,14 @@ class FunkinGame extends flixel.FlxGame
 		// of whatever was just destroyed, so this is always correct here.
 		#if mobile
 		if (Controls.instance != null) Controls.instance.isInSubstate = false;
+		// Also drop the stale substate pointer. A full state switch leaves no
+		// substate active, but MusicBeatSubstate.instance keeps pointing at the
+		// just-destroyed one. The next substate opened in the new state captures
+		// that corpse as its _previousInstance and can "restore" it on close,
+		// which routes Controls.get_requested() back at a dead pad (visible pad
+		// animates but never triggers). Clearing it here makes the new state's
+		// substate chain start clean.
+		MusicBeatSubstate.instance = null;
 		#end
 
 		// we need to clear bitmap cache only after previous state is destroyed, which will reset useCount for FlxGraphic objects
