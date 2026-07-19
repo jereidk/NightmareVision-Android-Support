@@ -10,7 +10,13 @@ import funkin.data.NoteSkin.ColorList;
 class NoteSkin implements IFlxDestroyable
 {
 	public var data:NoteSkinData;
-	
+
+	// Native scale of the default note skin. Anything that re-tunes a skin's
+	// scale relative to "normal" (e.g. the VSlice layout) should measure against
+	// this so skins with a different native scale -- like pixel's 6 -- keep
+	// their proportions instead of being clobbered to an absolute value.
+	public static final DEFAULT_SCALE:Float = 0.7;
+
 	public var name:String = '';
 	// public var helper:NoteSkinHelper;
 	public var keys:Int = 4;
@@ -51,8 +57,8 @@ class NoteSkin implements IFlxDestroyable
 	public var susSplashAlpha:Float = 1.0;
 	
 	// scale
-	public var receptorScale:Float = 0.7;
-	public var noteScale:Float = 0.7;
+	public var receptorScale:Float = NoteSkin.DEFAULT_SCALE;
+	public var noteScale:Float = NoteSkin.DEFAULT_SCALE;
 	public var splashScale:Float = 1;
 	public var susSplashScale:Float = 1;
 	
@@ -172,8 +178,8 @@ class NoteSkin implements IFlxDestroyable
 		data.splashAlpha ??= 1.0;
 		data.susSplashAlpha ??= 1.0;
 		
-		data.receptorScale ??= 0.7;
-		data.noteScale ??= 0.7;
+		data.receptorScale ??= NoteSkin.DEFAULT_SCALE;
+		data.noteScale ??= NoteSkin.DEFAULT_SCALE;
 		data.splashScale ??= 1;
 		data.susSplashScale ??= 1;
 		

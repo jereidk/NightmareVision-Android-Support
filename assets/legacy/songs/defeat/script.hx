@@ -4,7 +4,11 @@ function onCreatePost()
 	comboX = 440;
 	playHUD.updateIconsPosition();
 	playHUD.updateIconPos = false;
-	modManager.setValue("opponentSwap", 0.5, 0);
+	// VSlice already centers/positions the player strumline specially; the
+	// opponentSwap centering meant for the Normal layout just fights it and
+	// shoves the notes off-place, so only apply it on the Normal layout.
+	if (ClientPrefs.noteLayout != 'VSlice')
+		modManager.setValue("opponentSwap", 0.5, 0);
 	for (i in game.opponentStrums)
 		i.visible = false;
 	playHUD.healthBar.alpha = 0;

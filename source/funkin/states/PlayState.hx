@@ -1392,8 +1392,16 @@ class PlayState extends MusicBeatState
 				// opponent's strumline is additionally shrunk to match real mobile VSlice's
 				// small, always-top-anchored compact strumline (VSLICE_OPPONENT_SCALE); the
 				// player's is independently tuned via VSLICE_PLAYER_SIZE_SCALE.
-				strums._skin.receptorScale = sizeScale;
-				strums._skin.noteScale = sizeScale;
+				// VSLICE_*_SCALE were pixel-measured against the DEFAULT skin's 0.7 native
+				// scale, so apply them RELATIVE to that -- not as an absolute assignment.
+				// Assigning absolutely clobbers skins whose art has a different native scale
+				// (the pixel skin renders at 6 because its source arrows are ~17px), which
+				// shrank e.g. Dank Bars' pixel notes to a fraction of their intended size.
+				// Scaling relative leaves the default skin identical (0.7 -> sizeScale) while
+				// keeping every other skin's proportions.
+				final vsliceScale = sizeScale / funkin.data.NoteSkin.DEFAULT_SCALE;
+				strums._skin.receptorScale *= vsliceScale;
+				strums._skin.noteScale *= vsliceScale;
 			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
