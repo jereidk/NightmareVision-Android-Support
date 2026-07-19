@@ -78,7 +78,25 @@ class ControlsSubState extends MusicBeatSubstate
 	public function new(device:Device)
 	{
 		super();
-		
+
+		// This substate used to draw with a fully transparent bg (bgColor = 0)
+		// AND a transparent scrolling camera, so the whole controls list just
+		// floated over whatever Options screen sat behind it -- unreadable, and
+		// it read as "there's no background at all". Give it a real modal frame:
+		// dim the screen behind, then a solid panel behind the list. Both live on
+		// FlxG.camera (not the scrolling `camera` built below) so they stay put.
+		var dimBg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xAA0A0A14);
+		dimBg.scrollFactor.set();
+		dimBg.camera = FlxG.camera;
+		add(dimBg);
+
+		var panelBg = new FlxSprite(panelX - 24, topBound - 50).loadGraphic(Paths.image('menu/options/artPanel'));
+		panelBg.setGraphicSize(676 + 48, Std.int((bottomBound + 10) - (topBound - 50)));
+		panelBg.updateHitbox();
+		panelBg.antialiasing = ClientPrefs.globalAntialiasing;
+		panelBg.camera = FlxG.camera;
+		add(panelBg);
+
 		scrollBar = new ScrollBar(panelX - 16, topBound, 8, Std.int(bottomBound - topBound), 0xFF2C3F3F, 0xFFFFFFFF);
 		scrollBar.camera = scrollBar.track.camera = scrollBar.thumb.camera = FlxG.camera;
 		scrollBar.onScroll.add(function(scroll:Float, _) currentScrollY = (scroll * (optionEndY - camera.height)));
@@ -406,7 +424,11 @@ class ControlsSubState extends MusicBeatSubstate
 			
 			targetY = Math.min(targetY, target.y - scrollPad);
 			targetY = Math.max(targetY, target.y + target.height - camera.height + scrollPad);
-			targetY = FlxMath.bound(targetY, 0, optionEndY);
+			// Max scroll is content-height minus the viewport, matching the
+			// scroll bar's own range (scroll * (optionEndY - camera.height)).
+			// Bounding to optionEndY alone let the last option settle a scrollPad
+			// (64px) above the bottom edge, leaving dead empty space below it.
+			targetY = FlxMath.bound(targetY, 0, Math.max(0, optionEndY - camera.height));
 			
 			currentScrollY = FlxMath.lerp(currentScrollY, targetY, FlxMath.getElapsedLerp(.16, elapsed));
 		}
