@@ -198,6 +198,17 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	public var releaseTimestampMs:Float = 0.0;
 
 	/**
+	 * The active alpha-flash tween on this button (see MobileVirtualPad/
+	 * MobileHitbox's flashButton()), if any. Tracked per-button so a new
+	 * flash can cancel just this one tween directly instead of every caller
+	 * doing FlxTween.cancelTweensOf(btn) -- a scan of every active tween in
+	 * the whole game, called once per note hit during Showcase mode (which
+	 * flashes the hit column's button on EVERY autoplayed note), which added
+	 * up fast on dense charts.
+	 */
+	public var flashTween:Null<flixel.tweens.FlxTween> = null;
+
+	/**
 	 * The input currently pressing this button, if none, it's `null`. Needed to check for its release.
 	 */
 	var currentInput:IFlxInput;

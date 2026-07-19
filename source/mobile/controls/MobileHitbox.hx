@@ -79,9 +79,9 @@ class MobileHitbox extends TouchInputManager
 		for (btn in buttons)
 		{
 			if (btn == null || btn.IDs == null || !btn.IDs.contains(id)) continue;
-			FlxTween.cancelTweensOf(btn);
+			if (btn.flashTween != null) btn.flashTween.cancel();
 			btn.alpha = alphaTarget;
-			FlxTween.tween(btn, {alpha: 0.00001}, held ? 0.35 : 0.15, {ease: FlxEase.circInOut, startDelay: held ? 0.05 : 0.0});
+			btn.flashTween = FlxTween.tween(btn, {alpha: 0.00001}, held ? 0.35 : 0.15, {ease: FlxEase.circInOut, startDelay: held ? 0.05 : 0.0});
 			break;
 		}
 	}

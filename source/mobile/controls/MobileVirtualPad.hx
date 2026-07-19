@@ -388,9 +388,9 @@ class MobileVirtualPad extends TouchInputManager
 		{
 			if (btn == null || btn.IDs == null || !btn.IDs.contains(id)) continue;
 			final rest:Float = funkin.data.ClientPrefs.virtualPadAlpha;
-			flixel.tweens.FlxTween.cancelTweensOf(btn);
+			if (btn.flashTween != null) btn.flashTween.cancel();
 			btn.alpha = Math.min(1.0, rest + 0.5);
-			flixel.tweens.FlxTween.tween(btn, {alpha: rest}, held ? 0.35 : 0.18, {ease: flixel.tweens.FlxEase.quadOut});
+			btn.flashTween = flixel.tweens.FlxTween.tween(btn, {alpha: rest}, held ? 0.35 : 0.18, {ease: flixel.tweens.FlxEase.quadOut});
 			break;
 		}
 	}
