@@ -307,6 +307,50 @@ class PlayState extends MusicBeatState
 	var _pendingTails:Array<PendingTail> = [];
 	var _pendingTailIdx:Int = 0;
 
+	/**
+	 * Dead (killed but still-pooled, see disposeNote()) notes bucketed by
+	 * the (skin, noteData) they last had loaded -- lets recycleCompatibleNote()
+	 * find an exact-match reuse candidate in O(1) instead of linearly
+	 * scanning the whole pool hoping to find one, which failed unpredictably
+	 * depending on the chart's own note pattern (a burst of one direction
+	 * with no matching dead notes currently sitting in the pool forced a
+	 * full reloadNote() -- fresh atlas + animation rebuild -- for every note
+	 * in that burst). A real device log on a script-heavy song showed
+	 * noteSpawn cost spiking 100-300ms+ in bursts that lined up exactly with
+	 * this cache-miss pattern, with the pool size itself staying constant
+	 * throughout (so it wasn't pool growth -- this was it).
+	 *
+	 * Entries can go stale if a note gets revived through a path that
+	 * doesn't know about this index (Flixel's own FlxTypedGroup.recycle(),
+	 * used when recycleNote() has no specific target field) --
+	 * recycleCompatibleNote() verifies `!exists` before trusting a popped
+	 * entry instead of assuming the bucket is always accurate, so a missed
+	 * untrack never causes an already-alive note to be handed out twice.
+	 */
+	var _deadNotesByType:Map<NoteSkin, Map<Int, Array<Note>>> = [];
+
+	/** Call from every place a note becomes available for reuse (kill()). */
+	inline function _trackDeadNote(note:Note):Void
+	{
+		if (note._lastLoadedSkin == null) return; // never actually loaded -- nothing to index yet
+
+		var bySkin = _deadNotesByType.get(note._lastLoadedSkin);
+		if (bySkin == null)
+		{
+			bySkin = new Map();
+			_deadNotesByType.set(note._lastLoadedSkin, bySkin);
+		}
+
+		var bucket = bySkin.get(note._lastLoadedNoteData);
+		if (bucket == null)
+		{
+			bucket = [];
+			bySkin.set(note._lastLoadedNoteData, bucket);
+		}
+
+		bucket.push(note);
+	}
+
 	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
 	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
 	final _scriptMoveCamArgs:Array<Dynamic> = [''];
@@ -1664,6 +1708,7 @@ class PlayState extends MusicBeatState
 	{
 		note.kill();
 		note.garbage = true;
+		_trackDeadNote(note);
 		// NOT removed from `notes` — a killed-but-still-a-member note is
 		// exactly what notes.recycle()'s getFirstAvailable() looks for
 		// (first member with exists == false). Splicing it out here used to
@@ -3095,36 +3140,48 @@ class PlayState extends MusicBeatState
 	// checks `texture == resolved`, one condition this doesn't replicate), so
 	// a miss here just falls through to a real reload exactly like before,
 	// never a wrong render.
-	// Single pass: remembers the first dead member seen as a fallback
-	// (matching notes.recycle()'s own getFirstAvailable() behavior exactly)
-	// so this is never worse than what was already there, even when no
-	// compatible member exists yet.
+	// Exact-match lookup is O(1) via _deadNotesByType (see its own doc
+	// comment for why the old linear scan here used to spike noteSpawn cost
+	// unpredictably). Only the "no exact match" fallback still scans --
+	// that path always pays for a real reloadNote() regardless of which
+	// dead member it picks, so the scan itself was never the expensive part
+	// there; the pool is small (settles at the song's peak concurrent note
+	// count), so it stays cheap.
 	// Not `inline`: this has multiple return points (an early return inside
 	// the loop), and Haxe's inliner can't flatten that into the ternary
 	// expression at the call site above ("Cannot inline a not final return").
-	// The loop itself is where all the actual cost is, so losing inlining
-	// here is not a meaningful perf concern.
 	function recycleCompatibleNote(targetSkin:NoteSkin, targetNoteData:Int):Note
 	{
-		var fallback:Note = null;
+		final bySkin = _deadNotesByType.get(targetSkin);
+		if (bySkin != null)
+		{
+			final bucket = bySkin.get(targetNoteData);
+			if (bucket != null)
+			{
+				while (bucket.length > 0)
+				{
+					final candidate = bucket.pop();
+					// Can be stale if something revived this note through a
+					// path that doesn't know about this index (Flixel's own
+					// FlxTypedGroup.recycle(), used by the caller when there's
+					// no specific target field) -- verify before trusting it.
+					if (candidate != null && !candidate.exists)
+					{
+						candidate.revive();
+						return candidate;
+					}
+				}
+			}
+		}
 
+		// No exact match available -- any dead member will do (a reload is
+		// unavoidable here either way).
 		for (member in notes.members)
 		{
 			if (member == null || member.exists) continue;
 
-			if (fallback == null) fallback = member;
-
-			if (member._lastLoadedSkin == targetSkin && member._lastLoadedNoteData == targetNoteData)
-			{
-				member.revive();
-				return member;
-			}
-		}
-
-		if (fallback != null)
-		{
-			fallback.revive();
-			return fallback;
+			member.revive();
+			return member;
 		}
 
 		return notes.add(new Note());
@@ -3140,30 +3197,34 @@ class PlayState extends MusicBeatState
 			|| ScriptConstants.stopping(scripts.call('onSpawnNote', _scriptNoteArgs, false, _scriptNoteTypeExcl)))
 		{
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
-		
+
 		final expectedPlayfield:Null<PlayField> = getFieldFromID(note.lane);
-		
+
 		if (expectedPlayfield == null)
 		{
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else if (expectedPlayfield.autoPlayed && note.strumTime <= Conductor.songPosition && !note.ignoreNote /* && !note.blockHit */)
 		{
 			expectedPlayfield.onNoteHit.dispatch(note, expectedPlayfield);
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else if (!expectedPlayfield.autoPlayed && note.isLate() && !note.ignoreNote && !note.canMiss && !endingSong) // dont Even bother
 		{
 			expectedPlayfield.onNoteMiss.dispatch(note, expectedPlayfield);
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else
@@ -4037,6 +4098,10 @@ class PlayState extends MusicBeatState
 		for (note in notes.members)
 			if (note != null) note.kill();
 		notes.clear();
+		// notes.clear() throws away every member this index could still be
+		// pointing at -- drop it too instead of leaving stale references to
+		// notes that are no longer part of the pool.
+		_deadNotesByType = [];
 
 		for (trail in susTrails.members)
 			if (trail != null) trail.kill();
