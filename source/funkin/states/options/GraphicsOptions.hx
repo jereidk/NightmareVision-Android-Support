@@ -47,16 +47,21 @@ class GraphicsOptions
 					ClientPrefs.lowQuality = true;
 					ClientPrefs.shaders = false;
 					ClientPrefs.globalAntialiasing = false;
+					// Low-end profile: free per-state, lowest RAM footprint.
+					ClientPrefs.cacheMode = 'Destructive';
 				case 'Medium':
 					#if !android ClientPrefs.gpuCaching = true; #end
 					ClientPrefs.lowQuality = false;
 					ClientPrefs.shaders = false;
 					ClientPrefs.globalAntialiasing = true;
+					ClientPrefs.cacheMode = 'Destructive';
 				case 'High':
 					#if !android ClientPrefs.gpuCaching = true; #end
 					ClientPrefs.lowQuality = false;
 					ClientPrefs.shaders = true;
 					ClientPrefs.globalAntialiasing = true;
+					// High-end profile: keep art resident for faster returns.
+					ClientPrefs.cacheMode = 'Accumulative';
 				default: // Custom -- leave individual settings unchanged
 			}
 			onChangeAntiAliasing();
@@ -73,14 +78,16 @@ class GraphicsOptions
 		gpuCachingOption.onChange = markCustomPreset;
 		opts.push(gpuCachingOption);
 
-		// Independent of the quality preset -- a memory-vs-speed strategy, not a
-		// visual quality knob -- so it deliberately does not markCustomPreset.
-		opts.push(new Option(Lang.str('opt_cachemode', 'Cache Mode'),
+		// Part of the performance preset (Low/Medium -> Destructive, High ->
+		// Accumulative), so changing it by hand drops the preset to Custom.
+		final cacheModeOption = new Option(Lang.str('opt_cachemode', 'Cache Mode'),
 			Lang.str('opt_cachemode_desc',
 				'How loaded art is kept between screens.\nDestructive: free the art a screen loaded when you leave it — lowest RAM, best for low-end devices.\nAccumulative: keep everything loaded — faster returns and next-song loads, but RAM keeps growing. Best for high-end devices.'),
 			'cacheMode', 'string', 'Destructive',
 			[Lang.str('choice_cachemode_destructive', 'Destructive'), Lang.str('choice_cachemode_accumulative', 'Accumulative')],
-			['Destructive', 'Accumulative']));
+			['Destructive', 'Accumulative']);
+		cacheModeOption.onChange = markCustomPreset;
+		opts.push(cacheModeOption);
 
 		final lowQualityOption = new Option(Lang.str('opt_lowquality', 'Low Quality'),
 			Lang.str('opt_lowquality_desc', 'If checked, disables some background details,\ndecreases loading times and improves performance.'),

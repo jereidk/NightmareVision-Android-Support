@@ -155,7 +155,10 @@ class OptionsState extends MusicBeatState
 	// math (and the couple of places that used to repeat "6"/"74" inline)
 	// stay readable instead of scattering the same two magic numbers around.
 	static final DESC_GAP:Float = 6;
-	static final DESC_H:Float = 74;
+	// Taller description box so multi-line option descriptions get room to
+	// breathe. panelH trades this against LIST_MAX_VISIBLE below, so the panel's
+	// bottom edge stays put -- only ~half an option row is given up for it.
+	static final DESC_H:Float = 96;
 
 	// menu/freeplay/card.png's own corner radius measures ~16-17px (scanned
 	// its alpha channel) -- 20 gives NineSlice.build() a couple px of buffer
@@ -174,6 +177,13 @@ class OptionsState extends MusicBeatState
 	// whole reason for this redesign, so keeping the list clear of it is the
 	// one non-negotiable measurement here.
 	static final LIST_X:Float = 360;
+
+	// Right edge (pre-cutout) shared by the tabs row and the options/description
+	// panel below it, so both stay the same width and aligned. LIST_X is pinned
+	// by the Virtual Pad clearance, so widening the panel means pushing THIS out
+	// -- there's clear space between here and the 1280 canvas edge (plus the
+	// cutout expansion) to grow into without disturbing any left-edge position.
+	static final CONTENT_RIGHT_EDGE:Float = 1200;
 
 	// Strip reserved at the description box's right edge for the reset-to-
 	// default button, so descText's word wrap never runs underneath it.
@@ -275,7 +285,7 @@ class OptionsState extends MusicBeatState
 			topBar.updateHitbox();
 			add(topBar);
 
-			var optionsHeaderY:Float = 18 + (ClientPrefs.language == 'arabic' ? -10 : 0);
+			var optionsHeaderY:Float = 10 + (ClientPrefs.language == 'arabic' ? -10 : 0);
 			optionsHeader = new FlxText(40 + cutout * 0.5, optionsHeaderY, 0, Lang.str('options'), 62);
 			optionsHeader.setFormat(Paths.font('AmaticSC-Bold.ttf'), 42, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			optionsHeader.borderSize = 2;
@@ -303,10 +313,11 @@ class OptionsState extends MusicBeatState
 			// each hardcode this independently; nothing enforced they'd stay in
 			// sync if either widget's position/size ever changed).
 			final tabsAreaStart = optionsHeader.x;
-			// Fall back to the close button's would-be right edge (x 1100 + width
-			// ~60) when it isn't created (Virtual Pad nav), so the tab row keeps
-			// the exact same bounds it had when the button was present.
-			final tabsAreaEnd = (menuBackButton != null) ? menuBackButton.x + menuBackButton.width : (1160 + cutout);
+			// With the close 'X' present (Touch nav) the tabs end at its right edge;
+			// without it (Virtual Pad nav, the default) they extend to the shared
+			// CONTENT_RIGHT_EDGE so the tabs and the wider options panel below line
+			// up on the right in that mode.
+			final tabsAreaEnd = (menuBackButton != null) ? menuBackButton.x + menuBackButton.width : (CONTENT_RIGHT_EDGE + cutout);
 
 			// Action buttons sit on the SAME row as the title and the close
 			// button, so their span has to be read off those two widgets' actual
@@ -315,7 +326,7 @@ class OptionsState extends MusicBeatState
 			// than ~276px. A longer translation of "Options" -- or, as of the
 			// Controls button just added, five buttons squeezed into the same
 			// row -- had no guarantee of actually clearing the title text.
-			buildActionButtons(optionsHeader.x + optionsHeader.width + 24, ((menuBackButton != null) ? menuBackButton.x : (1100 + cutout)) - 10);
+			buildActionButtons(optionsHeader.x + optionsHeader.width + 24, ((menuBackButton != null) ? menuBackButton.x : (CONTENT_RIGHT_EDGE + cutout)) - 10);
 
 			// Same thingy.png-derived gradient as artPanelBg below (the "options"
 			// panel), cropped to a short strip instead -- unifies tabs with the
@@ -335,7 +346,7 @@ class OptionsState extends MusicBeatState
 
 			buildLanguageSearch(tabsAreaStart, tabsAreaEnd);
 
-			final listW = (1160 + cutout) - LIST_X;
+			final listW = (CONTENT_RIGHT_EDGE + cutout) - LIST_X;
 
 			// Shared backdrop for the whole options column below the tabs --
 			// upstream's thingy.png-derived gradient (same source as
