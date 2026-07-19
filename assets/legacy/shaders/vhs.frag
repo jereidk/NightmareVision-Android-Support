@@ -68,12 +68,9 @@ vec3 rgb2yiq(vec3 col)
 }
 // end ntsc-rgbyuv
 
-// NOTE: the 33 NTSC luma/chroma filter taps below used to be written into two
-// float[TAPS+1] arrays *every fragment* and then read with a dynamic index --
-// a real perf cliff on mobile GPUs (private-array indexing spills to slow
-// memory). They're compile-time constants, so main() now folds them straight
-// into a fully-unrolled accumulation: no per-pixel array construction, no
-// dynamic indexing, bit-identical output.
+#define TAPS 32
+float luma_filter[TAPS + 1];
+float chroma_filter[TAPS + 1];
 
 vec4 pass1(vec2 uv)
 {
@@ -101,55 +98,97 @@ vec4 pass1(vec2 uv)
 	return vec4(yiq, cola.a);
 }
 
-vec3 fetch_yiq(vec2 uv, float offset, float one_x)
-{
-	// same sample position as the old fetch_offset(); alpha is unused downstream
-	// (the final pixel's alpha is sampled fresh at uv), so only YIQ is carried.
-	return pass1(uv + vec2((offset - 0.5) * one_x, 0.0)).xyz;
+vec4 fetch_offset(vec2 uv, float offset, float one_x) {
+	return pass1(uv + vec2((offset - 0.5) * one_x, 0.0)).xyzw;
 }
 
 void main()
 {
+	luma_filter[0] = -0.000174844;
+	luma_filter[1] = -0.000205844;
+	luma_filter[2] = -0.000149453;
+	luma_filter[3] = -0.000051693;
+	luma_filter[4] = 0.000000000;
+	luma_filter[5] = -0.000066171;
+	luma_filter[6] = -0.000245058;
+	luma_filter[7] = -0.000432928;
+	luma_filter[8] = -0.000472644;
+	luma_filter[9] = -0.000252236;
+	luma_filter[10] = 0.000198929;
+	luma_filter[11] = 0.000687058;
+	luma_filter[12] = 0.000944112;
+	luma_filter[13] = 0.000803467;
+	luma_filter[14] = 0.000363199;
+	luma_filter[15] = 0.000013422;
+	luma_filter[16] = 0.000253402;
+	luma_filter[17] = 0.001339461;
+	luma_filter[18] = 0.002932972;
+	luma_filter[19] = 0.003983485;
+	luma_filter[20] = 0.003026683;
+	luma_filter[21] = -0.001102056;
+	luma_filter[22] = -0.008373026;
+	luma_filter[23] = -0.016897700;
+	luma_filter[24] = -0.022914480;
+	luma_filter[25] = -0.021642347;
+	luma_filter[26] = -0.008863273;
+	luma_filter[27] = 0.017271957;
+	luma_filter[28] = 0.054921920;
+	luma_filter[29] = 0.098342579;
+	luma_filter[30] = 0.139044281;
+	luma_filter[31] = 0.168055832;
+	luma_filter[32] = 0.178571429;
+
+	chroma_filter[0] = 0.001384762;
+	chroma_filter[1] = 0.001678312;
+	chroma_filter[2] = 0.002021715;
+	chroma_filter[3] = 0.002420562;
+	chroma_filter[4] = 0.002880460;
+	chroma_filter[5] = 0.003406879;
+	chroma_filter[6] = 0.004004985;
+	chroma_filter[7] = 0.004679445;
+	chroma_filter[8] = 0.005434218;
+	chroma_filter[9] = 0.006272332;
+	chroma_filter[10] = 0.007195654;
+	chroma_filter[11] = 0.008204665;
+	chroma_filter[12] = 0.009298238;
+	chroma_filter[13] = 0.010473450;
+	chroma_filter[14] = 0.011725413;
+	chroma_filter[15] = 0.013047155;
+	chroma_filter[16] = 0.014429548;
+	chroma_filter[17] = 0.015861306;
+	chroma_filter[18] = 0.017329037;
+	chroma_filter[19] = 0.018817382;
+	chroma_filter[20] = 0.020309220;
+	chroma_filter[21] = 0.021785952;
+	chroma_filter[22] = 0.023227857;
+	chroma_filter[23] = 0.024614500;
+	chroma_filter[24] = 0.025925203;
+	chroma_filter[25] = 0.027139546;
+	chroma_filter[26] = 0.028237893;
+	chroma_filter[27] = 0.029201910;
+	chroma_filter[28] = 0.030015081;
+	chroma_filter[29] = 0.030663170;
+	chroma_filter[30] = 0.031134640;
+	chroma_filter[31] = 0.031420995;
+	chroma_filter[32] = 0.031517031;
+	
 	vec2 uv = openfl_TextureCoordv;
+	vec2 fragCoord = uv * openfl_TextureSize;
+
 	float one_x = 1.0 / openfl_TextureSize.x;
-	vec3 signal = vec3(0.0);
+	vec4 signal = vec4(0.0);
 
-	// 33-tap one-sided NTSC filter, unrolled. The 32 outer taps carry weight x2
-	// and the final centre tap weight x1 -- exactly the old loop + trailing tap.
-	signal += fetch_yiq(uv, -32.0, one_x) * 2.0 * vec3(-0.000174844, 0.001384762, 0.001384762);
-	signal += fetch_yiq(uv, -31.0, one_x) * 2.0 * vec3(-0.000205844, 0.001678312, 0.001678312);
-	signal += fetch_yiq(uv, -30.0, one_x) * 2.0 * vec3(-0.000149453, 0.002021715, 0.002021715);
-	signal += fetch_yiq(uv, -29.0, one_x) * 2.0 * vec3(-0.000051693, 0.002420562, 0.002420562);
-	signal += fetch_yiq(uv, -28.0, one_x) * 2.0 * vec3(0.000000000, 0.002880460, 0.002880460);
-	signal += fetch_yiq(uv, -27.0, one_x) * 2.0 * vec3(-0.000066171, 0.003406879, 0.003406879);
-	signal += fetch_yiq(uv, -26.0, one_x) * 2.0 * vec3(-0.000245058, 0.004004985, 0.004004985);
-	signal += fetch_yiq(uv, -25.0, one_x) * 2.0 * vec3(-0.000432928, 0.004679445, 0.004679445);
-	signal += fetch_yiq(uv, -24.0, one_x) * 2.0 * vec3(-0.000472644, 0.005434218, 0.005434218);
-	signal += fetch_yiq(uv, -23.0, one_x) * 2.0 * vec3(-0.000252236, 0.006272332, 0.006272332);
-	signal += fetch_yiq(uv, -22.0, one_x) * 2.0 * vec3(0.000198929, 0.007195654, 0.007195654);
-	signal += fetch_yiq(uv, -21.0, one_x) * 2.0 * vec3(0.000687058, 0.008204665, 0.008204665);
-	signal += fetch_yiq(uv, -20.0, one_x) * 2.0 * vec3(0.000944112, 0.009298238, 0.009298238);
-	signal += fetch_yiq(uv, -19.0, one_x) * 2.0 * vec3(0.000803467, 0.010473450, 0.010473450);
-	signal += fetch_yiq(uv, -18.0, one_x) * 2.0 * vec3(0.000363199, 0.011725413, 0.011725413);
-	signal += fetch_yiq(uv, -17.0, one_x) * 2.0 * vec3(0.000013422, 0.013047155, 0.013047155);
-	signal += fetch_yiq(uv, -16.0, one_x) * 2.0 * vec3(0.000253402, 0.014429548, 0.014429548);
-	signal += fetch_yiq(uv, -15.0, one_x) * 2.0 * vec3(0.001339461, 0.015861306, 0.015861306);
-	signal += fetch_yiq(uv, -14.0, one_x) * 2.0 * vec3(0.002932972, 0.017329037, 0.017329037);
-	signal += fetch_yiq(uv, -13.0, one_x) * 2.0 * vec3(0.003983485, 0.018817382, 0.018817382);
-	signal += fetch_yiq(uv, -12.0, one_x) * 2.0 * vec3(0.003026683, 0.020309220, 0.020309220);
-	signal += fetch_yiq(uv, -11.0, one_x) * 2.0 * vec3(-0.001102056, 0.021785952, 0.021785952);
-	signal += fetch_yiq(uv, -10.0, one_x) * 2.0 * vec3(-0.008373026, 0.023227857, 0.023227857);
-	signal += fetch_yiq(uv, -9.0, one_x) * 2.0 * vec3(-0.016897700, 0.024614500, 0.024614500);
-	signal += fetch_yiq(uv, -8.0, one_x) * 2.0 * vec3(-0.022914480, 0.025925203, 0.025925203);
-	signal += fetch_yiq(uv, -7.0, one_x) * 2.0 * vec3(-0.021642347, 0.027139546, 0.027139546);
-	signal += fetch_yiq(uv, -6.0, one_x) * 2.0 * vec3(-0.008863273, 0.028237893, 0.028237893);
-	signal += fetch_yiq(uv, -5.0, one_x) * 2.0 * vec3(0.017271957, 0.029201910, 0.029201910);
-	signal += fetch_yiq(uv, -4.0, one_x) * 2.0 * vec3(0.054921920, 0.030015081, 0.030015081);
-	signal += fetch_yiq(uv, -3.0, one_x) * 2.0 * vec3(0.098342579, 0.030663170, 0.030663170);
-	signal += fetch_yiq(uv, -2.0, one_x) * 2.0 * vec3(0.139044281, 0.031134640, 0.031134640);
-	signal += fetch_yiq(uv, -1.0, one_x) * 2.0 * vec3(0.168055832, 0.031420995, 0.031420995);
-	signal += fetch_yiq(uv, 0.0, one_x) * vec3(0.178571429, 0.031517031, 0.031517031);
+	for (int i = 0; i < TAPS; i++)
+	{
+		float offset = float(i);
 
-	vec3 rgb = yiq2rgb(signal);
+		vec4 sums = fetch_offset(uv, offset - float(TAPS), one_x) * 2.0;
+
+		signal += sums * vec4(luma_filter[i], chroma_filter[i], chroma_filter[i], 1.0);
+	}
+	signal += pass1(uv - vec2(0.5 / openfl_TextureSize.x, 0.0)).xyzw *
+		vec4(luma_filter[TAPS], chroma_filter[TAPS], chroma_filter[TAPS], 1.0);
+
+	vec3 rgb = yiq2rgb(signal.xyz);
 	gl_FragColor = vec4(pow(rgb, vec3(NTSC_CRT_GAMMA / NTSC_MONITOR_GAMMA)), flixel_texture2D(bitmap, uv).a);
 }
