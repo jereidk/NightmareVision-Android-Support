@@ -68,7 +68,7 @@ vec3 rgb2yiq(vec3 col)
 }
 // end ntsc-rgbyuv
 
-#define TAPS 32
+#define TAPS 16 // NTSC kernel length: 33->17 fetches (~half); weights renormalized so brightness/saturation are unchanged, only the horizontal colour-bleed tail is shorter
 float luma_filter[TAPS + 1];
 float chroma_filter[TAPS + 1];
 
@@ -104,73 +104,41 @@ vec4 fetch_offset(vec2 uv, float offset, float one_x) {
 
 void main()
 {
-	luma_filter[0] = -0.000174844;
-	luma_filter[1] = -0.000205844;
-	luma_filter[2] = -0.000149453;
-	luma_filter[3] = -0.000051693;
-	luma_filter[4] = 0.000000000;
-	luma_filter[5] = -0.000066171;
-	luma_filter[6] = -0.000245058;
-	luma_filter[7] = -0.000432928;
-	luma_filter[8] = -0.000472644;
-	luma_filter[9] = -0.000252236;
-	luma_filter[10] = 0.000198929;
-	luma_filter[11] = 0.000687058;
-	luma_filter[12] = 0.000944112;
-	luma_filter[13] = 0.000803467;
-	luma_filter[14] = 0.000363199;
-	luma_filter[15] = 0.000013422;
-	luma_filter[16] = 0.000253402;
-	luma_filter[17] = 0.001339461;
-	luma_filter[18] = 0.002932972;
-	luma_filter[19] = 0.003983485;
-	luma_filter[20] = 0.003026683;
-	luma_filter[21] = -0.001102056;
-	luma_filter[22] = -0.008373026;
-	luma_filter[23] = -0.016897700;
-	luma_filter[24] = -0.022914480;
-	luma_filter[25] = -0.021642347;
-	luma_filter[26] = -0.008863273;
-	luma_filter[27] = 0.017271957;
-	luma_filter[28] = 0.054921920;
-	luma_filter[29] = 0.098342579;
-	luma_filter[30] = 0.139044281;
-	luma_filter[31] = 0.168055832;
-	luma_filter[32] = 0.178571429;
+	luma_filter[0] = 0.000253889;
+	luma_filter[1] = 0.001342038;
+	luma_filter[2] = 0.002938614;
+	luma_filter[3] = 0.003991148;
+	luma_filter[4] = 0.003032506;
+	luma_filter[5] = -0.001104176;
+	luma_filter[6] = -0.008389134;
+	luma_filter[7] = -0.016930207;
+	luma_filter[8] = -0.022958562;
+	luma_filter[9] = -0.021683982;
+	luma_filter[10] = -0.008880324;
+	luma_filter[11] = 0.017305184;
+	luma_filter[12] = 0.055027577;
+	luma_filter[13] = 0.098531767;
+	luma_filter[14] = 0.139311770;
+	luma_filter[15] = 0.168379132;
+	luma_filter[16] = 0.178914959;
 
-	chroma_filter[0] = 0.001384762;
-	chroma_filter[1] = 0.001678312;
-	chroma_filter[2] = 0.002021715;
-	chroma_filter[3] = 0.002420562;
-	chroma_filter[4] = 0.002880460;
-	chroma_filter[5] = 0.003406879;
-	chroma_filter[6] = 0.004004985;
-	chroma_filter[7] = 0.004679445;
-	chroma_filter[8] = 0.005434218;
-	chroma_filter[9] = 0.006272332;
-	chroma_filter[10] = 0.007195654;
-	chroma_filter[11] = 0.008204665;
-	chroma_filter[12] = 0.009298238;
-	chroma_filter[13] = 0.010473450;
-	chroma_filter[14] = 0.011725413;
-	chroma_filter[15] = 0.013047155;
-	chroma_filter[16] = 0.014429548;
-	chroma_filter[17] = 0.015861306;
-	chroma_filter[18] = 0.017329037;
-	chroma_filter[19] = 0.018817382;
-	chroma_filter[20] = 0.020309220;
-	chroma_filter[21] = 0.021785952;
-	chroma_filter[22] = 0.023227857;
-	chroma_filter[23] = 0.024614500;
-	chroma_filter[24] = 0.025925203;
-	chroma_filter[25] = 0.027139546;
-	chroma_filter[26] = 0.028237893;
-	chroma_filter[27] = 0.029201910;
-	chroma_filter[28] = 0.030015081;
-	chroma_filter[29] = 0.030663170;
-	chroma_filter[30] = 0.031134640;
-	chroma_filter[31] = 0.031420995;
-	chroma_filter[32] = 0.031517031;
+	chroma_filter[0] = 0.017775994;
+	chroma_filter[1] = 0.019539800;
+	chroma_filter[2] = 0.021347922;
+	chroma_filter[3] = 0.023181438;
+	chroma_filter[4] = 0.025019258;
+	chroma_filter[5] = 0.026838468;
+	chroma_filter[6] = 0.028614774;
+	chroma_filter[7] = 0.030323002;
+	chroma_filter[8] = 0.031937678;
+	chroma_filter[9] = 0.033433647;
+	chroma_filter[10] = 0.034786719;
+	chroma_filter[11] = 0.035974307;
+	chroma_filter[12] = 0.036976065;
+	chroma_filter[13] = 0.037774457;
+	chroma_filter[14] = 0.038355268;
+	chroma_filter[15] = 0.038708034;
+	chroma_filter[16] = 0.038826342;
 	
 	vec2 uv = openfl_TextureCoordv;
 	vec2 fragCoord = uv * openfl_TextureSize;
