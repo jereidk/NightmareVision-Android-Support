@@ -1564,13 +1564,20 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	// ── Cleanup ──────────────────────────────────────────────────────────────
 
-	override function close():Void
-	{
-		#if mobile
-		removeVirtualPad();
-		#end
-		super.close();
-	}
+	// NOTE: do NOT call removeVirtualPad() from an override of close() here.
+	// close() only requests the substate be closed -- Flixel defers the
+	// actual destroy() to the start of a later update(), so a manual
+	// removeVirtualPad() in close() destroys this substate's pad and
+	// un-hides OptionsState's pad several frames before destroy() gets
+	// around to restoring MusicBeatSubstate.instance/Controls.isInSubstate.
+	// In that window, Controls.get_requested() still resolves to THIS
+	// substate (still .exists == true, not destroyed yet) whose virtualPad
+	// is already null -- any touch on the now-visible parent pad during
+	// that window silently does nothing (animates locally, never registers
+	// with Controls). destroy() already calls removeVirtualPad() itself,
+	// in the same synchronous call as the instance/isInSubstate restore
+	// (MusicBeatSubstate.destroy()), so there's no gap to exploit -- let it
+	// be the only place this happens.
 
 	override function destroy():Void
 	{
