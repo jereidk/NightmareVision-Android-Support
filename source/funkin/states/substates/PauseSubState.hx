@@ -387,10 +387,10 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 				if (curTime > skipToTime)
 				{
 					PlayState.startOnTime = skipToTime;
-					
+
 					FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
-					
-					FlxG.resetState();
+
+					fadeThenResetState();
 				}
 				else if (curTime < skipToTime)
 				{
@@ -454,6 +454,33 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 	{
 		PlayState.instance.paused = true;
 		if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
-		FlxG.resetState();
+
+		if (noTrans)
+		{
+			FlxG.resetState();
+			return;
+		}
+
+		fadeThenResetState();
+	}
+
+	/**
+	 * FlxG.resetState() re-runs PlayState.create()'s whole synchronous burst
+	 * (stage/character/script/note construction) -- none of that is skipped
+	 * just because it's a retry of the same song (character JSON, scripts and
+	 * notes are re-parsed/rebuilt every time, warm asset cache or not -- see
+	 * the create() phase timings). PlayState's own transition-in substate only
+	 * opens near the END of that burst (super.create(), close to the very
+	 * bottom), so without this fade the screen just sits frozen on whatever
+	 * was showing (this pause menu) for however long the burst takes. Mirrors
+	 * GameOverSubstate.endBullshit()'s fade for the same reason.
+	 */
+	function fadeThenResetState(duration:Float = 0.35):Void
+	{
+		FlxG.camera.fade(FlxColor.BLACK, duration, false, function() {
+			FlxG.resetState();
+		});
+		if (cameras != null && cameras.length > 0 && cameras[0] != FlxG.camera)
+			cameras[0].fade(FlxColor.BLACK, duration, false);
 	}
 }
