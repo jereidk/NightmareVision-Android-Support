@@ -2496,10 +2496,8 @@ class PlayState extends MusicBeatState
 	override public function draw():Void
 	{
 		#if android SystemMonitor.profBegin('draw'); #end
-		#if android final _gcBeforeDraw = SystemMonitor.gcUsageSnapshot(); #end
 		super.draw();
 		#if android SystemMonitor.profEnd(); #end
-		#if android SystemMonitor.drawGcCollision(_gcBeforeDraw); #end
 	}
 
 	override public function update(elapsed:Float):Void
@@ -2945,10 +2943,8 @@ class PlayState extends MusicBeatState
 
 		_scriptUpdateArgs[0] = elapsed;
 		#if android SystemMonitor.profBegin('script'); #end
-		#if android final _gcBeforeScript = SystemMonitor.gcUsageSnapshot(); #end
 		scripts.call('onUpdate', _scriptUpdateArgs);
 		#if android SystemMonitor.profEnd(); #end
-		#if android SystemMonitor.scriptGcCollision(_gcBeforeScript); #end
 
 		// super.update() ticks every member of this state (characters, notes,
 		// receptors, HUD, particles) via their own FlxBasic.update() — none of
@@ -2956,10 +2952,8 @@ class PlayState extends MusicBeatState
 		// unaccounted chunk in every sample so far (profiled phases summed to
 		// a small fraction of the real per-second frame budget).
 		#if android SystemMonitor.profBegin('superUpdate'); #end
-		#if android final _gcBeforeSuperUpdate = SystemMonitor.gcUsageSnapshot(); #end
 		super.update(elapsed);
 		#if android SystemMonitor.profEnd(); #end
-		#if android SystemMonitor.superUpdateGcCollision(_gcBeforeSuperUpdate); #end
 
 		#if android SystemMonitor.profBegin('inputUpdate'); #end
 		input.update();
@@ -4222,15 +4216,9 @@ class PlayState extends MusicBeatState
 				
 				if (topNote != null)
 				{
-					#if android
-					final _gcBefore = SystemMonitor.gcUsageSnapshot();
-					SystemMonitor.profBegin('noteHitDispatch');
-					#end
+					#if android SystemMonitor.profBegin('noteHitDispatch'); #end
 					field.onNoteHit.dispatch(topNote, field);
-					#if android
-					SystemMonitor.profEnd();
-					SystemMonitor.noteGcCollision(_gcBefore);
-					#end
+					#if android SystemMonitor.profEnd(); #end
 
 					ghostTapped = false;
 				}
@@ -4377,12 +4365,11 @@ class PlayState extends MusicBeatState
 				// to be exactly where the sustain-note-end freeze happens, outside
 				// every tag noteHit() already profiles. dance() itself was found to
 				// rebuild its anim name strings on every call and has since been
-				// fixed (Bopper.hx); gcUsageSnapshot/holdReleaseGcCollision here
-				// confirm whether a GC collision still lands in this specific span.
-				#if android
-				SystemMonitor.profBegin('holdRelease');
-				final _gcBeforeHoldRelease = SystemMonitor.gcUsageSnapshot();
-				#end
+				// fixed (Bopper.hx); this tag is on SystemMonitor's _gcWatchNested
+				// list (nested inside keyShit, but fires once per frame like a
+				// top-level tag would) so profBegin/profEnd still confirm whether a
+				// GC collision lands in this specific span.
+				#if android SystemMonitor.profBegin('holdRelease'); #end
 				for (field in playFields)
 				{
 					if (field.playerControls && field.owner?.holding) field.owner.holding = false;
@@ -4395,10 +4382,7 @@ class PlayState extends MusicBeatState
 
 					holders.resize(0);
 				}
-				#if android
-				SystemMonitor.profEnd();
-				SystemMonitor.holdReleaseGcCollision(_gcBeforeHoldRelease);
-				#end
+				#if android SystemMonitor.profEnd(); #end
 			}
 		}
 	}
