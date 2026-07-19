@@ -665,6 +665,8 @@
 		"opt_devmode_desc": "If checked, traces & developer hotkeys will become available.",
 		"opt_streamedsongfiles": "Streamed Song files",
 		"opt_streamedsongfiles_desc": "Playable song files will be streamed via bytes instead of being loaded all at once. This heavily improves loading times, however it is EXTREMELY EXPERIMENTAL and prone to issues.",
+		"opt_threadedpreload": "Background Song Preload",
+		"opt_threadedpreload_desc": "The loading screen decodes the next song's assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way. Turn this off if you notice stutters or audio glitches right as a song starts.",
 		"opt_autopause": "Auto-Pause Game",
 		"opt_autopause_desc": "The game will automatically freeze when unselected, pausing all sounds and visuals. If unchecked, the game will continue as normal regardless of focus.",
 		"opt_quants": "Quants Enabled",

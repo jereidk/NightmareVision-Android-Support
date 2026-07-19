@@ -433,6 +433,14 @@ class LoadingState extends MusicBeatState
 	{
 		if (song == null) return true;
 
+		// Escape hatch: skip the background prefetch entirely. Deliberately
+		// does NOT touch _prefetchComplete/_prefetchForSongId, so
+		// isPrefetchedFor() stays honestly "no" for this song -- the caller
+		// (PlayState.endSong()'s hybrid check) falls through to routing
+		// through LoadingState normally instead of short-circuiting straight
+		// to PlayState.new() with nothing actually warmed.
+		if (!funkin.data.ClientPrefs.threadedPreload) return true;
+
 		// Reset any previously-stale prefetch state (from a different song).
 		_mutex.acquire();
 		final hadStaleData = _prefetchForSongId != song.song;
@@ -944,6 +952,29 @@ class LoadingState extends MusicBeatState
 	{
 		final song = PlayState.SONG;
 		if (song == null) return;
+
+		// Escape hatch (ClientPrefs.threadedPreload): skip the worker Thread
+		// entirely and land in the exact same terminal state as the "nothing
+		// to preload" case below -- update()'s Phase C just waits MIN_SHOW_TIME
+		// then switches, and PlayState.create() decodes everything itself the
+		// old synchronous way. Bump _threadGeneration first so any prior
+		// still-running background thread (e.g. from prefetchSong()) notices
+		// and bails out instead of writing into the state we're about to reset.
+		if (!funkin.data.ClientPrefs.threadedPreload)
+		{
+			++_threadGeneration;
+			_mutex.acquire();
+			_totalTasks = 0;
+			_completedDecodes = 0;
+			_completedFinalizes = 0;
+			_allFilesOpened = true;
+			_allFinalized = true;
+			_progress = 1.0;
+			_label = 'Preparing…';
+			_mutex.release();
+			Logger.log('[LoadingState] threadedPreload disabled -- skipping background decode, PlayState will load synchronously', NOTICE, true);
+			return;
+		}
 
 		// Reset static state from any previous run, but keep any
 		// BitmapData / AudioBuffer / ASTC bytes that prefetchSong() already

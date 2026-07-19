@@ -29,6 +29,11 @@ class MiscOptions
 				'If checked, playable song files will be streamed via bytes instead of being loaded all at once. This heavily improves loading times, however it is EXTREMELY EXPERIMENTAL and prone to issues.'),
 			'streamedMusic', 'bool', false));
 
+		opts.push(new Option(Lang.str('opt_threadedpreload', 'Background Song Preload'),
+			Lang.str('opt_threadedpreload_desc',
+				'If checked, the loading screen decodes the next song\'s assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way. Turn this off if you notice stutters or audio glitches right as a song starts.'),
+			'threadedPreload', 'bool', true));
+
 		final pauseOption = new Option(Lang.str('opt_autopause', 'Auto-Pause Game'),
 			Lang.str('opt_autopause_desc',
 				'If checked, the game will automatically freeze when unselected, pausing all sounds and visuals. If unchecked, the game will continue as normal regardless of focus.'),
