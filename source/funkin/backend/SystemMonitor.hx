@@ -652,6 +652,29 @@ class SystemMonitor
 		_windowAllocBytes = 0;
 	}
 
+	// ==================== AUDIO SYNC ====================
+
+	// PlayState.stepHit() already detects when audio.inst (or, for songs with
+	// voices, the vocal group) has drifted more than one frame's worth of
+	// time from Conductor.songPosition and silently fixes it via
+	// resyncVocals() — every one of those corrections is an audible glitch
+	// (a sudden jump/snap in what's playing), which is exactly the "voices
+	// sound distorted/laggy" symptom reported on device with nothing in this
+	// log ever explaining it. This turns each silent correction into a
+	// timestamped line so it can be lined up against whatever [SPIKE] or
+	// [GC hit] happened in the same window instead of being invisible.
+	static var _lastAudioResyncTime:Float = -999.0;
+	static inline final AUDIO_RESYNC_COOLDOWN:Float = 0.5; // collapse a burst of back-to-back corrections from the same sustained cause into one line
+
+	public static function reportAudioResync(cause:String, driftMs:Float, songTimeMs:Float):Void
+	{
+		if (!enabled) return;
+		final now = haxe.Timer.stamp();
+		if (now - _lastAudioResyncTime < AUDIO_RESYNC_COOLDOWN) return;
+		_lastAudioResyncTime = now;
+		_write('[AUDIO RESYNC] cause=$cause drift=${Std.int(driftMs)}ms songTime=${Std.int(songTimeMs / 1000)}s${_systemMemContext()}');
+	}
+
 	// ==================== PHASE PROFILING ====================
 
 	// Answers "what specifically is slow" instead of just "it's slow": wrap

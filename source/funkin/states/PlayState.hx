@@ -4461,8 +4461,15 @@ class PlayState extends MusicBeatState
 		
 		if (audio.inst?.playing)
 		{
-			if (Math.abs(audio.inst.time - (Conductor.songPosition - Conductor.offset)) > maxToleratedOffset
-				|| (SONG.needsVoices && audio.getDesyncDifference(Math.abs(Conductor.songPosition - Conductor.offset)) > maxToleratedOffset)) resyncVocals();
+			final instDrift = Math.abs(audio.inst.time - (Conductor.songPosition - Conductor.offset));
+			final vocalDrift = SONG.needsVoices ? audio.getDesyncDifference(Math.abs(Conductor.songPosition - Conductor.offset)) : 0.0;
+			if (instDrift > maxToleratedOffset || vocalDrift > maxToleratedOffset)
+			{
+				#if android
+				SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', Math.max(instDrift, vocalDrift), Conductor.songPosition);
+				#end
+				resyncVocals();
+			}
 		}
 		
 		if (lastStepHit >= curStep) return;
