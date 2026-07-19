@@ -872,7 +872,18 @@ class Controls extends FlxActionSet
 	private function get_requested():Dynamic
 	{
 		if (isInSubstate)
-			return funkin.backend.MusicBeatSubstate.instance;
+		{
+			// Route to the active substate's pad -- but ONLY if it's actually
+			// alive. If instance is null or already destroyed (exists == false),
+			// returning it would point pad lookups at a corpse whose virtualPad
+			// is null: the visible pad underneath then animates (FlxButton-local)
+			// but never triggers any action. Fall back to the underlying state's
+			// pad in that case so input keeps working after a substate closes.
+			final sub = funkin.backend.MusicBeatSubstate.instance;
+			if (sub != null && sub.exists)
+				return sub;
+			return funkin.backend.MusicBeatState.instance;
+		}
 		else
 			return funkin.backend.MusicBeatState.instance;
 	}

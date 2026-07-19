@@ -233,8 +233,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		canvasFrame.alpha = 0.5;
 		add(canvasFrame);
 
-		// Canvas background — star field scaled to preview area. Fully opaque
-		// so the white frame behind it can't show through the image itself.
+		// Opaque canvas base. starFG is a transparent star OVERLAY (foreground),
+		// so on its own the gaps between the stars let the 50%-white frame behind
+		// bleed through and the whole preview reads as a white background. An
+		// opaque dark rect over the frame's interior fixes that: the white now
+		// only shows as the thin border ring, exactly like a picture frame.
+		var canvasBase = new FlxSprite(CANVAS_X, CANVAS_Y).makeGraphic(CANVAS_W, CANVAS_H, COLOR_BG);
+		canvasBase.antialiasing = ClientPrefs.globalAntialiasing;
+		add(canvasBase);
+
+		// Canvas background — star field scaled to preview area, drawn over the
+		// opaque base so its transparent gaps reveal the dark base, not the frame.
 		_canvasBg = new FlxSprite(CANVAS_X, CANVAS_Y);
 		_canvasBg.loadGraphic(Paths.image('menu/common/starFG'));
 		_canvasBg.setGraphicSize(CANVAS_W, CANVAS_H);
