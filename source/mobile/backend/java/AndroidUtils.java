@@ -345,6 +345,36 @@ public class AndroidUtils extends Extension {
         return false;
     }
 
+    /**
+     * Fully restarts the app: relaunches the same Activity via its own
+     * launch intent, then kills this process. A plain FlxG.resetState()
+     * isn't enough for callers that need this (e.g. after opening the data
+     * folder to install a mod, or switching storage location) -- mods/DLC
+     * and the storage-mode bootstrap flag are only ever read once at true
+     * process boot (Init.hx), not on a soft state reset.
+     */
+    public static void restartApp() {
+        final Activity activity = mainActivity;
+        if (activity == null) return;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Intent intent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(intent);
+                    }
+                    android.os.Process.killProcess(android.os.Process.myPid());
+                    System.exit(0);
+                } catch (Exception e) {
+                    android.util.Log.e("AndroidUtils", "restartApp failed: " + e);
+                    JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "restartApp failed: " + e);
+                }
+            }
+        });
+    }
+
     private static android.view.Display getDisplay(Activity activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return activity.getDisplay();

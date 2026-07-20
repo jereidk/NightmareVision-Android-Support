@@ -9,6 +9,7 @@ class AndroidUtils
 	static var _toggleFullscreen = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "toggleFullscreen", "()V");
 	static var _scanFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "scanFolder", "(Ljava/lang/String;)V");
 	static var _openDataFolder = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "openDataFolder", "(Ljava/lang/String;)V");
+	static var _restartApp = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "restartApp", "()V");
 	static var _setGameplayState = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setGameplayState", "(Z)V");
 	static var _getMaxRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getMaxRefreshRate", "()F");
 	static var _requestHighRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "requestHighRefreshRate", "()V");
@@ -79,6 +80,43 @@ class AndroidUtils
 		var folderPath = StorageSystem.getDirectory();
 		try { _openDataFolder(folderPath); }
 		catch (e:Dynamic) { trace("openDataFolder error: " + e); }
+
+		_armRestartOnResume();
+	}
+
+	/**
+	 * Fully restarts the app (relaunches the Activity, kills this process).
+	 * A plain FlxG.resetState() wouldn't be enough for either caller below --
+	 * mods/DLC and the storage-mode bootstrap flag are only ever read once
+	 * at true process boot (Init.hx), not on a soft state reset.
+	 */
+	public static function restartApp():Void
+	{
+		try { _restartApp(); }
+		catch (e:Dynamic) { trace("restartApp error: " + e); }
+	}
+
+	static var _restartArmed:Bool = false;
+	static var _resumeListenerRegistered:Bool = false;
+
+	/**
+	 * Opening the data folder is almost always to add/remove mods, which
+	 * only get scanned at true process boot -- restarting the instant the
+	 * button is tapped would fire before the player has even reached their
+	 * file manager. Arms a one-shot restart for the next time the app comes
+	 * back to the foreground instead, giving them time to actually use it.
+	 */
+	static function _armRestartOnResume():Void
+	{
+		_restartArmed = true;
+		if (_resumeListenerRegistered) return;
+		_resumeListenerRegistered = true;
+
+		FlxG.stage.window.onActivate.add(() -> {
+			if (!_restartArmed) return;
+			_restartArmed = false;
+			restartApp();
+		});
 	}
 
 	/**

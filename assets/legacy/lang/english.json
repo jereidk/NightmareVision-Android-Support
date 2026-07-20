@@ -41,6 +41,7 @@
 		"dialogue_pink": "Pink",
 		"video_skip": "Press BACK to skip",
 		"video_skip_android": "◄ (Back button) to skip",
+		"finale_skip_cutscene": "Tap two time to skip this cutscene",
         // @ is the song name
 		"reset_score_question": "Clear highscore for @?",
         "skins_disclaimer":"Skins and pets only work in Freeplay mode.",
@@ -807,8 +808,10 @@
 		"opt_storagemode_desc": "Where mods/DLC/saves are stored.\nShared: the classic folder, visible to any file manager, needs \"All files access\". App-Only: no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nExisting mods/DLC only reappear after switching back and restarting.",
 		"choice_storagemode_shared": "Shared",
 		"choice_storagemode_scoped": "App-Only",
-		"opt_storagemode_alert_title": "Storage Location Changed",
-		"opt_storagemode_alert_msg": "Restart the game for this to fully take effect -- any mods/DLC already loaded this session will still be from the old location until you do.",
+		"opt_storagemode_confirm_title": "Storage Location Changed",
+		"opt_storagemode_confirm_msg": "Mods/DLC already loaded this session will still be from the old location until the game restarts. Restart now?",
+		"opt_storagemode_confirm_yes": "Restart Now",
+		"opt_storagemode_confirm_no": "Later",
 
 		"opt_opendatafolder": "Open Data Folder",
 		"opt_opendatafolder_desc": "Opens the game data folder in your file manager.\nUse this to install mods or access save files.",

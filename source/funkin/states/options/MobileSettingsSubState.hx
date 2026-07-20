@@ -814,10 +814,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		else if (opt.id == 'storageMode')
 		{
 			mobile.backend.StorageSystem.applyStorageMode(ClientPrefs.storageMode);
-			mobile.backend.utils.PopUp.showAlert(Lang.str('opt_storagemode_alert_title', 'Storage Location Changed'),
-				Lang.str('opt_storagemode_alert_msg',
-					'Restart the game for this to fully take effect -- any mods/DLC already loaded this session will still be from the old location until you do.'),
-				'OK');
+			mobile.backend.utils.PopUp.showConfirm(Lang.str('opt_storagemode_confirm_title', 'Storage Location Changed'),
+				Lang.str('opt_storagemode_confirm_msg',
+					'Mods/DLC already loaded this session will still be from the old location until the game restarts. Restart now?'),
+				Lang.str('opt_storagemode_confirm_yes', 'Restart Now'),
+				Lang.str('opt_storagemode_confirm_no', 'Later'),
+				() -> mobile.backend.AndroidUtils.restartApp());
 		}
 		#end
 
