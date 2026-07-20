@@ -115,6 +115,19 @@ class MainMenuState extends MusicBeatState
 	var devPanelCooldown:Int = 0;
 	var devPanelCam:FlxCamera = null; // dedicated top-most camera, always renders above game sprites
 
+	// Panel body bounds, kept around so the touch handler can tell "missed a
+	// button but still inside the panel" apart from "actually tapped outside
+	// it" -- see updateDevPanel()'s close-on-tap check.
+	var devPanelX:Float = 0;
+	var devPanelY:Float = 0;
+	var devPanelW:Float = 0;
+	var devPanelH:Float = 0;
+
+	// Virtual-pad row navigation (only active when ClientPrefs.navInputMode
+	// == 'Virtual Pad' -- touch mode keeps tapping rows directly).
+	var devPanelSelIdx:Int = 0;
+	var devPanelSelector:FlxSprite = null;
+
 	var devLblUnlock:FlxText = null;
 	var devLblUnlockReq:FlxText = null;
 	var devLblReset:FlxText = null;
@@ -652,13 +665,13 @@ class MainMenuState extends MusicBeatState
 		starBG.x -= 4.5 * elapsed;
 		starFG.x -= 9 * elapsed;
 
-		if (!devCodeBoxOpen && ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+		if (!devCodeBoxOpen && !devPanelOpen && ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
 		{
 			FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
 			CoolUtil.browserLoad(YT_CHANNEL_URL);
 		}
 
-		if (!devCodeBoxOpen && FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
+		if (!devCodeBoxOpen && !devPanelOpen && FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
 
 		#if !mobile
 		// Desktop: allow switching between keyboard and mouse
@@ -672,14 +685,18 @@ class MainMenuState extends MusicBeatState
 			if (introTimer <= 0) introActive = false;
 		}
 
-		// The code-entry field owns the keyboard/touch focus while it's open --
-		// menu navigation, mouse selection, and ACCEPT must not fire underneath
-		// it (a physical/soft-keyboard Enter used to double as both "submit the
-		// code" and "controls.ACCEPT the highlighted menu item" on the same
-		// frame). controls.BACK still works, but closes the code box instead of
-		// leaking through to the normal "back to TitleState" handling below --
-		// otherwise typing a code becomes the only thing on this screen with no
-		// way out except guessing it right.
+		// The code-entry field and the dev panel each own input focus while
+		// they're open -- menu navigation, mouse selection, and ACCEPT must
+		// not fire underneath them. For the code field, a physical/soft-
+		// keyboard Enter used to double as both "submit the code" and
+		// "controls.ACCEPT the highlighted menu item" on the same frame. For
+		// the panel, UI_UP_P/UI_DOWN_P/ACCEPT now drive its own row
+		// navigation (see updateDevPanel()) -- without this gate they'd ALSO
+		// move curMenuItem and select() the highlighted main-menu button
+		// underneath it, which is exactly the kind of "closes/exits as if
+		// nothing happened" behavior reported for the panel. controls.BACK
+		// still works in both cases, closing the code box / panel instead of
+		// leaking through to the normal "back to TitleState" handling below.
 		if (devCodeBoxOpen)
 		{
 			#if android
@@ -689,6 +706,12 @@ class MainMenuState extends MusicBeatState
 				closeDevCodeBox();
 			}
 			#end
+		}
+		else if (devPanelOpen)
+		{
+			// Actual row navigation handled in updateDevPanel(), called after
+			// this -- this branch only exists so the main-menu block below is
+			// skipped while the panel owns input.
 		}
 		else
 		{
@@ -785,6 +808,7 @@ class MainMenuState extends MusicBeatState
 		// add()) -- just drop the stale references.
 		devCodeTriggerBg = null;
 		devCodeField = null;
+		devPanelSelector = null;
 	}
 
 	// ── Dev-panel code-entry gate ────────────────────────────────────────────
@@ -800,6 +824,12 @@ class MainMenuState extends MusicBeatState
 
 	function updateDevCodeGate():Void
 	{
+		// The trigger icon sits under the dev panel's dim overlay once it's
+		// open (visually), but touches aren't blocked by what's drawn on top
+		// -- skip entirely so a tap landing on that same screen region can't
+		// reopen the code box while the panel is already up.
+		if (devPanelOpen) return;
+
 		// Only the trigger toggles the box -- deliberately no "tap elsewhere
 		// closes it" check, since the field itself would count as "elsewhere".
 		if (!devCodeBoxOpen)
@@ -846,6 +876,13 @@ class MainMenuState extends MusicBeatState
 		if (devCodeField != null) return;
 		devCodeBoxOpen = true;
 		pulseDevCodeTrigger(true);
+
+		// Typing a code needs the keyboard, not the D-pad -- hide the pad so
+		// it doesn't sit there visually reactable while its presses are
+		// actually being blocked (see update()'s devCodeBoxOpen gate).
+		#if mobile
+		if (virtualPad != null) virtualPad.visible = false;
+		#end
 
 		devCodeField = new FlxInputText(FlxG.width - 272, CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 8, 260, '', 20, DEV_COL_TEXT, DEV_COL_BG);
 		devCodeField.font = Paths.font('vcr.ttf');
@@ -906,6 +943,10 @@ class MainMenuState extends MusicBeatState
 	{
 		devCodeBoxOpen = false;
 		pulseDevCodeTrigger(false);
+
+		#if mobile
+		if (virtualPad != null) virtualPad.visible = true;
+		#end
 
 		if (devCodeField == null) return;
 		remove(devCodeField, true);
@@ -1034,6 +1075,11 @@ class MainMenuState extends MusicBeatState
 		var BH:Int = 48;
 		var BX:Int = px + 24;
 
+		devPanelX = px;
+		devPanelY = py;
+		devPanelW = PW;
+		devPanelH = PH;
+
 		function reg(thing:FlxSprite):Void
 		{
 			thing.visible = false;
@@ -1125,6 +1171,26 @@ class MainMenuState extends MusicBeatState
 
 		rowY += 8;
 		addRow('X  Close', DEV_COL_CLOSE, 6, 'devpanel_close');
+
+		// Row highlight for virtual-pad navigation -- added after every row so
+		// it draws on top of them, but kept out of devPanelAll/reg() since its
+		// own visibility is driven by nav mode (see updateDevPanelSelector()),
+		// not the panel open/close cascade every other sprite here uses.
+		devPanelSelector = new FlxSprite(BX, devPanelBtns[0].y);
+		devPanelSelector.loadGraphic(cachedDevShape('devpanel_selector', () -> devRoundedRect(BW, BH, DEV_COL_ACCENT, 10)));
+		devPanelSelector.alpha = 0.35;
+		devPanelSelector.visible = false;
+		devPanelSelector.scrollFactor.set();
+		add(devPanelSelector);
+	}
+
+	function updateDevPanelSelector():Void
+	{
+		if (devPanelSelector == null || devPanelBtns.length == 0) return;
+		final btn = devPanelBtns[devPanelSelIdx];
+		devPanelSelector.x = btn.x;
+		devPanelSelector.y = btn.y;
+		devPanelSelector.visible = devPanelOpen && ClientPrefs.navInputMode == 'Virtual Pad';
 	}
 
 	// No leading check/cross/warning glyphs -- vcr.ttf has no glyph for any of
@@ -1150,13 +1216,25 @@ class MainMenuState extends MusicBeatState
 		if (devLblReset != null) devLblReset.text = devResetLabel();
 
 		// Dedicated camera added last = renders on top of everything: game
-		// sprites, virtual pad, HUD, all of it.
+		// sprites, virtual pad, HUD, all of it. `false` here is load-bearing:
+		// FlxG.cameras.add()'s DefaultDrawTarget defaults to true, which would
+		// make devPanelCam a default render target for every sprite in this
+		// state that doesn't set its own `.cameras` -- i.e. the whole rest of
+		// the main menu (background, buttons, star layers, the virtual pad's
+		// underlying sprites don't count since those explicitly pin to
+		// virtualPadCam, but plenty of others don't) would get silently
+		// redrawn a second time on top of everything through this camera,
+		// permanently burying the virtual pad under a duplicate opaque
+		// background even after the panel itself closes. Every panel sprite
+		// (and the selector below) is already explicitly pinned to
+		// devPanelCam, so it doesn't need to be a default target at all.
 		if (devPanelCam == null)
 		{
 			devPanelCam = new FlxCamera();
 			devPanelCam.bgColor = 0x00000000;
-			FlxG.cameras.add(devPanelCam);
+			FlxG.cameras.add(devPanelCam, false);
 			for (thing in devPanelAll) thing.cameras = [devPanelCam];
+			if (devPanelSelector != null) devPanelSelector.cameras = [devPanelCam];
 		}
 
 		// Layered with unlockSong (the same fanfare the "Grant every
@@ -1179,6 +1257,9 @@ class MainMenuState extends MusicBeatState
 			FlxTween.tween(thing, {y: startY, alpha: 1}, 0.28, {ease: FlxEase.quintOut, startDelay: delay});
 			i++;
 		}
+
+		devPanelSelIdx = 0;
+		updateDevPanelSelector();
 	}
 
 	function closeDevPanel():Void
@@ -1192,6 +1273,7 @@ class MainMenuState extends MusicBeatState
 			thing.visible = false;
 			thing.alpha = 1;
 		}
+		if (devPanelSelector != null) devPanelSelector.visible = false;
 	}
 
 	function handleDevBtnTap(idx:Int):Void
@@ -1332,26 +1414,60 @@ class MainMenuState extends MusicBeatState
 			}
 		}
 
-		var touches = FlxG.touches.list;
-		if (touches != null)
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
-			for (touch in touches)
+			// Same D-pad-moves-a-highlighted-row + Action-confirms pattern
+			// CosmeticsSubstate's grid uses -- the panel reuses this state's
+			// own virtualPad (still visible while the panel is open) instead
+			// of spawning a second one.
+			if (controls.UI_UP_P)
 			{
-				if (!touch.justReleased) continue;
-				var tapped = false;
-				for (btn in devPanelBtns)
+				devPanelSelIdx = (devPanelSelIdx > 0) ? devPanelSelIdx - 1 : devPanelBtns.length - 1;
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
+				updateDevPanelSelector();
+			}
+			else if (controls.UI_DOWN_P)
+			{
+				devPanelSelIdx = (devPanelSelIdx + 1) % devPanelBtns.length;
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
+				updateDevPanelSelector();
+			}
+			if (controls.ACCEPT) handleDevBtnTap(devPanelBtns[devPanelSelIdx].idx);
+			if (controls.BACK) closeDevPanel();
+		}
+		else
+		{
+			var touches = FlxG.touches.list;
+			if (touches != null)
+			{
+				for (touch in touches)
 				{
-					if (touch.x >= btn.x && touch.x <= btn.x + btn.w &&
-					    touch.y >= btn.y && touch.y <= btn.y + btn.h)
+					if (!touch.justReleased) continue;
+					var tapped = false;
+					for (btn in devPanelBtns)
 					{
-						handleDevBtnTap(btn.idx);
-						tapped = true;
-						break;
+						if (touch.x >= btn.x && touch.x <= btn.x + btn.w &&
+						    touch.y >= btn.y && touch.y <= btn.y + btn.h)
+						{
+							handleDevBtnTap(btn.idx);
+							tapped = true;
+							break;
+						}
 					}
+					// Only close on a tap that lands fully outside the panel
+					// body -- a near-miss between two rows (still inside the
+					// panel) used to close the whole thing on any stray touch,
+					// which felt like a hair trigger for something you have
+					// to enter a secret code to even open.
+					if (!tapped && !devPanelContains(touch.x, touch.y)) closeDevPanel();
+					break;
 				}
-				if (!tapped) closeDevPanel();
-				break;
 			}
 		}
+	}
+
+	function devPanelContains(x:Float, y:Float):Bool
+	{
+		return x >= devPanelX && x <= devPanelX + devPanelW && y >= devPanelY && y <= devPanelY + devPanelH;
 	}
 }
