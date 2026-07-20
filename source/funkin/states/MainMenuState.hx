@@ -79,7 +79,7 @@ class MainMenuState extends MusicBeatState
 	// neither failure point exists here. It also lives in Flixel's normal
 	// logical coordinate space, removing the raw-window-vs-logical-pixel
 	// mismatch the old field's manual x/y positioning had to account for.
-	static inline final DEV_CODE:String = 'devconsole';
+	static inline final DEV_CODE:String = 'cheatmenu';
 	static inline final FNAF_CODE:String = 'backdoor';
 	static inline final CODE_TRIGGER_SIZE:Int = 64;
 	static inline final CODE_TRIGGER_MARGIN:Int = 12;
@@ -94,6 +94,11 @@ class MainMenuState extends MusicBeatState
 	var devCodeTriggerBg:FlxSprite = null;
 	var devCodeField:FlxInputText = null;
 	var devCodeBoxOpen:Bool = false;
+	// Tracks devCodeField.text so a real per-character change (typed OR
+	// backspaced) can be told apart from this state's own programmatic
+	// resets (fresh field on open, cleared on a wrong guess) -- matches
+	// FNAFState's terminal, which plays the same 'type' sound per keystroke.
+	var _lastDevCodeText:String = '';
 
 	// ── Dev panel: full port from the former hscript overlay (assets/legacy/
 	// scripts/states/MainMenuState.hx, now deleted) ─────────────────────────
@@ -793,6 +798,12 @@ class MainMenuState extends MusicBeatState
 		// Auto-submit the moment the typed text matches either code -- no need to press Enter.
 		if (devCodeField != null)
 		{
+			if (devCodeField.text != _lastDevCodeText)
+			{
+				_lastDevCodeText = devCodeField.text;
+				FlxG.sound.play(Paths.sound('type'));
+			}
+
 			final typed = StringTools.trim(devCodeField.text).toLowerCase();
 			if (typed == DEV_CODE || typed == FNAF_CODE) submitDevCode();
 		}
@@ -819,6 +830,7 @@ class MainMenuState extends MusicBeatState
 		devCodeField.maxChars = 10;
 		devCodeField.scrollFactor.set();
 		add(devCodeField);
+		_lastDevCodeText = '';
 
 		devCodeField.onEnter.add(_ -> submitDevCode());
 		devCodeField.startFocus();
@@ -851,6 +863,7 @@ class MainMenuState extends MusicBeatState
 		else
 		{
 			devCodeField.text = '';
+			_lastDevCodeText = '';
 			devCodeField.backgroundColor = DEV_COL_DANGER;
 			FlxG.sound.play(Paths.sound('error'), 0.6);
 			haxe.Timer.delay(() -> {
@@ -1107,7 +1120,12 @@ class MainMenuState extends MusicBeatState
 			for (thing in devPanelAll) thing.cameras = [devPanelCam];
 		}
 
+		// Layered with unlockSong (the same fanfare the "Grant every
+		// achievement" dev button and real content unlocks elsewhere use) so
+		// getting into the cheat menu itself feels like an unlock, not just
+		// another panel opening.
 		FlxG.sound.play(Paths.sound('panelAppear'), 0.6);
+		FlxG.sound.play(Paths.sound('unlockSong'), 0.9);
 
 		// Cascading fade/slide-in entrance.
 		var i = 0;

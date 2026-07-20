@@ -408,18 +408,22 @@ class OptionsState extends MusicBeatState
 			add(titleText);
 
 			artImage = new FlxSprite().loadGraphic(Paths.image('menu/options/art'));
-			// Capped at 520 (not just "however wide the panel is minus a margin")
+			// Capped at 560 (not just "however wide the panel is minus a margin")
 			// -- title/gap/art/gap/version all have to fit within panelH, and a
 			// width scaled straight off the panel's own (quite generous) width
 			// left the art tall enough to push version past the panel's bottom.
-			artImage.setGraphicSize(Std.int(Math.min(listW + 12 - 80, 520)));
+			// 520 (the old cap) actually left ~44px of unused vertical slack in
+			// panelH once title+art+version were stacked -- 560 (art.png's own
+			// 627:353 aspect ratio) plus the larger version font below spends
+			// that slack down to a ~14px margin instead of leaving it empty.
+			artImage.setGraphicSize(Std.int(Math.min(listW + 12 - 80, 560)));
 			artImage.updateHitbox();
 			artImage.antialiasing = ClientPrefs.globalAntialiasing;
 			artImage.setPosition(panelX + (listW + 12 - artImage.width) * 0.5, titleText.y + titleText.height + 16);
 			add(artImage);
 
 			versionText = new FlxText(panelX, artImage.y + artImage.height + 12, listW + 12, Main.LEGACY_VERSION);
-			versionText.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			versionText.setFormat(Paths.font('vcr.ttf'), 28, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			versionText.borderSize = 1.5;
 			versionText.antialiasing = ClientPrefs.globalAntialiasing;
 			add(versionText);
