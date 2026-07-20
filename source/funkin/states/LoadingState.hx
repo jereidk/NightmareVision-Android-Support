@@ -1083,6 +1083,51 @@ class LoadingState extends MusicBeatState
 				}
 			}
 
+			// Dialogue -- box/bubble/portrait art readDialogue() (assets/legacy/
+			// scripts/dialogue.hx, auto-loaded into every song) builds the
+			// instant a story-mode cutscene first triggers mid-song, none of it
+			// preloaded -- measured on device as an 800ms+ single-frame decode.
+			// dialogue.txt only lists which characters speak; each one's actual
+			// portrait atlas comes from data/dialogue/<char>.json's own "asset"
+			// field, same lookup dialogue.hx's speakerAnims() does at runtime.
+			// Gated on PlayState.seenCutscene (same flag readDialogue() checks)
+			// but NOT further narrowed by isStoryMode/videoCheckStory -- a
+			// per-song script can override videoCheckStory, which isn't visible
+			// here without actually running that script, so this can
+			// occasionally warm a portrait a freeplay run never shows. A
+			// couple of small UI images is a non-issue next to the
+			// note/character/stage assets already decoding on this thread.
+			if (!PlayState.seenCutscene)
+			{
+				final dialogueTxt = Paths.getPath('songs/${Paths.sanitize(song.song)}/dialogue.txt', null, PathsTestMode.NORMAL);
+				final dialogueLines = CoolUtil.coolTextFile(dialogueTxt);
+				if (dialogueLines.length > 0)
+				{
+					addAtlas('ui/dialogue/dialogueBox', 'dialogue');
+					addAtlas('ui/dialogue/bubble', 'dialogue');
+
+					final seenChars:Map<String, Bool> = new Map();
+					for (line in dialogueLines)
+					{
+						if (_threadGeneration != myGen) return;
+
+						final splitName = line.split(':');
+						if (splitName.length < 2) continue;
+
+						final charKey = splitName[1];
+						if (charKey.length == 0 || seenChars.exists(charKey)) continue;
+						seenChars.set(charKey, true);
+
+						final charPath = Paths.getPath('data/dialogue/$charKey.json', null, PathsTestMode.NORMAL);
+						if (!FunkinAssets.exists(charPath, TEXT)) continue;
+
+						final dialogueChar:Dynamic = FunkinAssets.parseJson5(FunkinAssets.getContent(charPath));
+						final asset:String = (dialogueChar != null) ? dialogueChar.asset : null;
+						if (asset != null && asset.length > 0) addAtlas('ui/dialogue/characters/$asset', 'dialogue:$asset');
+					}
+				}
+			}
+
 			// Audio. Mirrors SyncedFlxSoundGroup.populate()'s own path
 			// resolution (Paths.inst/voices/trackSwap) so the exact files the
 			// song will actually load get decoded on this thread instead of
