@@ -351,6 +351,40 @@ class PlayState extends MusicBeatState
 		bucket.push(note);
 	}
 
+	/**
+	 * Dead (killed but still-pooled) SustainTrail instances bucketed by the
+	 * skin texture they last had loaded -- same idea and same reason as
+	 * _deadNotesByType above, applied to the one pool that never got that
+	 * fix. setupSustainTrail()'s susTrails.recycle() used to grab the first
+	 * dead trail in pool order regardless of what texture it last had
+	 * loaded; SustainTrail.setupTrail()'s own reload guard
+	 * (`_textureLoaded != skin.noteTexture`) then forced a full atlas +
+	 * addAnimByPrefix reload -- the exact cost noteReload was built to catch
+	 * on the Note side -- every time that guess was wrong. susTrails is a
+	 * SINGLE pool shared by every player/field, so any song with more than
+	 * one note skin in play (P1 vs P2, per-lane arrowSkins) was thrashing
+	 * this on nearly every hold, and because it's SustainTrail-specific code
+	 * (not Note.set_texture()), it never showed up as its own tag -- it just
+	 * silently inflated noteSpawn's total. See SustainTrail.hx's own
+	 * 'trailReload' profiling tag for direct confirmation.
+	 */
+	var _deadTrailsByTexture:Map<String, Array<funkin.objects.note.SustainTrail>> = [];
+
+	/** Call from every place a SustainTrail becomes available for reuse (kill()). */
+	inline function _trackDeadTrail(trail:funkin.objects.note.SustainTrail):Void
+	{
+		if (trail._textureLoaded == null) return; // never actually loaded -- nothing to index yet
+
+		var bucket = _deadTrailsByTexture.get(trail._textureLoaded);
+		if (bucket == null)
+		{
+			bucket = [];
+			_deadTrailsByTexture.set(trail._textureLoaded, bucket);
+		}
+
+		bucket.push(trail);
+	}
+
 	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
 	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
 	final _scriptMoveCamArgs:Array<Dynamic> = [''];
@@ -2844,6 +2878,7 @@ class PlayState extends MusicBeatState
 				if (headNote == null || !headNote.alive || headNote.queueNote != trail.headQueueNote)
 				{
 					trail.kill();
+					_trackDeadTrail(trail);
 					continue;
 				}
 
@@ -2880,6 +2915,7 @@ class PlayState extends MusicBeatState
 				if (frontTime >= backTime)
 				{
 					trail.kill();
+					_trackDeadTrail(trail);
 					continue;
 				}
 
@@ -3061,10 +3097,50 @@ class PlayState extends MusicBeatState
 	{
 		if (field == null) return;
 
-		final trail:SustainTrail = susTrails.recycle(SustainTrail, () -> new SustainTrail());
+		final trail:SustainTrail = recycleCompatibleTrail(field._skin.noteTexture);
 		trail.setupTrail(headNote, field);
 		trail.headQueueNote = headNote.queueNote;
 		headNote.sustainTrail = trail;
+	}
+
+	// Mirrors recycleCompatibleNote() (see its own doc comment for the full
+	// reasoning) -- prefers a dead trail from _deadTrailsByTexture that
+	// already has the texture this spawn needs, so SustainTrail.setupTrail()'s
+	// own reload guard skips addAnims() instead of paying a full atlas +
+	// addAnimByPrefix rebuild. Plain susTrails.recycle() (FlxGroup.
+	// getFirstAvailable()) just grabs the first dead member regardless of
+	// what it last had loaded -- with susTrails shared across every player/
+	// field, that's a near-guaranteed reload on any song mixing more than
+	// one note skin.
+	function recycleCompatibleTrail(targetTexture:String):SustainTrail
+	{
+		final bucket = _deadTrailsByTexture.get(targetTexture);
+		if (bucket != null)
+		{
+			while (bucket.length > 0)
+			{
+				final candidate = bucket.pop();
+				// Can be stale if something revived this trail through a path
+				// that doesn't know about this index -- verify before trusting it.
+				if (candidate != null && !candidate.exists)
+				{
+					candidate.revive();
+					return candidate;
+				}
+			}
+		}
+
+		// No exact match available -- any dead member will do (a reload is
+		// unavoidable here either way).
+		for (member in susTrails.members)
+		{
+			if (member == null || member.exists) continue;
+
+			member.revive();
+			return member;
+		}
+
+		return susTrails.add(new SustainTrail());
 	}
 
 	// Builds one deferred tail segment. Mirrors what the old inline loop in
@@ -4104,6 +4180,9 @@ class PlayState extends MusicBeatState
 		for (trail in susTrails.members)
 			if (trail != null) trail.kill();
 		susTrails.clear();
+		// susTrails.clear() throws away every member this index could still
+		// be pointing at -- drop it too, same reasoning as _deadNotesByType above.
+		_deadTrailsByTexture = [];
 
 		queueNotes.resize(0);
 		_noteSpawnIdx = 0;

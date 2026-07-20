@@ -78,7 +78,12 @@ class SustainTrail extends RGBSprite implements funkin.game.modchart.IModNote
 		// from the field, not a fresh player-ID lookup.
 		skin = field?._skin ?? NoteUtil.getSkinFromID(player);
 
-		if (_textureLoaded != skin.noteTexture) addAnims(skin);
+		if (_textureLoaded != skin.noteTexture)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('trailReload'); #end
+			addAnims(skin);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+		}
 
 		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
 
