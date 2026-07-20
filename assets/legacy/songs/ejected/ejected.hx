@@ -1,5 +1,10 @@
 var cutscene = (hasBfSkin || hasGfSkin) ? 'week2/ejected-empty' : 'week2/ejected';
 
+// See scripts/cutsceneSkip.hx -- matches the events.json timestamp of the
+// 'Legacy'/'just in case' event below (~24774ms), same target the existing
+// dev-only 'SKIP TO DROP' shortcut in onUpdate() already jumps to.
+var ejectedDropTime:Float = 24774;
+
 function onCreatePost()
 {
 	camGame.alpha = camHUD.alpha = 0;
@@ -27,6 +32,20 @@ function onCreatePost()
 	intro.tiedToGame = false;
 
 	//camSpecialThing([-650, 700], [650, 800]);
+
+	registerSkippableCutscene(0, ejectedDropTime, skipEjectedCutscene);
+}
+
+// Passed to registerSkippableCutscene() above (see scripts/cutsceneSkip.hx)
+// -- replays exactly what the 'just in case' case below does, via
+// triggerEventNote() (not a direct onEvent() call) so it also runs the full
+// engine event dispatch, not just this file's local switch case.
+function skipEjectedCutscene():Void
+{
+	setSongTime(ejectedDropTime);
+	clearNotesBefore(Conductor.songPosition);
+
+	triggerEventNote('Legacy', 'just in case', '');
 }
 
 function onSongStart()

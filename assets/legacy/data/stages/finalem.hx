@@ -13,17 +13,14 @@ var finaleMode:Bool = false;
 var bars:FlxSpriteGroup;
 public var rimlightExcludedSkins:Array<String> = ['blackp']; // ig we need this now
 
-// Double-tap-to-skip: the flashback build-up (onCreatePost's hidden HUD/dark
-// overlay through 'Finale Drop' at finaleDropTime) runs entirely inside live,
-// scored gameplay (real notes spawn from ~9600ms on) -- skipping it means
-// jumping the song clock forward and manually replaying just the end-state
-// 'Finale Drop' would have set, not freezing/killing a video like every
-// other cutscene song in this pack.
-var skipCutsceneText:FlxText;
-var finaleSkipped:Bool = false;
-var lastSkipTapPos:Float = -9999;
+// Double-tap-to-skip (see scripts/cutsceneSkip.hx): the flashback build-up
+// (onCreatePost's hidden HUD/dark overlay through 'Finale Drop' at
+// finaleDropTime) runs entirely inside live, scored gameplay (real notes
+// spawn from ~9600ms on) -- skipping it means jumping the song clock
+// forward and manually replaying just the end-state 'Finale Drop' would
+// have set, not freezing/killing a video like every other cutscene song in
+// this pack.
 var finaleDropTime:Float = 20400;
-var doubleTapWindowMs:Float = 500;
 
 function onLoad()
 {
@@ -157,16 +154,7 @@ function onCreatePost()
 	opponentStrums.visible = false;
 	modManager.setValue("alpha", 1, 1);
 
-	// camOther, not camHUD -- camHUD.alpha is 0.001 for the whole
-	// flashback (see above), which would make this text invisible too.
-	skipCutsceneText = new FlxText(0, 0, FlxG.width, Lang.str('finale_skip_cutscene', 'Tap two time to skip this cutscene'));
-	skipCutsceneText.setFormat(Paths.font("liberbold.ttf"), 18, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-	skipCutsceneText.borderSize = 2;
-	skipCutsceneText.scrollFactor.set();
-	skipCutsceneText.y = FlxG.height - skipCutsceneText.height - 20;
-	skipCutsceneText.camera = camOther;
-	skipCutsceneText.zIndex = 20;
-	add(skipCutsceneText);
+	registerSkippableCutscene(0, finaleDropTime, skipFinaleCutscene);
 
 	refreshZ();
 	
@@ -226,27 +214,6 @@ function onUpdate(elapsed)
 	{
 		FlxG.camera.zoom = FlxMath.lerp(FlxG.camera.zoom, 1, FlxMath.bound(elapsed * 0.01, 0, 1));
 	}
-
-	if (!finaleSkipped && Conductor.songPosition >= 0 && Conductor.songPosition < finaleDropTime)
-	{
-		skipCutsceneText.visible = true;
-
-		for (touch in FlxG.touches.list)
-		{
-			if (touch.justPressed)
-			{
-				if (Conductor.songPosition - lastSkipTapPos < doubleTapWindowMs)
-					skipFinaleCutscene();
-				else
-					lastSkipTapPos = Conductor.songPosition;
-				break;
-			}
-		}
-	}
-	else if (skipCutsceneText != null)
-	{
-		skipCutsceneText.visible = false;
-	}
 }
 
 // Fast-forwards straight to 'Finale Drop' instead of freezing/killing a
@@ -256,12 +223,11 @@ function onUpdate(elapsed)
 // (not a direct onEvent() call) is the same sanctioned "synthesize this
 // event as if the chart fired it" API double-kill.hx already uses for
 // 'Change Character' -- it runs the full engine dispatch (including this
-// script's own onEvent), not just this file's local switch case.
+// script's own onEvent), not just this file's local switch case. Passed to
+// registerSkippableCutscene() above -- scripts/cutsceneSkip.hx calls this
+// once, when the player actually double-taps.
 function skipFinaleCutscene():Void
 {
-	if (finaleSkipped) return;
-	finaleSkipped = true;
-
 	setSongTime(finaleDropTime);
 	clearNotesBefore(Conductor.songPosition);
 
@@ -273,8 +239,6 @@ function skipFinaleCutscene():Void
 
 	triggerEventNote('Finale Drop', '', '');
 	triggerEventNote('Change Character', '1', 'blackparasite');
-
-	skipCutsceneText.visible = false;
 }
 
 function onSongStart()

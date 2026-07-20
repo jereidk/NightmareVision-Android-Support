@@ -41,7 +41,7 @@
 		"dialogue_pink": "Pink",
 		"video_skip": "Press BACK to skip",
 		"video_skip_android": "◄ (Back button) to skip",
-		"finale_skip_cutscene": "Tap two time to skip this cutscene",
+		"cutscene_skip_double_tap": "Tap two time to skip this cutscene",
         // @ is the song name
 		"reset_score_question": "Clear highscore for @?",
         "skins_disclaimer":"Skins and pets only work in Freeplay mode.",
