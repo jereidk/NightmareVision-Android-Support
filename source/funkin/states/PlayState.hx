@@ -1047,16 +1047,23 @@ class PlayState extends MusicBeatState
 		
 		underlays = new FlxTypedGroup<LaneUnderlay>();
 		
-		playFields = new FlxTypedGroup<PlayField>();
+		// TimedFlxGroup (funkin.backend) instead of a plain FlxTypedGroup for
+		// these three -- they're top-level state members, so their own share
+		// of the generic per-member update cascade ('flxMemberLoop', see
+		// MusicBeatState.update()) was otherwise invisible, same gap
+		// Stage.hx/TouchInputManager.hx's own update() overrides exist to
+		// close for what THEY wrap. Only times each group's own call, not
+		// every child individually -- doesn't multiply per-note overhead.
+		playFields = new funkin.backend.TimedFlxGroup<PlayField>('playFieldsGroupUpdate');
 		add(playFields);
-		
+
 		// Added before `notes` so heads/holdend caps (real Note sprites) draw
 		// on top of the plain trail body, matching how the old segment chain
 		// visually stacked (later-spawned segments/caps over earlier ones).
-		susTrails = new FlxTypedGroup<funkin.objects.note.SustainTrail>();
+		susTrails = new funkin.backend.TimedFlxGroup<funkin.objects.note.SustainTrail>('susTrailsGroupUpdate');
 		add(susTrails);
 
-		notes = new FlxTypedGroup<Note>();
+		notes = new funkin.backend.TimedFlxGroup<Note>('notesGroupUpdate');
 		add(notes);
 		
 		playHUD = new funkin.game.huds.PsychHUD(this);
