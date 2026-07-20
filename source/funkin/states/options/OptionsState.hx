@@ -738,6 +738,28 @@ class OptionsState extends MusicBeatState
 		FlxSprite.defaultAntialiasing = ClientPrefs.globalAntialiasing;
 	}
 
+	// Sets blockInput the instant ANY substate is requested to open -- not
+	// just the ones openSelectedSubstate() opens (Note Colors / Quant Colors
+	// are opened directly via openSubState() from VisualsUIOptions and used
+	// to bypass it, letting their D-pad and OptionsState's own list
+	// navigation both fire on every press).
+	//
+	// This used to be a reactive `if (subState != null) blockInput = true;`
+	// polled every frame in update() instead -- but FlxState.tryUpdate() calls
+	// update() BEFORE it processes a pending closeSubState() (resetSubState(),
+	// which is what actually nulls `subState`, is deferred to later in that
+	// same call). So the frame right after closeSubState() legitimately
+	// cleared blockInput, that reactive check still saw a non-null `subState`
+	// (one frame stale) and stomped it straight back to true -- permanently,
+	// since nothing ever cleared it again after `subState` finally went null.
+	// Setting it here instead, exactly once per open, needs no polling and
+	// can't race the deferred close.
+	override function openSubState(SubState:flixel.FlxSubState):Void
+	{
+		if (!(SubState is funkin.backend.BaseTransitionState)) blockInput = true;
+		super.openSubState(SubState);
+	}
+
 	override function closeSubState()
 	{
 		if (subState is funkin.backend.BaseTransitionState)
@@ -852,17 +874,6 @@ class OptionsState extends MusicBeatState
 		super.update(elapsed);
 
 		if (!isHardcodedState()) return;
-
-		// OptionsState keeps updating under any open substate (persistentUpdate
-		// = true), so its own list/handlers must not process input while one is
-		// up. openSelectedSubstate() sets blockInput for the submenus it opens,
-		// but Note Colors / Quant Colors are opened directly via
-		// openSubState() from VisualsUIOptions and bypass it -- their D-pad and
-		// OptionsState's list navigation were both firing on every press, which
-		// is why those two screens read as "extremely buggy". Treating any open
-		// (non-transition) substate as blockInput closes that gap uniformly;
-		// closeSubState() already clears blockInput on the way out.
-		if (subState != null && !(subState is funkin.backend.BaseTransitionState)) blockInput = true;
 
 		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
 
