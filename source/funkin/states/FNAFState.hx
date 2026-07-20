@@ -928,6 +928,25 @@ class FNAFState extends MusicBeatState
 			cursorVisible = true;
 		}
 
+		// Auto-submit the moment the typed code matches a known one -- no
+		// need to press Enter, mirrors MainMenuState's dev-code box.
+		if (inputCooldown <= 0 && enteredCode.length > 0 && KNOWN_TERMINAL_CODES.indexOf(enteredCode.toUpperCase()) != -1)
+		{
+			submitCode();
+			inputCooldown = 0.08;
+			cursorTimer = 0;
+			cursorVisible = true;
+
+			// submitCode() itself never clears the field -- the ENTER-driven
+			// call above only ever runs once per press, so that was never a
+			// problem before. This check runs every frame instead: without
+			// clearing here, any code whose case just calls errorMessage()
+			// (doesn't navigate away or set passwordActive = false) would
+			// keep matching and re-firing on every subsequent frame.
+			enteredCode = "";
+			if (codeInput != null) codeInput.text = "";
+		}
+
 		compInput.text = " " + enteredCode + (cursorVisible ? "|" : " ");
 		updateInputLayout();
 	}
@@ -963,6 +982,21 @@ class FNAFState extends MusicBeatState
 		}
 	}
 	
+	// Every case label submitCode() below recognizes, kept as a plain list so
+	// handlePasswordInput() can auto-submit the instant the typed text
+	// matches one (mirrors MainMenuState's dev-code box) without needing a
+	// second switch just to answer "is this a real code". Must stay in sync
+	// with submitCode()'s own case labels -- a code added there without
+	// being added here just falls back to requiring Enter, same as before
+	// this existed.
+	static final KNOWN_TERMINAL_CODES:Array<String> = [
+		"DANKBARS", "SECRET", "DIRECT", "REACTOR", "FINALE", "RIVALS", "RASPBERRY", "RAID",
+		"CHALLENGE", "SNEEP", "FUNNI342", "RUBATO", "DREAMJOB", "TRIPLETROUBLE", "STORY",
+		"NOOB49", "TRINKETS", "EBK", "WHITEPARASITE",
+		"COMMUNITYGAME", "PENKARU", "DEFEAT", "LIGHTSDOWN", "LIGHTSOUT", "LIGHTSOFF",
+		"FLIPPY", "DK", "BROIMPOSTOR", "HELLSCAPE", "ZARED"
+	];
+
 	function submitCode()
 	{
 		var code = enteredCode.toUpperCase();
