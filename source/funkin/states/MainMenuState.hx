@@ -128,6 +128,11 @@ class MainMenuState extends MusicBeatState
 	var devPanelSelIdx:Int = 0;
 	var devPanelSelector:FlxSprite = null;
 
+	// Audio-synced "epic unlock" glow -- see openDevPanel()'s scheduling and
+	// the DEV_UNLOCK_* timestamps below for where these numbers come from.
+	var devPanelGlow:FlxSprite = null;
+	var devPanelOpenGen:Int = 0;
+
 	var devLblUnlock:FlxText = null;
 	var devLblUnlockReq:FlxText = null;
 	var devLblReset:FlxText = null;
@@ -154,6 +159,24 @@ class MainMenuState extends MusicBeatState
 	// palette every other row uses -- makes the Chart Editor entry read as
 	// its own distinct category (a tool, not a cheat) at a glance.
 	static inline final DEV_COL_TOOL:Int = 0xFF1E3A5F;
+
+	// Timestamps measured directly off assets/legacy/sounds/unlockSong.ogg
+	// (ffmpeg -> raw PCM -> 20ms RMS/peak envelope + windowed-FFT peak
+	// frequency, done offline): a quiet ~180ms lead-in, then a rising
+	// arpeggio build (mostly A3/C#4/D4, RMS climbing 0.03 -> 0.3) from
+	// 0.18s to 1.46s, then a ~360ms sustained peak -- the "epic" hit, RMS
+	// 0.3-0.39 and peak clipping at 1.0, arpeggiating down through a bright
+	// B6-A6-F#6-D6 chord -- from 1.46s to 1.82s, then a long reverb decay
+	// tailing to silence by ~3.6s (full clip is 4.62s). The panel's own
+	// content still appears immediately via the existing row cascade below
+	// so it stays instantly usable -- this only times the extra glow/flash
+	// payoff to land exactly on that climax instead of firing on open.
+	static inline final DEV_UNLOCK_BUILD_START:Float = 0.18;
+	static inline final DEV_UNLOCK_CLIMAX_START:Float = 1.46;
+	// How long the burst itself takes to expand and fade once triggered --
+	// deliberately a bit shorter than the climax's own 0.36s sustain (it
+	// only needs to read as "the moment", not track the full decay tail).
+	static inline final DEV_UNLOCK_BURST_DURATION:Float = 0.5;
 
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
@@ -809,6 +832,7 @@ class MainMenuState extends MusicBeatState
 		devCodeTriggerBg = null;
 		devCodeField = null;
 		devPanelSelector = null;
+		devPanelGlow = null;
 	}
 
 	// ── Dev-panel code-entry gate ────────────────────────────────────────────
@@ -1065,6 +1089,39 @@ class MainMenuState extends MusicBeatState
 		return bmp;
 	}
 
+	// Soft radial glow -- full alpha at the center, smoothly falling off to
+	// fully transparent at the edge (squared falloff, so it stays bright
+	// through the middle instead of looking like a flat-topped circle).
+	// Used for the dev panel's audio-synced "epic unlock" burst below.
+	function devGlowBlob(size:Int, color:Int):BitmapData
+	{
+		var bmp = new BitmapData(size, size, true, 0x00000000);
+		var cx = size / 2;
+		var cy = size / 2;
+		var maxDist = size / 2;
+		var r = (color >> 16) & 0xFF;
+		var g = (color >> 8) & 0xFF;
+		var b = color & 0xFF;
+
+		for (px in 0...size)
+		{
+			for (py in 0...size)
+			{
+				var dx = px - cx;
+				var dy = py - cy;
+				var dist = Math.sqrt(dx * dx + dy * dy) / maxDist;
+				if (dist > 1) continue;
+
+				var a = 1 - dist;
+				a *= a;
+				var alpha = Std.int(a * 255);
+				bmp.setPixel32(px, py, (alpha << 24) | (r << 16) | (g << 8) | b);
+			}
+		}
+
+		return bmp;
+	}
+
 	// ── Dev panel content ────────────────────────────────────────────────────
 
 	function buildDevPanel():Void
@@ -1189,6 +1246,21 @@ class MainMenuState extends MusicBeatState
 		devPanelSelector.visible = false;
 		devPanelSelector.scrollFactor.set();
 		add(devPanelSelector);
+
+		// Audio-synced glow, centered on the panel and generously sized so it
+		// bleeds out past the edges into the dim overlay -- see
+		// DEV_UNLOCK_* above and openDevPanel()'s scheduling for the timing.
+		// ADD blend so it reads as light washing over the panel instead of
+		// covering the text (same trick this state's own background glow
+		// uses above, in create()).
+		var glowSize = Std.int(PW * 1.3);
+		devPanelGlow = new FlxSprite(px + PW / 2 - glowSize / 2, py + PH / 2 - glowSize / 2);
+		devPanelGlow.loadGraphic(cachedDevShape('devpanel_glow', () -> devGlowBlob(glowSize, DEV_COL_ACCENT)));
+		devPanelGlow.alpha = 0;
+		devPanelGlow.visible = false;
+		devPanelGlow.blend = ADD;
+		devPanelGlow.scrollFactor.set();
+		add(devPanelGlow);
 	}
 
 	function updateDevPanelSelector():Void
@@ -1242,6 +1314,7 @@ class MainMenuState extends MusicBeatState
 			FlxG.cameras.add(devPanelCam, false);
 			for (thing in devPanelAll) thing.cameras = [devPanelCam];
 			if (devPanelSelector != null) devPanelSelector.cameras = [devPanelCam];
+			if (devPanelGlow != null) devPanelGlow.cameras = [devPanelCam];
 		}
 
 		// Layered with unlockSong (the same fanfare the "Grant every
@@ -1267,6 +1340,57 @@ class MainMenuState extends MusicBeatState
 
 		devPanelSelIdx = 0;
 		updateDevPanelSelector();
+
+		// Schedule the audio-synced glow: a slow charge-up alpha ramp across
+		// the sound's own build-up, then the big payoff timed to land right
+		// on the climax (see the DEV_UNLOCK_* comment above and
+		// triggerDevPanelUnlockBurst() below). devPanelOpenGen guards both
+		// against the panel having since been closed and against it having
+		// been closed AND reopened before this fires -- either way, a stale
+		// callback from a previous open should not flash/shake the current
+		// one (or an empty screen).
+		devPanelOpenGen++;
+		final myGen = devPanelOpenGen;
+
+		if (devPanelGlow != null)
+		{
+			FlxTween.cancelTweensOf(devPanelGlow);
+			FlxTween.cancelTweensOf(devPanelGlow.scale);
+			devPanelGlow.scale.set(1, 1);
+			devPanelGlow.alpha = 0;
+			devPanelGlow.visible = true;
+			FlxTween.tween(devPanelGlow, {alpha: 0.3}, DEV_UNLOCK_CLIMAX_START - DEV_UNLOCK_BUILD_START,
+				{ease: FlxEase.sineIn, startDelay: DEV_UNLOCK_BUILD_START});
+		}
+
+		haxe.Timer.delay(() -> triggerDevPanelUnlockBurst(myGen), Std.int(DEV_UNLOCK_CLIMAX_START * 1000));
+	}
+
+	// The "epic" payoff -- fired via the timer openDevPanel() schedules,
+	// timed to land exactly on unlockSong.ogg's sustained peak (see the
+	// DEV_UNLOCK_* comment above openDevPanel()). Camera flash/shake are
+	// gated behind ClientPrefs.flashing, same convention as
+	// StoryMenuState.lockAnim()/FreeplayState's own lock-shake; the glow
+	// burst itself isn't a flashing-lights effect (just a shape scaling and
+	// fading), so it still plays either way, only dimmer without the flash.
+	function triggerDevPanelUnlockBurst(gen:Int):Void
+	{
+		if (!devPanelOpen || gen != devPanelOpenGen || devPanelGlow == null) return;
+
+		FlxTween.cancelTweensOf(devPanelGlow);
+		FlxTween.cancelTweensOf(devPanelGlow.scale);
+		devPanelGlow.visible = true;
+		devPanelGlow.scale.set(1, 1);
+		devPanelGlow.alpha = ClientPrefs.flashing ? 0.9 : 0.5;
+		FlxTween.tween(devPanelGlow.scale, {x: 2.2, y: 2.2}, DEV_UNLOCK_BURST_DURATION, {ease: FlxEase.quadOut});
+		FlxTween.tween(devPanelGlow, {alpha: 0}, DEV_UNLOCK_BURST_DURATION,
+			{ease: FlxEase.quadOut, onComplete: function(_) devPanelGlow.visible = false});
+
+		if (ClientPrefs.flashing && devPanelCam != null)
+		{
+			devPanelCam.flash(FlxColor.WHITE, 0.4);
+			devPanelCam.shake(0.006, 0.2);
+		}
 	}
 
 	function closeDevPanel():Void
@@ -1281,6 +1405,13 @@ class MainMenuState extends MusicBeatState
 			thing.alpha = 1;
 		}
 		if (devPanelSelector != null) devPanelSelector.visible = false;
+		if (devPanelGlow != null)
+		{
+			FlxTween.cancelTweensOf(devPanelGlow);
+			FlxTween.cancelTweensOf(devPanelGlow.scale);
+			devPanelGlow.visible = false;
+			devPanelGlow.alpha = 0;
+		}
 	}
 
 	function handleDevBtnTap(idx:Int):Void
