@@ -2557,6 +2557,15 @@ class PlayState extends MusicBeatState
 	{
 		canPlayAwardSound = true;
 
+		// Everything from here through the spawnOffset calc right before
+		// noteSpawn used to be entirely untagged -- mobile overlay visibility,
+		// camera lerp setup, pause-input polling (keyboard/BACK/touch),
+		// editor hotkeys, conductor songPosition tracking. None of it is
+		// individually expensive, but summed it was a real, previously
+		// invisible slice of "unaccounted". 'camera'/'eventNotes'/
+		// 'modifierTimeline' nest inside as their own sub-tags.
+		#if android SystemMonitor.profBegin('preUpdate'); #end
+
 		#if mobile
 		// Resolve the touch overlay's real visibility every frame from three
 		// independent conditions (see mobileControlsActive's doc):
@@ -2651,16 +2660,22 @@ class PlayState extends MusicBeatState
 		Conductor.visualPosition = getVisualPosition();
 		
 		if (!ClientPrefs.noReset && controls.RESET && canReset && !inCutscene && startedCountdown && !endingSong) health = 0;
-		
+
+		#if android SystemMonitor.profBegin('eventNotes'); #end
 		checkEventNote();
-		
+		#if android SystemMonitor.profEnd(); #end
+
 		if (modifiersRegistered)
 		{
+			#if android SystemMonitor.profBegin('modifierTimeline'); #end
 			modManager.updateTimeline(curDecStep);
 			modManager.update(elapsed);
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		final spawnOffset:Float = (spawnTime / songSpeed);
+
+		#if android SystemMonitor.profEnd(); #end // preUpdate
 
 		// Profiling this (previously untagged, hiding inside "unaccounted")
 		// showed noteSpawn cost scaling hard with burst size (~800ms for a
@@ -2739,7 +2754,9 @@ class PlayState extends MusicBeatState
 		if (generatedMusic)
 		{
 			#if android
+			SystemMonitor.profBegin('gameplayReport');
 			SystemMonitor.reportGameplayFrame(elapsed, SONG.song, Conductor.songPosition, notes.length, playFields != null ? playFields.length : 0);
+			SystemMonitor.profEnd();
 			#end
 
 			if (!inCutscene)
@@ -3014,6 +3031,10 @@ class PlayState extends MusicBeatState
 		input.update();
 		#if android SystemMonitor.profEnd(); #end
 
+		// Tail of the function was entirely untagged too -- taunt input, cam
+		// zoom decay, the death check, following-cam sync, debug hotkeys.
+		#if android SystemMonitor.profBegin('postUpdate'); #end
+
 		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
 		{
 			var focusPlayer:Character = (focusPlayer ?? boyfriend);
@@ -3029,15 +3050,17 @@ class PlayState extends MusicBeatState
 			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
 			camHUD.zoom = MathUtil.decayLerp(camHUD.zoom, defaultHudZoom, 6.25 * camZoomingDecay, elapsed);
 		}
-		
+
+		#if android SystemMonitor.profBegin('doDeathCheck'); #end
 		doDeathCheck();
-		
+		#if android SystemMonitor.profEnd(); #end
+
 		for (i in followingCams)
 		{
 			i.zoom = FlxG.camera.zoom;
 			i.scroll.copyFrom(FlxG.camera.scroll);
 		}
-		
+
 		if (#if debug true || #end chartingMode || ClientPrefs.inDevMode)
 		{
 			if (!endingSong && !startingSong)
@@ -3061,8 +3084,12 @@ class PlayState extends MusicBeatState
 				updateScoreBar();
 			}
 		}
-		
+
+		#if android SystemMonitor.profEnd(); #end // postUpdate
+
+		#if android SystemMonitor.profBegin('scriptPost'); #end
 		scripts.call('onUpdatePost', _scriptUpdateArgs);
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	public function recycleNote(queueNote:QueueNote, ?parent:Note):Note
