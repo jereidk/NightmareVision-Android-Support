@@ -213,6 +213,11 @@ class SystemMonitor
 			#if flixel
 			FlxG.signals.preStateSwitch.add(_onPreStateSwitch);
 			FlxG.signals.postStateSwitch.add(_onPostStateSwitch);
+			// See beginGpuPresent()'s own doc comment -- closes the 'gpuPresent'
+			// span PlayState.draw() opens, right after FlxGame's own draw() has
+			// finished everything our own tags can't see (FlxG.cameras.render(),
+			// the actual GPU tile-batch submission).
+			FlxG.signals.postDraw.add(_onPostDraw);
 			#end
 		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to initialize: $e', WARN); }
 		#end
@@ -789,6 +794,52 @@ class SystemMonitor
 			}
 		}
 	}
+
+	// The single biggest known gap behind every high "unaccounted%" line so
+	// far: FlxGame.draw() (flixel/FlxGame.hx) is
+	//   FlxG.cameras.lock();
+	//   _state.draw();        <- PlayState.draw()'s own 'draw' tag covers only this
+	//   FlxG.cameras.render(); <- the actual GPU tile-batch submission -- untimed
+	//   FlxG.cameras.unlock();
+	//   FlxG.signals.postDraw.dispatch();
+	// so everything from FlxG.cameras.render() onward — the part that
+	// actually blocks on the GPU/driver, as opposed to PlayState's own CPU-side
+	// sprite/draw-call batching already covered by 'draw' — fell straight
+	// into "unaccounted" with zero attribution. PlayState.draw() opens this
+	// span the instant its own 'draw' tag closes (right where FlxGame.draw()
+	// itself would go on to call FlxG.cameras.render()); postDraw (which only
+	// fires after that render() + unlock()) closes it here. A persistent
+	// signal listener, not a plain profBegin/profEnd pair, because nothing
+	// in PlayState runs again between "state draw finished" and "postDraw
+	// fires" to place a matching profEnd() call.
+	static var _gpuPresentOpen:Bool = false;
+
+	/**
+	 * Opens the 'gpuPresent' phase -- call once, immediately after PlayState's
+	 * own 'draw' tag closes (i.e. right after `super.draw()` returns in
+	 * PlayState.draw()). Closed automatically by the postDraw signal in
+	 * init() -- see this field's own doc comment above for why a plain
+	 * profEnd() call site doesn't exist for this one.
+	 */
+	public static inline function beginGpuPresent():Void
+	{
+		if (!enabled) return;
+		_gpuPresentOpen = true;
+		profBegin('gpuPresent');
+	}
+
+	#if flixel
+	static function _onPostDraw():Void
+	{
+		// Only PlayState ever opens this (from its own draw() override) --
+		// every other state's frame has postDraw fire with nothing open here,
+		// which must be a silent no-op rather than popping whatever else
+		// might be on the prof stack.
+		if (!_gpuPresentOpen) return;
+		_gpuPresentOpen = false;
+		profEnd();
+	}
+	#end
 
 	// Biggest-first "tag=Xms tag2=Yms" summary of everything accumulated
 	// since the last profReset(). Entries under half a millisecond are

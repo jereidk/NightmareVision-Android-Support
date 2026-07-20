@@ -2531,7 +2531,19 @@ class PlayState extends MusicBeatState
 	{
 		#if android SystemMonitor.profBegin('draw'); #end
 		super.draw();
-		#if android SystemMonitor.profEnd(); #end
+		#if android
+		SystemMonitor.profEnd();
+		// 'draw' above only covers the CPU-side sprite/draw-call batching
+		// this call actually does. FlxGame.draw() (the caller of this
+		// override, via _state.draw()) still has FlxG.cameras.render() --
+		// the real GPU tile-batch submission -- and unlock()/postDraw left to
+		// run after this function returns, which used to be pure
+		// "unaccounted" time with zero attribution. See
+		// SystemMonitor.beginGpuPresent()'s own doc comment for exactly what
+		// this covers and why it's closed via a signal instead of a plain
+		// profEnd() call.
+		SystemMonitor.beginGpuPresent();
+		#end
 	}
 
 	override public function update(elapsed:Float):Void
