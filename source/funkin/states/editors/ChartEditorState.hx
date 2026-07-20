@@ -93,12 +93,20 @@ class OurLittleFriend extends FlxSprite
 	function buildOffsets(?path:String)
 	{
 		path ??= _offsetPath;
-		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in File.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
+		// sys.io.File.getContent() only works against real files on disk --
+		// on Android, base assets are packed inside the APK, not loose files,
+		// so this crashed with a native file-read exception the instant the
+		// exists() guard above (which correctly checks the packed asset
+		// manifest, not the filesystem) passed. FunkinAssets.getContent()
+		// is the same "check disk first for mod overrides, fall back to the
+		// packed asset otherwise" helper already used everywhere else in
+		// this codebase for exactly this reason.
+		if (FunkinAssets.exists(Paths.getCorePath('$path.txt'))) for (k => i in FunkinAssets.getContent(Paths.getCorePath('$path.txt')).trim().split('\n'))
 		{
 			var value = i.trim().split(',');
 			offsets.set(k, [Std.parseFloat(value[0]), Std.parseFloat(value[1])]);
 		}
-		
+
 		_offsetPath = path;
 	}
 	
@@ -1521,7 +1529,10 @@ class ChartEditorState extends MusicBeatState
 									}
 									else
 									{
-										eventStuff.push([fileToCheck, File.getContent(path)]);
+										// Same fix as buildOffsets() above -- raw sys.io.File
+										// only works against real files, not assets packed
+										// inside an Android APK.
+										eventStuff.push([fileToCheck, FunkinAssets.getContent(path)]);
 										break;
 									}
 								}
