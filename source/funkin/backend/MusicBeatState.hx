@@ -339,6 +339,13 @@ class MusicBeatState extends FlxUIState
 
 		final oldStep:Int = curStep;
 
+		// Broken out of PlayState's own 'superUpdate' tag (which wraps this
+		// entire function) so a slow window can tell "MusicBeatState's own
+		// step/beat/section bookkeeping" apart from "everything below --
+		// scripts, then whatever Flixel/FlxUIState's own super.update() cascade
+		// (characters, HUD, stage, ...) actually costs" -- previously all of
+		// that was a single opaque 'superUpdate' number.
+		SystemMonitor.profBegin('stepBeatTracking');
 		curDecSection = Conductor.getSection(Conductor.songPosition - ClientPrefs.noteOffset);
 		updateCurStep();
 		updateBeat();
@@ -360,15 +367,33 @@ class MusicBeatState extends FlxUIState
 		{
 			updateSection(true);
 		}
-		
+		SystemMonitor.profEnd();
+
 		_updateArgs[0] = elapsed;
 		var _smT = haxe.Timer.stamp();
+		SystemMonitor.profBegin('baseScripts');
 		scriptGroup.call('onUpdate', _updateArgs);
 		SystemMonitor.reportScriptTime('onUpdate', (haxe.Timer.stamp() - _smT) * 1000);
 		if (GlobalScriptManager.instance != null)
 			GlobalScriptManager.instance.onUpdate(elapsed);
 		PluginsManager.callOnScripts('onUpdate', _updateArgs);
+		SystemMonitor.profEnd();
+
+		// Everything from here on is Flixel/FlxUIState's own update cascade --
+		// eventually FlxState/FlxTypedGroup's per-member loop, touching every
+		// object this state (or PlayState specifically) has add()ed: HUD,
+		// stage, characters, virtual pad, popups, etc. Not something safe to
+		// replace with a hand-rolled loop here (FlxUIState isn't vendored in
+		// this repo, so there's no way to confirm it does ONLY that and
+		// nothing else) -- but Character.update()/PsychHUD.update() wrap
+		// THEMSELVES individually (see those files), so their own share of
+		// this span still gets pulled out into 'charUpdate'/'hudUpdate' in
+		// the breakdown even though this tag's own total necessarily still
+		// includes them (profEnd()'s top-level-only accounting is what keeps
+		// that overlap from double-counting toward "unaccounted").
+		SystemMonitor.profBegin('flxMemberLoop');
 		super.update(elapsed);
+		SystemMonitor.profEnd();
 	}
 	
 	inline function updateSection(rollback:Bool = false):Void

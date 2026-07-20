@@ -3,6 +3,7 @@ package funkin.objects;
 import funkin.data.CharacterData.CharacterParser;
 import funkin.data.CharacterData.AnimationInfo;
 import funkin.data.CharacterData.CharacterInfo;
+import funkin.backend.SystemMonitor;
 
 import animate.FlxAnimate;
 
@@ -299,14 +300,26 @@ class Character extends Bopper implements IFlags
 		setBaseFrameSize();
 	}
 	
+	// Wraps _updateCharacter() (below) instead of timing this function's own
+	// body directly -- that body has an early return (debugMode/isAnimNull),
+	// and a wrapper here means profEnd() always fires exactly once no matter
+	// which path _updateCharacter() takes, instead of needing a matching
+	// profEnd() call duplicated at every return site.
 	override function update(elapsed:Float)
+	{
+		#if android SystemMonitor.profBegin('charUpdate'); #end
+		_updateCharacter(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	function _updateCharacter(elapsed:Float):Void
 	{
 		if (debugMode || isAnimNull())
 		{
 			super.update(elapsed);
 			return;
 		}
-		
+
 		if (animTimer > 0)
 		{
 			animTimer -= elapsed;

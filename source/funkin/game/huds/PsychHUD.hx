@@ -7,6 +7,7 @@ import flixel.util.FlxStringUtil;
 
 import funkin.objects.Bar;
 import funkin.objects.HealthIcon;
+import funkin.backend.SystemMonitor;
 
 // if the hud resembles psych u can just extend this instead of base
 @:access(funkin.states.PlayState)
@@ -278,12 +279,13 @@ class PsychHUD extends BaseHUD
 	
 	override function update(elapsed:Float)
 	{
+		#if android SystemMonitor.profBegin('hudUpdate'); #end
 		super.update(elapsed);
-		
+
 		updateIconsPosition();
 		updateIconsScale(elapsed);
 		updateIconsAnimation();
-		
+
 		if (!parent.startingSong && !parent.paused && parent.updateTime && !parent.endingSong)
 		{
 			var curTime:Float = FlxMath.bound(parent.getSongTime() - ClientPrefs.noteOffset, 0, parent.songLength);
@@ -301,8 +303,9 @@ class PsychHUD extends BaseHUD
 				timeTxt.text = flixel.util.FlxStringUtil.formatTime(secondsTotal, false);
 			}
 		}
-		
+
 		healthLerp = FlxMath.lerp(healthLerp, parent.health, 0.15);
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	override function beatHit()

@@ -692,6 +692,12 @@ class SystemMonitor
 	static var _profTags:Array<String> = [];
 	static var _profMs:Map<String, Float> = new Map();
 
+	// Sum of only the OUTERMOST (non-overlapping) spans since the last
+	// profReset() -- see profEnd()'s own comment on why this has to be
+	// tracked separately from _profMs (which intentionally keeps every tag,
+	// nested or not, for the human-readable breakdown).
+	static var _profTopLevelMs:Float = 0;
+
 	// A single note hit pushes/pops this stack ~10-12 times (noteHitDispatch, hitPreScript,
 	// hitStrum, hitsoundPlay/hitHealth, hitCharSing, hitSplash, hitNoteScript, hitDispose,
 	// hitFocus, hitAudioSfx, hitPopUp). It used to be Array<{tag:String, t:Float}> — an
@@ -775,6 +781,22 @@ class SystemMonitor
 		}
 		_profMs.set(tag, _profMs.get(tag) + ms);
 
+		// _profTotal() (used against real wall-clock time to compute
+		// "unaccounted") must only sum spans that don't overlap each other,
+		// or nesting more sub-tags inside an existing one (superUpdate now
+		// containing stepBeatTracking/charUpdate/hudUpdate/etc., see
+		// MusicBeatState.update()/Character.hx/PsychHUD.hx) would count that
+		// same wall-clock time twice -- once under the parent's tag, again
+		// under the child's -- shrinking "unaccounted" through double-
+		// counting arithmetic rather than genuine new attribution. A tag is
+		// only added to that total when the stack is EMPTY right after this
+		// pop, i.e. it was the outermost span running at the time (a plain
+		// top-level tag, or the single top-level call of a tag that also
+		// happens to run nested elsewhere) -- _profMs/_profTags above are
+		// untouched, so the per-tag breakdown line still shows every tag,
+		// nested or not, for context.
+		if (_profStackTags.length == 0) _profTopLevelMs += ms;
+
 		final watched = _gcCheckStack.pop();
 		if (watched)
 		{
@@ -852,15 +874,16 @@ class SystemMonitor
 		return parts.join(' ');
 	}
 
-	// Sum of every tag accumulated since the last profReset() — used to
-	// compare against real wall-clock time for a reporting window (see
-	// _gameplayWindowStartStamp) to find out how much of each window isn't
-	// covered by any profBegin/profEnd span at all.
+	// Real (non-overlapping) time covered by profiling since the last
+	// profReset() — used to compare against real wall-clock time for a
+	// reporting window (see _gameplayWindowStartStamp) to find out how much
+	// of each window isn't covered by any profBegin/profEnd span at all.
+	// _profTopLevelMs (not a sum over _profMs/_profTags) is what keeps this
+	// correct as more nested sub-tags get added inside existing ones -- see
+	// profEnd()'s own comment.
 	static function _profTotal():Float
 	{
-		var total:Float = 0;
-		for (t in _profTags) total += _profMs.get(t);
-		return total;
+		return _profTopLevelMs;
 	}
 
 	/** Clears accumulated phase timings — call after folding them into a report. */
@@ -868,6 +891,7 @@ class SystemMonitor
 	{
 		_profTags = [];
 		_profMs.clear();
+		_profTopLevelMs = 0;
 		_profStackTags.resize(0);
 		_profStackTimes.resize(0);
 		_gcCheckStack.resize(0);
