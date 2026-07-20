@@ -78,6 +78,55 @@ function onCreatePost()
 	skipText.borderSize = 2;
 	skipText.y = FlxG.height - skipText.height - (PADDING * (3 / 4));
 	skipText.zIndex = 12;
+
+	preloadDialogueAssets();
+}
+
+/**
+ * Warms the dialogue box/bubble/character-portrait caches ahead of time so
+ * readDialogue() (called mid-song, the first time a story-mode cutscene
+ * actually triggers) doesn't have to decode all of that art synchronously
+ * in a single frame -- measured on device as an 800ms+ spike the instant
+ * dialogue first appears. Mirrors readDialogue()'s own early-return gate
+ * exactly, so this is a no-op for every song that isn't about to show
+ * dialogue at all.
+**/
+function preloadDialogueAssets()
+{
+	if ((videoCheckStory && !isStoryMode) || PlayState.seenCutscene) return;
+
+	var txt = Paths.getPath('songs/' + Paths.sanitize(songName) + '/dialogue.txt', null, PathsTestMode.NORMAL);
+	var lines:Array<String> = CoolUtil.coolTextFile(txt);
+	if (lines.length == 0) return;
+
+	// Universal to every dialogue box regardless of speaker.
+	Paths.image('ui/dialogue/dialogueBox');
+	Paths.image('ui/dialogue/bubble');
+
+	// Warm each unique speaker's portrait atlas -- same lookup speakerAnims()
+	// itself does (data/dialogue/<char>.json -> its "asset" field -> the
+	// portrait atlas), just against a throwaway sprite instead of the real
+	// on-screen one so nothing here is actually visible yet.
+	var seenChars:Map<String, Bool> = new Map();
+	for (line in lines)
+	{
+		var splitName:Array<String> = line.split(":");
+		if (splitName.length < 2) continue;
+
+		var charKey:String = splitName[1];
+		if (charKey.length == 0 || seenChars.exists(charKey)) continue;
+		seenChars.set(charKey, true);
+
+		var path:String = Paths.getPath('data/dialogue/' + charKey + '.json', null, PathsTestMode.NORMAL);
+		if (!FunkinAssets.exists(path, TEXT)) continue;
+
+		var dialogueChar:DialogueCharacter = FunkinAssets.parseJson5(FunkinAssets.getContent(path));
+		if (dialogueChar == null || dialogueChar.asset == null) continue;
+
+		var warm:FunkinSprite = new FunkinSprite();
+		warm.loadAtlas('ui/dialogue/characters/${dialogueChar.asset}');
+		warm.destroy();
+	}
 }
 
 function onVidEnd()
