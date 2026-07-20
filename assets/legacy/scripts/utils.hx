@@ -75,8 +75,17 @@ function onLoad()
 function onCreatePost()
 {
 	modifyGUI();
-	
-	if (!ClientPrefs.inDevMode) return;
+
+	// onUpdate's entire body is dev-mode-only (TAB debug overlay). inDevMode
+	// can't change during a PlayState's lifetime -- the only way to flip it
+	// is via OptionsState, reached through a full FlxG.switchState() that
+	// destroys this PlayState -- so it's safe to decide once here instead of
+	// re-checking through the hscript interpreter every single frame.
+	if (!ClientPrefs.inDevMode)
+	{
+		script.suppressedEvents.set('onUpdate', true);
+		return;
+	}
 	var WATERMARK:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menu/pause/looksie_extreme_demon'));
 	WATERMARK.camera = camOther;
 	WATERMARK.alpha = 0.3;

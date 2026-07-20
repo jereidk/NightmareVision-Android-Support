@@ -4,6 +4,14 @@ public var dbGroup = new FlxSpriteGroup();
 
 function onCreatePost()
 {
+	// onUpdate is only useful while inDevMode or chartingMode is set, and
+	// neither can change during a PlayState's lifetime (inDevMode only flips
+	// via OptionsState, reached through a full state switch that destroys
+	// this PlayState; chartingMode is only ever set before PlayState.create()
+	// runs) -- decide once here instead of re-entering the hscript
+	// interpreter every frame just to hit this same check.
+	script.suppressedEvents.set('onUpdate', !(ClientPrefs.inDevMode || PlayState.chartingMode));
+
 	if (!ClientPrefs.inDevMode) return;
 	// trace('well hey');
 	game.paused = false;
