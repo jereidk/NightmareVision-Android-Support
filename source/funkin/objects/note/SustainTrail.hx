@@ -54,7 +54,10 @@ class SustainTrail extends RGBSprite implements funkin.game.modchart.IModNote
 	public var player:Int = 0;
 	public var skin:NoteSkin;
 
-	@:noCompletion var _textureLoaded:Null<String> = null;
+	// Public: PlayState's _deadTrailsByTexture index (recycleCompatibleTrail())
+	// reads this from outside the class to bucket dead trails by what they
+	// last had loaded.
+	@:noCompletion public var _textureLoaded:Null<String> = null;
 
 	public function new(x:Float = 0, y:Float = 0)
 	{
