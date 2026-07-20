@@ -932,7 +932,14 @@ class MainMenuState extends MusicBeatState
 			// enough to signal "wrong code"; the player can see and correct
 			// what they actually typed instead.
 			devCodeField.backgroundColor = DEV_COL_DANGER;
-			FlxG.sound.play(Paths.sound('error'), 0.6);
+			// 'error' isn't a real key under assets/legacy/sounds -- the only
+			// error.ogg in the project lives under assets/embeds/sounds/ui/,
+			// a different lookup path Paths.sound() doesn't check, so this
+			// silently fell back to Flixel's beep. 'locked' is the sound this
+			// codebase already uses everywhere else for "denied" (locked
+			// songs/cosmetics in FreeplayState, StoryMenuState,
+			// CosmicubeSubState) and it actually resolves.
+			FlxG.sound.play(Paths.sound('locked'), 0.6);
 			haxe.Timer.delay(() -> {
 				if (devCodeField != null) devCodeField.backgroundColor = DEV_COL_BG;
 			}, 400);
@@ -1319,14 +1326,22 @@ class MainMenuState extends MusicBeatState
 						var bw = Std.int(devResetBtnSpr.width), bh = Std.int(devResetBtnSpr.height);
 						devResetBtnSpr.loadGraphic(cachedDevShape('devpanel_danger_armed', () -> devRoundedRect(bw, bh, DEV_COL_DANGER_ARMED, 10)));
 					}
-					FlxG.sound.play(Paths.sound('warn'), 0.7);
+					// 'warn' isn't a real key under assets/legacy/sounds (same
+					// gap as 'error' below -- see submitDevCode()'s comment).
+					// 'cancelMenu' is already this file's go-to "heads up"
+					// blip for the code-entry field's own BACK handling.
+					FlxG.sound.play(Paths.sound('cancelMenu'), 0.7);
 				}
 				else
 				{
 					CosmicubeData.currentMoney = 0;
 					ClientPrefs.cosmicubeUnlocks.resize(0);
 					ClientPrefs.flush();
-					FlxG.sound.play(Paths.sound('error'), 0.7);
+					// Same broken 'error' key -- 'kill' is what
+					// MissCounterSubstate already uses for its own "you just
+					// confirmed a destructive reset" menu action, so it's a
+					// proven fit here too.
+					FlxG.sound.play(Paths.sound('kill'), 0.7);
 					closeDevPanel();
 				}
 
