@@ -119,6 +119,7 @@ class ScriptGroup implements IFlxDestroyable
 		for (i in members)
 		{
 			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
+			if (i.suppressedEvents.get(event) == true) continue;
 
 			// Set as soon as we know the answer, not after the loop — a halting
 			// return below exits early, and the cache should still capture

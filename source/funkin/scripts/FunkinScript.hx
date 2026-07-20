@@ -135,8 +135,22 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * is true if parsing failed
 	 */
 	@:noCompletion public var __garbage:Bool = false;
-	
+
 	public var modFolder:Null<String>;
+
+	/**
+	 * Per-event opt-out a script can flip on itself (via the `script` var it's
+	 * given, e.g. `script.suppressedEvents.set('onUpdate', true);`) to stop
+	 * ScriptGroup.call() from invoking it for that event -- for scripts that
+	 * are auto-loaded into every song (assets/legacy/scripts/) but only need
+	 * a per-frame hook while some specific runtime state is active (e.g.
+	 * cutsceneSkip.hx's onUpdate, idle for every song that never registers a
+	 * skippable cutscene). Every hscript function call pays real tree-walking
+	 * interpreter overhead even for a trivial early-return body, so this
+	 * avoids entering the interpreter at all rather than relying on the
+	 * script's own first-line guard.
+	 */
+	public var suppressedEvents:Map<String, Bool> = new Map();
 
 	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{

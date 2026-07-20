@@ -22,6 +22,14 @@ var _cutsceneSkipLastTapPos:Float = -9999;
 var _cutsceneSkipWindowMs:Float = 500;
 var _cutsceneSkipTextShown:Bool = false;
 
+// This script is auto-loaded into EVERY song (see PlayState.hx's
+// addSongScripts('scripts')), but registerSkippableCutscene() is only ever
+// called by a handful of stage scripts (currently just ejected.hx). Without
+// this, onUpdate() paid full hscript interpreter dispatch cost every single
+// frame of every song, for nothing, just to hit its own early-return guard.
+// Suppressed by default; registerSkippableCutscene()/onSkip flip it on/off.
+script.suppressedEvents.set('onUpdate', true);
+
 /**
  * Registers a skippable mid-song cutscene. Call once (e.g. from
  * onCreatePost()) from any song/stage script whose cutscene runs
@@ -43,6 +51,7 @@ public function registerSkippableCutscene(startTime:Float, endTime:Float, onSkip
 	_cutsceneSkipCallback = onSkip;
 	_cutsceneSkipLastTapPos = -9999;
 	_cutsceneSkipTextShown = false;
+	script.suppressedEvents.set('onUpdate', false);
 
 	if (_cutsceneSkipText == null)
 	{
@@ -102,6 +111,7 @@ function _doCutsceneSkip():Void
 	_cutsceneSkipDone = true;
 	_cutsceneSkipActive = false;
 	_cutsceneSkipTextShown = false;
+	script.suppressedEvents.set('onUpdate', true);
 
 	FlxTween.cancelTweensOf(_cutsceneSkipText);
 	_cutsceneSkipText.visible = false;

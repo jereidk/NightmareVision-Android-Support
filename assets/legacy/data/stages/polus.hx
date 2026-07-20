@@ -10,23 +10,34 @@ var ext = 'stages/polus/red/';
 
 function onLoad()
 {
+	// These five are static parallax layers: no velocity, no animation, nothing
+	// that ever changes after onLoad(). scrollFactor is a draw-time concern
+	// (handled by the camera, not update()), so FlxObject.update()'s per-frame
+	// velocity/drag/angle integration on each of them was pure waste every
+	// single frame of every song using this stage -- active=false makes
+	// FlxTypedGroup.update() skip them entirely (see stage's own group loop).
 	var sky:FlxSprite = new FlxSprite(-400, -400).loadGraphic(Paths.image(ext + 'polus_custom_sky'));
 	sky.scrollFactor.set(0.5, 0.5);
 	sky.setGraphicSize(Std.int(sky.width * 1.4));
+	sky.active = false;
 	add(sky);
-	
+
 	var rocks:FlxSprite = new FlxSprite(-700, -300).loadGraphic(Paths.image(ext + 'polusrocks'));
 	rocks.scrollFactor.set(0.6, 0.6);
+	rocks.active = false;
 	add(rocks);
-	
+
 	var hills:FlxSprite = new FlxSprite(-1050, -180.55).loadGraphic(Paths.image(ext + 'polusHills'));
 	hills.scrollFactor.set(0.9, 0.9);
+	hills.active = false;
 	add(hills);
-	
+
 	var warehouse:FlxSprite = new FlxSprite(50, -400).loadGraphic(Paths.image(ext + 'polus_custom_lab'));
+	warehouse.active = false;
 	add(warehouse);
-	
+
 	var ground:FlxSprite = new FlxSprite(-1350, 80).loadGraphic(Paths.image(ext + 'polus_custom_floor'));
+	ground.active = false;
 	add(ground);
 	
 	snowEmitter = new SnowEmitter(-600, -600, 2700);
@@ -50,6 +61,7 @@ function onLoad()
 	bfdead.setGraphicSize(Std.int(bfdead.width * 0.8));
 	bfdead.updateHitbox();
 	bfdead.alpha = 0;
+	bfdead.active = false; // static prop, only its alpha flips once in onCreatePost()
 	add(bfdead);
 	
 	// wh.color = FlxColor.RED;
