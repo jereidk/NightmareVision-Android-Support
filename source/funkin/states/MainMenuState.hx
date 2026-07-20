@@ -652,90 +652,111 @@ class MainMenuState extends MusicBeatState
 		starBG.x -= 4.5 * elapsed;
 		starFG.x -= 9 * elapsed;
 
-		if (ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+		if (!devCodeBoxOpen && ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
 		{
 			FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
 			CoolUtil.browserLoad(YT_CHANNEL_URL);
 		}
 
-		if (FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
-		
+		if (!devCodeBoxOpen && FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
+
 		#if !mobile
 		// Desktop: allow switching between keyboard and mouse
 		if (FlxG.keys.firstJustPressed() != FlxKey.NONE) mouseMode = false;
 		if (FlxG.mouse.justMoved) mouseMode = true;
 		#end
-		
-		if (!lockMovement && !introActive && mouseMode)
-		{
-			for (i in 0...menuButtons.length)
-			{
-				if (FlxG.mouse.overlaps(menuButtons[i]))
-				{
-					if (curMenuItem != i)
-					{
-						curMenuItem = i;
-						updateMenuSelection();
-					}
-					if (FlxG.mouse.justPressed) select();
-					break;
-				}
-			}
-		}
-		
+
 		if (introActive)
 		{
 			introTimer -= elapsed;
 			if (introTimer <= 0) introActive = false;
 		}
-		
-		if (!lockMovement && !introActive)
+
+		// The code-entry field owns the keyboard/touch focus while it's open --
+		// menu navigation, mouse selection, and ACCEPT must not fire underneath
+		// it (a physical/soft-keyboard Enter used to double as both "submit the
+		// code" and "controls.ACCEPT the highlighted menu item" on the same
+		// frame). controls.BACK still works, but closes the code box instead of
+		// leaking through to the normal "back to TitleState" handling below --
+		// otherwise typing a code becomes the only thing on this screen with no
+		// way out except guessing it right.
+		if (devCodeBoxOpen)
 		{
-			var moved = false;
-			if (controls.UI_UP_P)
-			{
-				final prev = curMenuItem;
-				if (curMenuItem >= 3)
-				{
-					lastSmallBtn = curMenuItem;
-					curMenuItem = 2;
-				}
-				else if (curMenuItem > 0) curMenuItem--;
-				
-				moved = curMenuItem != prev;
-			}
-			else if (controls.UI_DOWN_P)
-			{
-				final prev = curMenuItem;
-				
-				if (curMenuItem == 2) curMenuItem = lastSmallBtn;
-				else if (curMenuItem < 2) curMenuItem++;
-				
-				moved = curMenuItem != prev;
-			}
-			else if (controls.UI_LEFT_P && curMenuItem == 4)
-			{
-				curMenuItem = 3;
-				moved = true;
-			}
-			else if (controls.UI_RIGHT_P && curMenuItem == 3)
-			{
-				curMenuItem = 4;
-				moved = true;
-			}
-			if (moved)
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
-				updateMenuSelection();
-			}
-			if (controls.ACCEPT) select();
 			#if android
 			if (controls.BACK)
 			{
 				FlxG.sound.play(Paths.sound('cancelMenu'));
-				FlxG.switchState(TitleState.new);
+				closeDevCodeBox();
 			}
 			#end
+		}
+		else
+		{
+			if (!lockMovement && !introActive && mouseMode)
+			{
+				for (i in 0...menuButtons.length)
+				{
+					if (FlxG.mouse.overlaps(menuButtons[i]))
+					{
+						if (curMenuItem != i)
+						{
+							curMenuItem = i;
+							updateMenuSelection();
+						}
+						if (FlxG.mouse.justPressed) select();
+						break;
+					}
+				}
+			}
+
+			if (!lockMovement && !introActive)
+			{
+				var moved = false;
+				if (controls.UI_UP_P)
+				{
+					final prev = curMenuItem;
+					if (curMenuItem >= 3)
+					{
+						lastSmallBtn = curMenuItem;
+						curMenuItem = 2;
+					}
+					else if (curMenuItem > 0) curMenuItem--;
+
+					moved = curMenuItem != prev;
+				}
+				else if (controls.UI_DOWN_P)
+				{
+					final prev = curMenuItem;
+
+					if (curMenuItem == 2) curMenuItem = lastSmallBtn;
+					else if (curMenuItem < 2) curMenuItem++;
+
+					moved = curMenuItem != prev;
+				}
+				else if (controls.UI_LEFT_P && curMenuItem == 4)
+				{
+					curMenuItem = 3;
+					moved = true;
+				}
+				else if (controls.UI_RIGHT_P && curMenuItem == 3)
+				{
+					curMenuItem = 4;
+					moved = true;
+				}
+				if (moved)
+				{
+					FlxG.sound.play(Paths.sound('scrollMenu'), 0.5);
+					updateMenuSelection();
+				}
+				if (controls.ACCEPT) select();
+				#if android
+				if (controls.BACK)
+				{
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					FlxG.switchState(TitleState.new);
+				}
+				#end
+			}
 		}
 
 		super.update(elapsed);
@@ -867,8 +888,12 @@ class MainMenuState extends MusicBeatState
 		}
 		else
 		{
-			devCodeField.text = '';
-			_lastDevCodeText = '';
+			// Leave the typed text in place -- wiping it here used to give the
+			// illusion the field had been cleared, but _lastDevCodeText stayed
+			// stale until the next keystroke, so the "cleared" text would pop
+			// back and pile on top of whatever got typed next. A red flash is
+			// enough to signal "wrong code"; the player can see and correct
+			// what they actually typed instead.
 			devCodeField.backgroundColor = DEV_COL_DANGER;
 			FlxG.sound.play(Paths.sound('error'), 0.6);
 			haxe.Timer.delay(() -> {
