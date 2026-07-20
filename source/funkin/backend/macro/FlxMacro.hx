@@ -33,13 +33,53 @@ class FlxMacro
 						expr: macro
 						{
 							this.frames = funkin.Paths.getAtlasFrames(path);
-							this.animation.addByPrefix(animName, animName, fps, looped);
+
+							// A frame named EXACTLY animName (no numeric suffix at
+							// all -- e.g. a static prop atlas with one frame
+							// literally called "bg") is a single-image
+							// "animation" using the addByPrefix machinery only to
+							// grab itself. FlxAnimationController's own
+							// addByPrefix() always calls FlxFrame.sortFrames()
+							// with its default warn=true, which tries to parse a
+							// numeric index out of whatever's between the prefix
+							// and suffix and logs "Could not parse frame number"
+							// when there isn't one -- harmless (falls back to
+							// index 0) but noisy. Skip straight to a direct
+							// single-frame animation.add() whenever that's
+							// exactly the case; anything else (real numbered
+							// sequences, or multiple frames sharing this prefix)
+							// still goes through addByPrefix exactly as before.
+							var singleFrameIndex = -1;
+							var matchCount = 0;
+							if (this.frames != null)
+							{
+								var atlasFrames = this.frames.frames;
+								for (i in 0...atlasFrames.length)
+								{
+									var f = atlasFrames[i];
+									if (f.name != null && StringTools.startsWith(f.name, animName))
+									{
+										matchCount++;
+										if (f.name == animName) singleFrameIndex = i;
+									}
+								}
+							}
+
+							if (matchCount == 1 && singleFrameIndex != -1)
+							{
+								this.animation.add(animName, [singleFrameIndex], fps, looped);
+							}
+							else
+							{
+								this.animation.addByPrefix(animName, animName, fps, looped);
+							}
+
 							this.animation.play(animName);
 							if (this.animation.curAnim == null || this.animation.curAnim.numFrames == 1)
 							{
 								this.active = false;
 							}
-							
+
 							return this;
 						}
 					}),
