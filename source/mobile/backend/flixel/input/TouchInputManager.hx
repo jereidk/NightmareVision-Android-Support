@@ -17,24 +17,44 @@ class TouchInputManager extends FlxTypedSpriteGroup<FlxButton>
 	 */
 	public var activeButtons:Map<FlxMobileInputID, FlxButton> = new Map<FlxMobileInputID, FlxButton>();
 
+	// Resolved once instead of on every profBegin() call in update()/draw()
+	// below -- Type.getClassName(Type.getClass(this)) doesn't change for the
+	// lifetime of the instance.
+	#if android
+	final _profTagUpdate:String;
+	final _profTagDraw:String;
+	#end
+
 	public function new()
 	{
 		super();
 		RawTouchClock.init();
 		refreshMappedButtons();
+		#if android
+		final className = Type.getClassName(Type.getClass(this));
+		_profTagUpdate = 'touchInput:$className';
+		_profTagDraw = 'touchInput:$className:draw';
+		#end
 	}
 
 	// Base class for MobileVirtualPad (the on-screen D-pad/action buttons)
-	// and MobileHitbox (the note-tap zones) -- neither overrode update()
-	// before, so per-touch hit-testing against every button here was
-	// invisible, folded into whichever tag wraps the generic Flixel member
-	// loop that reaches it ('flxMemberLoop' during gameplay). One override
-	// here covers both, tagged by the concrete class name so the breakdown
-	// can tell which of the two (if either) is actually costing anything.
+	// and MobileHitbox (the note-tap zones) -- neither overrode
+	// update()/draw() before, so per-touch hit-testing and the buttons' own
+	// draw cost were invisible, folded into whichever tag wraps the generic
+	// Flixel member loop that reaches them ('flxMemberLoop'/'draw' during
+	// gameplay). Tagged by concrete class name so the breakdown can tell
+	// which of the two (if either) is actually costing anything.
 	override function update(elapsed:Float):Void
 	{
-		#if android SystemMonitor.profBegin('touchInput:${Type.getClassName(Type.getClass(this))}'); #end
+		#if android SystemMonitor.profBegin(_profTagUpdate); #end
 		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	override function draw():Void
+	{
+		#if android SystemMonitor.profBegin(_profTagDraw); #end
+		super.draw();
 		#if android SystemMonitor.profEnd(); #end
 	}
 

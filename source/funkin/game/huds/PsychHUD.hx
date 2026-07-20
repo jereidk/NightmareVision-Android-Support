@@ -307,7 +307,18 @@ class PsychHUD extends BaseHUD
 		healthLerp = FlxMath.lerp(healthLerp, parent.health, 0.15);
 		#if android SystemMonitor.profEnd(); #end
 	}
-	
+
+	// Didn't override draw() before -- its own share of PlayState's 'draw'
+	// tag (which wraps this whole state's super.draw(), see PlayState.hx's
+	// own doc comment on that tag) was invisible, same reasoning as
+	// 'hudUpdate' above.
+	override function draw()
+	{
+		#if android SystemMonitor.profBegin('hudDraw'); #end
+		super.draw();
+		#if android SystemMonitor.profEnd(); #end
+	}
+
 	override function beatHit()
 	{
 		if (!updateIconScale) return;

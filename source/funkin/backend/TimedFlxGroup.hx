@@ -19,17 +19,26 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 class TimedFlxGroup<T:FlxBasic> extends FlxTypedGroup<T>
 {
 	final _profTag:String;
+	final _profDrawTag:String;
 
 	public function new(profTag:String, maxSize:Int = 0)
 	{
 		super(maxSize);
 		_profTag = profTag;
+		_profDrawTag = profTag + 'Draw';
 	}
 
 	override function update(elapsed:Float):Void
 	{
 		#if android SystemMonitor.profBegin(_profTag); #end
 		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	override function draw():Void
+	{
+		#if android SystemMonitor.profBegin(_profDrawTag); #end
+		super.draw();
 		#if android SystemMonitor.profEnd(); #end
 	}
 }

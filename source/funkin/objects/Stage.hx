@@ -84,6 +84,14 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 		#if android SystemMonitor.profEnd(); #end
 	}
 
+	// Same reasoning as update() above, for PlayState's 'draw' tag instead.
+	override function draw():Void
+	{
+		#if android SystemMonitor.profBegin('stageDraw'); #end
+		super.draw();
+		#if android SystemMonitor.profEnd(); #end
+	}
+
 	/**
 	 *
 	 * instantiates any stage objects and attempts to load a script for the stage

@@ -375,6 +375,7 @@ class Character extends Bopper implements IFlags
 	
 	override function draw()
 	{
+		#if android SystemMonitor.profBegin('charDraw'); #end
 		if (ghostsEnabled)
 		{
 			for (ghost in doubleGhosts)
@@ -383,6 +384,7 @@ class Character extends Bopper implements IFlags
 			}
 		}
 		super.draw();
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	function set_holding(isIt:Bool):Bool
