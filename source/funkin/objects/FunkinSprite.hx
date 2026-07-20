@@ -1,10 +1,14 @@
 package funkin.objects;
 
 import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.graphics.frames.FlxFramesCollection;
+import flixel.graphics.frames.FlxFrame;
 
 import animate.FlxAnimateController;
 import animate.FlxAnimateFrames;
 import animate.FlxAnimate;
+
+using StringTools;
 
 class FunkinSprite extends FlxAnimate
 {
@@ -243,6 +247,13 @@ class FunkinSprite extends FlxAnimate
  		);
 	}
 	
+	// (FlxFramesCollection, prefix) -> resolved frame-index list for that
+	// prefix within that atlas -- see addAnimByPrefix()'s own comment for
+	// why this exists. Keyed weakly so a disposed/reloaded atlas (mod swap,
+	// destructive cache mode) doesn't pin dead FlxFramesCollections alive
+	// forever just because something once animated off them.
+	static var _animByPrefixCache = new haxe.ds.WeakMap<FlxFramesCollection, Map<String, Array<Int>>>();
+
 	/**
 	 * Helper function add a animation by prefix. It will attempt to add by `frame label`, `symbol`, then `prefix`
 	 */
@@ -256,6 +267,72 @@ class FunkinSprite extends FlxAnimate
 		else if (checkLibraryForSymbol(library, prefix))
 		{
 			anim.addBySymbol(name, prefix, fps, looping, flipX, flipY);
+		}
+		else if (frames != null)
+		{
+			// FlxAnimationController.addByPrefix() does a full O(n) scan of
+			// frames.frames to find every frame whose name starts with
+			// `prefix`, then for EACH match calls getFrameIndex(), which does
+			// ANOTHER full O(n) `indexOf` scan to find that frame's position
+			// -- an O(n*m) cost paid from scratch on every single call. Note
+			// skins call this 3+ times per reload (scroll/hold/holdend), and
+			// reload fires on nearly every pooled note spawn whenever the
+			// dead-note pool doesn't happen to have an exact (skin, lane)
+			// match sitting dead (see PlayState.recycleCompatibleNote()'s own
+			// doc comment) -- on a dense song this dominated noteSpawn cost
+			// outright (device logs showed noteReload regularly 200-400ms in
+			// a single frame). The (prefix, atlas) -> frame-index list is
+			// entirely determined by the atlas itself and never changes for
+			// as long as that FlxFramesCollection is alive, so it's computed
+			// once per atlas and reused after that instead of rescanning
+			// every time.
+			var byPrefix = _animByPrefixCache.get(frames);
+			if (byPrefix == null)
+			{
+				byPrefix = [];
+				_animByPrefixCache.set(frames, byPrefix);
+			}
+
+			var indices = byPrefix.get(prefix);
+			if (indices == null)
+			{
+				indices = [];
+
+				final matched:Array<FlxFrame> = [];
+				for (frame in frames.frames) if (frame.name != null && frame.name.startsWith(prefix)) matched.push(frame);
+
+				if (matched.length > 0)
+				{
+					// Same suffix-detection + sort FlxAnimationController's own
+					// byPrefixHelper() uses, so frame ORDER matches exactly --
+					// only the index lookup below differs.
+					final firstName = matched[0].name;
+					final postIndex = firstName.indexOf(".", prefix.length);
+					final suffix = firstName.substring(postIndex == -1 ? firstName.length : postIndex, firstName.length);
+					FlxFrame.sortFrames(matched, prefix, suffix);
+
+					// One O(n) pass building frame -> array-position, shared
+					// across every matched frame, instead of an O(n) indexOf()
+					// scan PER frame (the actual O(n*m) blowup this exists to
+					// avoid).
+					final positionOf = new Map<FlxFrame, Int>();
+					for (i in 0...frames.frames.length) positionOf.set(frames.frames[i], i);
+					for (frame in matched) indices.push(positionOf.get(frame));
+				}
+				else
+				{
+					FlxG.log.warn('Could not create animation: "$name", no frames were found with the prefix "$prefix"');
+				}
+
+				byPrefix.set(prefix, indices);
+			}
+
+			// Copied, not handed out by reference -- FlxAnimation.frames is a
+			// plain mutable Array<Int>, and at least one Flixel animation API
+			// (append-style prefix/indices calls) mutates it in place. A
+			// script or future call path doing that to one note's animation
+			// must not corrupt every other note sharing this cached list.
+			if (indices.length > 0) animation.add(name, indices.copy(), fps, looping, flipX, flipY);
 		}
 		else
 		{
