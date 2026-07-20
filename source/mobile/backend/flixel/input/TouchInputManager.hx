@@ -4,6 +4,7 @@ import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import mobile.backend.flixel.input.FlxMobileInputID;
 import mobile.backend.flixel.FlxButton;
 import haxe.ds.Map;
+import funkin.backend.SystemMonitor;
 
 /**
  * Virtual button manager for mobile devices
@@ -21,6 +22,20 @@ class TouchInputManager extends FlxTypedSpriteGroup<FlxButton>
 		super();
 		RawTouchClock.init();
 		refreshMappedButtons();
+	}
+
+	// Base class for MobileVirtualPad (the on-screen D-pad/action buttons)
+	// and MobileHitbox (the note-tap zones) -- neither overrode update()
+	// before, so per-touch hit-testing against every button here was
+	// invisible, folded into whichever tag wraps the generic Flixel member
+	// loop that reaches it ('flxMemberLoop' during gameplay). One override
+	// here covers both, tagged by the concrete class name so the breakdown
+	// can tell which of the two (if either) is actually costing anything.
+	override function update(elapsed:Float):Void
+	{
+		#if android SystemMonitor.profBegin('touchInput:${Type.getClassName(Type.getClass(this))}'); #end
+		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
 	}
 
 	public inline function isPressed(id:FlxMobileInputID):Bool

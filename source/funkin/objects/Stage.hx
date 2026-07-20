@@ -8,6 +8,7 @@ import flixel.FlxBasic;
 
 import funkin.data.StageData;
 import funkin.scripts.FunkinScript;
+import funkin.backend.SystemMonitor;
 
 /**
  * Primary class holding all `FlxBasic`'s for the background of stage within `PlayState`
@@ -65,9 +66,26 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 		
 		flags = (stageData.flags ?? {});
 	}
-	
+
+	// This state's own tag until now -- Stage never overrode update(), so its
+	// whole cascade (background/parallax props, AND the character groups it
+	// contains -- see this class's own doc comment) was invisible, folded
+	// into whatever PlayState/MusicBeatState tag happens to wrap the member
+	// loop that reaches it ('flxMemberLoop'). The stage's own script (loaded
+	// via runScript() below) isn't part of this -- that's added to
+	// PlayState.scripts and already timed per-script by ScriptGroup.call().
+	// Character.update() tags itself separately as 'charUpdate', so
+	// "stageUpdate minus charUpdate" is roughly the background/props-only
+	// cost.
+	override function update(elapsed:Float):Void
+	{
+		#if android SystemMonitor.profBegin('stageUpdate'); #end
+		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
 	/**
-	 * 
+	 *
 	 * instantiates any stage objects and attempts to load a script for the stage
 	 */
 	public function buildStage()

@@ -649,12 +649,28 @@ class SystemMonitor
 		profReset();
 	}
 
-	/** Reset the sampling cadence — call when a song starts so the first sample lands ~1s in, not mid-timer from the previous song. */
+	/**
+	 * Reset the sampling cadence — call when a song starts so the first
+	 * sample lands ~1s in, not mid-timer from the previous song.
+	 *
+	 * Also wipes any profBegin/profEnd accumulation via profReset(): tags
+	 * like 'stepBeatTracking'/'flxMemberLoop'/'charUpdate'/'script:...' fire
+	 * from MusicBeatState/Character/ScriptGroup, which run on EVERY state
+	 * (menus, editors, ...), not just PlayState -- but profReset() itself is
+	 * otherwise only called from reportGameplayFrame(), which only PlayState
+	 * calls. Without this, whatever accumulated during however long the
+	 * player spent in menus before starting this song would still be sitting
+	 * in _profMs/_profTopLevelMs, and the very first post-song-start
+	 * [GAMEPLAY] line would compare that stale total against only the ~1s
+	 * real window reportGameplayFrame() actually measures -- a nonsense
+	 * "unaccounted" figure (likely deeply negative) on that one line.
+	 */
 	public static function resetGameplayTimer():Void
 	{
 		_gameplayLogTimer = 0.0;
 		_gameplayWindowStartStamp = haxe.Timer.stamp();
 		_windowAllocBytes = 0;
+		profReset();
 	}
 
 	// ==================== AUDIO SYNC ====================

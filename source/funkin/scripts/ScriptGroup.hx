@@ -6,6 +6,8 @@ import extensions.hscript.InterpEx;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
+import funkin.backend.SystemMonitor;
+
 /**
  * Container of `FunkinScript` instances
  *
@@ -126,7 +128,21 @@ class ScriptGroup implements IFlxDestroyable
 
 			final _t = timingEnabled ? haxe.Timer.stamp() : 0.0;
 
+			// PlayState's own 'script' tag (wrapping this whole call()) only
+			// ever showed the COMBINED cost of every loaded song/stage
+			// script -- one slow mod/script script among several was
+			// invisible, folded into everyone else's time. Tagged per
+			// (script name, event) instead of just accumulating a single
+			// 'script' number; nested inside whatever tag the caller already
+			// has open (PlayState's 'script', MusicBeatState's
+			// 'baseScripts'), so this doesn't inflate "unaccounted" -- see
+			// SystemMonitor.profEnd()'s own doc comment on why only the
+			// outermost span in a nest counts toward that total.
+			#if android SystemMonitor.profBegin('script:${i.name}:$event'); #end
+
 			var ret:Dynamic = i.call(event, args)?.returnValue;
+
+			#if android SystemMonitor.profEnd(); #end
 
 			if (timingEnabled)
 			{
