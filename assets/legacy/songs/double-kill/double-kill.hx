@@ -109,7 +109,13 @@ function onEvent(eventName, value1, value2)
 						FlxTween.tween(obj, {alpha: 0}, Conductor.crotchet * .004, {ease: FlxEase.circInOut});
 					
 				case 'readykill':
-					if (!hasBfSkin) triggerEventNote('Change Character', '0', 'bf-defeat-normal');
+					// Falls back to the normal defeat sprite whenever the equipped
+					// skin doesn't define its own flags.variants.defeat (every custom
+					// BF skin right now, upstream included) -- otherwise defeatness()
+					// below silently does nothing for anyone using a custom skin, and
+					// BF just keeps singing normally through what's supposed to be a
+					// dramatic death sequence for everyone else on screen.
+					if (!hasBfSkin || boyfriend.getFlag('variants')?.defeat == null) triggerEventNote('Change Character', '0', 'bf-defeat-normal');
 					
 					FlxTween.tween(game, {defaultCamZoom: .8}, Conductor.crotchet * .004 * 4, {ease: FlxEase.expoOut});
 					
