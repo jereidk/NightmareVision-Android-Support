@@ -3342,7 +3342,7 @@ class PlayState extends MusicBeatState
 		if (automatedDiscord) DiscordClient.changePresence(rpcPausedDescription, rpcSongName);
 	}
 	
-	function openChartEditor():Void
+	public function openChartEditor():Void
 	{
 		ChartEditorState._song = SONG;
 		FlxG.camera.followLerp = 0;
@@ -3351,11 +3351,7 @@ class PlayState extends MusicBeatState
 		paused = true;
 		CoolUtil.cancelMusicFadeTween();
 		
-		#if mobile
 		FlxG.switchState(ChartEditorState.new);
-		#else
-		FlxG.switchState(FlxG.keys.pressed.SHIFT ? ChartEditorState.new : OLDChartEditorState.new);
-		#end
 		chartingMode = true;
 		
 		DiscordClient.changePresence('Chart Editor');

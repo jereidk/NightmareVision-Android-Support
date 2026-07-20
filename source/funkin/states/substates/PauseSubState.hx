@@ -126,6 +126,10 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
                 {
                         options.push('[DEV] debug info');
                         options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
+                        // Mirrors keyboard-only debugKeysChart (PlayState.hx) -- the only
+                        // way to reach the chart editor mid-song on a touch-only device
+                        // used to be a keybind with no on-screen equivalent.
+                        options.push('[DEV] chart editor');
                 }
 		if (PlayState.chartingMode)
 		{
@@ -433,6 +437,11 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
                         case '[DEV] speed: back to 1x':
                                 PlayState.instance.playbackRate = 1;
                                 close();
+                        case '[DEV] chart editor':
+                                // Matches 'options'/'restartsong' above -- FlxG.switchState()
+                                // (inside openChartEditor()) replaces this substate along with
+                                // everything else, no separate close() needed first.
+                                PlayState.instance.openChartEditor();
 
                         case 'backtomenu':
 				returnToMain();

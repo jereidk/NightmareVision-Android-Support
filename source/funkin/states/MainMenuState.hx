@@ -26,6 +26,7 @@ import funkin.states.options.*;
 import funkin.states.*;
 import funkin.states.substates.CreditsRollSubState;
 import funkin.states.editors.MasterEditorMenu;
+import funkin.states.editors.ChartEditorState;
 
 class MainMenuState extends MusicBeatState
 {
@@ -136,6 +137,10 @@ class MainMenuState extends MusicBeatState
 	static inline final DEV_COL_MONEY:Int = 0xFF14532D;
 	static inline final DEV_COL_DANGER_ARMED:Int = 0xFFFF4444;
 	static inline final DEV_COL_CLOSE:Int = 0xFF241A1A;
+	// Deliberately its own cool blue, apart from the warm gold/green/red
+	// palette every other row uses -- makes the Chart Editor entry read as
+	// its own distinct category (a tool, not a cheat) at a glance.
+	static inline final DEV_COL_TOOL:Int = 0xFF1E3A5F;
 
 	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
@@ -992,7 +997,12 @@ class MainMenuState extends MusicBeatState
 	function buildDevPanel():Void
 	{
 		var PW:Int = 560;
-		var PH:Int = 560;
+		// Was 560 -- already a touch short for the six rows it had (the Close
+		// row's own bottom edge landed ~32px past the panel background before
+		// this), and the new TOOLS section below adds a full section label +
+		// row (~88px) on top of that. Grown to fit both with a little margin
+		// to spare instead of compounding the existing overflow.
+		var PH:Int = 700;
 		var px:Int = Std.int((FlxG.width - PW) / 2);
 		var py:Int = Std.int((FlxG.height - PH) / 2);
 		var BW:Int = PW - 48;
@@ -1076,6 +1086,10 @@ class MainMenuState extends MusicBeatState
 		rowY += 6;
 		sectionLabel('ECONOMY');
 		addRow('Grant 1,000,000 Beans', DEV_COL_MONEY, 4, 'devpanel_money');
+
+		rowY += 6;
+		sectionLabel('TOOLS');
+		addRow('Chart Editor', DEV_COL_TOOL, 7, 'devpanel_tool');
 
 		rowY += 6;
 		sectionLabel('DANGER ZONE');
@@ -1211,6 +1225,10 @@ class MainMenuState extends MusicBeatState
 
 			case 6: // Close
 				closeDevPanel();
+
+			case 7: // Chart Editor -- same no-song-yet fallback MasterEditorMenu's own entry uses
+				closeDevPanel();
+				FlxG.switchState(ChartEditorState.new);
 		}
 	}
 

@@ -184,7 +184,7 @@ class ChartEditorState extends MusicBeatState
 			"Value 1: Character to change (Dad, BF, GF)\nValue 2: New character's name"
 		],
 		// my auto formatter is forcing it to be liek this. i will fix it later
-		['Change Noteskin', 'Value 1: name of the noteskin json to change to.\nValue 2: ID of strum to change. (0 -> player, 1 -> opponent, etc)'],
+		['Change Noteskin', 'Changes the Noteskin of a specific strumline.\n\nValue 1: Name of the Noteskin to change to\nValue 2: ID of the Strumline (0 = Player, 1 = Opponent, etc.)'],
 		['Change Scroll Speed', "Value 1: Scroll Speed Multiplier (1 is default)\nValue 2: Time it takes to change fully in seconds."],
 		['Set Property', "Value 1: Variable name\nValue 2: New value"],
 		['HUD Fade', "Fades the HUD camera\n\nValue 1: Alpha\nValue 2: Duration"],
@@ -238,40 +238,17 @@ class ChartEditorState extends MusicBeatState
 	var curRedoIndex = 0;
 	
 	public static var _song:Song;
-	public static var song(get, set):Song;
-	static inline function get_song():Song return _song;
-	static inline function set_song(v:Song):Song return _song = v;
 
-	public static function getDefaultSong():Song
-	{
-		return {
-			song: 'test', notes: [], events: [], bpm: 150, needsVoices: true,
-			speed: 1.0, keys: 4, lanes: 1, player1: 'bf', player2: 'dad',
-			gfVersion: 'gf', stage: 'stage', arrowSkins: [],
-			allowBFskin: false, allowGFskin: false, allowPet: false
-		};
-	}
-
-	public var bfHitsound:Bool = false;
-	public var dadHitsound:Bool = false;
-	public var shiftStrumlineTransform:Dynamic = null;
-	public var swapStrumlineTransform:Dynamic = null;
-
+	// Android on-screen transport bar (section nav, play/pause, undo, and the
+	// options/back submenu) -- gameplay's own debug shortcut into this state
+	// (PlayState's debugKeysChart) is a keyboard key with no touch
+	// equivalent, and once inside, none of the desktop keybinds this editor
+	// otherwise relies on (arrows, Z/X, Ctrl+Z, Escape) exist on a
+	// touch-only device either.
 	#if mobile
 	var chartMobileBtns:Array<FlxSprite> = [];
-	var chartMobilePlayLbl:flixel.text.FlxText = null;
+	var chartMobilePlayLbl:FlxText = null;
 	#end
-
-	public function updateVolume():Void {}
-	public function copySection():Void {}
-	public function pasteSection():Void {}
-	public function clearSection():Void {}
-	public function cloneSection(n:Dynamic):Void {}
-	public function mirrorNotes(notes:Dynamic, axis:Dynamic):Void {}
-	public function transformNoteStrumlines(notes:Dynamic, transform:Dynamic):Void {}
-	public function getSelectedNotes():Array<Array<Dynamic>> return curSelectedNotes;
-	public function getSelectedEvents():Array<Array<Dynamic>>
-		return [for (n in curSelectedNotes) if (n[2] == null) n];
 
 	/*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
@@ -357,8 +334,9 @@ class ChartEditorState extends MusicBeatState
 			});
 		}
 		
+		PlayState.chartingMode = true;
+		
 		Conductor.bpm = _song.bpm;
-                PlayState.chartingMode = true;
 		Conductor.mapBPMChanges(_song);
 		initialKeyCount = _song.keys;
 		
@@ -366,9 +344,7 @@ class ChartEditorState extends MusicBeatState
 		
 		ClientPrefs.load();
 		
-		// Updating Discord Rich Presence
-		// DiscordClient.changePresence("Chart Editor", StringTools.replace(_song.song, '-', ' '));
-		DiscordClient.changePresence("Chart Editor", "Uhm idk mane burp");
+		DiscordClient.changePresence("Chart Editor" /* sorry that was boring */);
 		
 		camHUD = new FlxCamera();
 		camHUD.bgColor = 0x0;
@@ -408,7 +384,6 @@ class ChartEditorState extends MusicBeatState
 		if (curSec >= _song.notes.length) curSec = _song.notes.length - 1;
 		
 		FlxG.mouse.visible = true;
-		
 		
 		addSection();
 		
@@ -555,7 +530,7 @@ class ChartEditorState extends MusicBeatState
 			btn.camera = camHUD;
 			add(btn);
 			chartMobileBtns.push(btn);
-			final lbl = new flixel.text.FlxText(bx, startY + Std.int((btnH - 16) / 2), btnW, btnLabels[i]);
+			final lbl = new FlxText(bx, startY + Std.int((btnH - 16) / 2), btnW, btnLabels[i]);
 			lbl.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER);
 			lbl.scrollFactor.set();
 			lbl.camera = camHUD;
@@ -566,14 +541,14 @@ class ChartEditorState extends MusicBeatState
 
 		super.create();
 	}
-
+	
 	override function destroy():Void
 	{
 		Conductor.bpmChangeMap.resize(0);
-
+		
 		super.destroy();
 	}
-
+	
 	function createFriends()
 	{
 		// temp
@@ -1982,7 +1957,9 @@ class ChartEditorState extends MusicBeatState
 			if (wname == 'section_beats')
 			{
 				_song.notes[curSec].sectionBeats = Std.int(nums.value);
-                                Conductor.mapBPMChanges(_song);
+				
+				Conductor.mapBPMChanges(_song);
+				
 				reloadGridLayer();
 			}
 			else if (wname == 'song_speed')
@@ -1992,7 +1969,10 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'song_bpm')
 			{
 				_song.bpm = nums.value;
+				
 				Conductor.mapBPMChanges(_song);
+				
+				updateGrid();
 			}
 			else if (wname == 'song_strums')
 			{
@@ -2032,11 +2012,11 @@ class ChartEditorState extends MusicBeatState
 			else if (wname == 'section_bpm')
 			{
 				_song.notes[curSec].bpm = nums.value;
-
+				
 				if (_song.notes[curSec].changeBPM)
 				{
 					Conductor.mapBPMChanges(_song);
-
+					
 					updateGrid();
 				}
 			}
@@ -2555,7 +2535,6 @@ class ChartEditorState extends MusicBeatState
 		// 	clickForInfo.color = 0xFF8c8c8c;
 		// }
 		
-		
 		strumLineNotes.visible = quant.visible = vortex;
 		
 		// PLAYBACK SPEED CONTROLS //
@@ -2862,7 +2841,7 @@ class ChartEditorState extends MusicBeatState
 	var waveformPrinted:Bool = true;
 	var wavData:Array<Array<Array<Float>>> = [[[0], [0]], [[0], [0]]];
 	
-	function updateWaveform(?forceRegenerate:Bool)
+	function updateWaveform()
 	{
 		#if desktop
 		if (waveformPrinted)
@@ -3416,6 +3395,10 @@ class ChartEditorState extends MusicBeatState
 			}
 		}
 		
+		// This fork's Note.hx dropped the ?prevNote constructor param entirely
+		// (see git blame) -- EditorNote has no constructor of its own, so it
+		// inherits Note's current 5-param one (strumTime, noteData,
+		// sustainNote, inEditor, player) directly. Matches the arg count.
 		var note:EditorNote = renderedNotes.recycle(EditorNote, function() return new EditorNote(null, null, null, true));
 		note._reset();
 		note.chartData = i;
@@ -3943,7 +3926,7 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 		}
 		add(bg);
 		bg.screenCenter();
-		
+
 		grpMenuShit = new FlxTypedGroup<Alphabet>();
 		add(grpMenuShit);
 		for (i in 0...menuItems.length)
@@ -3960,7 +3943,7 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 			// }
 			grpMenuShit.add(item);
 		}
-		
+
 		new FlxTimer().start(0.05, function(shit:FlxTimer) {
 			canexit = true;
 		});
