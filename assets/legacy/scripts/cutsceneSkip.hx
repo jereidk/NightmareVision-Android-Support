@@ -26,10 +26,11 @@ var _cutsceneSkipTextShown:Bool = false;
  * Registers a skippable mid-song cutscene. Call once (e.g. from
  * onCreatePost()) from any song/stage script whose cutscene runs
  * concurrently with real gameplay. startTime/endTime are the cutscene's
- * bounds in Conductor.songPosition ms -- the skip gesture only becomes
- * live and visible from the HALFWAY point of that window through endTime,
- * never earlier (input is simply not checked before then). onSkip is
- * called exactly once, when the player double-taps during that window;
+ * bounds in Conductor.songPosition ms -- the skip gesture is live and
+ * visible from startTime through the HALFWAY point of that window, then
+ * hides and stops checking input for the second half (skipping only makes
+ * sense once the player has actually seen enough of it to want to). onSkip
+ * is called exactly once, when the player double-taps during that window;
  * it's responsible for the actual time jump and for replaying whatever
  * end-state the cutscene's own reveal event would have set.
  */
@@ -63,7 +64,7 @@ function onUpdate(elapsed)
 	if (!_cutsceneSkipActive || _cutsceneSkipDone) return;
 
 	final halfway = _cutsceneSkipStart + (_cutsceneSkipEnd - _cutsceneSkipStart) * 0.5;
-	final inWindow = Conductor.songPosition >= halfway && Conductor.songPosition < _cutsceneSkipEnd;
+	final inWindow = Conductor.songPosition >= _cutsceneSkipStart && Conductor.songPosition < halfway;
 
 	if (inWindow && !_cutsceneSkipTextShown)
 	{
@@ -77,8 +78,7 @@ function onUpdate(elapsed)
 	{
 		_cutsceneSkipTextShown = false;
 		FlxTween.cancelTweensOf(_cutsceneSkipText);
-		_cutsceneSkipText.alpha = 0;
-		_cutsceneSkipText.visible = false;
+		FlxTween.tween(_cutsceneSkipText, {alpha: 0}, 0.4, {onComplete: function() _cutsceneSkipText.visible = false});
 	}
 
 	if (!inWindow) return;
