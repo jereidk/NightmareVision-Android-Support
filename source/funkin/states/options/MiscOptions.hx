@@ -41,6 +41,20 @@ class MiscOptions
 		pauseOption.onChange = () -> FlxG.autoPause = ClientPrefs.autoPause;
 		opts.push(pauseOption);
 
+		// ClientPrefs.discordRPC's own set_discordRPC() already reactively
+		// calls DiscordClient.check() to start/stop the presence the moment
+		// this changes -- Reflect.setProperty (Option.setValue()) goes
+		// through that setter, not a raw field write, so no onChange hook is
+		// needed here.
+		opts.push(new Option(Lang.str('opt_discordrpc', 'Discord Rich Presence'),
+			#if android
+			Lang.str('opt_discordrpc_desc_android',
+				'If checked, your current song/menu is made available as a Discord status via a local MediaSession. Requires the free "Kizzy" app installed and configured separately -- this only makes the status available for it to pick up, it cannot detect whether Kizzy is actually installed.'),
+			#else
+			Lang.str('opt_discordrpc_desc', 'If checked, your current song/menu is shown as your Discord status.'),
+			#end
+			'discordRPC', 'bool', true));
+
 		return opts;
 	}
 }
