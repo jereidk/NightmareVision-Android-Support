@@ -841,6 +841,18 @@ class PlayState extends MusicBeatState
 
 		FunkinAssets.cache.clearStoredMemory();
 
+		// AwardPopup's solid-color background (makeGraphic(410, 100, ...)) is
+		// generated on demand the first time an award/achievement popup is
+		// actually built, which can land right at song end -- a device log
+		// showed it as one of several textures created mid-spike then
+		// (alongside the award icon PNGs, warmed via LoadingState's preload
+		// thread instead -- see startPreload()'s own comment). makeGraphic()
+		// isn't a disk read, just a Flixel bitmap-cache fill keyed by
+		// "WxH:colorHash" -- touching FlxG.bitmap's cache off the main thread
+		// isn't safe the way plain file decodes are, so this warms it here
+		// instead, once, cheaply, rather than on the background Thread.
+		FlxDestroyUtil.destroy(new FlxSprite().makeGraphic(410, 100, 0xAA000000));
+
 		// This whole create() is one long synchronous allocation burst (stage,
 		// characters, notes...) -- letting the collector fire mid-burst risks
 		// landing its pause during the countdown that plays right after create()

@@ -1177,6 +1177,26 @@ class LoadingState extends MusicBeatState
 			// NotePoolPlan.hx's own class doc for the full reasoning.
 			NotePoolPlan.computeAndStore(song);
 
+			// End-of-song popups (award unlocks, currency earned) build their
+			// icon art the FIRST time they're actually shown -- which can land
+			// right as the results screen appears, still technically PlayState,
+			// still a real stutter the player feels. Neither is knowable ahead
+			// of time in the sense of "will THIS song trigger it" (achievement
+			// conditions are score/completion-based, not song-specific, and
+			// awards.json/CosmicubeData reading is plain text/JSON -- same safe
+			// pattern already used for dialogue.json above), so this warms
+			// EVERY possible award icon plus the active cosmicube's currency
+			// icon regardless of whether this particular song ends up
+			// triggering one. Both lists are small (a couple dozen small icons
+			// at most), so warming all of them unconditionally is the same
+			// trade-off already made for NOTE_assets/noteskins/default above.
+			for (award in funkin.data.GameFlags.getAwards())
+				addAtlas('awards/${award.icon}', 'award:${award.icon}');
+			addAtlas('awards/blank', 'award:blank'); // AwardPopup's own missing-icon fallback
+
+			final currency = funkin.data.CosmicubeData.currentCurrency;
+			addAtlas('currency/${(currency != null && currency.length > 0) ? currency : "beans"}', 'currency');
+
 			if (_threadGeneration != myGen) return;
 
 			if (tasks.length == 0)
