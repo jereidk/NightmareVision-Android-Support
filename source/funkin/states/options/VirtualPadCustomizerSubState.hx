@@ -54,6 +54,8 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 	/** Button bounding boxes for overlap check (invisible, used like Shadow Engine's TouchButton.bounds). */
 	var _boundsList:Array<FlxRect> = [];
 
+	var isClosing:Bool = false;
+
 	override function create()
 	{
 		// ── Background (scrolling stars, matches OptionsState) ──
@@ -156,9 +158,30 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		#end
 	}
 
+	/** Fades every sprite out, then closes -- see the SAVE/BACK sites below. */
+	function _closeTween():Void
+	{
+		if (isClosing) return;
+		isClosing = true;
+
+		for (i in 0...members.length)
+		{
+			var spr = Std.downcast(members[i], FlxSprite);
+			if (spr != null)
+			{
+				FlxTween.cancelTweensOf(spr);
+				FlxTween.tween(spr, {alpha: 0}, 0.2, {ease: FlxEase.circIn});
+			}
+		}
+
+		new FlxTimer().start(0.2, function(_) close());
+	}
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		if (isClosing) return;
 
 		// ── Pointer state ──
 		var pointerJustPressed  = FlxG.mouse.justPressed  || _anyTouchJustPressed();
@@ -175,7 +198,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 			{
 				_saveAllPositions();
 				ClientPrefs.flushSave();
-				close();
+				_closeTween();
 				return;
 			}
 			else if (_overlaps(resetBtn, px, py))
@@ -228,7 +251,7 @@ class VirtualPadCustomizerSubState extends MusicBeatSubstate
 		{
 			_saveAllPositions();
 			ClientPrefs.flushSave();
-			close();
+			_closeTween();
 		}
 	}
 

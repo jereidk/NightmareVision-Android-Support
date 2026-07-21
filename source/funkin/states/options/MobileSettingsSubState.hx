@@ -171,6 +171,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _enterAlpha:Float = 0.0;
 	var _enterComplete:Bool = false;
 
+	// Mirrors _enterAlpha/_enterComplete, but running out instead of in --
+	// guards BACK/touch-back from firing twice and stops row/preview input
+	// from being processed while the whole screen is fading away.
+	var _closing:Bool = false;
+	var _closeAlpha:Float = 1.0;
+
 	// ── Lifecycle ──────────────────────────────────────────────────────────────
 
 	public function new()
@@ -468,9 +474,32 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	// ── Update ───────────────────────────────────────────────────────────────
 
+	/** Fades the whole screen out, then closes -- see BACK/touch-back below. */
+	function _closeTween():Void
+	{
+		if (_closing) return;
+		_closing = true;
+		_closeAlpha = _enterAlpha;
+	}
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		if (_closing)
+		{
+			_closeAlpha = FlxMath.lerp(_closeAlpha, 0.0, elapsed * 6);
+
+			for (i in 0...members.length)
+			{
+				var spr = Std.downcast(members[i], FlxSprite);
+				if (spr != null)
+					spr.alpha = _closeAlpha;
+			}
+
+			if (_closeAlpha < 0.05) close();
+			return;
+		}
 
 		// Smooth fade-in entrance
 		if (!_enterComplete)
@@ -502,7 +531,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (controls.BACK)
 		{
 			FunkinSound.play(Paths.sound('cancelMenu'));
-			close();
+			_closeTween();
 			return;
 		}
 
@@ -640,7 +669,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (_backBtn.visible && FlxG.mouse.overlaps(_backBtn))
 		{
 			FunkinSound.play(Paths.sound('cancelMenu'));
-			close();
+			_closeTween();
 			return;
 		}
 

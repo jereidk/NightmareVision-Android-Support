@@ -105,6 +105,14 @@ class MobileDLCSubState extends MusicBeatSubstate
     var _scroll:Int      = 0;
     var _blockInput:Bool = false;
 
+    // Whole-screen fade in/out, same lerp-driven convention as
+    // MobileSettingsSubState/ControlsSubState (this file's siblings in the
+    // Options cluster) -- see _closeTween().
+    var _enterAlpha:Float = 0.0;
+    var _enterComplete:Bool = false;
+    var _closing:Bool = false;
+    var _closeAlpha:Float = 1.0;
+
     var _installed:Array<{id:String, name:String, folder:String}> = [];
     var _lastTaskState:DLCTaskState = DLCTaskState.IDLE;
     var _items:Array<DLCListItem>   = [];
@@ -354,9 +362,43 @@ class MobileDLCSubState extends MusicBeatSubstate
 
     // ── Update ─────────────────────────────────────────────────────────────
 
+    /** Fades the whole screen out, then closes -- see BACK below. */
+    function _closeTween():Void
+    {
+        if (_closing) return;
+        _closing = true;
+        _closeAlpha = _enterAlpha;
+    }
+
     override function update(elapsed:Float)
     {
         super.update(elapsed);
+
+        if (_closing)
+        {
+            _closeAlpha = FlxMath.lerp(_closeAlpha, 0.0, elapsed * 6);
+
+            for (i in 0...members.length)
+            {
+                var spr = Std.downcast(members[i], FlxSprite);
+                if (spr != null) spr.alpha = _closeAlpha;
+            }
+
+            if (_closeAlpha < 0.05) close();
+            return;
+        }
+
+        if (!_enterComplete)
+        {
+            _enterAlpha = FlxMath.lerp(_enterAlpha, 1.0, elapsed * 4);
+            if (_enterAlpha > 0.95) _enterComplete = true;
+
+            for (i in 0...members.length)
+            {
+                var spr = Std.downcast(members[i], FlxSprite);
+                if (spr != null) spr.alpha = _enterAlpha;
+            }
+        }
 
         var ts = DLCManager.taskState;
         if (ts != _lastTaskState) {
@@ -402,7 +444,7 @@ class MobileDLCSubState extends MusicBeatSubstate
                 _updateRows();
                 return;
             }
-            close();
+            _closeTween();
             return;
         }
 

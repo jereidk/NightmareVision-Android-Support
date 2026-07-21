@@ -28,6 +28,14 @@ class NotesSubState extends MusicBeatSubstate
 	
 	var blackBG:FlxSprite;
 	var hsbText:Alphabet;
+
+	// Every note/number preview alpha here is already meaningful (selection
+	// highlight, 0.6 vs 1), so a generic "fade every member" exit like the
+	// other Options substates would clobber that state instead of just
+	// dimming it. A single covering sprite added on top, faded to opaque,
+	// sidesteps that entirely -- nothing underneath needs to change.
+	var closeCover:FlxSprite;
+	var isClosing:Bool = false;
 	
 	// blackBG spans posX-25 to posX-25+870=1075+X, i.e. symmetric ~205px
 	// margins on the 1280 canvas — centered, not edge-anchored, so shifted by
@@ -118,12 +126,31 @@ class NotesSubState extends MusicBeatSubstate
 		addVirtualPad(LEFT_FULL, A_B_C, true);
 		addVirtualPadCamera();
 		#end
+
+		closeCover = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		closeCover.alpha = 0;
+		add(closeCover);
+	}
+
+	/** Covers the screen in black, then closes -- see BACK below. */
+	function closeTween():Void
+	{
+		if (isClosing) return;
+		isClosing = true;
+		changingNote = false;
+		FlxTween.tween(closeCover, {alpha: 1}, 0.2, {ease: FlxEase.circIn, onComplete: (_) -> close()});
 	}
 
 	var changingNote:Bool = false;
 	
 	override function update(elapsed:Float)
 	{
+		if (isClosing)
+		{
+			super.update(elapsed);
+			return;
+		}
+
 		if (changingNote)
 		{
 			if (holdTime < 0.5)
@@ -237,7 +264,9 @@ class NotesSubState extends MusicBeatSubstate
 		{
 			if (!changingNote)
 			{
-				close();
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				closeTween();
+				return;
 			}
 			else
 			{

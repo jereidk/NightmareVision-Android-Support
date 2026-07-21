@@ -14,11 +14,16 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	private var curOption:GameplayOption = null;
 	private var curSelected:Int = 0;
 	private var optionsArray:Array<Dynamic> = [];
-	
+
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
 	private var grpTexts:FlxTypedGroup<AttachedAlphabet>;
-	
+
+	var bg:FlxSprite;
+	var isClosing:Bool = false;
+	var lockMovement:Bool = true;
+	final uiTweenOffsetY:Float = 120;
+
 	function getOptions()
 	{
 		var goption:GameplayOption = new GameplayOption('Scroll Type', 'scrolltype', 'string', 'multiplicative', ["multiplicative", "constant"]);
@@ -94,9 +99,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	public function new()
 	{
 		super();
-		
-		var bg:FlxSprite = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		bg.alpha = 0.6;
+
+		bg = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		bg.alpha = 0;
 		add(bg);
 		
 		// avoids lagspikes while scrolling through menus!
@@ -149,7 +154,61 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		#if mobile
 		controls.isInSubstate = true;
 		addVirtualPad(LEFT_FULL, A_B_C);
+		addVirtualPadCamera();
 		#end
+
+		FlxTween.tween(bg, {alpha: 0.6}, 0.25, {ease: FlxEase.circOut});
+
+		eachSprite(function(spr:FlxSprite) {
+			if (spr == bg) return;
+			final targetAlpha = spr.alpha;
+			spr.alpha = 0;
+			spr.y += uiTweenOffsetY;
+			FlxTween.tween(spr, {y: spr.y - uiTweenOffsetY, alpha: targetAlpha}, 0.25, {ease: FlxEase.circOut});
+		});
+
+		new FlxTimer().start(0.25, function(_) lockMovement = false);
+	}
+
+	/**
+	 * Walks every FlxSprite reachable from this substate's members, recursing
+	 * into FlxTypedGroup containers (grpOptions/grpTexts/checkboxGroup are
+	 * groups, not sprites themselves -- their actual Alphabet/AttachedAlphabet/
+	 * CheckboxThingie children live one level down in `.members`) -- so the
+	 * entrance/exit fade below reaches every visible option row instead of
+	 * just `bg`, without needing to hand-enumerate the three groups.
+	 */
+	function eachSprite(cb:FlxSprite->Void):Void
+	{
+		function walk(list:Array<flixel.FlxBasic>):Void
+		{
+			for (obj in list)
+			{
+				if (obj == null) continue;
+				if (Std.isOfType(obj, FlxTypedGroup)) walk(cast(obj, FlxTypedGroup<Dynamic>).members);
+				else if (Std.isOfType(obj, FlxSprite)) cb(cast obj);
+			}
+		}
+		walk(members);
+	}
+
+	function closeTween():Void
+	{
+		if (isClosing) return;
+		isClosing = true;
+		lockMovement = true;
+		ClientPrefs.flush();
+
+		FlxTween.cancelTweensOf(bg);
+		FlxTween.tween(bg, {alpha: 0}, 0.2, {ease: FlxEase.circIn});
+
+		eachSprite(function(spr:FlxSprite) {
+			if (spr == bg) return;
+			FlxTween.cancelTweensOf(spr);
+			FlxTween.tween(spr, {y: spr.y + uiTweenOffsetY, alpha: 0}, 0.2, {ease: FlxEase.circIn});
+		});
+
+		new FlxTimer().start(0.2, function(_) close());
 	}
 	
 	var nextAccept:Int = 5;
@@ -158,6 +217,8 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
+		if (!lockMovement)
+		{
 		if (controls.UI_UP_P)
 		{
 			changeSelection(-1);
@@ -166,14 +227,13 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		{
 			changeSelection(1);
 		}
-		
+
 		if (controls.BACK)
 		{
-			close();
-			ClientPrefs.flush();
 			FlxG.sound.play(Paths.sound('cancelMenu'));
+			closeTween();
 		}
-		
+
 		if (nextAccept <= 0)
 		{
 			var usesCheckbox = true;
@@ -328,10 +388,11 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 				reloadCheckboxes();
 			}
 		}
-		
+
 		if (nextAccept > 0)
 		{
 			nextAccept -= 1;
+		}
 		}
 		super.update(elapsed);
 	}

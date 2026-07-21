@@ -258,12 +258,56 @@ class ControlsSubState extends MusicBeatSubstate
 		if (index >= optionsList.length) index = (optionsList.length - 1);
 	}
 	
+	// `leaving` existed as a dead, never-set field before this -- reused here
+	// as the actual close guard instead of adding a redundant one.
 	var leaving:Bool = false;
 	var bindingTime:Float = 0;
 	var mouseControlActive:Bool = false;
-	
+
+	// Whole-screen fade in/out, same lerp-driven convention as
+	// MobileSettingsSubState (this file's sibling in the Options cluster) --
+	// see enterAlpha/closeAlpha below and closeTween().
+	var enterAlpha:Float = 0.0;
+	var enterComplete:Bool = false;
+	var closeAlpha:Float = 1.0;
+
+	/** Fades the whole screen out, then closes -- see BACK below. */
+	function closeTween():Void
+	{
+		if (leaving) return;
+		leaving = true;
+		closeAlpha = enterAlpha;
+	}
+
 	override function update(elapsed:Float)
 	{
+		if (leaving)
+		{
+			closeAlpha = FlxMath.lerp(closeAlpha, 0.0, elapsed * 6);
+
+			for (i in 0...members.length)
+			{
+				var spr = Std.downcast(members[i], FlxSprite);
+				if (spr != null) spr.alpha = closeAlpha;
+			}
+
+			super.update(elapsed);
+			if (closeAlpha < 0.05) close();
+			return;
+		}
+
+		if (!enterComplete)
+		{
+			enterAlpha = FlxMath.lerp(enterAlpha, 1.0, elapsed * 4);
+			if (enterAlpha > 0.95) enterComplete = true;
+
+			for (i in 0...members.length)
+			{
+				var spr = Std.downcast(members[i], FlxSprite);
+				if (spr != null) spr.alpha = enterAlpha;
+			}
+		}
+
 		inline function handleIndex()
 		{
 			if (!(controls.UI_UP_P && controls.UI_DOWN_P) && (controls.UI_UP_P || controls.UI_DOWN_P))
@@ -319,10 +363,10 @@ class ControlsSubState extends MusicBeatSubstate
 				if (controls.BACK)
 				{
 					mouseControlActive = false;
-					
+
 					// ClientPrefs.reloadControls();
-					close();
 					FlxG.sound.play(Paths.sound('cancelMenu'));
+					closeTween();
 				}
 				if (controls.ACCEPT)
 				{
