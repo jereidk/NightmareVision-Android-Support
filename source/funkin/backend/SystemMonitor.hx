@@ -646,10 +646,21 @@ class SystemMonitor
 		var allocSuffix = '';
 		#end
 		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
+		// A slow, steady leak never spikes and never fires a [MEM EVENT] --
+		// nothing else in this log samples memory on a regular cadence
+		// during gameplay, so it would be invisible until a crash. Riding on
+		// this already-once-a-second line instead of a new timer: no new
+		// per-frame cost, and getAppMemoryUsage()/_systemMemContext() are
+		// just /proc reads, not allocations.
+		#if android
+		final memSuffix = '  mem=' + getAppMemoryUsage() + _systemMemContext();
+		#else
+		final memSuffix = '';
+		#end
 		// noteCount is PlayState.notes.length — the note *pool* size (a
 		// fixed-size, reused set of Note objects once note pooling actually
 		// works), not the count of notes currently in flight.
-		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcHitSuffix$gcAnySuffix');
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcHitSuffix$gcAnySuffix$memSuffix');
 		profReset();
 	}
 
