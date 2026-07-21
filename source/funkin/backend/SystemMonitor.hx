@@ -262,7 +262,7 @@ class SystemMonitor
 		lines.push('');
 		lines.push('[MEMORY]');
 		lines.push('  Total RAM: ' + getTotalRAM());
-		lines.push('  Free RAM: ' + getFreeRAM());
+		lines.push('  App Memory Used: ' + getAppMemoryUsage());
 
 		#if (openfl_v22_up)
 		try {
@@ -303,7 +303,7 @@ class SystemMonitor
 		}
 		
 		// Also log current memory state
-		_write('  RAM Free: ' + getFreeRAM());
+		_write('  App Memory Used: ' + getAppMemoryUsage());
 		#if flixel
 		_write('  GPU Textures: ' + getBitmapCacheCount());
 		#end
@@ -1183,7 +1183,18 @@ class SystemMonitor
 		return '';
 	}
 
-	static function getFreeRAM():String
+	/**
+	 * How much RAM THIS APP's own process is currently resident in (RSS),
+	 * via Native.getTaskMemory() -- NOT free/available memory. Used to be
+	 * named getFreeRAM() and logged as "Free RAM"/"RAM Free", which is the
+	 * opposite of what it measures: a real device log with this reading at
+	 * "396 MB" during a [MEM EVENT] was misread as "the app is 396MB away
+	 * from running out" when it actually meant "the app itself is using
+	 * 396MB" -- a perfectly healthy figure, not a low-memory warning. Pair
+	 * with getSystemAvailableMemory() (see _systemMemContext()'s "sysFree="
+	 * suffix) for an actual free-memory reading.
+	 */
+	static function getAppMemoryUsage():String
 	{
 		#if (android && cpp)
 		try {
