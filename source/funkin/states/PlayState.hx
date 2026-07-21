@@ -2489,13 +2489,14 @@ class PlayState extends MusicBeatState
 		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset);
 	}
 	
-	function resyncVocals():Void
+	function resyncVocals():Int
 	{
-		if (finishTimer != null) return;
-		
+		if (finishTimer != null) return 0;
+
 		audio.pitch = playbackRate;
-		audio.resync(audio.inst.time);
+		final restarted = audio.resync(audio.inst.time);
 		Conductor.songPosition = audio.inst.time;
+		return restarted;
 	}
 	
 	public var canAccessEditors:Bool = true;
@@ -4582,10 +4583,21 @@ class PlayState extends MusicBeatState
 			final vocalDrift = SONG.needsVoices ? audio.getDesyncDifference(Math.abs(Conductor.songPosition - Conductor.offset)) : 0.0;
 			if (instDrift > maxToleratedOffset || vocalDrift > maxToleratedOffset)
 			{
+				// resyncVocals() -> SyncedFlxSoundGroup.resync() does a real
+				// pause()/time=/play() per drifted track, not a cheap seek --
+				// timed here (not just logged) to find out whether the
+				// correction itself is a meaningful CPU cost on top of being
+				// an audible glitch. stepHit() runs once per STEP (several
+				// times a second), and this branch isn't cooldown-gated the
+				// way the log line below is, so a chronically drifting track
+				// can call this far more often than the log's throttled
+				// output alone would suggest.
+				#if android final _resyncT0 = haxe.Timer.stamp(); #end
+				final _tracksRestarted = resyncVocals();
 				#if android
-				SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', Math.max(instDrift, vocalDrift), Conductor.songPosition);
+				final _resyncMs = (haxe.Timer.stamp() - _resyncT0) * 1000;
+				SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', Math.max(instDrift, vocalDrift), Conductor.songPosition, _tracksRestarted, _resyncMs);
 				#end
-				resyncVocals();
 			}
 		}
 		

@@ -95,21 +95,31 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 	}
 	
 	/**
-	 * Resyncs all group members to a given time. 
+	 * Resyncs all group members to a given time.
 	 * @param baseTime The reference to compare difference to. Defaults to the groups first instance's time
+	 * @return How many members were actually pause()/play()'d back into sync --
+	 *         each one is a real stop-seek-restart on the underlying native
+	 *         sound (not a cheap position nudge), and PlayState.stepHit() can
+	 *         call this several times a second when a track is chronically
+	 *         drifting, so the caller can tell whether "resync fired" meant
+	 *         one track or the whole group jumping at once.
 	 */
-	public function resync(?baseTime:Float)
+	public function resync(?baseTime:Float):Int
 	{
 		final time = baseTime ?? getFirstAlive()?.time ?? 0.0;
-		
+		var restarted = 0;
+
 		forEachAlive(snd -> {
 			if (snd.playing && time <= snd.length && Math.abs(snd.time - time) > 1)
 			{
 				snd.pause();
 				snd.time = time;
 				snd.play(false, time);
+				restarted++;
 			}
 		});
+
+		return restarted;
 	}
 	
 	@:inheritDoc

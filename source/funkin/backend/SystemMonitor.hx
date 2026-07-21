@@ -710,13 +710,37 @@ class SystemMonitor
 	static var _lastAudioResyncTime:Float = -999.0;
 	static inline final AUDIO_RESYNC_COOLDOWN:Float = 0.5; // collapse a burst of back-to-back corrections from the same sustained cause into one line
 
-	public static function reportAudioResync(cause:String, driftMs:Float, songTimeMs:Float):Void
+	// Uncapped -- stepHit()'s actual resyncVocals() call isn't gated by
+	// AUDIO_RESYNC_COOLDOWN, only the log LINE below is. Without these, a
+	// track drifting every single step (several times a second) would look
+	// identical in sysmon.log to one that barely trips the threshold once
+	// every cooldown window -- these accumulate the true count/cost between
+	// writes so the log line can say how much got collapsed into it.
+	static var _audioResyncSuppressed:Int = 0;
+	static var _audioResyncTracksSinceWrite:Int = 0;
+	static var _audioResyncCostMsSinceWrite:Float = 0;
+
+	public static function reportAudioResync(cause:String, driftMs:Float, songTimeMs:Float, tracksRestarted:Int = 0, costMs:Float = 0):Void
 	{
 		if (!enabled) return;
+
+		_audioResyncTracksSinceWrite += tracksRestarted;
+		_audioResyncCostMsSinceWrite += costMs;
+
 		final now = haxe.Timer.stamp();
-		if (now - _lastAudioResyncTime < AUDIO_RESYNC_COOLDOWN) return;
+		if (now - _lastAudioResyncTime < AUDIO_RESYNC_COOLDOWN)
+		{
+			_audioResyncSuppressed++;
+			return;
+		}
 		_lastAudioResyncTime = now;
-		_write('[AUDIO RESYNC] cause=$cause drift=${Std.int(driftMs)}ms songTime=${Std.int(songTimeMs / 1000)}s${_systemMemContext()}');
+
+		final suppressedNote = _audioResyncSuppressed > 0 ? ' (+${_audioResyncSuppressed} more collapsed in last ${AUDIO_RESYNC_COOLDOWN}s)' : '';
+		_write('[AUDIO RESYNC] cause=$cause drift=${Std.int(driftMs)}ms songTime=${Std.int(songTimeMs / 1000)}s trackRestarts=${_audioResyncTracksSinceWrite} resyncCost=${_audioResyncCostMsSinceWrite}ms$suppressedNote${_systemMemContext()}');
+
+		_audioResyncSuppressed = 0;
+		_audioResyncTracksSinceWrite = 0;
+		_audioResyncCostMsSinceWrite = 0;
 	}
 
 	// ==================== PHASE PROFILING ====================
