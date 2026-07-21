@@ -166,6 +166,21 @@
         "weekbonus",
         "song"
       ]
+    },
+    {
+      "id": "weekcval",
+      "name": "Cval vs. Pip (Bonus Songs)",
+      "description": "Chart, audio, and shared character/stage art for \"Chippin\", \"Chipping\", and \"Torture\" -- the Cval vs. Pip shop week. All three songs share one character-art set, so they ship as a single package instead of one DLC per song. Downloaded automatically after purchasing Chippin or Chipping.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 7.27,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekcval.zip",
+      "sha256": "e58727e22d11ccfb3f9329dc582bd2aa4e8eea01ae35e33e9dc768faa5ebba67",
+      "tags": [
+        "official",
+        "weekcval",
+        "song"
+      ]
     }
   ]
 }
