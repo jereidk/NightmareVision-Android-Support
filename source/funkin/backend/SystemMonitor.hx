@@ -955,7 +955,12 @@ class SystemMonitor
 		var diff = after - _texCountBefore;
 		var newName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
 		var sign = diff >= 0 ? '+' : '';
-		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})');
+		// Count alone can hide a size leak -- a handful of huge textures
+		// barely moves the count but is exactly the case _getRawBitmapBytes()
+		// exists to catch. One extra full-cache pass, but this only runs on
+		// a state switch (a loading transition), not per frame.
+		var estMB = Std.int(_getRawBitmapBytes() / 1024 / 1024);
+		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})  |  ~${estMB}MB (est., uncompressed upper bound)');
 
 		if (diff > 0)
 		{
@@ -1015,6 +1020,26 @@ class SystemMonitor
 		var n = 0;
 		@:privateAccess for (_ in FlxG.bitmap._cache.keys()) n++;
 		return n;
+	}
+
+	// Sum of width*height*4 (RGBA32-equivalent) across every cached
+	// FlxGraphic -- an upper-bound byte estimate, not exact (most of this
+	// game's real textures are ASTC-compressed on GPU, smaller than this),
+	// but unlike a flat per-texture average it actually reflects real
+	// dimensions. A handful of huge textures (a full-screen background, an
+	// uncompressed atlas) can leak while the texture COUNT barely moves --
+	// this is the only number in this file that would catch that; count
+	// alone can't. FlxGraphic caches width/height on the object itself at
+	// set_bitmap() time (see flixel/graphics/FlxGraphic.hx), so this reads
+	// them directly without touching any BitmapData pixel buffer -- safe
+	// even for GPU-cached graphics whose CPU-side image was already
+	// disposed via bitmap.disposeImage() (see FunkinCache.cacheBitmap()).
+	static function _getRawBitmapBytes():Float
+	{
+		var bytes:Float = 0;
+		@:privateAccess for (g in FlxG.bitmap._cache)
+			if (g != null) bytes += g.width * g.height * 4;
+		return bytes;
 	}
 	#end
 
@@ -1253,8 +1278,11 @@ class SystemMonitor
 
 	static function getEstimatedGPUMemory():String
 	{
-		// ~0.5 MB per texture (rough)
-		return Std.string(_getRawBitmapCount() * 0.5) + ' MB (est.)';
+		// Was a flat "count * 0.5MB" guess -- a linear rescaling of the same
+		// count already shown right above this line, carrying no
+		// independent information. _getRawBitmapBytes() actually sums real
+		// per-texture dimensions instead.
+		return Std.string(Std.int(_getRawBitmapBytes() / 1024 / 1024)) + ' MB (est., uncompressed upper bound)';
 	}
 	#end
 
