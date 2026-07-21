@@ -1231,8 +1231,10 @@ class PlayState extends MusicBeatState
 		input.addEventListener(InputEvent.INPUT_RELEASED, onInputRelease);
 		
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000;
-		
+
+		trace('[PlayState] Calling onCreatePost scripts (stage: ${stage != null ? stage.curStage : "null"})...');
 		scripts.call('onCreatePost', _scriptEmptyArgs);
+		trace('[PlayState] onCreatePost scripts OK');
 
 		callHUDFunc(hud -> hud.cachePopUpScore());
 
@@ -1426,7 +1428,9 @@ class PlayState extends MusicBeatState
 	public function generatePlayfields()
 	{
 		if (generatedFields) return;
-		
+
+		trace('[PlayState] generatePlayfields: START (${SONG.lanes} lane(s))');
+
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 		Note.swagWidth = 160 * 0.7;
@@ -1449,6 +1453,8 @@ class PlayState extends MusicBeatState
 
 		for (lane in 0...SONG.lanes)
 		{
+			trace('[PlayState] generatePlayfields: lane $lane...');
+
 			final character = (lane == 1 ? dad : boyfriend);
 			final isPlayer = (lane != 1);
 
@@ -1592,8 +1598,9 @@ class PlayState extends MusicBeatState
 		modManager.keys = SONG.keys;
 		
 		generatedFields = true;
+		trace('[PlayState] generatePlayfields: lanes built OK, calling postReceptorGeneration...');
 		scripts.call('postReceptorGeneration');
-		
+
 		modManager.registerEssentialModifiers();
 		modManager.registerDefaultModifiers();
 		modManager.registerScriptedModifiers();
@@ -1601,7 +1608,9 @@ class PlayState extends MusicBeatState
 
 		scripts.call('postModifierRegister');
 
+		trace('[PlayState] generatePlayfields: calling prewarmNotePool()...');
 		prewarmNotePool();
+		trace('[PlayState] generatePlayfields: END');
 	}
 
 	/**
@@ -1622,6 +1631,7 @@ class PlayState extends MusicBeatState
 	function prewarmNotePool():Void
 	{
 		final plan = NotePoolPlan.consume(SONG.song);
+		trace('[PlayState] prewarmNotePool: START (${plan.length} bucket(s))');
 		if (plan.length == 0) return;
 
 		final _t0 = haxe.Timer.stamp();
@@ -1994,6 +2004,8 @@ class PlayState extends MusicBeatState
 	
 	function generateSong(dataPath:String):Void
 	{
+		trace('[PlayState] generateSong: START ($dataPath)');
+
 		songSpeedType = ClientPrefs.getGameplaySetting('scrolltype', 'multiplicative');
 		
 		songSpeed = SONG.speed;
@@ -2030,7 +2042,7 @@ class PlayState extends MusicBeatState
 			add(i);
 			
 		final noteData:Array<SongSection> = songData.notes;
-		
+
 		// loads note types
 		for (section in noteData)
 		{
@@ -2038,26 +2050,28 @@ class PlayState extends MusicBeatState
 			{
 				var type:Dynamic = songNotes[3];
 				if (!Std.isOfType(type, String)) type = ChartEditorState.noteTypeList[type];
-				
+
 				if (!noteTypeMap.exists(type)) noteTypeMap.set(type, true);
 			}
 		}
-		
+
+		trace('[PlayState] generateSong: loading ${Lambda.count(noteTypeMap)} note type script(s)...');
 		for (type in noteTypeMap.keys())
 		{
 			if (!noteTypesPushed.contains(type))
 			{
 				var baseScriptFile = 'data/notetypes/$type';
 				if (!FunkinAssets.exists(FunkinScript.getPath(baseScriptFile), TEXT)) baseScriptFile = 'notetypes/$type';
-				
+
 				final scriptFile = FunkinScript.getPath(baseScriptFile);
-				
+
 				if (FunkinAssets.exists(scriptFile, TEXT)) noteTypeScripts.addScript(initFunkinScript(scriptFile, type));
-				
+
 				noteTypesPushed.push(type);
 			}
 		}
-		
+		trace('[PlayState] generateSong: note type scripts OK, decoding chart notes...');
+
 		var events = getEventsDirect();
 		
 		#if debug
@@ -2192,29 +2206,31 @@ class PlayState extends MusicBeatState
 			}
 		}
 		
+		trace('[PlayState] generateSong: chart notes decoded OK (${queueNotes.length}), loading ${events.length} event(s)...');
 		for (event in events)
 		{
 			final eventName = event.event;
-			
+
 			if (!eventsPushed.contains(eventName))
 			{
 				var baseScriptFile:String = 'data/events/$eventName';
 				if (!FunkinAssets.exists(FunkinScript.getPath(baseScriptFile), TEXT)) baseScriptFile = 'events/$eventName';
-				
+
 				final scriptFile = FunkinScript.getPath(baseScriptFile);
-				
+
 				if (FunkinAssets.exists(scriptFile, TEXT)) eventScripts.addScript(initFunkinScript(scriptFile, eventName));
-				
+
 				firstEventPush(event);
-				
+
 				eventsPushed.push(eventName);
 			}
-			
+
 			event.strumTime -= eventNoteEarlyTrigger(event);
 			eventNotes.push(event);
 			eventPushed(event);
 		}
-		
+		trace('[PlayState] generateSong: events OK');
+
 		eventNotes.sort(function(a:EventNote, b:EventNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		_noteSpawnIdx = 0;
@@ -2250,6 +2266,7 @@ class PlayState extends MusicBeatState
 		
 		checkEventNote();
 		generatedMusic = true;
+		trace('[PlayState] generateSong: END');
 	}
 	
 	public function getNoteInitialTime(time:Float):Float
