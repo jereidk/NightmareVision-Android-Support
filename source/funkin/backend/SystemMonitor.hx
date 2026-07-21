@@ -123,6 +123,14 @@ class SystemMonitor
 	static var _keysBefore:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
 	// Last texture count seen when each state NAME was exited — re-entry leak detector
 	static var _stateTexOnExit:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+	// Full key SET seen when each state NAME was exited -- lets the re-entry
+	// leak detector below name exactly which textures are new since last
+	// time, instead of just reporting a growing count. Safe to hold a direct
+	// reference to the StringMap _onPreStateSwitch() just built: that
+	// function always REASSIGNS _keysBefore to a fresh map next time rather
+	// than mutating the existing one, so what's stored here is never touched
+	// again after being set.
+	static var _stateKeysOnExit:haxe.ds.StringMap<haxe.ds.StringMap<Bool>> = new haxe.ds.StringMap();
 
 	// GC spike detection
 	#if cpp
@@ -945,8 +953,10 @@ class SystemMonitor
 		@:privateAccess for (k in FlxG.bitmap._cache.keys())
 			_keysBefore.set(k, true);
 
-		// Record how many textures this state had when it exited
+		// Record how many textures this state had when it exited, and exactly
+		// which ones (see _stateKeysOnExit's own doc comment).
 		_stateTexOnExit.set(_prevStateName, _texCountBefore);
+		_stateKeysOnExit.set(_prevStateName, _keysBefore);
 	}
 
 	static function _onPostStateSwitch():Void
@@ -981,7 +991,29 @@ class SystemMonitor
 		// now has more textures than when we last left it, something accumulated.
 		var prevExitCount = _stateTexOnExit.get(newName);
 		if (prevExitCount != null && after > prevExitCount + 5)
+		{
 			_write('  [REVISIT LEAK] $newName had $prevExitCount textures last exit, now ${after} (+${after - prevExitCount}) — accumulating each visit');
+
+			// Name the actual stragglers: anything in the cache right now that
+			// WASN'T there the last time we left $newName. Diffing against
+			// $newName's own last exit (not this transition's immediate
+			// _keysBefore) catches textures that leaked from ANY state visited
+			// in between, not just the one we just came from -- which is the
+			// realistic case, since a slow leak like this compounds across
+			// several different screens before it's ever noticed here.
+			var prevExitKeys = _stateKeysOnExit.get(newName);
+			if (prevExitKeys != null)
+			{
+				var leakedKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!prevExitKeys.exists(k)) leakedKeys.push(k);
+				leakedKeys.sort((a, b) -> Reflect.compare(a, b));
+
+				var shownLeaked = leakedKeys.slice(0, 15).map(_keyTail);
+				_write('    New since last exit (${leakedKeys.length}): ' + shownLeaked.join(', ')
+					+ (leakedKeys.length > 15 ? '  … +${leakedKeys.length - 15} more' : ''));
+			}
+		}
 
 		if (diff > 30)
 			_write('  [!] $newName loaded $diff textures — verify it releases them on exit');
