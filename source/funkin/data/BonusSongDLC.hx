@@ -6,6 +6,7 @@ import funkin.FunkinAssets;
 import flixel.util.FlxTimer;
 import mobile.backend.DLCManager;
 import mobile.backend.DLCManager.DLCEntry;
+import mobile.backend.DLCManager.DLCTaskState;
 import mobile.backend.StorageSystem;
 #end
 
@@ -79,11 +80,29 @@ class BonusSongDLC
 	 * install style. A file-existence check is also strictly more honest
 	 * here: it can't go stale the way a "did we mark this installed"
 	 * flag could if a file got deleted out from under it.
+	 *
+	 * BUT that file-existence check alone races against an in-flight
+	 * install: _extractZip() writes zip entries sequentially, and the
+	 * chart json (songs/<slug>/data/.../normal.json) sits earlier in the
+	 * archive than the character/stage art -- so the chart can already
+	 * exist on disk while the SAME background thread is still writing the
+	 * image files a few entries later. loadSong()/BonusDLCDownloadSubstate
+	 * both call this in a polling loop and proceed the instant it returns
+	 * true, so without this guard they could jump straight into
+	 * PlayState.create() reading images that genuinely aren't written yet
+	 * (they show up correctly a moment later, once extraction finishes --
+	 * "the files are right there on disk" is true, just not yet at the
+	 * moment this was checked). Treat "still actively installing this
+	 * exact id" as not-installed regardless of which files have landed so
+	 * far; DLCManager only flips out of BUSY after _extractZip() returns.
 	 */
 	public static function isInstalled(songName:String):Bool
 	{
 		final id = dlcIdFor(songName);
 		if (id == null) return true;
+		#if mobile
+		if (DLCManager.taskState == BUSY && DLCManager.activeTaskId == id) return false;
+		#end
 		final slug = Paths.sanitize(songName);
 		return FunkinAssets.exists(Paths.json('$slug/data/normal'));
 	}
