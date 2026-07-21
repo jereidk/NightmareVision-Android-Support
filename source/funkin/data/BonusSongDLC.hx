@@ -4,6 +4,7 @@ package funkin.data;
 import flixel.util.FlxTimer;
 import mobile.backend.DLCManager;
 import mobile.backend.DLCManager.DLCEntry;
+import mobile.backend.StorageSystem;
 #end
 
 /**
@@ -17,6 +18,18 @@ import mobile.backend.DLCManager.DLCEntry;
  * itself (names/prices/icons, all tiny) stays bundled in the APK so the
  * shop cards can render and be purchased before anything is downloaded;
  * only the heavy per-song assets are DLC-gated.
+ *
+ * Unlike a regular DLC/mod, these install as plain loose files under the
+ * SAME relative path the bundled copy would have used (Paths.CORE_DIRECTORY,
+ * e.g. "assets/songs/ow/..."), not into content/<id>/. FunkinAssets already
+ * checks that exact loose-file location before falling back to the bundled
+ * asset for every single load (see FunkinAssets.getContent()/getBitmapData()) --
+ * this is the same mechanism used to override an individual bundled file,
+ * just applied to files that no longer HAVE a bundled copy at all. That
+ * means: no content/<id>/meta.json, never touches Mods.hx's mod list, and
+ * never shows up in ModsState's mod browser -- as far as the rest of the
+ * game is concerned this content either exists at its normal path or it
+ * doesn't, exactly like it always did before it was split out of the APK.
  *
  * Explicit hardcoded map rather than deriving the id from the song name
  * (e.g. 'weekbonus-' + Paths.sanitize(name)) -- a wrong guess here would
@@ -44,20 +57,33 @@ class BonusSongDLC
 
 	/**
 	 * True for any song this class doesn't gate at all (nothing to check),
-	 * or one whose DLC package is actually present on disk.
+	 * or one whose chart is actually present -- checked directly via
+	 * FunkinAssets, the exact same path/lookup Chart.fromSong() itself uses
+	 * (songs/<slug>/data/normal.json, present for all 10 of these songs
+	 * regardless of their real difficulty set), NOT DLCManager's
+	 * content/<id>/meta.json bookkeeping -- there isn't one for this
+	 * install style. A file-existence check is also strictly more honest
+	 * here: it can't go stale the way a "did we mark this installed"
+	 * flag could if a file got deleted out from under it.
 	 */
 	public static function isInstalled(songName:String):Bool
 	{
 		final id = dlcIdFor(songName);
 		if (id == null) return true;
-		#if mobile
-		return DLCManager.isDLCInstalled(id);
-		#else
-		return true;
-		#end
+		final slug = Paths.sanitize(songName);
+		return FunkinAssets.exists(Paths.json('$slug/data/normal'));
 	}
 
 	#if mobile
+	/**
+	 * Where a bonus song's DLC zip gets extracted -- the app's external
+	 * storage root plus Paths.CORE_DIRECTORY's OWN relative prefix (mirrored
+	 * literally, not hardcoded, so this can't drift out of sync with
+	 * whatever Paths.hx actually resolves loose-asset lookups against).
+	 */
+	static function _installRoot():String
+		return StorageSystem.getStorageDirectory() + Paths.CORE_DIRECTORY + '/';
+
 	/**
 	 * Fire-and-forget: called right after a successful shop purchase (see
 	 * FreeplayState.acceptSong()) so the download is very likely already
@@ -76,15 +102,16 @@ class BonusSongDLC
 	 */
 	public static function beginBackgroundDownload(songName:String):Void
 	{
+		if (isInstalled(songName)) return;
 		final id = dlcIdFor(songName);
-		if (id == null || DLCManager.isDLCInstalled(id)) return;
+		if (id == null) return;
 		if (DLCManager.taskState == BUSY) return;
 
 		function tryStart():Void
 		{
 			if (DLCManager.taskState == BUSY) return;
 			final entry = findEntry(id);
-			if (entry != null) DLCManager.downloadAndInstallAsync(entry);
+			if (entry != null) DLCManager.downloadAndInstallAsync(entry, _installRoot());
 		}
 
 		if (DLCManager.registryData != null)
@@ -111,6 +138,10 @@ class BonusSongDLC
 			if (e.id == id) return e;
 		return null;
 	}
+
+	/** Same install destination beginBackgroundDownload() uses -- exposed so BonusDLCDownloadSubstate's own retry can pass it too. */
+	public static function installRoot():String
+		return _installRoot();
 	#else
 	public static function beginBackgroundDownload(songName:String):Void {}
 	#end

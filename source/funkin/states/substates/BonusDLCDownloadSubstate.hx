@@ -131,7 +131,7 @@ class BonusDLCDownloadSubstate extends MusicBeatSubstate
 		if (entry != null)
 		{
 			statusText.text = Lang.str('bonusdlc_starting', 'Starting download...');
-			DLCManager.downloadAndInstallAsync(entry);
+			DLCManager.downloadAndInstallAsync(entry, BonusSongDLC.installRoot());
 		}
 		else if (DLCManager.registryData == null && !registryFetchAttempted)
 		{

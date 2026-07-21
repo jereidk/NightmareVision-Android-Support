@@ -334,8 +334,22 @@ class DLCManager {
         #end
     }
 
-    /** Downloads, validates (SHA-256), and installs a DLC asynchronously. */
-    public static function downloadAndInstallAsync(entry:DLCEntry):Void {
+    /**
+     * Downloads, validates (SHA-256), and installs a DLC asynchronously.
+     *
+     * `destOverride`, when set, extracts straight to that absolute path
+     * instead of the usual content/<id>/ mod folder, and skips writing
+     * meta.json there -- for content that used to ship IN the APK (e.g. a
+     * shop song's chart/audio/character art, or a language's font pack)
+     * and is meant to reappear at the exact loose-asset path FunkinAssets
+     * already checks before falling back to the bundled copy (see
+     * Paths.CORE_DIRECTORY), not as a mod-manager-visible install. Callers
+     * building that path should mirror StorageSystem.getDirectory() +
+     * Paths.CORE_DIRECTORY exactly so the zip's internal layout (e.g.
+     * songs/ow/..., data/characters/blue-ow.json) lands where
+     * FunkinAssets' FileSystem-before-Assets check will actually find it.
+     */
+    public static function downloadAndInstallAsync(entry:DLCEntry, ?destOverride:String):Void {
         #if sys
         if (taskState == BUSY) return;
         _setStatus(BUSY, 0, "Starting download...");
@@ -430,9 +444,9 @@ class DLCManager {
                 }
 
                 _setProgress(65, "Installing...");
-                var destPath = getContentPath() + entry.id + "/";
+                var destPath = destOverride ?? (getContentPath() + entry.id + "/");
                 _mkdirs(destPath);
-                _extractZip(zipPath, destPath, entry);
+                _extractZip(zipPath, destPath, entry, destOverride == null);
 
                 _setProgress(96, "Cleaning up...");
                 if (FileSystem.exists(zipPath)) FileSystem.deleteFile(zipPath);
@@ -486,7 +500,7 @@ class DLCManager {
         File.saveContent(metaPath, Json.stringify(meta, null, "  "));
     }
 
-    static function _extractZip(zipPath:String, destPath:String, entry:DLCEntry):Void {
+    static function _extractZip(zipPath:String, destPath:String, entry:DLCEntry, writeMeta:Bool = true):Void {
         var input   = File.read(zipPath, true);
         var entries = Reader.readZip(input);
         input.close();
@@ -538,8 +552,11 @@ class DLCManager {
             _setProgress(70 + (total > 0 ? Std.int(25 * i / total) : 25), "Installing (" + i + "/" + total + ")...");
         }
 
-        // Ensure meta.json carries our dlcId marker, name, and global:true
-        _writeMetaJson(destPath, entry);
+        // Ensure meta.json carries our dlcId marker, name, and global:true --
+        // skipped for a destOverride install (loose asset overlay, not a
+        // mod-manager-visible folder; nothing should ever read a meta.json
+        // from there, so writing one would just be stray clutter).
+        if (writeMeta) _writeMetaJson(destPath, entry);
     }
 
     static function _setStatus(state:DLCTaskState, progress:Int, msg:String):Void {
