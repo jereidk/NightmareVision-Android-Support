@@ -667,6 +667,18 @@ class MobileDLCSubState extends MusicBeatSubstate
         } else {
             if (DLCManager.registryData != null) {
                 for (e in DLCManager.registryData.dlcs) {
+                    // "official" entries (e.g. the Bonus Songs week's own
+                    // per-song packages, tagged by BonusSongDLC's registry
+                    // rows) are content that used to just BE the game --
+                    // acquired silently via purchase, installed as loose
+                    // assets, never through content/<id>/. They don't belong
+                    // in a browser meant for genuine third-party mods/DLC,
+                    // and DLCManager.isDLCInstalled() below would never read
+                    // them as installed anyway (no meta.json at their install
+                    // location), so showing them here would misleadingly
+                    // always read "downloadable" even once acquired.
+                    if (e.tags != null && e.tags.contains("official")) continue;
+
                     var inst = DLCManager.isDLCInstalled(e.id);
                     var sizeStr = e.sizeMb > 0 ? "  •  " + e.sizeMb + " MB" : "";
                     _items.push({
