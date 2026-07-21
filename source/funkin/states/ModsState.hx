@@ -78,8 +78,7 @@ class ModsState extends MusicBeatState
 		Mods.updateModList(modList[curDir]);
 		Mods.loadTopMod();
 		FunkinAssets.invalidateAssetListCache(); // Refresh asset list after mod priority change
-		#if MODS_ALLOWED Paths.invalidateModPathCache(); #end
-
+		
 		Logger.log('${modList[curDir]} is now prioritized');
 	}
 }
