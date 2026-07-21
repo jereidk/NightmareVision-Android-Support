@@ -1822,113 +1822,6 @@ class PlayState extends MusicBeatState
 		// that point are real reuses.
 	}
 
-	/**
-	 * Pool reuse (see disposeNote()) means the pool only stops allocating
-	 * once it's grown to the song's peak concurrent note count — until
-	 * then, the first time a dense burst pushes past the previous
-	 * high-water mark, that burst pays for `new Note()` on every note over
-	 * the old peak, synchronously, mid-song (this is exactly what caused
-	 * the fps=15 spike the very first time "Danger"'s densest section hit,
-	 * jumping the pool from 26 to 58 notes in one frame).
-	 *
-	 * Chart data (queueNotes, already fully built and sorted by strumTime
-	 * at this point) is enough to compute that peak up front via a
-	 * sweep-line over each note's [spawn, dispose) lifetime — spawn at the
-	 * same `strumTime - spawnOffset` threshold the real spawn loop uses,
-	 * dispose at the same `strumTime + sustainLength + noteKillOffset`
-	 * threshold notesLoop uses to kill late/finished notes. Creating that
-	 * many Note objects now, during the loading transition before the
-	 * countdown starts, pays the exact same construction cost somewhere
-	 * that doesn't show up as an in-song stutter.
-	 *
-	 * Both thresholds depend on `songSpeed`, which a 'Change Scroll Speed'
-	 * event (direct or tweened -- either way its value stays within
-	 * [min(old,new), max(old,new)] the whole time) can change mid-song --
-	 * a slower songSpeed widens both windows, so a chart that starts fast
-	 * and later has a slowdown could have MORE notes in flight at once
-	 * than a peak computed from the chart's starting songSpeed alone would
-	 * predict. Use the smallest songSpeed this chart can ever reach
-	 * (starting value, plus every 'Change Scroll Speed' target) for the
-	 * whole sweep instead, so the estimate stays a safe upper bound
-	 * regardless of when in the song the slowdown actually lands. (A
-	 * script/modchart driving songSpeed directly, outside any chart event,
-	 * is outside what static analysis of the chart can predict -- the pool
-	 * still recovers correctly either way, just via a real allocation the
-	 * one time it happens, same as before this function existed.)
-	 */
-	function prewarmNotePool():Void
-	{
-		var minSongSpeed:Float = songSpeed;
-
-		if (songSpeedType != "constant")
-		{
-			for (event in eventNotes)
-			{
-				if (event.event != 'Change Scroll Speed') continue;
-
-				var val1:Float = Std.parseFloat(event.value1);
-				if (Math.isNaN(val1)) val1 = 1;
-
-				final target:Float = SONG.speed * ClientPrefs.getGameplaySetting('scrollspeed', 1) * val1;
-				if (target < minSongSpeed) minSongSpeed = target;
-			}
-		}
-
-		final safeSpawnOffset:Float = (spawnTime / minSongSpeed);
-		final safeNoteKillOffset:Float = Math.max(Conductor.stepCrotchet, 350 / minSongSpeed * playbackRate);
-
-		final edges:Array<{t:Float, delta:Int}> = [];
-
-		inline function addInterval(qn:QueueNote):Void
-		{
-			edges.push({t: qn.strumTime - safeSpawnOffset, delta: 1});
-			edges.push({t: qn.strumTime + qn.sustainLength + safeNoteKillOffset, delta: -1});
-		}
-
-		for (qn in queueNotes)
-		{
-			addInterval(qn);
-			if (qn.tail != null) for (tail in qn.tail) addInterval(tail);
-		}
-
-		// Tie-break same-instant edges with spawns (delta=1) before
-		// despawns (delta=-1). Charts routinely land a note's spawn at the
-		// exact instant a previous note/sustain despawns (e.g. a sustain
-		// ending right where the next note starts) -- if the dispose were
-		// processed first at that tick, the sweep would briefly free a slot
-		// that runtime never actually frees before needing it (spawning
-		// happens before disposing within the same frame, see noteSpawn/
-		// notesLoop order in update()), silently undercounting the true
-		// peak. Sorting spawns first keeps this a guaranteed upper bound
-		// instead of an average-case guess.
-		edges.sort((a, b) -> a.t < b.t ? -1 : (a.t > b.t ? 1 : b.delta - a.delta));
-
-		var concurrent:Int = 0, peakConcurrent:Int = 0;
-		for (e in edges)
-		{
-			concurrent += e.delta;
-			if (concurrent > peakConcurrent) peakConcurrent = concurrent;
-		}
-
-		// The sweep above is a static upper bound on the CHART, but actual
-		// dispose timing at runtime also depends on things no static analysis
-		// sees: hit-timing variance (a late/early hit shifts exactly when a
-		// note leaves the pool) and sustain "coyote time" grace windows. A
-		// real device log confirmed this gap directly -- predicted peak=48 for
-		// one song, actual runtime peak=57 (~19% higher) -- which forced one
-		// live pool-grow mid-song and caused a visible stutter. Padding the
-		// prewarm target absorbs that class of error; the extra Notes cost
-		// nothing but a few constructions during the loading screen.
-		final paddedPeak:Int = Math.ceil(peakConcurrent * 1.25);
-
-		for (i in notes.length...paddedPeak)
-		{
-			final n:Note = new Note();
-			n.kill();
-			notes.add(n);
-		}
-	}
-
 	#if android
 	/**
 	 * Dev-only measurement, no effect on real gameplay: times how long
@@ -2330,7 +2223,13 @@ class PlayState extends MusicBeatState
 		_pendingTailIdx = 0;
 		susTrails?.forEachAlive(t -> t.kill());
 
-		prewarmNotePool();
+		// prewarmNotePool() used to also be called here, but that's before
+		// generatePlayfields() has built any PlayField -- the surviving
+		// implementation (see its own doc comment) needs playField._skin to
+		// exist, and NotePoolPlan.consume() clears the precomputed plan the
+		// first time it's read, so calling it this early would silently
+		// throw the plan away before generatePlayfields()'s own call ever
+		// got a chance to use it. Only that later call remains.
 
 		// benchmarkFullNoteConstruction() used to run here automatically
 		// whenever ClientPrefs.inDevMode was on. It already did its job (the
