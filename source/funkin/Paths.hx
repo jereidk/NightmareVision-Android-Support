@@ -65,7 +65,36 @@ class Paths
 	@:allow(funkin.backend.FunkinCache)
 	@:allow(funkin.objects.FunkinSprite)
 	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
-	
+
+	#if MODS_ALLOWED
+	// LAZILY initialized (no `= new Map()` field initializer) on purpose --
+	// see getPath()'s own comment on why. A previous attempt at this exact
+	// cache used an eager initializer and crashed on boot because Haxe/hxcpp
+	// runs static field initializers in textual declaration order:
+	// DEFAULT_FONT's own initializer (above) calls font() -> getPath()
+	// immediately at class-init time, before a field declared further down
+	// the file has run its own initializer yet. Reordering the field above
+	// DEFAULT_FONT was tried as the fix and STILL crashed on a real device
+	// (see commits db31c27a / 21180a75 in this file's history) -- reordering
+	// is fragile against any future field shuffle reintroducing the same
+	// bug. A null-checked lazy init has no declaration-order dependency at
+	// all: hxcpp defaults an uninitialized field to null before any __init__
+	// code runs, so this is guaranteed non-null by the time anything reads
+	// it, regardless of where in the file it's declared or what triggers
+	// the first getPath() call.
+	static var _modPathCache:Null<Map<String, String>> = null;
+
+	/**
+	 * Clears getPath()'s memoized mod-override resolutions. Call this
+	 * anywhere mod state can change -- currently mirrors every existing
+	 * FunkinAssets.invalidateAssetListCache() call site exactly.
+	 */
+	public static function invalidateModPathCache():Void
+	{
+		_modPathCache = null;
+	}
+	#end
+
 	/**
 	 * Primary function used for pathing.
 	 * @param file The Path to the file. extension included.
@@ -76,16 +105,28 @@ class Paths
 	public static function getPath(file:String, ?parentFolder:String, mode:PathsTestMode = NONE):String
 	{
 		if (parentFolder != null) file = '$parentFolder/$file';
-		
+
 		#if MODS_ALLOWED
 		if (mode != NONE)
 		{
-			final modPath:String = modFolders(file, mode);
-			
-			if (FileSystem.exists(modPath)) return modPath;
+			if (_modPathCache == null) _modPathCache = new Map();
+
+			final cacheKey = '$mode:$file';
+			var modPath:String = _modPathCache.get(cacheKey);
+			if (modPath == null)
+			{
+				modPath = modFolders(file, mode);
+				// Sentinel for "no override found" -- an empty string can
+				// never be a real modFolders() result (it always joins onto
+				// a non-empty mods()/content path), so it's safe to reuse as
+				// the "checked, nothing there" marker instead of a second Map.
+				if (!FileSystem.exists(modPath)) modPath = '';
+				_modPathCache.set(cacheKey, modPath);
+			}
+			if (modPath.length > 0) return modPath;
 		}
 		#end
-		
+
 		#if ASSET_REDIRECT
 		final embedPath = '${trail}assets/embeds/$file';
 		if (FunkinAssets.exists(embedPath)) return embedPath;

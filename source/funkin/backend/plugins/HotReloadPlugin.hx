@@ -54,6 +54,7 @@ class HotReloadPlugin extends FlxBasic
 			
 			funkin.Mods.loadTopMod();
 			FunkinAssets.invalidateAssetListCache(); // Refresh asset list after hot reload
+			#if MODS_ALLOWED funkin.Paths.invalidateModPathCache(); #end
 		}
 		if (FlxG.keys.justPressed.F7)
 		{

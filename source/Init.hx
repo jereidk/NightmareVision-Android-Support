@@ -238,6 +238,7 @@ class Init extends FlxState
 		funkin.Mods.pushGlobalMods();
 		funkin.Mods.loadTopMod();
 		funkin.FunkinAssets.invalidateAssetListCache(); // Refresh asset list after loading mods
+		funkin.Paths.invalidateModPathCache();
 		#end
 		
 		// Make mod folder visible in Android file managers (like FunkinCrew/Funkin's "Data Folder")
