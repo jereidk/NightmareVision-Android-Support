@@ -10,16 +10,25 @@ import mobile.backend.StorageSystem;
 #end
 
 /**
- * Maps the "Bonus Songs" week's shop-purchasable songs (weekBonus.json --
- * Ow, Who, Insane Streamer, Sussus Nuzzus, Idk, Esculent, Drippypop,
- * Crewicide, Monotone Attack, Top 10) to their individual DLC package ids.
+ * Maps shop-purchasable songs whose heavy assets ship as separate DLC
+ * packages, rather than bundled in the APK, to their DLC package id:
  *
- * Each of these 10 songs ships as its OWN small DLC (chart+audio+exclusive
- * character/stage art) instead of the whole week as one bundle -- buying
- * just one shouldn't force downloading the other nine. weekBonus.json
- * itself (names/prices/icons, all tiny) stays bundled in the APK so the
- * shop cards can render and be purchased before anything is downloaded;
- * only the heavy per-song assets are DLC-gated.
+ * - weekBonus.json's 10 songs (Ow, Who, Insane Streamer, Sussus Nuzzus,
+ *   Idk, Esculent, Drippypop, Crewicide, Monotone Attack, Top 10) --
+ *   each ships as its OWN small DLC (chart+audio+exclusive character/stage
+ *   art). Buying just one shouldn't force downloading the other nine.
+ * - weekCval.json's 3 songs (Chippin, Chipping, Torture) -- these share one
+ *   character-art spritesheet set (images/characters/misc/cvp/) across all
+ *   three, so splitting them per-song would just triplicate that shared
+ *   art; they ship as a single "weekcval" DLC instead. Torture has no
+ *   purchase of its own (it's a `special` lock requiring Chippin+Chipping
+ *   already cleared) but needs no separate download trigger either -- by
+ *   the time it's reachable, the other two were already played, so
+ *   "weekcval" is already installed.
+ *
+ * Either week's own WeekFile JSON (names/prices/icons, all tiny) stays
+ * bundled in the APK so the shop cards can render and be purchased before
+ * anything is downloaded; only the heavy per-song assets are DLC-gated.
  *
  * Unlike a regular DLC/mod, these install as plain loose files under the
  * SAME relative path the bundled copy would have used (Paths.CORE_DIRECTORY,
@@ -51,6 +60,9 @@ class BonusSongDLC
 		'Crewicide' => 'weekbonus-crewicide',
 		'Monotone Attack' => 'weekbonus-monotone-attack',
 		'Top 10' => 'weekbonus-top-10',
+		'Chippin' => 'weekcval',
+		'Chipping' => 'weekcval',
+		'Torture' => 'weekcval',
 	];
 
 	/** Null if `songName` isn't one of this DLC set's songs -- never gates anything else. */
