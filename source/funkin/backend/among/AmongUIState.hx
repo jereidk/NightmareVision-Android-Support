@@ -4,6 +4,7 @@ import flixel.util.FlxStringUtil;
 import flixel.addons.display.FlxBackdrop;
 
 import funkin.data.CosmicubeData;
+import funkin.backend.Logger;
 
 class AmongUIState extends MusicBeatState
 {
@@ -113,7 +114,18 @@ class AmongUIState extends MusicBeatState
 
 		if (_bitmapSnapshotAtCreate != null)
 		{
-			FunkinAssets.cache.disposeNewSinceIfDestructive(_bitmapSnapshotAtCreate);
+			// A device log showed a ~1s freeze landing in the exact same frame
+			// as this call (leaving FreeplayState, which can load 80+ card/
+			// portrait textures under cacheMode=Destructive) -- timed directly
+			// rather than via profBegin/profEnd since those only ever get
+			// reported through PlayState's once-a-second [GAMEPLAY] line, which
+			// doesn't exist here (this runs from menu states, not gameplay).
+			#if android final _t0 = haxe.Timer.stamp(); #end
+			final _disposed = FunkinAssets.cache.disposeNewSinceIfDestructive(_bitmapSnapshotAtCreate);
+			#if android
+			final _ms = (haxe.Timer.stamp() - _t0) * 1000;
+			if (_ms >= 5) Logger.log('[AmongUIState] destroy: disposeNewSinceIfDestructive disposed $_disposed graphic(s) in ${Std.int(_ms)}ms');
+			#end
 			_bitmapSnapshotAtCreate = null;
 		}
 	}

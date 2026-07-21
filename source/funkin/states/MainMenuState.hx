@@ -196,6 +196,8 @@ class MainMenuState extends MusicBeatState
 
 	override function create()
 	{
+		#if android final _createT0 = haxe.Timer.stamp(); #end
+
 		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
 
 		Mods.currentModDirectory = null;
@@ -208,8 +210,18 @@ class MainMenuState extends MusicBeatState
 		// Free previous state's assets before loading new ones. Must run before any
 		// Paths.image/getSparrowAtlas calls so that shared assets (starFG, starBG, logo)
 		// are revived from cache instead of reloaded, preventing double-allocation.
+		// Timed directly (not profBegin/profEnd -- those only ever surface via
+		// PlayState's [GAMEPLAY] line, which doesn't fire here) after a device
+		// log showed a ~1s freeze landing on entry to this exact state,
+		// particularly right after leaving FreeplayState (which can itself
+		// dispose 80+ textures on the way out -- see AmongUIState.destroy()).
+		#if android final _t0 = haxe.Timer.stamp(); #end
 		FunkinAssets.cache.clearStoredMemory();
 		FunkinAssets.cache.clearUnusedMemory();
+		#if android
+		final _clearMs = (haxe.Timer.stamp() - _t0) * 1000;
+		if (_clearMs >= 5) Logger.log('[MainMenuState] create: clearStoredMemory+clearUnusedMemory took ${Std.int(_clearMs)}ms');
+		#end
 
 		persistentUpdate = persistentDraw = true;
 
@@ -358,7 +370,18 @@ class MainMenuState extends MusicBeatState
 		// garbage into the loading transition instead of leaving it to
 		// surface as a [LARGE-GC] stutter a second or two later while the
 		// player is already looking at the menu.
+		// forceGcPass() calls cpp.vm.Gc.compact() -- a FULL heap compaction,
+		// not just a mark-sweep -- likely the single biggest contributor to
+		// the ~1s freeze a device log showed on entry to this state; timed
+		// directly for the same reason as the clearStoredMemory timing above.
+		#if android final _t0b = haxe.Timer.stamp(); #end
 		FunkinAssets.cache.forceGcPass();
+		#if android
+		final _gcMs = (haxe.Timer.stamp() - _t0b) * 1000;
+		if (_gcMs >= 5) Logger.log('[MainMenuState] create: forceGcPass (System.gc + Gc.compact) took ${Std.int(_gcMs)}ms');
+		final _createMs = (haxe.Timer.stamp() - _createT0) * 1000;
+		if (_createMs >= 30) Logger.log('[MainMenuState] create: END, total ${Std.int(_createMs)}ms');
+		#end
 	}
 
 	var backpanel:FlxSprite;
