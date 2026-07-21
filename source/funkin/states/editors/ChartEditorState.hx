@@ -155,13 +155,6 @@ class ChartEditorState extends MusicBeatState
 	
 	public static var camHUD:FlxCamera;
 
-	// Mobile-only: magnifies the whole tab panel (UI_box) via a dedicated
-	// zoomed camera instead of touching it -- see where it's built, right
-	// after the six addXUI() calls, for why this can't just be UI_box.scale.
-	#if mobile
-	var chartUICam:FlxCamera;
-	#end
-	
 	var undos = [];
 	var redos = [];
 	var eventStuff:Array<Dynamic> = [
@@ -494,39 +487,6 @@ class ChartEditorState extends MusicBeatState
 		updateWaveform();
 		// UI_box.selected_tab = 4;
 
-		// The tab panel (checkboxes/steppers/dropdowns, all hand-placed by the
-		// addXUI() calls above at desktop-mouse scale) is unusably small as a
-		// touch target on a phone screen. FlxSpriteGroup.scale does NOT scale
-		// a group like a nested transform -- it copies the scale value onto
-		// each child in place (see FlxSpriteGroup.scaleTransform()), so
-		// scaling UI_box directly would enlarge every widget in place at
-		// their existing cramped spacing and make them overlap instead of
-		// growing the layout proportionally. A dedicated camera zoomed in on
-		// UI_box's own world-space rect has no such problem -- it magnifies
-		// everything (widgets AND the gaps between them) together, exactly
-		// like zooming a screenshot, with zero changes to any individual
-		// widget's placement.
-		#if mobile
-		// Matches the exact UI_box.resize(360, 380) / UI_box.x = 10 / UI_box.y = 20
-		// set up above -- literals instead of UI_box.width/height/x/y since
-		// FlxSpriteGroup's width/height getters scan child bounds and aren't
-		// guaranteed to equal resize()'s configured size exactly.
-		final uiZoom:Float = 1.5;
-		chartUICam = new FlxCamera(0, 0, Std.int(360 * uiZoom), Std.int(380 * uiZoom), uiZoom);
-		chartUICam.bgColor = 0x0;
-		chartUICam.scroll.set(10, 20);
-		FlxG.cameras.add(chartUICam, false);
-		UI_box.camera = chartUICam;
-
-		// zoomTxt/bpmTxt sit just below UI_box on camHUD (screen-space, zoom
-		// 1) -- UI_box itself now draws bigger on screen via chartUICam, so
-		// these need to move down to the new, taller on-screen bottom edge
-		// instead of the old unzoomed one.
-		final uiScreenBottom:Float = chartUICam.height;
-		zoomTxt.y = uiScreenBottom + 10;
-		bpmTxt.y = zoomTxt.y + 20;
-		#end
-		
 		add(renderedNotes);
 		add(renderedNoteType);
 		
