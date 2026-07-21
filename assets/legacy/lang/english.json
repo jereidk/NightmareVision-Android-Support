@@ -65,6 +65,15 @@
         "loading_tip_sranks": "Earning an S rank or higher on 5 different songs unlocks a special award.",
         "loading_tip_mods": "This game supports mods! Check the Mods menu to see what's installed.",
         "loading_tip_charteditor": "Curious how charts are made? Try out the built-in Chart Editor!",
+
+        // BonusDLCDownloadSubstate (blocking screen shown while a purchased bonus song's DLC downloads)
+        "bonusdlc_downloading_title": "Downloading Song",
+        "bonusdlc_cancel_hint": "BACK to cancel",
+        "bonusdlc_cancel_hint_failed": "BACK to go back",
+        "bonusdlc_waiting": "Waiting...",
+        "bonusdlc_starting": "Starting download...",
+        "bonusdlc_fetching_registry": "Fetching download info...",
+        "bonusdlc_not_found": "This download is not available right now.",
         "loading_tip_languages": "This game has been translated into dozens of languages by the community!",
         "loading_tip_whitehiding": "There's a hidden character named White somewhere in the game... can you find them?",
         "loading_tip_redhanded": "There's an achievement for playing as Red, against Red, with a Red pet.",

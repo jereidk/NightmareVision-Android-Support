@@ -5,6 +5,7 @@ import mobile.backend.flixel.input.FlxMobileInputID;
 
 import funkin.input.TurboControl;
 
+import flixel.FlxState;
 import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
 import flixel.group.FlxContainer.FlxTypedContainer;
@@ -22,6 +23,7 @@ import funkin.game.shaders.RimLight;
 // import sys.io.File;
 import funkin.data.WeekData;
 import funkin.data.CosmicubeData;
+import funkin.data.BonusSongDLC;
 import funkin.objects.menu.FreeplayCard;
 import funkin.objects.menu.AmongControls;
 
@@ -629,6 +631,13 @@ class FreeplayState extends AmongUIState
 				lockMovement = true;
 				localWeeks.push(s.songName);
 				localBeans -= Std.int(s.cost);
+				// Fire-and-forget: this song's heavy assets (chart/audio/
+				// character/stage) may live in a separate DLC package, not
+				// bundled in the APK. Kick the download off now, in the
+				// background, so it's very likely already done by the time
+				// the player actually presses play -- loadSong()'s own gate
+				// is the real safety net if it isn't.
+				#if mobile BonusSongDLC.beginBackgroundDownload(s.songName); #end
 				return;
 			}
 			FlxG.sound.play(Paths.sound('locked'), 0.7);
@@ -907,8 +916,34 @@ class FreeplayState extends AmongUIState
 	
 	public static function loadSong(song:String, silent:Bool = false):Void
 	{
+		// Gate independent of whether the song is "unlocked" -- a purchase,
+		// a met requiredSongs condition, and ClientPrefs.forceUnlock (Dev
+		// Panel) all only ever affect checkLock()'s UI-side lock state, none
+		// of them touch whether this song's DLC package is actually present
+		// on disk. beginBackgroundDownload() (fired at purchase time) is
+		// only a best-effort head start -- this is the real safety net, and
+		// it applies the same way regardless of HOW the song became
+		// selectable.
+		#if mobile
+		if (!BonusSongDLC.isInstalled(song))
+		{
+			// loadSong() is static, so there's no `this` substate to open on
+			// directly -- and callers reach it from various nesting depths
+			// (straight from FreeplayState, or from AttackCharSelectSubstate/
+			// MissCounterSubstate's own confirm callbacks, which don't close
+			// themselves before calling this). Opening on FlxG.state alone
+			// would fight whichever substate is still actually active, so
+			// walk down to whichever one currently owns the slot Flixel will
+			// really render/update and open on THAT.
+			var host:FlxState = FlxG.state;
+			while (host.subState != null) host = host.subState;
+			host.openSubState(new BonusDLCDownloadSubstate(song, () -> loadSong(song, silent)));
+			return;
+		}
+		#end
+
 		// PlayState.storyMeta.difficulty = 1; // This would be 2 but I just made them all normal difficulty because -hard was annoying lol
-		
+
 		final ret = PlayState.prepareForSong(song);
 		
 		if (ret != null) return trace('THIS CHART IS INVALID! FUCK!');
