@@ -6,19 +6,20 @@ import mobile.backend.DLCManager.DLCTaskState;
 
 import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
-import funkin.Mods;
 
 /**
  * Metadata for a downloadable language font pack.
  */
 typedef LangFontPack =
 {
-	/** content/<id>/ folder name, and the DLCEntry id used for install tracking. */
+	/** content/<id>/ folder name (legacy installs only -- see isInstalled()'s doc comment), and the DLCEntry id used for install tracking. */
 	var id:String;
 	var displayName:String;
 	var zipName:String;
 	var sha256:String;
 	var sizeMb:Float;
+	/** One font file this pack is guaranteed to provide (first entry of its font_replacement map) -- checked directly for isInstalled(). */
+	var checkFile:String;
 }
 
 /**
@@ -27,10 +28,16 @@ typedef LangFontPack =
  * Rather than ship them in every install, they're pulled out of
  * assets/legacy/fonts/ entirely and fetched on demand the first time
  * someone actually picks one of those languages, reusing DLCManager's
- * existing download/verify/extract pipeline (content/<id>/, global:true in
- * meta.json, so Paths.font()'s existing FileSystem-before-Assets check in
- * Paths.hx picks the downloaded file up automatically -- no changes needed
- * there or in Mods.hx).
+ * existing download/verify/extract pipeline.
+ *
+ * Installs as loose files at fonts/<name>.ttf under Paths.CORE_DIRECTORY --
+ * the exact same relative path a bundled font would live at -- instead of
+ * content/<id>/, the same reasoning as funkin.data.BonusSongDLC (see its
+ * own doc comment): this is content that used to just BE the game, not a
+ * mod/DLC a player added, so it shouldn't show up as one in ModsState or
+ * MobileDLCSubState's Browse tab. Paths.font()'s own FileSystem-before-
+ * Assets check (see its doc comment on the loose-font-file branch) picks
+ * it up with zero code changes needed there.
  */
 class LangFontPacks
 {
@@ -43,6 +50,7 @@ class LangFontPacks
 			zipName: "korean-fonts.zip",
 			sha256: "407ed6b853ad4d43289a8f67840e8a4624ebc1dabee15eed0af178b9b48ca0cf",
 			sizeMb: 4.3,
+			checkFile: "kr.ttf",
 		},
 		"japanese" => {
 			id: "asian-langs-japanese",
@@ -50,6 +58,7 @@ class LangFontPacks
 			zipName: "japanese-fonts.zip",
 			sha256: "bc6d9929c7099b12fa7d3b75dcb29cb642f9ac68d4ff66334f5b6d57ffcdbab8",
 			sizeMb: 6.05,
+			checkFile: "jp.ttf",
 		},
 		// zh-cn and zh-tw share the exact same font_replacement targets, so
 		// they share one pack/one download instead of fetching it twice.
@@ -59,6 +68,7 @@ class LangFontPacks
 			zipName: "chinese-fonts.zip",
 			sha256: "6c35715e607c0235ccf096752ca58c2de90b495b04b462e48c20fbc47c738cf8",
 			sizeMb: 17.7,
+			checkFile: "NotoSansSC-SemiBold.ttf",
 		},
 		"zh-tw" => {
 			id: "asian-langs-chinese",
@@ -66,6 +76,7 @@ class LangFontPacks
 			zipName: "chinese-fonts.zip",
 			sha256: "6c35715e607c0235ccf096752ca58c2de90b495b04b462e48c20fbc47c738cf8",
 			sizeMb: 17.7,
+			checkFile: "NotoSansSC-SemiBold.ttf",
 		},
 	];
 
@@ -91,10 +102,30 @@ class LangFontPacks
 		return PACKS.get(langCode);
 	}
 
+	/** Where a font pack's zip extracts to -- fonts/<name> lands at the same relative path a bundled font would use. */
+	static function _installRoot():String
+	{
+		return StorageSystem.getStorageDirectory() + funkin.Paths.CORE_DIRECTORY + '/';
+	}
+
+	/**
+	 * True once `pack.checkFile` is actually present -- checked directly via
+	 * FunkinAssets at the loose-asset path (fonts/<checkFile> under
+	 * Paths.CORE_DIRECTORY), NOT DLCManager's content/<id>/meta.json
+	 * bookkeeping, since that's not where this install style puts anything.
+	 *
+	 * Also treats an OLD-style install (content/<id>/, from before this
+	 * class switched to the loose-asset location) as installed, so an
+	 * existing user who already downloaded a pack under the previous
+	 * scheme isn't asked to redownload it -- new downloads always go to the
+	 * new location; nothing here ever migrates an old one, it's just also
+	 * accepted as valid.
+	 */
 	public static function isInstalled(langCode:String):Bool
 	{
 		final pack = getPack(langCode);
 		if (pack == null) return true;
+		if (funkin.FunkinAssets.exists(funkin.Paths.getPath('fonts/${pack.checkFile}'))) return true;
 		return DLCManager.isDLCInstalled(pack.id);
 	}
 
@@ -123,7 +154,7 @@ class LangFontPacks
 		final pack = getPack(langCode);
 		if (pack == null) return;
 		if (_attempted.exists(pack.id)) return;
-		if (DLCManager.isDLCInstalled(pack.id)) return;
+		if (isInstalled(langCode)) return;
 		if (DLCManager.taskState == DLCTaskState.BUSY) return; // another download already running, don't collide
 
 		_attempted.set(pack.id, true);
@@ -142,17 +173,15 @@ class LangFontPacks
 			sha256: pack.sha256,
 		};
 
-		DLCManager.downloadAndInstallAsync(entry);
+		DLCManager.downloadAndInstallAsync(entry, _installRoot());
 		#end
 	}
 
 	/**
 	 * Polls for completion of a font-pack install kicked off by
-	 * ensureDownloaded(), and -- unlike regular DLC, which needs a restart
-	 * -- refreshes the mod list right away so the font is usable
-	 * immediately. Call this once per frame from somewhere that's always
-	 * alive (e.g. MusicBeatState.update()); it's a cheap no-op once there's
-	 * nothing left to finish.
+	 * ensureDownloaded(). Call this once per frame from somewhere that's
+	 * always alive (e.g. MusicBeatState.update()); it's a cheap no-op once
+	 * there's nothing left to finish.
 	 */
 	public static function pollCompletion():Void
 	{
@@ -162,9 +191,7 @@ class LangFontPacks
 
 		if (DLCManager.taskState == DLCTaskState.SUCCESS)
 		{
-			Logger.log('[LangFontPacks] Font pack installed, refreshing mod list.', NOTICE);
-			Mods.updateModList();
-			Mods.pushGlobalMods();
+			Logger.log('[LangFontPacks] Font pack installed.', NOTICE);
 		}
 		else
 		{

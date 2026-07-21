@@ -1,5 +1,7 @@
 package funkin.data;
 
+import funkin.FunkinAssets;
+
 #if mobile
 import flixel.util.FlxTimer;
 import mobile.backend.DLCManager;
