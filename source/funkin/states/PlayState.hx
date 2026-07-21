@@ -654,7 +654,19 @@ class PlayState extends MusicBeatState
 	 * Useful for if you want custom Discord RPC messages and PlayState gets in the way.
 	**/
 	public var automatedDiscord:Bool = true;
-	
+
+	// Android's MediaSession-based RPC (see DiscordClient.hx's android branch)
+	// only advances Kizzy's progress bar when we periodically re-report a
+	// fresh elapsed position -- Kizzy recomputes its own start/end timestamps
+	// from whatever position we last set on its ~1s poll loop, it doesn't
+	// extrapolate on its own, so an unrefreshed position looks frozen rather
+	// than ticking. Resynced on this interval instead of every frame to avoid
+	// the JNI/notification-rebuild overhead that would come with that. Not
+	// worth #if android-gating the field/reset themselves (a harmless float
+	// everywhere else) -- only the actual resync call below is guarded.
+	var _discordSyncTimer:Float = 0;
+	static inline final DISCORD_SYNC_INTERVAL:Float = 5;
+
 	/**
 	 * Group of general scripts.
 	 */
@@ -1938,7 +1950,8 @@ class PlayState extends MusicBeatState
 		if (paused) audio.pause();
 		
 		// Updating Discord Rich Presence (with Time Left)
-		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName, null, true, songLength);
+		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName, null, true, songLength, songDurationMs: songLength);
+		_discordSyncTimer = 0;
 		
 		scripts.call('onSongStart', _scriptEmptyArgs);
 		callHUDFunc(hud -> hud.onSongStart());
@@ -2486,7 +2499,8 @@ class PlayState extends MusicBeatState
 	inline function resetDiscordRPC(showTime:Bool = false)
 	{
 		if (!showTime) DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon);
-		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset);
+		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset, songDurationMs: songLength);
+		_discordSyncTimer = 0;
 	}
 	
 	function resyncVocals():Int
@@ -2570,7 +2584,25 @@ class PlayState extends MusicBeatState
 			moveCameraSection();
 			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
+		#if android
+		// See DISCORD_SYNC_INTERVAL's doc comment -- keeps Kizzy's progress bar
+		// actually advancing during gameplay instead of freezing at whichever
+		// elapsed position was last reported (song start, or the last pause/
+		// resume). Paused is deliberately excluded: Kizzy only draws a
+		// progress bar at all while PlaybackState.STATE_PLAYING, so there's
+		// nothing to keep fresh while paused.
+		if (automatedDiscord && startedCountdown && !paused && !endingSong)
+		{
+			_discordSyncTimer += elapsed;
+			if (_discordSyncTimer >= DISCORD_SYNC_INTERVAL)
+			{
+				_discordSyncTimer = 0;
+				resetDiscordRPC(true);
+			}
+		}
+		#end
+
 		if (controls.PAUSE && startedCountdown && canPause)
 		{
 			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();

@@ -30,14 +30,25 @@ class AndroidRPC {
 	 *   Media RPC polls this MediaSession independently of when we last called
 	 *   update(), so leaving it on STATE_PLAYING would keep showing "still playing"
 	 *   in Discord indefinitely after the player actually paused.
+	 * @param positionMs Current elapsed playback position in milliseconds --
+	 *   only meaningful (and only shown by Kizzy at all) while isPlaying. See
+	 *   KizzyHelper.updateStatus()'s own doc comment for why this needs to be
+	 *   kept reasonably fresh via repeated calls, not just set once.
+	 * @param durationMs Total song length in milliseconds. 0 (the default,
+	 *   used by every non-gameplay caller) disables Kizzy's progress bar.
 	 */
-	public static function update(title:String, artist:String, ?charIcon:String, isPlaying:Bool = true) {
+	public static function update(title:String, artist:String, ?charIcon:String, isPlaying:Bool = true, positionMs:Float = 0, durationMs:Float = 0) {
 		if (_update == null) {
-			_update = JNI.createStaticMethod("mobile/backend/java/KizzyHelper", "updateStatus", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V");
+			// Java-side takes `int`, not `long` ("J") -- every other JNI call in
+			// this codebase passes plain 32-bit ints/floats/strings/bools, and a
+			// song position/duration in milliseconds comfortably fits an Int
+			// (max ~24 days), so this stays on that same already-proven path
+			// instead of introducing an untested 64-bit marshalling case.
+			_update = JNI.createStaticMethod("mobile/backend/java/KizzyHelper", "updateStatus", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZII)V");
 		}
 
 		try {
-			_update(title, artist, resolveIconPath(charIcon), isPlaying);
+			_update(title, artist, resolveIconPath(charIcon), isPlaying, Std.int(positionMs), Std.int(durationMs));
 		} catch(e:Dynamic) {
 			trace("JNI Update Error: " + e);
 		}

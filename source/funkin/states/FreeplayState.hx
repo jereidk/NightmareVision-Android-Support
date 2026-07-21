@@ -535,7 +535,13 @@ class FreeplayState extends AmongUIState
 		}
 		
 		changePortrait(change);
-		
+
+		// Was a static "Freeplay Menu" set once in create() and never touched
+		// again -- now reflects whichever song is actually highlighted,
+		// updating live as the player scrolls/taps through the list instead
+		// of staying frozen on whatever was selected first.
+		DiscordClient.changePresence("Freeplay Menu", song.songName);
+
 		scriptGroup.call('onSongChange', [song.songName]);
 		intendedScore = Highscore.getScore(song.songName, 1);
 		intendedRating = Highscore.getRating(song.songName, 1);

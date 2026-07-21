@@ -141,7 +141,7 @@ class DiscordClient
 	 * @param endTimestamp 
 	 */
 	public static function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
-			largeImageKey:String = 'icon'):Void
+			largeImageKey:String = 'icon', ?songDurationMs:Float):Void
 	{
 		final startTimestamp:Float = hasStartTimestamp == true ? Date.now().getTime() : 0;
 		
@@ -230,18 +230,38 @@ class DiscordClient
 	/**
 	 * Same call shape as the desktop version, so every existing call site works
 	 * unchanged -- mapped onto AndroidRPC.update()'s narrower (title, artist,
-	 * charIcon, isPlaying) shape: `details` -> title, `state` -> artist,
-	 * `smallImageKey` -> character icon key (only PlayState passes one, via
-	 * `dad.healthIcon`). `hasStartTimestamp` -> isPlaying: every call site that
-	 * omits it is a menu/editor/paused state, every one that sets it true is an
-	 * actively-playing song. `endTimestamp`/`largeImageKey` have no Android
-	 * equivalent here (no progress-bar/duration support) and are ignored.
+	 * charIcon, isPlaying, positionMs, durationMs) shape: `details` -> title,
+	 * `state` -> artist, `smallImageKey` -> character icon key (only PlayState
+	 * passes one, via `dad.healthIcon`). `hasStartTimestamp` -> isPlaying:
+	 * every call site that omits it is a menu/editor/paused state, every one
+	 * that sets it true is an actively-playing song. `largeImageKey` has no
+	 * Android equivalent here and is ignored.
+	 *
+	 * `endTimestamp` follows the exact same convention PlayState already uses
+	 * for the desktop branch: milliseconds REMAINING until the song ends, not
+	 * an absolute timestamp (see PlayState.hx's own call sites -- e.g.
+	 * `songLength - Conductor.songPosition - ClientPrefs.noteOffset`).
+	 * `songDurationMs` (the song's total length) is the one new piece of
+	 * information Android needs that desktop's absolute-end-timestamp scheme
+	 * doesn't: Kizzy's progress bar needs both elapsed position AND total
+	 * duration, and elapsed alone isn't recoverable from "time remaining"
+	 * without also knowing the total.
 	 */
 	public static function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
-			largeImageKey:String = 'icon'):Void
+			largeImageKey:String = 'icon', ?songDurationMs:Float):Void
 	{
 		if (!initiated) return;
-		AndroidRPC.update(details, state, smallImageKey, hasStartTimestamp);
+
+		var positionMs:Float = 0;
+		var durationMs:Float = 0;
+		if (hasStartTimestamp && songDurationMs != null && songDurationMs > 0)
+		{
+			durationMs = songDurationMs;
+			positionMs = songDurationMs - (endTimestamp ?? 0);
+			if (positionMs < 0) positionMs = 0;
+		}
+
+		AndroidRPC.update(details, state, smallImageKey, hasStartTimestamp, positionMs, durationMs);
 	}
 
 	static function set_rpcId(value:String):String return (rpcId = value);
@@ -260,7 +280,7 @@ class DiscordClient
 	public static var rpcId(default, set):String = '';
 
 	public static inline function changePresence(details:String = 'In the Menus', ?state:String, ?smallImageKey:String, hasStartTimestamp:Bool = false, ?endTimestamp:Float,
-		largeImageKey:String = 'icon'):Void {}
+		largeImageKey:String = 'icon', ?songDurationMs:Float):Void {}
 
 	public static function check():Void {}
 

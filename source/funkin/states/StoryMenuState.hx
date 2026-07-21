@@ -449,6 +449,10 @@ class StoryMenuState extends AmongUIState
 			
 			weekTitle.text = week.storyName;
 			weekNumber.text = week.weekName;
+
+			// Was a static "Story Menu" set once in create() -- now reflects
+			// whichever week is actually highlighted on the map.
+			DiscordClient.changePresence("Story Menu", week.storyName);
 			
 			weekPlaylist.size = Std.int(Math.min(128 / week.songs.length, 50));
 			weekPlaylist.text = playlistText;
