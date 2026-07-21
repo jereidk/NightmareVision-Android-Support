@@ -139,11 +139,20 @@ class ScriptGroup implements IFlxDestroyable
 			// 'baseScripts'), so this doesn't inflate "unaccounted" -- see
 			// SystemMonitor.profEnd()'s own doc comment on why only the
 			// outermost span in a nest counts toward that total.
-			#if android SystemMonitor.profBegin('script:${i.name}:$event'); #end
+			// The enabled check has to guard the STRING BUILD too, not just
+			// live inside profBegin() -- Haxe evaluates a call's arguments
+			// before the call runs, so '${i.name}:$event' was getting
+			// interpolated (and thrown away) on every single dispatch
+			// regardless of whether monitoring was on, defeating profBegin's
+			// own internal enabled check. This fires per (script, event) at
+			// step/beat/frame frequency across every loaded script for the
+			// whole song -- a real, sustained allocation source, not a
+			// one-off.
+			#if android if (SystemMonitor.enabled) SystemMonitor.profBegin('script:${i.name}:$event'); #end
 
 			var ret:Dynamic = i.call(event, args)?.returnValue;
 
-			#if android SystemMonitor.profEnd(); #end
+			#if android if (SystemMonitor.enabled) SystemMonitor.profEnd(); #end
 
 			if (timingEnabled)
 			{

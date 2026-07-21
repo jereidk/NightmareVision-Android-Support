@@ -326,15 +326,22 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public static function noteHit(note:Note, field:PlayField):Void
 	{
 		var scriptFunc:String = '';
-		if (field.playerControls) scriptFunc = 'goodNoteHit';
-		else scriptFunc = field.ID == 1 ? 'opponentNoteHit' : 'extraNoteHit';
+		var scriptFuncPre:String = '';
+		if (field.playerControls) { scriptFunc = 'goodNoteHit'; scriptFuncPre = 'goodNoteHitPre'; }
+		else if (field.ID == 1) { scriptFunc = 'opponentNoteHit'; scriptFuncPre = 'opponentNoteHitPre'; }
+		else { scriptFunc = 'extraNoteHit'; scriptFuncPre = 'extraNoteHitPre'; }
 
 		_noteScriptArgs[0] = note;
 		_noteScriptArgs[1] = field.ID;
 		final scriptArgs = _noteScriptArgs;
 
+		// scriptFuncPre used to be `scriptFunc + 'Pre'`, concatenated fresh on
+		// every single note hit -- three literal constants instead, same
+		// branching, zero per-hit allocation. This fires continuously for the
+		// whole song (every opponent/player note), not just at a few points,
+		// so the concat was a real sustained GC-pressure source.
 		#if android SystemMonitor.profBegin('hitPreScript'); #end
-		PlayState.instance.scripts.call(scriptFunc + 'Pre', scriptArgs);
+		PlayState.instance.scripts.call(scriptFuncPre, scriptArgs);
 		#if android SystemMonitor.profEnd(); #end
 
 		final strum:StrumNote = note.strum;
