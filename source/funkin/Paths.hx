@@ -65,7 +65,33 @@ class Paths
 	@:allow(funkin.backend.FunkinCache)
 	@:allow(funkin.objects.FunkinSprite)
 	static var tempAtlasFramesCache:Map<String, FlxAtlasFrames> = []; // maybe instead of this make a txt cache ?
-	
+
+	#if MODS_ALLOWED
+	// getPath()'s mod-override check (modFolders() + FileSystem.exists()) used
+	// to run unconditionally on every single call, real disk I/O every time --
+	// including for callers like Note.reloadNote() -> getSparrowAtlas() that
+	// hit the SAME (file, mode) over and over for notes already warm in
+	// tempAtlasFramesCache. A device log showed that stat call alone
+	// accounting for ~46s cumulative across one play session (present in 78%
+	// of all 1-second gameplay windows). Mod state only ever changes at the
+	// three call sites that already call FunkinAssets.invalidateAssetListCache()
+	// (mods loaded at startup, mod priority changed, hot reload) -- see
+	// invalidateModPathCache() below, called from those same three sites --
+	// so memoizing this per (mode, file) is safe for the whole session
+	// in between.
+	static var _modPathCache:Map<String, String> = new Map();
+
+	/**
+	 * Clears getPath()'s memoized mod-override resolutions. Call this
+	 * anywhere mod state can change -- currently mirrors every existing
+	 * FunkinAssets.invalidateAssetListCache() call site exactly.
+	 */
+	public static function invalidateModPathCache():Void
+	{
+		_modPathCache = new Map();
+	}
+	#end
+
 	/**
 	 * Primary function used for pathing.
 	 * @param file The Path to the file. extension included.
@@ -76,16 +102,26 @@ class Paths
 	public static function getPath(file:String, ?parentFolder:String, mode:PathsTestMode = NONE):String
 	{
 		if (parentFolder != null) file = '$parentFolder/$file';
-		
+
 		#if MODS_ALLOWED
 		if (mode != NONE)
 		{
-			final modPath:String = modFolders(file, mode);
-			
-			if (FileSystem.exists(modPath)) return modPath;
+			final cacheKey = '$mode:$file';
+			var modPath:String = _modPathCache.get(cacheKey);
+			if (modPath == null)
+			{
+				modPath = modFolders(file, mode);
+				// Sentinel for "no override found" -- an empty string can
+				// never be a real modFolders() result (it always joins onto
+				// a non-empty mods()/content path), so it's safe to reuse as
+				// the "checked, nothing there" marker instead of a second Map.
+				if (!FileSystem.exists(modPath)) modPath = '';
+				_modPathCache.set(cacheKey, modPath);
+			}
+			if (modPath.length > 0) return modPath;
 		}
 		#end
-		
+
 		#if ASSET_REDIRECT
 		final embedPath = '${trail}assets/embeds/$file';
 		if (FunkinAssets.exists(embedPath)) return embedPath;
