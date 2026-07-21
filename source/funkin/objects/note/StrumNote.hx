@@ -130,26 +130,33 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	}
 
 	/**
-	 * Absolute X for the player's LEFT receptor -- like VSLICE_OPPONENT_X_OFFSET,
-	 * this replaces (FlxG.width / 2 + STRUMLINE_X_OFFSET), which put the whole
-	 * player strumline much too far right (LEFT-arrow center measured at 846
-	 * on a 1600-wide screenshot, vs. 416 in the reference at the same
-	 * resolution). Same root cause as the opponent strumline already not
-	 * following desktop VSlice's formula: mobile VSlice doesn't actually
-	 * anchor the player strumline to the screen's horizontal midpoint either
-	 * -- it sits at a fixed position instead. All 4 lane centers matched the
-	 * reference within ~1px using this single absolute value plus
-	 * VSLICE_PLAYER_SPACING_MULT/VSLICE_PLAYER_SPLIT_GAP_COEFF above.
+	 * Center-relative offset for the player's LEFT receptor -- like
+	 * VSLICE_OPPONENT_X_OFFSET, this replaces (FlxG.width / 2 + STRUMLINE_X_OFFSET),
+	 * which put the whole player strumline much too far right (LEFT-arrow
+	 * center measured at 846 on a 1600-wide screenshot, vs. 416 in the
+	 * reference at the same resolution).
 	 *
-	 * Confirmed against FunkinCrew/Funkin's actual mobile formula
-	 * (PlayState.initNoteHitbox()): the player strumline's own X there is
-	 * `(FlxG.width - playerStrumline.width) / 2 + STRUMLINE_X_OFFSET`, which
-	 * depends on playerStrumline.width -- itself derived from a note-scale
-	 * term that doesn't match this project's own note-scale measurements (see
-	 * VSLICE_PLAYER_SIZE_SCALE), so it can't be safely reproduced as a formula
-	 * yet. Left as the fixed, pixel-confirmed value here rather than guessing.
+	 * Originally landed as a fixed 416 (see git history), measured/confirmed
+	 * ONLY at that one 1600x720 'expand'-mode screenshot -- correct there, but
+	 * a single (width, position) data point can't tell a genuinely fixed
+	 * value apart from a width-proportional one that just happens to equal
+	 * 416 at width=1600. Turned out to be the latter: 'fit' mode pins
+	 * FlxG.width back to the design resolution (1280, not 1600 -- see
+	 * FunkinRatioScaleMode.updateGameSize()'s non-expand branch), and reusing
+	 * the same flat 416 there visibly shifted the whole player strumline too
+	 * far right (screenshots, 'fit' mode, both up- and downscroll).
+	 *
+	 * Reintroduced as a center-relative term instead -- `FlxG.width * 0.5 +
+	 * this` -- which exactly reproduces the already-validated 416 at
+	 * width=1600 (416 - 1600/2 = -384, so 'expand' mode is completely
+	 * unchanged) while now scaling proportionally for any other FlxG.width,
+	 * including 'fit' mode's 1280 (-> 256). Matches this same file's own
+	 * vsliceAmplification()-based terms (e.g. VSLICE_PLAYER_SPLIT_GAP_COEFF
+	 * below), which already scale with FlxG.width for exactly this reason --
+	 * and matches desktop VSlice's own FlxG.width/2-shaped formula, which is
+	 * what this constant's doc comment already said it was replacing.
 	 */
-	public static final VSLICE_PLAYER_X_OFFSET:Float = 416;
+	public static final VSLICE_PLAYER_X_OFFSET_FROM_CENTER:Float = 416 - 800;
 
 	/**
 	 * Extra inset for the opponent's compact corner strumline, separate from
@@ -353,7 +360,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	 */
 	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
 	{
-		final baseX:Float = isPlayerLane ? VSLICE_PLAYER_X_OFFSET : VSLICE_OPPONENT_X_OFFSET;
+		final baseX:Float = isPlayerLane ? (FlxG.width * 0.5 + VSLICE_PLAYER_X_OFFSET_FROM_CENTER) : VSLICE_OPPONENT_X_OFFSET;
 		var x = baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
 		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP_COEFF/vsliceAmplification().
 		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP_COEFF * vsliceAmplification() * spacingScale;
