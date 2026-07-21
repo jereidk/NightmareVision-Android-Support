@@ -541,8 +541,14 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		if (_prefix.length > 0) this.prefix = _prefix;
 		if (_suffix.length > 0) this.suffix = _suffix;
 		
-		if (noteScript != null) if (noteScript.executeFunc("onReloadNote", [this, _prefix, _texture, _suffix], this) == ScriptConstants.STOP_FUNC) return;
-		
+		if (noteScript != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.scriptPre'); #end
+			final _stopped = (noteScript.executeFunc("onReloadNote", [this, _prefix, _texture, _suffix], this) == ScriptConstants.STOP_FUNC);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+			if (_stopped) return;
+		}
+
 		skin ??= NoteUtil.getSkinFromID(player);
 		
 		var _skin:String = _texture;
@@ -562,23 +568,40 @@ class Note extends RGBSprite implements funkin.game.modchart.IModNote
 		var atlasPath:String = arraySkin.join('/');
 		
 		isQuant = ClientPrefs.quants && (skin?.quantsEnabled ?? true) && canQuant;
-		
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.atlas'); #end
 		frames = Paths.getSparrowAtlas(atlasPath);
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.anims'); #end
 		loadNoteAnims();
-		
-		if (animName != null) playAnim(animName, true);
-		
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		if (animName != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.playAnim'); #end
+			playAnim(animName, true);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+		}
+
 		if (inEditor && !skipScale) setGraphicSize(ChartEditorState.GRID_SIZE, ChartEditorState.GRID_SIZE);
-		
+
 		baseScale.copyFrom(scale);
-		
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.hitbox'); #end
 		updateHitbox();
-		
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
 		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
-		
+
 		x += swagWidth * (noteData % (skin?.keys ?? 4));
-		
-		if (noteScript != null) noteScript.executeFunc("postReloadNote", [this, _prefix, _texture, _suffix], this);
+
+		if (noteScript != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.scriptPost'); #end
+			noteScript.executeFunc("postReloadNote", [this, _prefix, _texture, _suffix], this);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+		}
 	}
 	
 	public override function playAnim(anim:String, force:Bool = false, isReversed:Bool = false, frame:Int = 0)

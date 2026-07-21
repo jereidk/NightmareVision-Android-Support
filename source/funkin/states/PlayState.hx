@@ -2755,7 +2755,9 @@ class PlayState extends MusicBeatState
 		while (_headsSpawnedThisFrame < MAX_NOTE_SPAWNS_PER_FRAME && _noteSpawnIdx < queueNotes.length
 			&& (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
 		{
+			#if android SystemMonitor.profBegin('noteSpawn.recycleHead'); #end
 			recycleNote(queueNotes[_noteSpawnIdx++]);
+			#if android SystemMonitor.profEnd(); #end
 			_headsSpawnedThisFrame++;
 		}
 
@@ -2763,7 +2765,9 @@ class PlayState extends MusicBeatState
 		while (_pendingTailsDrained < MAX_NOTE_SPAWNS_PER_FRAME && _pendingTailIdx < _pendingTails.length
 			&& (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
 		{
+			#if android SystemMonitor.profBegin('noteSpawn.spawnTail'); #end
 			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
+			#if android SystemMonitor.profEnd(); #end
 			_pendingTailsDrained++;
 		}
 		#if android SystemMonitor.profEnd(); #end
@@ -3146,29 +3150,43 @@ class PlayState extends MusicBeatState
 	{
 		final targetField:Null<PlayField> = getFieldFromID(queueNote.playField);
 
+		#if android SystemMonitor.profBegin('noteSpawn.findCompatible'); #end
 		var note:Note = (targetField != null)
 			? recycleCompatibleNote(targetField._skin, queueNote.noteData)
 			: notes.recycle(Note, () -> new Note());
+		#if android SystemMonitor.profEnd(); #end
 
+		#if android SystemMonitor.profBegin('noteSpawn.preRecycle'); #end
 		note.preRecycle(queueNote, parent);
+		#if android SystemMonitor.profEnd(); #end
 
 		if (parent != null) return note;
 
 		if (queueNote.tail != null)
 		{
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNoteCall'); #end
 			final note:Note = spawnNote(note);
+			#if android SystemMonitor.profEnd(); #end
 
 			if (note != null)
 			{
+				#if android SystemMonitor.profBegin('noteSpawn.enqueueTails'); #end
 				enqueuePendingTails(note, queueNote, queueNote.tail);
+				#if android SystemMonitor.profEnd(); #end
+
+				#if android SystemMonitor.profBegin('noteSpawn.sustainTrailSetup'); #end
 				setupSustainTrail(note, targetField);
+				#if android SystemMonitor.profEnd(); #end
 			}
 
 			return note;
 		}
 		else
 		{
-			return spawnNote(note);
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNoteCall'); #end
+			final _spawned = spawnNote(note);
+			#if android SystemMonitor.profEnd(); #end
+			return _spawned;
 		}
 	}
 
