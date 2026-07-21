@@ -11,7 +11,161 @@
       "downloadUrl": "https://github.com/jereidk/NightmareVision-Android-Support/releases/download/dlc-v1/securitydlc.zip",
       "sha256": "c53d7014868050cc3708bf2433335358751a47ae0a2299aee9ad9f46e302ab26",
       "releaseTag": "dlc-v1",
-      "tags": ["content", "songs", "characters"]
+      "tags": [
+        "content",
+        "songs",
+        "characters"
+      ]
+    },
+    {
+      "id": "weekbonus-ow",
+      "name": "Ow (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Ow\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 1.43,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-ow.zip",
+      "sha256": "dc03d2fcdff5bef2d76a734af7ea880e3aa8540488ccbb6250eb1fa4be491349",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-who",
+      "name": "Who (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Who\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 2.35,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-who.zip",
+      "sha256": "5da2314a482ed6873554ab8759aedf60a7a7d3ec8dee2951daaaa38eb0d49b9b",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-insane-streamer",
+      "name": "Insane Streamer (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Insane Streamer\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 2.31,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-insane-streamer.zip",
+      "sha256": "42416e7d35c810365fb1c17181f85da18d94ab159771c5762e5daa48eebf2f28",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-sussus-nuzzus",
+      "name": "Sussus Nuzzus (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Sussus Nuzzus\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 2.97,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-sussus-nuzzus.zip",
+      "sha256": "55cb540f130c3f153b785af0bbaf8c6f2bab89ed0a8089bb61cbd7868745db27",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-idk",
+      "name": "Idk (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Idk\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 1.54,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-idk.zip",
+      "sha256": "6d6554ed63136ffb35e778f2bc52b65d56273c9bbeeadddff4bc0006b79d7e0f",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-esculent",
+      "name": "Esculent (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Esculent\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 4.21,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-esculent.zip",
+      "sha256": "91e6ef633717de9988c6677d98fef9ff9a0547191d806bac6ff852387b690f25",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-drippypop",
+      "name": "Drippypop (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Drippypop\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 4.22,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-drippypop.zip",
+      "sha256": "dac400cf0da4f7ad2039db6dd387bed015d3094ec407753bb28876b77485dbed",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-crewicide",
+      "name": "Crewicide (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Crewicide\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 2.77,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-crewicide.zip",
+      "sha256": "b532dd980d569e36521d47ac23ae713acaa2def11ab1342b73a4021cec7e49e9",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-monotone-attack",
+      "name": "Monotone Attack (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Monotone Attack\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 3.61,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-monotone-attack.zip",
+      "sha256": "dfe0adbaca0ef0eee34543e2bedb54f4e5631ca8d441fc15c46fe6156219ce21",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
+    },
+    {
+      "id": "weekbonus-top-10",
+      "name": "Top 10 (Bonus Song)",
+      "description": "Chart, audio, and character/stage art for \"Top 10\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
+      "author": "",
+      "version": "1.0",
+      "sizeMb": 0.98,
+      "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-top-10.zip",
+      "sha256": "1cdb7eaa1a1ec8931cae5379015b43e97e8243ddc1f51ec84e3ea4692da4eae2",
+      "tags": [
+        "official",
+        "weekbonus",
+        "song"
+      ]
     }
   ]
 }
