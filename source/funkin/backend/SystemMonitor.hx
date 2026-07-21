@@ -302,8 +302,12 @@ class SystemMonitor
 			_write('  Details: ' + details);
 		}
 		
-		// Also log current memory state
-		_write('  App Memory Used: ' + getAppMemoryUsage());
+		// Also log current memory state. App-used and system-free are two
+		// different things (this app's own RSS vs. the whole device's
+		// remaining headroom) -- both on the same line so a reader can
+		// correlate them directly instead of hunting down a nearby
+		// [GAMEPLAY]/[SPIKE] line's own "sysFree=" for context.
+		_write('  App Memory Used: ' + getAppMemoryUsage() + _systemMemContext());
 		#if flixel
 		_write('  GPU Textures: ' + getBitmapCacheCount());
 		#end

@@ -227,6 +227,11 @@ class FunkinCache
 	public function disposeNewSince(snapshot:haxe.ds.StringMap<Bool>):Int
 	{
 		var disposed = 0;
+		// Only collected when monitoring is actually on -- this loop already
+		// runs at most a few times a second (state destroy(), not a hot
+		// per-frame path), so the list itself is cheap, but no reason to
+		// build it just to throw it away when nobody's reading the log.
+		final disposedKeys:Null<Array<String>> = SystemMonitor.enabled ? [] : null;
 		@:privateAccess
 		{
 			final bitmapKeys:Array<String> = [for (k in FlxG.bitmap._cache.keys()) k];
@@ -241,12 +246,21 @@ class FunkinCache
 				{
 					disposeGraphic(g);
 					disposed++;
+					if (disposedKeys != null) disposedKeys.push(key);
 				}
 			}
 		}
 
 		#if android
-		if (disposed > 0) SystemMonitor.logMemoryEvent('disposeNewSince', 'force-disposed $disposed ephemeral graphic(s) still alive after destroy()');
+		// Naming the actual keys (not just the count) turns "something isn't
+		// self-cleaning" into "THIS specific graphic isn't self-cleaning" --
+		// no more guessing what the stragglers are on every device log.
+		// Guarded by SystemMonitor.enabled here (not just inside
+		// logMemoryEvent, which already checks it) because disposedKeys is
+		// null when monitoring is off -- disposedKeys.join() below would
+		// otherwise null-deref on exactly that path.
+		if (disposed > 0 && SystemMonitor.enabled)
+			SystemMonitor.logMemoryEvent('disposeNewSince', 'force-disposed $disposed ephemeral graphic(s) still alive after destroy(): ${disposedKeys.join(", ")}');
 		#end
 
 		return disposed;
