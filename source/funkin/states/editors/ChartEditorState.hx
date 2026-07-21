@@ -154,6 +154,13 @@ class ChartEditorState extends MusicBeatState
 	public var ignoreWarnings = false;
 	
 	public static var camHUD:FlxCamera;
+
+	// Mobile-only: magnifies the whole tab panel (UI_box) via a dedicated
+	// zoomed camera instead of touching it -- see where it's built, right
+	// after the six addXUI() calls, for why this can't just be UI_box.scale.
+	#if mobile
+	var chartUICam:FlxCamera;
+	#end
 	
 	var undos = [];
 	var redos = [];
@@ -486,6 +493,39 @@ class ChartEditorState extends MusicBeatState
 		addVisualsUI();
 		updateWaveform();
 		// UI_box.selected_tab = 4;
+
+		// The tab panel (checkboxes/steppers/dropdowns, all hand-placed by the
+		// addXUI() calls above at desktop-mouse scale) is unusably small as a
+		// touch target on a phone screen. FlxSpriteGroup.scale does NOT scale
+		// a group like a nested transform -- it copies the scale value onto
+		// each child in place (see FlxSpriteGroup.scaleTransform()), so
+		// scaling UI_box directly would enlarge every widget in place at
+		// their existing cramped spacing and make them overlap instead of
+		// growing the layout proportionally. A dedicated camera zoomed in on
+		// UI_box's own world-space rect has no such problem -- it magnifies
+		// everything (widgets AND the gaps between them) together, exactly
+		// like zooming a screenshot, with zero changes to any individual
+		// widget's placement.
+		#if mobile
+		// Matches the exact UI_box.resize(360, 380) / UI_box.x = 10 / UI_box.y = 20
+		// set up above -- literals instead of UI_box.width/height/x/y since
+		// FlxSpriteGroup's width/height getters scan child bounds and aren't
+		// guaranteed to equal resize()'s configured size exactly.
+		final uiZoom:Float = 1.5;
+		chartUICam = new FlxCamera(0, 0, Std.int(360 * uiZoom), Std.int(380 * uiZoom), uiZoom);
+		chartUICam.bgColor = 0x0;
+		chartUICam.scroll.set(10, 20);
+		FlxG.cameras.add(chartUICam, false);
+		UI_box.camera = chartUICam;
+
+		// zoomTxt/bpmTxt sit just below UI_box on camHUD (screen-space, zoom
+		// 1) -- UI_box itself now draws bigger on screen via chartUICam, so
+		// these need to move down to the new, taller on-screen bottom edge
+		// instead of the old unzoomed one.
+		final uiScreenBottom:Float = chartUICam.height;
+		zoomTxt.y = uiScreenBottom + 10;
+		bpmTxt.y = zoomTxt.y + 20;
+		#end
 		
 		add(renderedNotes);
 		add(renderedNoteType);
@@ -3917,26 +3957,33 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 	]; // shamelessly stolen from andromeda im sorry
 	var curSelected:Int = 0;
 	var canexit:Bool = false;
-	
+
+	var overlayCamera:FlxCamera;
+	var bg:FlxSprite;
+	var isClosing:Bool = false;
+	final uiTweenOffsetY:Float = 120;
+
 	public function new()
 	{
 		super();
-		
-		var bg:FlxSprite = new FlxSprite().makeGraphic(1280, 720, FlxColor.BLACK);
+
+		// A dedicated, real full-screen camera (matching Locker/CosmeticsSubstate's
+		// overlayCamera) instead of `cameras = [FlxG.cameras.list[last]]` --
+		// grabbing "whichever camera happens to be last" was fragile and, on a
+		// wide 'expand'-mode screen, could land on a camera that doesn't span
+		// the full expanded width, clipping/mispositioning this whole menu.
+		// A plain `new FlxCamera()` already spans the true (possibly cutout-
+		// widened) FlxG.width/height, same as every other overlay camera in
+		// this codebase.
+		overlayCamera = new FlxCamera();
+		overlayCamera.bgColor = 0x00000000;
+		FlxG.cameras.add(overlayCamera, false);
+		cameras = [overlayCamera];
+
+		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		bg.scrollFactor.set();
-		bg.alpha = 0.6;
-		// Fixed 1280x720 dimmer -- on a wide 'expand'-mode screen this left the
-		// newly revealed strip(s) on the side(s) completely undimmed instead of
-		// covering the full camera. Same stretch-then-recenter fix as
-		// CreditsState.hx's bg (gated on gameCutoutSize.x so 'fit'/'stretch'
-		// mode is untouched).
-		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
-		{
-			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
-			bg.updateHitbox();
-		}
+		bg.alpha = 0;
 		add(bg);
-		bg.screenCenter();
 
 		grpMenuShit = new FlxTypedGroup<Alphabet>();
 		add(grpMenuShit);
@@ -3959,61 +4006,121 @@ class ChartingOptionsSubmenuOLD extends MusicBeatSubstate
 			canexit = true;
 		});
 		changeSelection();
-		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
 
 		#if mobile
 		addVirtualPad(LEFT_FULL, A_B);
 		addVirtualPadCamera();
 		#end
+
+		FlxTween.tween(bg, {alpha: 0.6}, 0.25, {ease: FlxEase.circOut});
+		for (item in grpMenuShit)
+		{
+			final targetAlpha = item.alpha;
+			item.alpha = 0;
+			item.x -= uiTweenOffsetY;
+			FlxTween.tween(item, {x: item.x + uiTweenOffsetY, alpha: targetAlpha}, 0.25, {ease: FlxEase.circOut});
+		}
+	}
+
+	/** Fades everything out, then closes -- see BACK/Resume below. */
+	function closeTween():Void
+	{
+		if (isClosing) return;
+		isClosing = true;
+		canexit = false;
+
+		FlxTween.cancelTweensOf(bg);
+		FlxTween.tween(bg, {alpha: 0}, 0.2, {ease: FlxEase.circIn});
+		for (item in grpMenuShit)
+		{
+			FlxTween.cancelTweensOf(item);
+			FlxTween.tween(item, {x: item.x - uiTweenOffsetY, alpha: 0}, 0.2, {ease: FlxEase.circIn});
+		}
+
+		new FlxTimer().start(0.2, function(_) close());
+	}
+
+	/**
+	 * Direct tap-to-select-and-confirm on a menu item -- this whole menu used
+	 * to be D-pad/button only with no touch equivalent at all, so a player in
+	 * 'Touch' nav mode (the default on most Android devices) had no way to
+	 * interact with it whatsoever.
+	 */
+	function handleTouch():Void
+	{
+		if (!FlxG.mouse.justReleased) return;
+
+		for (i => item in grpMenuShit.members)
+		{
+			if (!FlxG.mouse.overlaps(item, overlayCamera)) continue;
+
+			if (curSelected == i) confirmSelection();
+			else changeSelection(i - curSelected);
+			break;
+		}
+	}
+
+	function confirmSelection():Void
+	{
+		switch (menuItems[curSelected])
+		{
+			case 'Resume':
+				closeTween();
+			case 'Play from beginning':
+				ChartEditorState.enterSong();
+			case 'Play from here':
+				ChartEditorState.playSongFromTimestamp(FlxG.sound.music.time);
+			case 'Play from start time':
+				ChartEditorState.playSongFromTimestamp(ChartEditorState.startTime);
+			case 'Set start time':
+				ChartEditorState.startTime = FlxG.sound.music.time;
+			case 'Exit to Editor Menu':
+				FlxG.switchState(() -> new MasterEditorMenu());
+				FunkinSound.playMusic(Paths.music('freakyMenu'));
+		}
 	}
 
 	override public function update(elapsed:Float)
 	{
+		if (isClosing)
+		{
+			super.update(elapsed);
+			return;
+		}
+
 		if ((FlxG.keys.justPressed.ESCAPE || controls.BACK) && canexit)
 		{
-			close();
+			closeTween();
+			return;
 		}
+
+		handleTouch();
 
 		var upP = controls.UI_UP_P;
 		var downP = controls.UI_DOWN_P;
 		var accepted = controls.ACCEPT;
-		
+
 		if (upP) changeSelection(-1);
 		if (downP) changeSelection(1);
-		if (accepted)
-		{
-			switch (menuItems[curSelected])
-			{
-				case 'Resume':
-					close();
-				case 'Play from beginning':
-					ChartEditorState.enterSong();
-				case 'Play from here':
-					ChartEditorState.playSongFromTimestamp(FlxG.sound.music.time);
-				case 'Play from start time':
-					ChartEditorState.playSongFromTimestamp(ChartEditorState.startTime);
-				case 'Set start time':
-					ChartEditorState.startTime = FlxG.sound.music.time;
-				// close();
-				// case 'Botplay':
-				// 	PlayState.instance.cpuControlled = !PlayState.instance.cpuControlled;
-				// 	PlayState.changedDifficulty = true;
-				// 	PlayState.instance.botplayTxt.visible = PlayState.instance.cpuControlled;
-				// 	PlayState.instance.botplayTxt.alpha = 1;
-				// 	PlayState.instance.botplaySine = 0;
-				// 	trace(PlayState.instance.cpuControlled);
-				// 	if(PlayState.instance.cpuControlled)
-				// 		grpMenuShit.members[curSelected].color = FlxColor.GREEN;
-				// 	else
-				// 		grpMenuShit.members[curSelected].color = FlxColor.RED;
-				// 	// close();
-				case 'Exit to Editor Menu':
-					FlxG.switchState(() -> new MasterEditorMenu());
-					FunkinSound.playMusic(Paths.music('freakyMenu'));
-			}
-		}
+		if (accepted) confirmSelection();
 	}
-	
+
+	override function destroy():Void
+	{
+		// Now that this owns a real dedicated camera (see the constructor's
+		// doc comment) instead of borrowing whatever was last in the global
+		// list, it has to clean that camera up too -- otherwise every open of
+		// this menu during a charting session leaks one more into
+		// FlxG.cameras forever, which the old borrow-don't-own version never
+		// had to worry about.
+		if (overlayCamera != null)
+		{
+			FlxG.cameras.remove(overlayCamera, true);
+			overlayCamera = null;
+		}
+		super.destroy();
+	}
+
 	function changeSelection(change:Int = 0):Void
 	{
 		curSelected += change;
