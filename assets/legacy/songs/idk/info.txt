@@ -1,3 +1,0 @@
-IDK
-Composer: kiwiquest
-Charter: Gonk

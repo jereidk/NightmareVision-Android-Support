@@ -1,3 +1,0 @@
-Ow
-Composer: fabs
-Charter: fabs
