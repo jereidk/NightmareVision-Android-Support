@@ -1,8 +1,1 @@
-{
-	"flags": {
-		"variants": {
-			"running": "elliepetrun",
-			"falling": "elliepetfall"
-		}
-	}
-}
+{"flags":{"variants":{"running":"elliepetrun","falling":"elliepetfall"}}}

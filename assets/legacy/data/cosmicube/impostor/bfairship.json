@@ -1,13 +1,1 @@
-{
-	"type": "playerSkin",
-	"price": 200,
-	
-	"title": "Airship BF",
-
-	"week": "week6",
-	
-	"node": {
-		"direction": "west",
-		"parent": "bfpolus"
-	}
-}
+{"type":"playerSkin","price":200,"title":"Airship BF","week":"week6","node":{"direction":"west","parent":"bfpolus"}}

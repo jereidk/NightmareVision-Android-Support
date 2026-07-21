@@ -1,13 +1,1 @@
-{
-	"animations": [
-		{
-			"fps": 24,
-			"loop": true,
-			"anim": "idle",
-			"name": "idle"
-		}
-	],
-	"flags": {
-		"floating": true
-	}
-}
+{"animations":[{"fps":24,"loop":true,"anim":"idle","name":"idle"}],"flags":{"floating":true}}

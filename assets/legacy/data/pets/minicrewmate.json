@@ -1,9 +1,1 @@
-{
-	"flags": {
-		"variants": {
-			"running": "minicrewmaterun",
-			"falling": "minicrewmatefall",
-			"chef": "fatogus"
-		}
-	}
-}
+{"flags":{"variants":{"running":"minicrewmaterun","falling":"minicrewmatefall","chef":"fatogus"}}}

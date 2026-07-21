@@ -1,13 +1,1 @@
-{
-	"type": "playerSkin",
-	"price": 180,
-	
-	"title": "Yellow..?",
-
-	"week": "week3",
-
-	"node": {
-		"direction": "east",
-		"parent": "greenp"
-	}
-}
+{"type":"playerSkin","price":180,"title":"Yellow..?","week":"week3","node":{"direction":"east","parent":"greenp"}}

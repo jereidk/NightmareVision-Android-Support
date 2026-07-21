@@ -1,11 +1,1 @@
-{
-	"type": "speakerSkin",
-	"price": 375,
-	"title": "Stickmin GF",
-	"week": "week9",
-	
-	"node": {
-		"direction": "west",
-		"parent": "bf-stick"
-	}
-}
+{"type":"speakerSkin","price":375,"title":"Stickmin GF","week":"week9","node":{"direction":"west","parent":"bf-stick"}}

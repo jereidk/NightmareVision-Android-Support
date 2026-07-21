@@ -1,14 +1,1 @@
-{
-	"type": "playerSkin",
-	"price": 800,
-	"completionExcluded": true,
-	
-	"title": "UPDOG BF",
-
-    "requirement": "updogSave",
-	
-	"node": {
-		"direction": "east",
-		"parent": "amongbf"
-	}
-}
+{"type":"playerSkin","price":800,"completionExcluded":true,"title":"UPDOG BF","requirement":"updogSave","node":{"direction":"east","parent":"amongbf"}}

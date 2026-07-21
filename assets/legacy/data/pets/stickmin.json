@@ -1,8 +1,1 @@
-{
-	"flags": {
-		"variants": {
-			"running": "stickminrun",
-			"falling": "stickminfall"
-		}
-	}
-}
+{"flags":{"variants":{"running":"stickminrun","falling":"stickminfall"}}}

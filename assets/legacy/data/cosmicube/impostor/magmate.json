@@ -1,17 +1,1 @@
-{
-	"type": "pet",
-	"price": 300,
-	"title": "Magmate",
-	"song": "magmatic",
-	"requirement": "A",
-	"node": {
-		"direction": "south",
-		"parent": "snowball"
-	},
-	
-	"color": [
-		255,
-		65,
-		8
-	]
-}
+{"type":"pet","price":300,"title":"Magmate","song":"magmatic","requirement":"A","node":{"direction":"south","parent":"snowball"},"color":[255,65,8]}

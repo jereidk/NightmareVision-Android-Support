@@ -1,16 +1,1 @@
-{
-	"type": "pet",
-	"price": 340,
-	
-	"title": "Thermonuclear Bomb",
-	"node": {
-		"direction": "south",
-		"parent": "amongGf"
-	},
-	
-	"color": [
-		230,
-		213,
-		68
-	]
-}
+{"type":"pet","price":340,"title":"Thermonuclear Bomb","node":{"direction":"south","parent":"amongGf"},"color":[230,213,68]}

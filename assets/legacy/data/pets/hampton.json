@@ -1,8 +1,1 @@
-{
-	"flags": {
-		"variants": {
-			"running": "hamptonrun",
-			"falling": "hamptonrun"
-		}
-	}
-}
+{"flags":{"variants":{"running":"hamptonrun","falling":"hamptonrun"}}}

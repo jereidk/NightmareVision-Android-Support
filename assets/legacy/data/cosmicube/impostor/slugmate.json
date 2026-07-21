@@ -1,15 +1,1 @@
-{
-	"type": "pet",
-	"price": 456,
-	"title": "Slugmate",
-	"node": {
-		"direction": "west",
-		"parent": "squig"
-	},
-	
-	"color": [
-		111,
-		219,
-		255
-	]
-}
+{"type":"pet","price":456,"title":"Slugmate","node":{"direction":"west","parent":"squig"},"color":[111,219,255]}

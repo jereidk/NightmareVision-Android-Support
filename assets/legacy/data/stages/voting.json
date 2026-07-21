@@ -1,15 +1,1 @@
-{
-	"directory": "",
-	"defaultZoom": 0.55,
-	"isPixelStage": false,
-
-	"boyfriend": [2088, 310],
-	"girlfriend": [280, 170],
-	"opponent": [-75, 275],
-	"pet": [1825, 810],
-	"bfZIndex": 3,
-	
-	"flags": {
-		"airship": true
-	}
-}
+{"directory":"","defaultZoom":0.55,"isPixelStage":false,"boyfriend":[2088,310],"girlfriend":[280,170],"opponent":[-75,275],"pet":[1825,810],"bfZIndex":3,"flags":{"airship":true}}

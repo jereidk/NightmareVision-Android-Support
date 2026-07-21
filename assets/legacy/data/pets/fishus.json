@@ -1,8 +1,1 @@
-{
-	"flags": {
-		"variants": {
-			"boiling": "fishuscooked",
-			"chef": "fishuscooked"
-		}
-	}
-}
+{"flags":{"variants":{"boiling":"fishuscooked","chef":"fishuscooked"}}}

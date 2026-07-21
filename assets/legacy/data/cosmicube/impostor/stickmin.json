@@ -1,16 +1,1 @@
-{
-	"type": "pet",
-	"price": 300,
-	
-	"title": "H. Stickmin",
-	"node": {
-		"direction": "west",
-		"parent": "gf-stick"
-	},
-	
-	"color": [
-		217,
-		229,
-		250
-	]
-}
+{"type":"pet","price":300,"title":"H. Stickmin","node":{"direction":"west","parent":"gf-stick"},"color":[217,229,250]}

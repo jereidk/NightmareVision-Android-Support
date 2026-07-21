@@ -1,11 +1,1 @@
-{
-	"type": "speakerSkin",
-	"price": 450,
-	"title": "Polus GF",
-	"week": "week5",
-	
-	"node": {
-		"direction": "south",
-		"parent": "bfpolus"
-	}
-}
+{"type":"speakerSkin","price":450,"title":"Polus GF","week":"week5","node":{"direction":"south","parent":"bfpolus"}}
