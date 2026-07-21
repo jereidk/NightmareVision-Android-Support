@@ -49,10 +49,41 @@ class DebugTextPlugin extends FlxTypedGroup<DebugText>
 		return instance.recycle(DebugText, () -> new DebugText(message));
 	}
 	
+	#if android
+	// A device log showed a 702ms [SPIKE] from 48 new "textNNN" bitmap
+	// textures created inside a single frame during real gameplay -- FlxText
+	// re-rasterizes into a brand-new cached bitmap every time its .text
+	// changes (see DebugText.draw()'s `this.text = ...`), and addText() is
+	// the one thing that can fire many DISTINCT messages in the same frame
+	// (each unique message -> a new/recycled DebugText -> a fresh texture on
+	// its next draw()). Counts calls in a short rolling window and traces a
+	// burst with its actual messages, instead of just "+48 texture(s)" with
+	// no indication of who's responsible.
+	static var _burstCount:Int = 0;
+	static var _burstWindowStart:Float = 0;
+	static var _burstMessages:Array<String> = [];
+	static inline final _BURST_WINDOW_S:Float = 0.1;
+	static inline final _BURST_THRESHOLD:Int = 8;
+	#end
+
 	public static function addText(message:String, colour:FlxColor = FlxColor.WHITE)
 	{
 		if (instance == null) return;
-		
+
+		#if android
+		final _now = haxe.Timer.stamp();
+		if (_now - _burstWindowStart > _BURST_WINDOW_S)
+		{
+			if (_burstCount >= _BURST_THRESHOLD)
+				trace('[DebugTextPlugin] burst: $_burstCount addText() call(s) within ${Std.int(_BURST_WINDOW_S * 1000)}ms -- sample: ${_burstMessages.join(" | ")}');
+			_burstWindowStart = _now;
+			_burstCount = 0;
+			_burstMessages = [];
+		}
+		_burstCount++;
+		if (_burstMessages.length < 5 && !_burstMessages.contains(message)) _burstMessages.push(message);
+		#end
+
 		final text = grabText(message);
 		
 		text.traceCount++;
