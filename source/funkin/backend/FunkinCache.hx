@@ -255,11 +255,13 @@ class FunkinCache
 		// Naming the actual keys (not just the count) turns "something isn't
 		// self-cleaning" into "THIS specific graphic isn't self-cleaning" --
 		// no more guessing what the stragglers are on every device log.
-		// Guarded by SystemMonitor.enabled here (not just inside
-		// logMemoryEvent, which already checks it) because disposedKeys is
-		// null when monitoring is off -- disposedKeys.join() below would
-		// otherwise null-deref on exactly that path.
-		if (disposed > 0 && SystemMonitor.enabled)
+		// Checking `disposedKeys != null` directly (not `SystemMonitor.enabled`,
+		// even though they're equivalent by construction above) so the
+		// compiler's null-safety analysis can actually narrow the type in
+		// this block -- it can't follow that a *different* variable being
+		// true implies this one is non-null, and rejected the old version
+		// at compile time.
+		if (disposed > 0 && disposedKeys != null)
 			SystemMonitor.logMemoryEvent('disposeNewSince', 'force-disposed $disposed ephemeral graphic(s) still alive after destroy(): ${disposedKeys.join(", ")}');
 		#end
 
