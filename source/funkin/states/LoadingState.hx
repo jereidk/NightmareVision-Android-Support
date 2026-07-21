@@ -12,6 +12,7 @@ import lime.media.vorbis.VorbisFile;
 
 import funkin.data.CharacterData.CharacterParser;
 import funkin.objects.HealthIcon;
+import funkin.objects.note.NotePoolPlan;
 import funkin.Paths.PathsTestMode;
 
 #if (sys && cpp)
@@ -1163,6 +1164,18 @@ class LoadingState extends MusicBeatState
 			// Notes
 			addAtlas('NOTE_assets', 'notes');
 			addAtlas('noteskins/default', 'noteskin');
+
+			// Note pool pre-warm plan: a sweep-line pass over the ALREADY-KNOWN
+			// full chart (song.notes) to find, per (field, direction) bucket,
+			// how many notes are ever alive at once -- pure chart-data work, no
+			// Flixel/GL objects touched, so it's safe here on the worker
+			// thread. PlayState.prewarmNotePool() (called from
+			// generatePlayfields(), once real PlayField._skin instances exist)
+			// consumes this to build exactly that many already-reloaded dead
+			// notes per bucket instead of discovering the need one cold
+			// reloadNote() at a time during real gameplay. See
+			// NotePoolPlan.hx's own class doc for the full reasoning.
+			NotePoolPlan.computeAndStore(song);
 
 			if (_threadGeneration != myGen) return;
 

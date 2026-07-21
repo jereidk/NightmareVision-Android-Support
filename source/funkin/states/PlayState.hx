@@ -1586,8 +1586,58 @@ class PlayState extends MusicBeatState
 		modManager.registerDefaultModifiers();
 		modManager.registerScriptedModifiers();
 		modifiersRegistered = true;
-		
+
 		scripts.call('postModifierRegister');
+
+		prewarmNotePool();
+	}
+
+	/**
+	 * Consumes whatever LoadingState's background thread precomputed (see
+	 * NotePoolPlan.hx) and builds exactly that many already-reloaded dead
+	 * Note instances per (field, direction) bucket, straight into
+	 * _deadNotesByType, using the SAME NoteSkin instance (playField._skin)
+	 * real gameplay notes will be matched against -- a different NoteSkin
+	 * object with identical data would still miss _deadNotesByType's
+	 * identity-keyed lookup, so this can only run here, after
+	 * generatePlayfields() has built the real PlayField instances, not any
+	 * earlier. Textures are already warm in FunkinCache by this point
+	 * (LoadingState's normal preload), so each reload here is a cache hit,
+	 * not a disk decode -- the only new cost is the object construction
+	 * itself, paid once now instead of scattered as reloadNote() calls
+	 * through the whole song.
+	 */
+	function prewarmNotePool():Void
+	{
+		final plan = NotePoolPlan.consume(SONG.song);
+		if (plan.length == 0) return;
+
+		final _t0 = haxe.Timer.stamp();
+		var built = 0;
+
+		for (bucket in plan)
+		{
+			final field = getFieldFromID(bucket.fieldID);
+			if (field == null || field._skin == null) continue;
+
+			for (_ in 0...bucket.count)
+			{
+				final note = new Note();
+				note.player = bucket.fieldID;
+				note.noteData = bucket.noteData;
+				note.skin = field._skin;
+				note.texture = field._skin.noteTexture; // triggers reloadNote() via set_texture, same path addNote() uses
+				note.baseScale.copyFrom(note.scale);
+				note.updateHitbox();
+
+				notes.add(note);
+				disposeNote(note); // kill() + garbage flag + _trackDeadNote(), same as any other note's real disposal
+				built++;
+			}
+		}
+
+		if (built > 0 && ClientPrefs.inDevMode)
+			Logger.log('[PlayState] prewarmNotePool: built $built dead note(s) across ${plan.length} bucket(s) in ${Std.int((haxe.Timer.stamp() - _t0) * 1000)}ms', NOTICE);
 	}
 	
 	var startTimer:FlxTimer = null;
