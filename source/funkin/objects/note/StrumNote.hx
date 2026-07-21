@@ -386,9 +386,25 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		safeBottom = safe.bottom;
 		#end
 
-		return ClientPrefs.downScroll
+		final result = ClientPrefs.downScroll
 			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET + VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL)
 			: (safeTop + STRUMLINE_Y_OFFSET);
+
+		// Diagnostic for the "expand mode ignores upscroll" report -- reading
+		// this function's own inputs at the exact moment it decides top vs.
+		// bottom is the only way to tell "ClientPrefs.downScroll read true when
+		// it shouldn't have" apart from "the formula is fine but something
+		// else about 'expand' overrides/ignores the result", since nothing
+		// else in the codebase branches on aspectRatioMode == 'expand' at all
+		// (grepped the whole source tree -- only FunkinRatioScaleMode itself
+		// does). Remove once the log confirms which one it is.
+		#if android
+		Logger.log('[StrumNote] getVSliceBaseY: downScroll=${ClientPrefs.downScroll} aspectRatioMode=${ClientPrefs.aspectRatioMode} '
+			+ 'FlxG.width=${FlxG.width} FlxG.height=${FlxG.height} cutout=(${funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x},${funkin.backend.FunkinRatioScaleMode.gameCutoutSize.y}) '
+			+ 'safeTop=$safeTop safeBottom=$safeBottom -> result=$result', NOTICE);
+		#end
+
+		return result;
 	}
 
 	/**
