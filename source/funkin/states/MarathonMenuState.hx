@@ -181,12 +181,22 @@ class MarathonMenuState extends AmongUIState
 	function marathonMode()
 	{
 		marathonArray = []; // The list of songs
-		
+
 		for (i in 0...weeks.length) // Gets all the songs and puts them into marathonArray
 		{
 			for (j in 0...weeks[i].songs.length)
 			{
-				marathonArray.push(weeks[i].songs[j][0]);
+				// Unlike FreeplayState.loadSong(), marathonMode() jumps straight
+				// to Chart.fromSong() below with no try/catch -- a bonus-shop
+				// song whose DLC isn't downloaded would throw uncaught and crash
+				// the moment the shuffle happened to land it first. A random
+				// fresh player has never downloaded any of these, so skip them
+				// here instead of ever letting one into the pool -- the rest of
+				// the game's song catalog is large enough that this doesn't
+				// meaningfully shrink a marathon run.
+				final songName:String = weeks[i].songs[j][0];
+				if (!BonusSongDLC.isInstalled(songName)) continue;
+				marathonArray.push(songName);
 			}
 		}
 		
