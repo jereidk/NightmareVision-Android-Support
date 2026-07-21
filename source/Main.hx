@@ -47,6 +47,10 @@ class Main extends Sprite
 	{
 		super();
 
+		// Captures the main thread's identity before anything else can run --
+		// see Logger.initMainThread()'s own doc comment for why this matters.
+		funkin.backend.Logger.initMainThread();
+
 		#if mobile
 		if (StorageSystem.getPermissions()) return;
 		Sys.setCwd(StorageSystem.getStorageDirectory());
