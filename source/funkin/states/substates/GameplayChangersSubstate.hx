@@ -185,7 +185,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			for (obj in list)
 			{
 				if (obj == null) continue;
-				if (Std.isOfType(obj, FlxTypedGroup)) walk(cast(obj, FlxTypedGroup<Dynamic>).members);
+				if (Std.isOfType(obj, FlxTypedGroup)) walk(cast(obj, FlxTypedGroup<FlxBasic>).members);
 				else if (Std.isOfType(obj, FlxSprite)) cb(cast obj);
 			}
 		}
