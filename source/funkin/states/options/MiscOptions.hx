@@ -1,6 +1,13 @@
 package funkin.states.options;
 
-/** Builds the "Misc" category's option list. Pure data, see GraphicsOptions.hx. */
+/**
+ * Builds the "Misc" category's option list. Pure data, see GraphicsOptions.hx.
+ *
+ * streamedMusic/threadedPreload used to live here despite being loading-time
+ * performance settings -- moved to GraphicsOptions.hx, next to the rest of
+ * the performance-related options (see that file's own comment on why
+ * they're not folded into the Performance Preset system).
+ */
 class MiscOptions
 {
 	public static function build():Array<Option>
@@ -9,6 +16,8 @@ class MiscOptions
 
 		opts.push(new Option(Lang.str('opt_splashscreen', 'NMV Splash Screen'),
 			Lang.str('opt_splashscreen_desc', "If unchecked, it will completely skip the splash screen upon the engine's boot up."), 'toggleSplashScreen', 'bool', true));
+
+		opts.push(new Option(Lang.str('opt_category_developer', 'Developer').toUpperCase(), '', '', 'label'));
 
 		// defaultValue was 'true' (inherited from upstream) -- ClientPrefs.
 		// inDevMode's own declared default is 'false', so Reset to Default
@@ -23,16 +32,6 @@ class MiscOptions
 				Lang.str('opt_showcase_desc',
 					'If checked, songs autoplay like Botplay, but the mobile controls stay visible and animate with the hits, and the HUD (score included) keeps updating live. For recording clean gameplay footage.'),
 				'showcaseMode', 'bool', false));
-
-		opts.push(new Option(Lang.str('opt_streamedsongfiles', 'Streamed Song files'),
-			Lang.str('opt_streamedsongfiles_desc',
-				'If checked, playable song files will be streamed via bytes instead of being loaded all at once. This heavily improves loading times, however it is EXTREMELY EXPERIMENTAL and prone to issues.'),
-			'streamedMusic', 'bool', false));
-
-		opts.push(new Option(Lang.str('opt_threadedpreload', 'Background Song Preload'),
-			Lang.str('opt_threadedpreload_desc',
-				'If checked, the loading screen decodes the next song\'s assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way.'),
-			'threadedPreload', 'bool', true));
 
 		final pauseOption = new Option(Lang.str('opt_autopause', 'Auto-Pause Game'),
 			Lang.str('opt_autopause_desc',

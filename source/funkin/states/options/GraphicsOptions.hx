@@ -18,6 +18,8 @@ class GraphicsOptions
 	{
 		final opts:Array<Option> = [];
 
+		opts.push(new Option(Lang.str('opt_category_performance', 'Performance').toUpperCase(), '', '', 'label'));
+
 		final presetOption = new Option(Lang.str('opt_perfpreset', 'Performance Preset'),
 			Lang.str('opt_perfpreset_desc',
 				'Quickly apply a quality profile.\nLow boosts performance, High enables everything.\nCustom lets you configure each setting individually.'),
@@ -104,16 +106,23 @@ class GraphicsOptions
 		aaOption.onChange = () -> { onChangeAntiAliasing(); markCustomPreset(); };
 		opts.push(aaOption);
 
-		opts.push(new Option(Lang.str('opt_debugdisplaytype', 'Debug Display Type'),
-			Lang.str('opt_debugdisplaytype_desc',
-				'Handles what type of information to display in the top left of your screen.\nSimple shows FPS & Memory. Advanced adds debug info.\nDisabled hides it entirely.'),
-			'fpsDisplayType', 'string', 'Simple',
-			[Lang.str('choice_debug_simple', 'Simple'), Lang.str('choice_debug_advanced', 'Advanced'), Lang.str('choice_debug_memory', 'Memory'), Lang.str('choice_generic_disabled', 'Disabled')],
-			['Simple', 'Advanced', 'Memory', 'Disabled']));
+		// Loading-time behaviour -- moved here from the "Misc" tab, where they
+		// sat disconnected from every other performance-affecting setting.
+		// Not wired into markCustomPreset(): the Low/Medium/High switch-case
+		// above never sets either of these, so they're genuinely independent
+		// of the preset (unlike everything above, which the preset controls),
+		// not merely relocated.
+		opts.push(new Option(Lang.str('opt_streamedsongfiles', 'Streamed Song files'),
+			Lang.str('opt_streamedsongfiles_desc',
+				'If checked, playable song files will be streamed via bytes instead of being loaded all at once. This heavily improves loading times, however it is EXTREMELY EXPERIMENTAL and prone to issues.'),
+			'streamedMusic', 'bool', false));
 
-		opts.push(new Option(Lang.str('opt_fpsrgb', 'Animate FPS Color (RGB)'),
-			Lang.str('opt_fpsrgb_desc', 'Cycles the FPS counter color through the rainbow.\nWorks with both Simple and Advanced display modes.'),
-			'fpsRGB', 'bool', false));
+		opts.push(new Option(Lang.str('opt_threadedpreload', 'Background Song Preload'),
+			Lang.str('opt_threadedpreload_desc',
+				'If checked, the loading screen decodes the next song\'s assets on a background thread while the bar animates. If unchecked, it just waits, and PlayState loads everything itself the plain, one-at-a-time way.'),
+			'threadedPreload', 'bool', true));
+
+		opts.push(new Option(Lang.str('opt_category_framerate', 'Framerate').toUpperCase(), '', '', 'label'));
 
 		final framerateOption = new Option(Lang.str('opt_framerate', 'Framerate'), Lang.str('opt_framerate_desc', "Pretty self explanatory, isn't it?"), 'framerate', 'int', 60);
 		framerateOption.minValue = 60;
