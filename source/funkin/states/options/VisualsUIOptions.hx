@@ -37,9 +37,20 @@ class VisualsUIOptions
 		opts.push(new Option(Lang.str('opt_hudrankdisplay', 'HUD Rank Display:'), Lang.str('opt_hudrankdisplay_desc', "What should be displayed on the HUD?"), 'hudRankDisplay', 'string',
 			'Both', [Lang.str('choice_scoredisplay_both', 'Both'), Lang.str('choice_scoredisplay_accuracy', 'Accuracy'), Lang.str('choice_scoredisplay_rank', 'Rank')], ['Both', 'Accuracy', 'Rank']));
 
+		// 'Enabled DX' is a real third value -- assets/legacy/scripts/utils.hx
+		// checks for it explicitly (tints the rating popup graphic and combo
+		// digits to match the score text's color, on top of the base
+		// 'Enabled' coloring) but it was never exposed as a pickable choice
+		// here, in this port OR upstream. Confirmed upstream has the exact
+		// same 2-choice option next to the exact same 3-value check in its
+		// own utils.hx, so this wasn't a porting regression -- just an old
+		// mode that lost its menu entry at some point and was never wired
+		// back up. Adding the third choice here restores it without
+		// touching storedValues' existing 'Enabled'/'Disabled' strings, so
+		// anyone with either already saved keeps working exactly as before.
 		opts.push(new Option(Lang.str('opt_coloredui', 'Colored UI:'),
-			Lang.str('opt_coloredui_desc', "Colors UI elements based on the opponent's icon color.\n(Some colors might be hard to read.)"), 'colorText', 'string', 'Enabled',
-			[Lang.str('choice_generic_enabled', 'Enabled'), Lang.str('choice_generic_disabled', 'Disabled')], ['Enabled', 'Disabled']));
+			Lang.str('opt_coloredui_desc', "Colors UI elements based on the opponent's icon color.\nDX also tints the rating popup and combo digits to match.\n(Some colors might be hard to read.)"), 'colorText', 'string', 'Enabled',
+			[Lang.str('choice_generic_enabled', 'Enabled'), Lang.str('choice_coloredui_enableddx', 'Enabled (DX)'), Lang.str('choice_generic_disabled', 'Disabled')], ['Enabled', 'Enabled DX', 'Disabled']));
 
 		opts.push(new Option(Lang.str('opt_category_display', 'Display').toUpperCase(), '', '', 'label'));
 

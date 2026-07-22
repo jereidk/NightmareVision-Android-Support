@@ -670,7 +670,7 @@
 		"opt_hudrankdisplay": "HUD Rank Display:",
 		"opt_hudrankdisplay_desc": "What should be displayed on the HUD?",
 		"opt_coloredui": "V4 Colored UI:",
-		"opt_coloredui_desc": "Colors UI elements based on the opponent's icon color.\n(Some colors might be hard to read.)",
+		"opt_coloredui_desc": "Colors UI elements based on the opponent's icon color.\nDX also tints the rating popup and combo digits to match.\n(Some colors might be hard to read.)",
 		"opt_photosensitivemode": "Photosensitive Mode",
 		"opt_photosensitivemode_desc": "Tones down screen flashes and other visual effects (such as quickly moving backgrounds).\nEnable this if you're prone to photosensitive epilepsy.",
 		"opt_camerazooms": "Camera Zoom on Beat",
@@ -723,6 +723,7 @@
 		"choice_generic_no": "No",
 		"choice_generic_disabled": "Disabled",
 		"choice_generic_enabled": "Enabled",
+		"choice_coloredui_enableddx": "Enabled (DX)",
 		
 		"choice_debug_simple": "Simple",
 		"choice_debug_advanced": "Advanced",
