@@ -65,7 +65,19 @@ class ControlsSubState extends MusicBeatSubstate
 	// required.
 	var rebindHintBg:FlxSprite;
 	var rebindHintText:FlxText;
-	
+
+	// The panel only ever occupied the right ~676px of a 1280-wide canvas,
+	// leaving the whole left side empty. Fills it with a live preview: a
+	// boyfriend sprite that reacts to whichever NOTES direction is
+	// currently selected, plus a badge showing the physical key/gamepad
+	// button bound to whatever row is selected (works for every group, not
+	// just NOTES) -- see _updatePreview(), called from updateOptionFlash()
+	// so it stays in sync with every selection/device change for free.
+	var boyfriend:Character;
+	var previewCaption:FlxText;
+	var keyBadgeBg:FlxSprite;
+	var keyBadgeText:FlxText;
+
 	// Same 676px-wide, asymmetrically-placed panel as BaseOptionsMenu (480
 	// left margin / 124 right margin on the 1280 canvas) — this substate
 	// doesn't extend BaseOptionsMenu so it needed the same fix independently.
@@ -137,6 +149,47 @@ class ControlsSubState extends MusicBeatSubstate
 		rebindHintText.camera = FlxG.camera;
 		rebindHintText.visible = false;
 		add(rebindHintText);
+
+		// Left-side preview (see the field doc comments above). Both live on
+		// FlxG.camera, same as the rest of this constructor's non-scrolling
+		// chrome -- the empty space is to the LEFT of panelX, outside the
+		// scrolling `camera`'s own viewport entirely.
+		final previewCenterX = (panelX - 24) * 0.5;
+
+		boyfriend = new Character(0, 0, ClientPrefs.bfSkin != 'default' ? ClientPrefs.bfSkin : 'bf', true);
+		// Native character art runs much bigger than this panel's ~450px-wide
+		// column -- scaled down to fit, feet anchored near the badge below.
+		// Not pixel-verified on a real device yet (no local renderer here);
+		// may need a follow-up calibration pass once this is actually seen.
+		boyfriend.scale.set(0.55, 0.55);
+		boyfriend.updateHitbox();
+		boyfriend.x = previewCenterX - boyfriend.width * 0.5;
+		boyfriend.y = 500 - boyfriend.height;
+		boyfriend.scrollFactor.set();
+		boyfriend.camera = FlxG.camera;
+		add(boyfriend);
+
+		previewCaption = new FlxText(previewCenterX - 150, 512, 300, '');
+		previewCaption.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		previewCaption.borderSize = 1.5;
+		previewCaption.antialiasing = ClientPrefs.globalAntialiasing;
+		previewCaption.scrollFactor.set();
+		previewCaption.camera = FlxG.camera;
+		add(previewCaption);
+
+		keyBadgeBg = new FlxSprite(previewCenterX - 100, 546).makeGraphic(200, 74, 0xFF1C2626);
+		keyBadgeBg.scrollFactor.set();
+		keyBadgeBg.camera = FlxG.camera;
+		add(keyBadgeBg);
+
+		keyBadgeText = new FlxText(keyBadgeBg.x, keyBadgeBg.y, 200, '');
+		keyBadgeText.setFormat(Paths.font('vcr.ttf'), 34, OptionsTheme.GOLD, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		keyBadgeText.borderSize = 2;
+		keyBadgeText.y += Math.round((keyBadgeBg.height - keyBadgeText.height) * .5);
+		keyBadgeText.antialiasing = ClientPrefs.globalAntialiasing;
+		keyBadgeText.scrollFactor.set();
+		keyBadgeText.camera = FlxG.camera;
+		add(keyBadgeText);
 
 		(camera = new FlxCamera(panelX, topBound, 676, Std.int(bottomBound - topBound))).bgColor = 0;
 		FlxG.cameras.add(camera, false);
@@ -525,8 +578,47 @@ class ControlsSubState extends MusicBeatSubstate
 		
 		for (group in controlsGroup)
 			group.label.alpha = (currentGroup == group) ? 1.0 : 0.6;
+
+		_updatePreview();
 	}
-	
+
+	/**
+	 * Keeps the left-side preview in sync with the current selection: the
+	 * boyfriend sprite poses for whichever NOTES direction is selected (any
+	 * other row just leaves it idle), and the badge mirrors whatever text
+	 * the currently selected bind is already showing -- reusing that text
+	 * directly instead of re-deriving the key/button name a second time
+	 * keeps it guaranteed consistent with the small label next to it.
+	 */
+	function _updatePreview():Void
+	{
+		if (boyfriend == null) return;
+
+		final opt = currentOption;
+
+		if (opt != null)
+		{
+			previewCaption.text = opt.label.text;
+
+			final singAnim = switch (opt.action)
+			{
+				case NOTE_LEFT: 'singLEFT';
+				case NOTE_DOWN: 'singDOWN';
+				case NOTE_UP: 'singUP';
+				case NOTE_RIGHT: 'singRIGHT';
+				default: null;
+			}
+			if (singAnim != null && boyfriend.hasAnim(singAnim)) boyfriend.playAnimForDuration(singAnim, 0.6, true);
+		}
+		else
+		{
+			previewCaption.text = '';
+		}
+
+		final bind = currentBind;
+		keyBadgeText.text = (bind != null && bind.visible) ? bind.text : '';
+	}
+
 	function set_device(device:Device):Device
 	{
 		if (this.device != device)
