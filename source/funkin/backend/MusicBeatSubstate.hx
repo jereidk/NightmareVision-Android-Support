@@ -76,35 +76,24 @@ class MusicBeatSubstate extends FlxSubState
 
 	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
-		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-		Logger.log('[SHIMEJI-DBG] MusicBeatSubstate.addVirtualPad() ENTER forceShow=$forceShow forGameplay=$forGameplay navInputMode=${funkin.data.ClientPrefs.navInputMode}', WARN, true);
-		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad')
-		{
-			Logger.log('[SHIMEJI-DBG] addVirtualPad() early-return (not forceShow and nav != Virtual Pad)', WARN, true);
-			return;
-		}
+		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
 		virtualPad = new MobileVirtualPad(DPad, Action, forGameplay);
 		add(virtualPad);
-		Logger.log('[SHIMEJI-DBG] addVirtualPad() created+added virtualPad', WARN, true);
 
 		// A substate's pad REPLACES the parent state's on screen -- input is
 		// already routed to this one (Controls.get_requested via
 		// isInSubstate), so leaving the parent's visible just stacks two
 		// overlapping pads where only one works.
 		final parent = funkin.backend.MusicBeatState.instance;
-		Logger.log('[SHIMEJI-DBG] addVirtualPad() parent=${parent != null} parentPad=${parent != null && parent.virtualPad != null} parentPadVisible=${parent != null && parent.virtualPad != null && parent.virtualPad.visible}', WARN, true);
 		if (parent != null && parent.virtualPad != null && parent.virtualPad.visible)
 		{
 			parent.virtualPad.visible = false;
 			_hidParentPad = true;
-			Logger.log('[SHIMEJI-DBG] addVirtualPad() hid parent pad, _hidParentPad=true', WARN, true);
 		}
-		Logger.log('[SHIMEJI-DBG] addVirtualPad() EXIT', WARN, true);
 	}
 
 	public function addVirtualPadCamera(DefaultDrawTarget:Bool = false)
 	{
-		Logger.log('[SHIMEJI-DBG] addVirtualPadCamera() ENTER DefaultDrawTarget=$DefaultDrawTarget virtualPad!=null=${virtualPad != null}', WARN, true);
 		if (virtualPad != null)
 		{
 			virtualPadCam = new FlxCamera();
@@ -112,18 +101,14 @@ class MusicBeatSubstate extends FlxSubState
 			FlxG.cameras.add(virtualPadCam, DefaultDrawTarget);
 			virtualPad.cameras = [virtualPadCam];
 		}
-		Logger.log('[SHIMEJI-DBG] addVirtualPadCamera() EXIT', WARN, true);
 	}
 
 	public function removeVirtualPad()
 	{
-		Logger.log('[SHIMEJI-DBG] removeVirtualPad() ENTER virtualPad!=null=${virtualPad != null} virtualPadCam!=null=${virtualPadCam != null} _hidParentPad=$_hidParentPad', WARN, true);
 		if (virtualPad != null)
 		{
 			remove(virtualPad);
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() removed virtualPad from display list, destroying...', WARN, true);
 			virtualPad = FlxDestroyUtil.destroy(virtualPad);
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() virtualPad destroyed', WARN, true);
 		}
 
 		// Un-hide the parent state's pad if we were the one hiding it (see
@@ -133,10 +118,8 @@ class MusicBeatSubstate extends FlxSubState
 		{
 			_hidParentPad = false;
 			final parent = funkin.backend.MusicBeatState.instance;
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() restoring parent pad -- parent=${parent != null} parentPad=${parent != null && parent.virtualPad != null} parentPadExists=${parent != null && parent.virtualPad != null && parent.virtualPad.exists}', WARN, true);
 			if (parent != null && parent.virtualPad != null && parent.virtualPad.exists)
 				parent.virtualPad.visible = true;
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() parent pad restore done', WARN, true);
 		}
 		if (virtualPadCam != null)
 		{
@@ -145,13 +128,9 @@ class MusicBeatSubstate extends FlxSubState
 			// already wiped this camera via FlxG.cameras.reset(), so check
 			// before removing again to avoid the "not a part of the game"
 			// warning.
-			final inList = FlxG.cameras.list.indexOf(virtualPadCam) != -1;
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() virtualPadCam inList=$inList, removing/destroying...', WARN, true);
-			if (inList) FlxG.cameras.remove(virtualPadCam);
+			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
 			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
-			Logger.log('[SHIMEJI-DBG] removeVirtualPad() virtualPadCam destroyed', WARN, true);
 		}
-		Logger.log('[SHIMEJI-DBG] removeVirtualPad() EXIT', WARN, true);
 	}
 
 	public function addMobileControls(DefaultDrawTarget:Bool = false, forGameplay:Bool = false)

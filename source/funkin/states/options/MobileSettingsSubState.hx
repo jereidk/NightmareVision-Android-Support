@@ -14,7 +14,6 @@ import flixel.tweens.FlxEase;
 import flixel.addons.display.FlxBackdrop;
 import openfl.display.BitmapData;
 import funkin.objects.menu.NineSlice;
-import funkin.backend.Logger;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
@@ -663,16 +662,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 		if (!FlxG.mouse.justPressed) return;
 
-		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-		Logger.log('[SHIMEJI-DBG] _handleTouch() justPressed at (${FlxG.mouse.x},${FlxG.mouse.y})', WARN, true);
-
 		final mx = FlxG.mouse.x;
 		final my = FlxG.mouse.y;
 
 		// Touch-mode back button
 		if (_backBtn.visible && FlxG.mouse.overlaps(_backBtn))
 		{
-			Logger.log('[SHIMEJI-DBG] _handleTouch() -> back button branch', WARN, true);
 			FunkinSound.play(Paths.sound('cancelMenu'));
 			_closeTween();
 			return;
@@ -681,7 +676,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Touch-mode reset button
 		if (_resetIcon.visible && FlxG.mouse.overlaps(_resetIcon))
 		{
-			Logger.log('[SHIMEJI-DBG] _handleTouch() -> reset button branch', WARN, true);
 			_resetToDefault();
 			return;
 		}
@@ -691,7 +685,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			if (FlxG.mouse.overlaps(_zones[i].spr))
 			{
-				Logger.log('[SHIMEJI-DBG] _handleTouch() -> preview zone $i branch', WARN, true);
 				_zones[i].pressed = true;
 				FunkinSound.play(Paths.sound('hover'), 0.4);
 				return;
@@ -699,11 +692,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 
 		// Option rows — Virtual Pad navigates via controls.*, not raw touch.
-		if (ClientPrefs.navInputMode == 'Virtual Pad')
-		{
-			Logger.log('[SHIMEJI-DBG] _handleTouch() early-return, navInputMode is Virtual Pad', WARN, true);
-			return;
-		}
+		if (ClientPrefs.navInputMode == 'Virtual Pad') return;
 
 		final withinList = (mx >= OPT_X && mx <= OPT_X + OPT_W && my >= OPT_Y0 && my < OPT_Y0 + MAX_OPT * OPT_H);
 		if (withinList && _opts.length > MAX_OPT)
@@ -711,7 +700,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// Might be the start of a scroll drag — the tap itself (row
 			// select / value change) is resolved on release, once we know
 			// whether the finger actually moved past the drag threshold.
-			Logger.log('[SHIMEJI-DBG] _handleTouch() -> starting scroll-drag tracking (_opts.length=${_opts.length})', WARN, true);
 			_touchDragging = true;
 			_touchIsScroll = false;
 			_touchStartY = my;
@@ -719,9 +707,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			return;
 		}
 
-		Logger.log('[SHIMEJI-DBG] _handleTouch() -> calling _resolveRowTap($mx,$my) directly', WARN, true);
 		_resolveRowTap(mx, my);
-		Logger.log('[SHIMEJI-DBG] _handleTouch() back from _resolveRowTap()', WARN, true);
 	}
 
 	/** Continues an in-progress drag, and resolves a pending tap on release. */
@@ -743,14 +729,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 
 		// Released.
-		Logger.log('[SHIMEJI-DBG] _updateTouchDrag() release -- _touchIsScroll=$_touchIsScroll', WARN, true);
 		_touchDragging = false;
-		if (!_touchIsScroll)
-		{
-			Logger.log('[SHIMEJI-DBG] _updateTouchDrag() -> calling _resolveRowTap on release', WARN, true);
-			_resolveRowTap(FlxG.mouse.x, FlxG.mouse.y);
-			Logger.log('[SHIMEJI-DBG] _updateTouchDrag() back from _resolveRowTap()', WARN, true);
-		}
+		if (!_touchIsScroll) _resolveRowTap(FlxG.mouse.x, FlxG.mouse.y);
 	}
 
 	/**
@@ -760,8 +740,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	 */
 	function _resolveRowTap(mx:Float, my:Float):Void
 	{
-		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-		Logger.log('[SHIMEJI-DBG] _resolveRowTap($mx,$my) ENTER, _opts.length=${_opts.length} _sel=$_sel', WARN, true);
 		// Must match _updateRows()'s topIndex exactly (the stable target, not
 		// the smoothed visual) — this is a hit-test against whatever rows are
 		// actually populated right now, not wherever the scroll animation
@@ -776,8 +754,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (!(mx >= OPT_X && mx <= OPT_X + OPT_W && my >= rowY && my < rowY + OPT_H))
 				continue;
 
-			Logger.log('[SHIMEJI-DBG] _resolveRowTap() hit row optIndex=$optIndex id=${_opts[optIndex]?.id}', WARN, true);
-
 			if (_sel != optIndex)
 			{
 				_sel = optIndex;
@@ -787,20 +763,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			}
 
 			if (mx < OPT_X + OPT_W * 0.5)
-			{
-				Logger.log('[SHIMEJI-DBG] _resolveRowTap() -> _changeSelected(-1)', WARN, true);
 				_changeSelected(-1);
-			}
 			else
-			{
-				Logger.log('[SHIMEJI-DBG] _resolveRowTap() -> _changeSelected(1)', WARN, true);
 				_changeSelected(1);
-			}
 
-			Logger.log('[SHIMEJI-DBG] _resolveRowTap() EXIT (matched)', WARN, true);
 			return;
 		}
-		Logger.log('[SHIMEJI-DBG] _resolveRowTap() EXIT (no row matched)', WARN, true);
 	}
 	#end
 
@@ -809,9 +777,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		if (dir == 0) return;
 		final opt = _opts[_sel];
 		if (opt == null) return;
-
-		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-		Logger.log('[SHIMEJI-DBG] _changeSelected($dir) ENTER opt.id=${opt.id} opt.kind=${opt.kind}', WARN, true);
 
 		switch (opt.kind)
 		{
@@ -840,12 +805,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Layout / input changes alter both the visible options and the preview.
 		if (opt.id == 'nav')
 		{
-			// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-			Logger.log('[SHIMEJI-DBG] _changeSelected() nav option changed to ${ClientPrefs.navInputMode}, calling _refreshVirtualPadForNavMode()', WARN, true);
 			#if mobile
 			_refreshVirtualPadForNavMode();
 			#end
-			Logger.log('[SHIMEJI-DBG] _changeSelected() back from _refreshVirtualPadForNavMode()', WARN, true);
 		}
 		else if (opt.id == 'game')
 		{
@@ -922,17 +884,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	 */
 	function _refreshVirtualPadForNavMode():Void
 	{
-		Logger.log('[SHIMEJI-DBG] _refreshVirtualPadForNavMode() ENTER navInputMode=${ClientPrefs.navInputMode}', WARN, true);
 		removeVirtualPad();
-		Logger.log('[SHIMEJI-DBG] _refreshVirtualPadForNavMode() back from removeVirtualPad()', WARN, true);
 		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
 			addVirtualPad(LEFT_FULL, A_B_C);
 			addVirtualPadCamera();
 		}
-		Logger.log('[SHIMEJI-DBG] _refreshVirtualPadForNavMode() before _updateNavModeUI()', WARN, true);
 		_updateNavModeUI();
-		Logger.log('[SHIMEJI-DBG] _refreshVirtualPadForNavMode() EXIT', WARN, true);
 	}
 	#end
 
