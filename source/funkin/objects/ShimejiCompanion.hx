@@ -10,15 +10,26 @@ import mobile.utils.MobileNavUtil;
  * How a given pet identity should roam. Assigned per-pet in MOVE_STYLES
  * below, from a direct visual review of every pet's spritesheet (assets/
  * legacy/images/pets/*) -- not every pet's "idle" animation is actually an
- * idle pose; a few are genuine multi-frame walk/run cycles, and a few are
- * flying creatures. Anything not listed defaults to Shuffle, the safe
- * choice for a pet whose art was never checked (a single static-ish pose
- * would just look like it's sliding on ice if translated).
+ * idle pose; a few are genuine multi-frame walk/run cycles, a few are
+ * flying creatures, and a bunch are legless/blob-shaped critters with no
+ * locomotion frames at all but an obvious "would hop" silhouette (frogs,
+ * snails, blobs, a literal snowball...). Anything not listed defaults to
+ * Shuffle, the safe choice for a pet whose art was never checked (a
+ * single static-ish pose would just look like it's sliding on ice if
+ * translated).
  */
 enum abstract MoveStyle(String)
 {
 	/** Legs actually alternate in the loaded animation -- walk it along the ground. */
 	var Walk = 'walk';
+
+	/**
+	 * No locomotion frames, but shaped like something that would hop
+	 * (round/legless/frog-like) -- walk it along the ground like Walk, but
+	 * fake the motion with a bounce arc + squash/stretch (see update())
+	 * instead of relying on animation frames that don't exist.
+	 */
+	var Hop = 'hop';
 
 	/** A flying/hovering creature -- floats toward a random point instead of a fixed ground line. */
 	var Fly = 'fly';
@@ -68,6 +79,26 @@ class ShimejiCompanion extends Pet
 		'frankendog' => Walk,
 		'helicopter' => Fly,
 		'ufo' => Fly,
+
+		// No walk/run frames, but a shape that reads as "would hop": legless
+		// blobs (magmate, squig, snowball, snowmate, thenug), a literal
+		// snail (slug), a frog (fribbit -- frogs hop for real), a fish out
+		// of water (fishus), stubby-legged/vehicle-bound critters already
+		// drawn mid-bounce in their own idle art (ham, crab), and a
+		// clawed-foot creature (lilmungus). nuclearbomb is deliberately NOT
+		// here -- it's a bomb on a wheeled cart, which should roll, not hop.
+		'crab' => Hop,
+		'slug' => Hop,
+		'squig' => Hop,
+		'tomong' => Hop,
+		'ham' => Hop,
+		'magmate' => Hop,
+		'lilmungus' => Hop,
+		'fishus' => Hop,
+		'snowball' => Hop,
+		'snowmate' => Hop,
+		'thenug' => Hop,
+		'fribbit' => Hop,
 	];
 
 	// The reverse of the exclusion above: several -run variants that are
@@ -113,8 +144,17 @@ class ShimejiCompanion extends Pet
 
 	// A light vertical hop layered on top of ground movement/reactions --
 	// see the bob block in update() for why this is ground-styles-only.
+	// Walk gets a subtle version (it already has real leg-animation frames
+	// doing most of the work); Hop gets a much bigger arc + squash/stretch,
+	// since the bounce itself IS its walk cycle, not a garnish on top of one.
 	static inline final BOB_HEIGHT:Float = 4;
 	static inline final BOB_SPEED:Float = 9;
+	static inline final HOP_HEIGHT:Float = 14;
+	static inline final HOP_SPEED:Float = 7;
+	// Max scale distortion at the exact moment of ground contact -- e.g.
+	// 0.28 means 28% wider / 28% shorter at peak squash, tapering to no
+	// distortion (round again) at the top of the arc.
+	static inline final HOP_SQUASH:Float = 0.28;
 	static inline final TAP_BOUNCE_DURATION:Float = 0.5;
 
 	var moveStyle:MoveStyle;
@@ -124,6 +164,11 @@ class ShimejiCompanion extends Pet
 	var walkTargetY:Float = 0;
 	var bobPhase:Float = 0;
 	var tapBounceTimer:Float = 0;
+
+	// scale.x/y as loaded by Pet.loadPet() (via data.scale) -- Hop's
+	// squash/stretch multiplies on top of this every frame rather than
+	// the previous frame's already-squashed value, so it never compounds.
+	var baseScale:Float = 1;
 
 	// The equipped identity as of construction -- curPet itself gets
 	// overwritten by loadPet() whenever we swap to/from the running
@@ -142,6 +187,7 @@ class ShimejiCompanion extends Pet
 		baseCurPet = curPet;
 		runVariant = RUN_VARIANTS.get(baseCurPet);
 		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
+		baseScale = scale.x;
 
 		if (lastX != null && lastY != null)
 		{
@@ -250,7 +296,7 @@ class ShimejiCompanion extends Pet
 				idleTimer -= elapsed;
 				if (idleTimer <= 0) _pickNewIdlePause();
 
-			case Walk:
+			case Walk, Hop:
 				_updateGroundMovement(elapsed);
 
 			case Fly:
@@ -270,8 +316,8 @@ class ShimejiCompanion extends Pet
 		if (moveStyle == Fly)
 			y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
 		else
-			// Walk/Shuffle are ground-anchored -- always exactly on the
-			// current bottom edge, not just clamped into range, since
+			// Walk/Hop/Shuffle are ground-anchored -- always exactly on
+			// the current bottom edge, not just clamped into range, since
 			// nothing else ever moves their y.
 			y = FlxG.height - height - GROUND_MARGIN;
 
@@ -301,24 +347,37 @@ class ShimejiCompanion extends Pet
 		if (tapBounceTimer > 0) tapBounceTimer -= elapsed;
 
 		// The animation-frame fix below (isAnimFinished()) sells the pet's
-		// OWN art; this sells the movement itself -- a small hop timed to
-		// actual travel, so walking/reacting reads as physical motion with
-		// a bit of weight instead of gliding on a fixed line. Ground
-		// styles only (Walk/Shuffle): their y is fully recomputed from the
-		// current screen bottom every frame just above, so this offset
-		// never carries over into next frame's position. Deliberately
-		// excluded for Fly -- its y IS the authoritative, carried-over-
-		// frame flight position (see _updateFlightMovement above), so
-		// nudging it here would feed straight back into next frame's
-		// movement math and drift.
+		// OWN art; this sells the movement itself -- a hop timed to actual
+		// travel, so walking/reacting reads as physical motion with some
+		// weight instead of gliding on a fixed line. Ground styles only
+		// (Walk/Hop/Shuffle): their y is fully recomputed from the current
+		// screen bottom every frame just above, so this offset never
+		// carries over into next frame's position. Deliberately excluded
+		// for Fly -- its y IS the authoritative, carried-over-frame flight
+		// position (see _updateFlightMovement above), so nudging it here
+		// would feed straight back into next frame's movement math and drift.
 		if (moveStyle != Fly && (walking || tapBounceTimer > 0))
 		{
-			bobPhase += elapsed * BOB_SPEED;
-			y -= Math.abs(Math.sin(bobPhase)) * BOB_HEIGHT;
+			final hopping = (moveStyle == Hop);
+			bobPhase += elapsed * (hopping ? HOP_SPEED : BOB_SPEED);
+
+			// 0 at ground contact (start/end of each arc), 1 at the peak.
+			final arc = Math.abs(Math.sin(bobPhase));
+			y -= arc * (hopping ? HOP_HEIGHT : BOB_HEIGHT);
+
+			if (hopping)
+			{
+				// Squashed wide/flat right at ground contact, back to its
+				// normal proportions by the top of the arc -- the "IS its
+				// walk cycle" bounce Hop pets don't get from frames.
+				final squash = (1 - arc) * HOP_SQUASH;
+				scale.set(baseScale * (1 + squash), baseScale * (1 - squash));
+			}
 		}
 		else
 		{
 			bobPhase = 0;
+			if (moveStyle == Hop) scale.set(baseScale, baseScale);
 		}
 
 		super.update(elapsed);
