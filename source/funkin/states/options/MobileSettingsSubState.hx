@@ -485,7 +485,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	override function update(elapsed:Float)
 	{
+		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
+		Logger.log('[SHIMEJI-DBG] update() FRAME START', WARN, false);
 		super.update(elapsed);
+		Logger.log('[SHIMEJI-DBG] update() after super.update()', WARN, false);
 
 		if (_closing)
 		{
@@ -527,7 +530,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		else
 			_scrollOffsetVisual = FlxMath.lerp(_scrollOffsetVisual, _scrollOffset, elapsed * 10);
 
+		Logger.log('[SHIMEJI-DBG] update() before _updatePreview()', WARN, false);
 		_updatePreview(elapsed);
+		Logger.log('[SHIMEJI-DBG] update() after _updatePreview()', WARN, false);
 
 		if (controls.BACK)
 		{
@@ -541,13 +546,18 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// instead, same convention OptionsState.hx already uses for its own
 		// reset button.
 		#if mobile
+		Logger.log('[SHIMEJI-DBG] update() before buttonC check, virtualPad!=null=${virtualPad != null}', WARN, false);
 		if (virtualPad?.buttonC?.justPressed == true) _resetToDefault();
+		Logger.log('[SHIMEJI-DBG] update() after buttonC check', WARN, false);
 		#end
 
+		Logger.log('[SHIMEJI-DBG] update() before _handleInput()', WARN, false);
 		_handleInput(elapsed);
+		Logger.log('[SHIMEJI-DBG] update() after _handleInput(), before _handleTouch()', WARN, false);
 		#if mobile
 		_handleTouch();
 		#end
+		Logger.log('[SHIMEJI-DBG] update() after _handleTouch(), before _updateRows()', WARN, false);
 
 		// _scrollOffsetVisual/_selVisual above are lerped every single frame,
 		// but _updateRows() (the only place that reads them and repositions the
@@ -559,13 +569,20 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// the view ever catching up to show it. Call it unconditionally so the
 		// scroll animation actually renders every frame.
 		_updateRows();
+		Logger.log('[SHIMEJI-DBG] update() FRAME END', WARN, false);
 	}
 
 	// ── Input ────────────────────────────────────────────────────────────────
 
 	function _handleInput(elapsed:Float):Void
 	{
-		if (_opts.length == 0) return;
+		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
+		Logger.log('[SHIMEJI-DBG] _handleInput() ENTER _opts.length=${_opts.length}', WARN, false);
+		if (_opts.length == 0)
+		{
+			Logger.log('[SHIMEJI-DBG] _handleInput() EXIT (no opts)', WARN, false);
+			return;
+		}
 
 		if (controls.UI_UP_P)
 		{
@@ -626,14 +643,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 
 		if (controls.RESET) _resetToDefault();
+		Logger.log('[SHIMEJI-DBG] _handleInput() EXIT', WARN, false);
 	}
 
 	/** Update scroll offset so selected option stays visible */
 	function _updateScrollOffset():Void
 	{
+		Logger.log('[SHIMEJI-DBG] _updateScrollOffset() ENTER _opts.length=${_opts.length} _sel=$_sel', WARN, true);
 		if (_opts.length <= MAX_OPT)
 		{
 			_scrollOffset = 0;
+			Logger.log('[SHIMEJI-DBG] _updateScrollOffset() EXIT (no scroll needed)', WARN, true);
 			return;
 		}
 
@@ -652,6 +672,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// Clamp to valid scroll range
 		if (_scrollOffset < 0) _scrollOffset = 0;
 		if (_scrollOffset > maxScroll) _scrollOffset = maxScroll;
+		Logger.log('[SHIMEJI-DBG] _updateScrollOffset() EXIT _scrollOffset=$_scrollOffset', WARN, true);
 	}
 
 	#if mobile
@@ -1158,9 +1179,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	 */
 	function _pulseSelection():Void
 	{
+		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
+		Logger.log('[SHIMEJI-DBG] _pulseSelection() ENTER', WARN, true);
 		final topIndex = Std.int(_scrollOffset / OPT_H);
 		final slot = _sel - topIndex;
-		if (slot < 0 || slot >= MAX_OPT) return;
+		if (slot < 0 || slot >= MAX_OPT)
+		{
+			Logger.log('[SHIMEJI-DBG] _pulseSelection() EXIT (slot out of range)', WARN, true);
+			return;
+		}
 
 		final hi = _rowHi[slot];
 		FlxTween.cancelTweensOf(hi.scale);
@@ -1176,6 +1203,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			ease: FlxEase.quadOut,
 			onComplete: (_) -> FlxTween.tween(hi.scale, {x: 1, y: 1}, 0.14, {ease: FlxEase.quadIn})
 		});
+		Logger.log('[SHIMEJI-DBG] _pulseSelection() EXIT', WARN, true);
 	}
 
 	function _updateRows():Void
@@ -1614,11 +1642,18 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _updatePreview(elapsed:Float):Void
 	{
-		if (_zones.length == 0) return;
+		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
+		Logger.log('[SHIMEJI-DBG] _updatePreview() ENTER _zones.length=${_zones.length}', WARN, false);
+		if (_zones.length == 0)
+		{
+			Logger.log('[SHIMEJI-DBG] _updatePreview() EXIT (no zones)', WARN, false);
+			return;
+		}
 
 		// Hold-to-test: a zone stays lit while the screen is held over it.
 		_touchingZone = false;
 		#if mobile
+		Logger.log('[SHIMEJI-DBG] _updatePreview() before mouse-overlap loop', WARN, false);
 		if (FlxG.mouse.pressed)
 		{
 			for (z in _zones)
@@ -1631,6 +1666,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			for (z in _zones) z.pressed = false;
 		}
+		Logger.log('[SHIMEJI-DBG] _updatePreview() after mouse-overlap loop', WARN, false);
 		#end
 
 		// Idle "demo" animation — zones pulse in sequence when untouched
@@ -1646,6 +1682,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				_zones[i].pressed = (i == _demoIdx);
 		}
 
+		Logger.log('[SHIMEJI-DBG] _updatePreview() before alpha/animation loop', WARN, false);
+
 		// Smooth alpha transitions with easing
 		final pressA = _pressAlpha();
 		final idleA  = _idleAlpha();
@@ -1658,6 +1696,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (z.spr.frames != null && z.spr.frames.numFrames > 1)
 				z.spr.animation.play(z.pressed ? 'pressed' : 'idle');
 		}
+		Logger.log('[SHIMEJI-DBG] _updatePreview() EXIT', WARN, false);
 	}
 
 	// ── Cleanup ──────────────────────────────────────────────────────────────
