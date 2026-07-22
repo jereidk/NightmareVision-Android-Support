@@ -23,7 +23,11 @@ on:
           - release
           - debug
       symbolicate_run_id:
-        description: 'TEMP diagnostic: run ID of a prior arm64-debugsymbols run to symbolicate a crash trace against (leave empty to skip). See the Symbolicate job.'
+        description: 'Diagnostic: run ID of a prior arm64-debugsymbols run to symbolicate a crash trace against (leave empty to skip). See the Symbolicate job.'
+        required: false
+        type: string
+      symbolicate_offsets:
+        description: 'Space-separated hex rel_pc offsets (e.g. "0xd49ae4 0x16a9d3c ...") from a native_crash_trace.log crashing thread, innermost frame first.'
         required: false
         type: string
   workflow_call:
@@ -1835,16 +1839,21 @@ jobs:
         run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
 
   # ───────────────────────────────────────────────────────────────────────────────
-  # TEMP diagnostic job (touch-nav crash investigation) -- only runs when
-  # symbolicate_run_id is explicitly provided. Downloads the already-built
-  # unstripped libApplicationMain.so artifact from that prior
-  # arm64-debugsymbols run (no recompiling) and resolves a fixed set of
-  # rel_pc offsets -- the crashing SDLThread's (tid=29163) unresolved
-  # app-code frames from a captured native_crash_trace.log -- via addr2line.
-  # Delete this job once the crash is identified and fixed.
+  # Reusable crash-trace symbolication job -- only runs when symbolicate_run_id
+  # is explicitly provided. Downloads the already-built unstripped
+  # libApplicationMain.so artifact from a prior arm64-debugsymbols run (no
+  # recompiling) and resolves symbolicate_offsets -- a captured
+  # native_crash_trace.log's crashing thread's unresolved app-code rel_pc
+  # offsets, extracted from the tombstone protobuf (see the pbdump/
+  # extract_thread scripts used to pull them out, kept in this session's
+  # scratchpad) -- via addr2line. First used for the touch-nav-mode crash
+  # (fixed in OptionsState.hx, commit fcb821ee); kept around for future
+  # native_crash_trace.log reports since the pattern (build once with
+  # target=arm64-debugsymbols, then re-run this job per trace without
+  # recompiling) is cheap to reuse.
   # ───────────────────────────────────────────────────────────────────────────────
   Symbolicate:
-    name: TEMP - Symbolicate crash trace
+    name: Symbolicate crash trace
     if: inputs.symbolicate_run_id != ''
     runs-on: ubuntu-latest
     permissions:
@@ -1876,21 +1885,22 @@ jobs:
           fi
           echo "bin=$A2L" >> "$GITHUB_OUTPUT"
 
-      - name: Symbolicate crashing thread's backtrace (SDLThread tid=29163)
+      - name: Symbolicate crashing thread's backtrace
         run: |
           set -euo pipefail
           SO="unstripped/libApplicationMain.so"
           ls -la "$SO"
           file "$SO"
           echo ""
-          echo "=== Frames 0-20 (unresolved app-code frames from the tombstone, innermost first) ==="
-          OFFSETS="0xd49ae4 0x16a9d3c 0x80903c 0x1ba0298 0x1b9f7e4 0x1b9f64c 0x933564 0x11e0340 0x933564 0x16f80c4 0x16f81b4 0x8103d8 0x1dbff54 0x1dc0068 0x1f450a0 0x3774e8 0x376640 0x1dbf068 0x1b32b9c 0xce4b0c 0xce3cc0"
+          OFFSETS="${{ inputs.symbolicate_offsets }}"
+          if [ -z "$OFFSETS" ]; then
+            echo "No symbolicate_offsets provided -- nothing to resolve."
+            exit 1
+          fi
+          echo "=== Resolving offsets (innermost frame first) ==="
           i=0
           for off in $OFFSETS; do
             echo "--- frame $i (rel_pc=$off) ---"
             "${{ steps.ndk.outputs.bin }}" -f -C -i -e "$SO" "$off" || echo "FAILED to resolve $off"
             i=$((i+1))
           done
-          echo ""
-          echo "=== Frame 21 (expected: hxcpp_main, sanity check) ==="
-          "${{ steps.ndk.outputs.bin }}" -f -C -i -e "$SO" 0x1ed3d3c
