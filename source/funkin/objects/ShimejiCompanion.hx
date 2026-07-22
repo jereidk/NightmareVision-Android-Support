@@ -64,11 +64,31 @@ class ShimejiCompanion extends Pet
 	// so ClientPrefs.equipment.get('pet') can never actually resolve to one
 	// of them and listing them here would be dead code.
 	static final MOVE_STYLES:Map<String, MoveStyle> = [
-		'elliepet' => Walk,
 		'dog' => Walk,
 		'frankendog' => Walk,
 		'helicopter' => Fly,
 		'ufo' => Fly,
+	];
+
+	// The reverse of the exclusion above: several -run variants that are
+	// dead as MOVE_STYLES *keys* (previous comment) are still very much
+	// alive as ART -- each is a base pet's own "running" context swap
+	// target (assets/legacy/data/pets/<base>.json's flags.variants.running),
+	// and direct visual review confirms all four actually have a genuine
+	// running pose (leaning forward / alternating legs), distinct from
+	// that base's own idle. Reusing that art for real here: while walking,
+	// swap to the -run identity's spritesheet via loadPet() (exactly how
+	// PlayState.checkStageFlag swaps identities mid-song -- Pet.loadPet()
+	// already recenters the sprite on every call via _petOffset/_baseWidth/
+	// _baseHeight bookkeeping, so re-calling it mid-life is the intended,
+	// jump-free way to do this); swap back to the base's own idle art the
+	// moment it stops. A base pet listed here always walks (MOVE_STYLES
+	// above is checked first, but nothing above conflicts with these four).
+	static final RUN_VARIANTS:Map<String, String> = [
+		'stickmin' => 'stickminrun',
+		'elliepet' => 'elliepetrun',
+		'minicrewmate' => 'minicrewmaterun',
+		'slugmate' => 'slugmaterun',
 	];
 
 	/** Whether `petName` should ever get a ShimejiCompanion at all -- checked before construction, not in here. */
@@ -96,6 +116,12 @@ class ShimejiCompanion extends Pet
 	var walkTargetX:Float = 0;
 	var walkTargetY:Float = 0;
 
+	// The equipped identity as of construction -- curPet itself gets
+	// overwritten by loadPet() whenever we swap to/from the running
+	// variant below, so this is what "back to normal" actually means.
+	var baseCurPet:String;
+	var runVariant:Null<String>;
+
 	public function new()
 	{
 		super(0, 0, ClientPrefs.equipment.get('pet') ?? '');
@@ -104,7 +130,9 @@ class ShimejiCompanion extends Pet
 
 		// curPet (set by Pet.loadPet() inside super() above) is the actual
 		// resolved identity -- read after super() runs, not before.
-		moveStyle = MOVE_STYLES.get(curPet) ?? Shuffle;
+		baseCurPet = curPet;
+		runVariant = RUN_VARIANTS.get(baseCurPet);
+		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
 
 		if (lastX != null && lastY != null)
 		{
@@ -126,12 +154,22 @@ class ShimejiCompanion extends Pet
 	{
 		walking = false;
 		idleTimer = FlxG.random.float(IDLE_MIN, IDLE_MAX);
+
+		// Stopped -- if we're currently showing the running variant's art,
+		// swap back to the equipped identity's own idle.
+		if (curPet != baseCurPet) loadPet(baseCurPet);
 	}
 
 	function _pickNewWalkTarget():Void
 	{
 		walking = true;
 		walkTargetX = FlxG.random.float(0, Math.max(0, FlxG.width - width));
+
+		// Swap to the running variant's art before setting flipX below --
+		// loadPet() reloads flip_x from that variant's own JSON, which
+		// would otherwise clobber the facing direction we're about to set.
+		if (runVariant != null) loadPet(runVariant);
+
 		flipX = (walkTargetX < x);
 	}
 
