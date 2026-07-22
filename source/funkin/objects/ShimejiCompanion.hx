@@ -111,11 +111,19 @@ class ShimejiCompanion extends Pet
 	static inline final IDLE_MIN:Float = 2;
 	static inline final IDLE_MAX:Float = 6;
 
+	// A light vertical hop layered on top of ground movement/reactions --
+	// see the bob block in update() for why this is ground-styles-only.
+	static inline final BOB_HEIGHT:Float = 4;
+	static inline final BOB_SPEED:Float = 9;
+	static inline final TAP_BOUNCE_DURATION:Float = 0.5;
+
 	var moveStyle:MoveStyle;
 	var idleTimer:Float = 0;
 	var walking:Bool = false;
 	var walkTargetX:Float = 0;
 	var walkTargetY:Float = 0;
+	var bobPhase:Float = 0;
+	var tapBounceTimer:Float = 0;
 
 	// The equipped identity as of construction -- curPet itself gets
 	// overwritten by loadPet() whenever we swap to/from the running
@@ -287,6 +295,30 @@ class ShimejiCompanion extends Pet
 		{
 			_pickNewIdlePause();
 			dance(true);
+			tapBounceTimer = TAP_BOUNCE_DURATION;
+		}
+
+		if (tapBounceTimer > 0) tapBounceTimer -= elapsed;
+
+		// The animation-frame fix below (isAnimFinished()) sells the pet's
+		// OWN art; this sells the movement itself -- a small hop timed to
+		// actual travel, so walking/reacting reads as physical motion with
+		// a bit of weight instead of gliding on a fixed line. Ground
+		// styles only (Walk/Shuffle): their y is fully recomputed from the
+		// current screen bottom every frame just above, so this offset
+		// never carries over into next frame's position. Deliberately
+		// excluded for Fly -- its y IS the authoritative, carried-over-
+		// frame flight position (see _updateFlightMovement above), so
+		// nudging it here would feed straight back into next frame's
+		// movement math and drift.
+		if (moveStyle != Fly && (walking || tapBounceTimer > 0))
+		{
+			bobPhase += elapsed * BOB_SPEED;
+			y -= Math.abs(Math.sin(bobPhase)) * BOB_HEIGHT;
+		}
+		else
+		{
+			bobPhase = 0;
 		}
 
 		super.update(elapsed);
