@@ -53,6 +53,16 @@ function onCreatePost()
 	// getBool('Low Quality Mode', ClientPrefs.lowQuality) + getBool('Flashing Lights', ClientPrefs.flashing);
 }
 
+// dbGroup's buttons/slider are never destroy()'d without this -- PlayState's
+// generic disposeNewSince() sweep ends up force-disposing their graphics as a
+// fallback (harmless under the default 'Destructive' cache mode, but under
+// 'Accumulative' that sweep is a no-op, so this panel's ~15 tiny bitmaps would
+// otherwise pile up forever across every dev-mode PlayState session).
+function onDestroy():Void
+{
+	dbGroup.destroy();
+}
+
 var warping:Bool = false;
 function onUpdate()
 {
