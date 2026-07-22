@@ -31,6 +31,14 @@ enum abstract MoveStyle(String)
 	 */
 	var Hop = 'hop';
 
+	/**
+	 * Ground movement with no vertical bounce at all -- for pets that are
+	 * clearly wheeled/vehicle-bound (a bomb on a cart, say), where a hop
+	 * or even a subtle Walk-style bob would look wrong: it should roll.
+	 * Still reacts to a tap like everything else (see update()).
+	 */
+	var Roll = 'roll';
+
 	/** A flying/hovering creature -- floats toward a random point instead of a fixed ground line. */
 	var Fly = 'fly';
 
@@ -86,7 +94,8 @@ class ShimejiCompanion extends Pet
 		// of water (fishus), stubby-legged/vehicle-bound critters already
 		// drawn mid-bounce in their own idle art (ham, crab), and a
 		// clawed-foot creature (lilmungus). nuclearbomb is deliberately NOT
-		// here -- it's a bomb on a wheeled cart, which should roll, not hop.
+		// here -- it's a bomb on a wheeled cart, which should roll, not hop
+		// (see Roll below).
 		'crab' => Hop,
 		'slug' => Hop,
 		'squig' => Hop,
@@ -99,6 +108,10 @@ class ShimejiCompanion extends Pet
 		'snowmate' => Hop,
 		'thenug' => Hop,
 		'fribbit' => Hop,
+
+		// The one deliberately left out of the Hop list above -- a bomb on
+		// a wheeled cart rolls, it doesn't hop.
+		'nuclearbomb' => Roll,
 	];
 
 	// The reverse of the exclusion above: several -run variants that are
@@ -296,7 +309,7 @@ class ShimejiCompanion extends Pet
 				idleTimer -= elapsed;
 				if (idleTimer <= 0) _pickNewIdlePause();
 
-			case Walk, Hop:
+			case Walk, Hop, Roll:
 				_updateGroundMovement(elapsed);
 
 			case Fly:
@@ -316,9 +329,9 @@ class ShimejiCompanion extends Pet
 		if (moveStyle == Fly)
 			y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
 		else
-			// Walk/Hop/Shuffle are ground-anchored -- always exactly on
-			// the current bottom edge, not just clamped into range, since
-			// nothing else ever moves their y.
+			// Walk/Hop/Roll/Shuffle are ground-anchored -- always exactly
+			// on the current bottom edge, not just clamped into range,
+			// since nothing else ever moves their y.
 			y = FlxG.height - height - GROUND_MARGIN;
 
 		#if mobile
@@ -350,13 +363,18 @@ class ShimejiCompanion extends Pet
 		// OWN art; this sells the movement itself -- a hop timed to actual
 		// travel, so walking/reacting reads as physical motion with some
 		// weight instead of gliding on a fixed line. Ground styles only
-		// (Walk/Hop/Shuffle): their y is fully recomputed from the current
-		// screen bottom every frame just above, so this offset never
-		// carries over into next frame's position. Deliberately excluded
-		// for Fly -- its y IS the authoritative, carried-over-frame flight
-		// position (see _updateFlightMovement above), so nudging it here
-		// would feed straight back into next frame's movement math and drift.
-		if (moveStyle != Fly && (walking || tapBounceTimer > 0))
+		// (Walk/Hop/Roll/Shuffle): their y is fully recomputed from the
+		// current screen bottom every frame just above, so this offset
+		// never carries over into next frame's position. Deliberately
+		// excluded for Fly -- its y IS the authoritative, carried-over-
+		// frame flight position (see _updateFlightMovement above), so
+		// nudging it here would feed straight back into next frame's
+		// movement math and drift.
+		// Roll only bounces for the tap reaction, never while actually
+		// rolling -- a wheeled pet gliding smoothly is the whole point of
+		// giving it its own style instead of reusing Walk/Hop.
+		final movingBounce = walking && moveStyle != Roll;
+		if (moveStyle != Fly && (movingBounce || tapBounceTimer > 0))
 		{
 			final hopping = (moveStyle == Hop);
 			bobPhase += elapsed * (hopping ? HOP_SPEED : BOB_SPEED);
