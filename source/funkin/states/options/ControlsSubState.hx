@@ -26,11 +26,16 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	public var index(default, set):Int = -1;
 	
-	public var currentGroup(get, set):ControlsGroup;
-	
-	public var currentOption(get, set):ControlsOption;
-	
-	public var currentBind(get, set):FlxText;
+	// Read-only: nothing writes these from outside their own getter
+	// (confirmed by grep -- their old setters were dead code, never called
+	// except recursively from within themselves). index/currentBindIndex
+	// below are the two real, owned pieces of selection state; these three
+	// are just views derived from them.
+	public var currentGroup(get, never):ControlsGroup;
+
+	public var currentOption(get, never):ControlsOption;
+
+	public var currentBind(get, never):FlxText;
 	
 	public var currentBindIndex(get, set):Int;
 	
@@ -337,15 +342,26 @@ class ControlsSubState extends MusicBeatSubstate
 				state = SELECT;
 				
 			case SELECT:
-				// check for device changes
+				// Device only switches on a deliberate button press -- never from a
+				// held button or idle analog-stick drift. getFirstActiveGamepad()
+				// is backed by anyButton(PRESSED) OR any non-zero axis with no
+				// deadzone (FlxGamepad.anyInput()), so a connected-but-untouched
+				// gamepad can read "active" continuously from raw stick jitter
+				// alone -- that used to permanently flip device to Gamepad and
+				// hide every Keys-only group (UI/VOLUME/DEBUG, Reset to Default
+				// Keys) the instant a controller was plugged in, with no action
+				// from the player. firstJustPressedID() (the same call this file
+				// already uses safely for REBIND capture below) only fires on the
+				// actual press edge, buttons only.
 				final key = FlxG.keys.firstJustPressed();
-				final gamepad = FlxG.gamepads.getFirstActiveGamepad();
-				
+				final gamepadCandidate = FlxG.gamepads.getFirstActiveGamepad();
+				final gamepadJustPressed = (gamepadCandidate != null && gamepadCandidate.firstJustPressedID() > -1);
+
 				device = switch (device)
 				{
-					case Keys if (gamepad != null): Gamepad(gamepad.id);
+					case Keys if (gamepadJustPressed): Gamepad(gamepadCandidate.id);
 					case Gamepad(_) if (key > -1): Keys;
-					case Gamepad(id) if (gamepad != null && id != gamepad.id): Gamepad(gamepad.id);
+					case Gamepad(id) if (gamepadJustPressed && id != gamepadCandidate.id): Gamepad(gamepadCandidate.id);
 					case d: d;
 				}
 				
@@ -394,19 +410,15 @@ class ControlsSubState extends MusicBeatSubstate
 				{
 					currentOption.change(device, inputID);
 					FlxG.sound.play(Paths.sound('confirmMenu'));
-					state = SELECT;
-					
-					if (currentBind != null) currentBind.visible = true;
+					_exitRebind();
 				}
-				
+
 				bindingTime += elapsed;
 				if (bindingTime > 5)
 				{
 					FlxG.sound.play(Paths.sound('scrollMenu'));
-					state = SELECT;
 					bindingTime = 0;
-					
-					if (currentBind != null) currentBind.visible = true;
+					_exitRebind();
 				}
 		}
 
@@ -459,8 +471,8 @@ class ControlsSubState extends MusicBeatSubstate
 		super.update(elapsed);
 		
 		final target:FlxObject = currentOption;
-		
-		if (autoScroll)
+
+		if (autoScroll && target != null)
 		{
 			final scrollPad:Float = 64;
 			
@@ -482,15 +494,25 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	public function selectOption():Void
 	{
+		if (currentOption == null) return;
 		if (currentOption.fun != null) currentOption.fun(currentOption);
-		
+
 		if (currentBind != null)
 		{
 			state = REBIND;
 			currentBind.visible = false;
 		}
 	}
-	
+
+	/** Common cleanup for every way REBIND ends: a successful capture, the 5s
+	 * timeout, or the gamepad that opened it disconnecting mid-wait (falls
+	 * through to the same timeout above instead of a separate branch). */
+	inline function _exitRebind():Void
+	{
+		state = SELECT;
+		if (currentBind != null) currentBind.visible = true;
+	}
+
 	inline function updateOptionFlash():Void
 	{
 		autoScroll = true;
@@ -518,36 +540,26 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	function get_currentGroup():Null<ControlsGroup>
 	{
-		return cast currentOption.container.container;
+		final opt = currentOption;
+		return (opt != null) ? cast opt.container.container : null;
 	}
-	
-	function set_currentGroup(currentGroup:ControlsGroup):ControlsGroup
-	{
-		if (currentGroup == null)
-		{
-			index = 0;
-			return controlsGroup.members[0];
-		}
-		index = optionsList.indexOf(currentGroup.options.members[0]);
-		return get_currentGroup();
-	}
-	
-	function get_currentOption():ControlsOption
+
+	function get_currentOption():Null<ControlsOption>
 	{
 		return optionsList[index];
 	}
-	
-	function set_currentOption(currentOption:ControlsOption):ControlsOption
-	{
-		index = optionsList.indexOf(currentOption);
-		return currentOption;
-	}
-	
+
 	function set_index(index:Int):Int
 	{
+		// optionsList is never actually empty in practice (the NOTES group is
+		// AnyOption, so it matches every device), but FlxMath.wrap(_, 0, -1)
+		// on an empty list would wrap against an invalid (max < min) range --
+		// guard it explicitly instead of relying on that always holding.
+		if (optionsList.length == 0) return this.index = NONE;
+
 		index = FlxMath.wrap(index, 0, optionsList.length - 1);
 		if (state != BindState.NONE) state = SELECT;
-		
+
 		if (this.index != index)
 		{
 			if (optionsList[this.index] != null && state == SELECT)
@@ -555,40 +567,37 @@ class ControlsSubState extends MusicBeatSubstate
 				final bindIndex = currentBindIndex;
 				optionsList[index].index = bindIndex;
 			}
-			
+
 			this.index = index;
-			
+
 			updateOptionFlash();
-			
+
 			if (currentBindIndex == NONE) currentBindIndex = 0;
 		}
-		
+
 		return index;
 	}
-	
+
 	function get_currentBind():Null<FlxText>
 	{
-		return currentOption.binds.members[currentBindIndex];
+		final opt = currentOption;
+		return (opt != null) ? opt.binds.members[currentBindIndex] : null;
 	}
-	
-	function set_currentBind(currentBind:FlxText):Null<FlxText>
-	{
-		final index = currentOption.binds.members.indexOf(currentBind);
-		if (index != -1) currentBindIndex = index;
-		return currentBind;
-	}
-	
+
 	function get_currentBindIndex():Int
 	{
-		return currentOption.index;
+		final opt = currentOption;
+		return (opt != null) ? opt.index : NONE;
 	}
 	
 	function set_currentBindIndex(currentBindIndex:Int):Int
 	{
+		if (currentOption == null) return currentBindIndex;
+
 		currentOption.index = currentBindIndex;
-		
+
 		updateOptionFlash();
-		
+
 		return currentBindIndex;
 	}
 	
