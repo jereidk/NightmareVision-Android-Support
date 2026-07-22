@@ -2,6 +2,7 @@ package mobile.backend.flixel.input;
 
 import openfl.events.TouchEvent;
 import flixel.FlxG;
+import funkin.backend.Logger;
 
 /**
  * Records the true OS-event timestamp of each touch press, independent of
@@ -31,6 +32,14 @@ class RawTouchClock
 
 	static function onTouchBegin(event:TouchEvent):Void
 	{
+		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
+		// Earliest possible Haxe-level hook for any OS touch event -- fires
+		// from a listener registered once at app init, independent of any
+		// per-state/substate object (virtual pad, MobileSettingsSubState,
+		// etc.) that could have been destroyed by a nav-mode switch. If the
+		// crash happens before this line appears in game.log, it's occurring
+		// before Haxe even learns about the touch (pure native/OS layer).
+		Logger.log('[SHIMEJI-DBG] RawTouchClock.onTouchBegin() touchPointID=${event.touchPointID} stageX=${event.stageX} stageY=${event.stageY}', WARN, true);
 		_pressTimes.set(event.touchPointID, lime.system.System.getTimer());
 	}
 
