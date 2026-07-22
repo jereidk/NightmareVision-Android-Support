@@ -94,6 +94,14 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		return diff;
 	}
 	
+	// Below this many ms of difference, don't bother -- native audio channel
+	// position readback has its own granularity/jitter (varies by device and
+	// backend), so comparing against a 1ms threshold meant almost every call
+	// force-restarted almost every track, even ones that were already close
+	// enough to be inaudible. 15ms is comfortably under one video frame at
+	// 60fps and still well under anything a player could perceive as desync.
+	static inline final RESYNC_THRESHOLD_MS:Float = 15;
+
 	/**
 	 * Resyncs all group members to a given time.
 	 * @param baseTime The reference to compare difference to. Defaults to the groups first instance's time
@@ -110,7 +118,7 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		var restarted = 0;
 
 		forEachAlive(snd -> {
-			if (snd.playing && time <= snd.length && Math.abs(snd.time - time) > 1)
+			if (snd.playing && time <= snd.length && Math.abs(snd.time - time) > RESYNC_THRESHOLD_MS)
 			{
 				snd.pause();
 				snd.time = time;

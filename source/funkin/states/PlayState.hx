@@ -667,6 +667,22 @@ class PlayState extends MusicBeatState
 	var _discordSyncTimer:Float = 0;
 	static inline final DISCORD_SYNC_INTERVAL:Float = 5;
 
+	// stepHit()'s drift check below used to call resyncVocals() completely
+	// ungated -- only the sysmon LOG LINE was cooldown-throttled, the actual
+	// pause()/time=/play() correction wasn't. maxToleratedOffset is one
+	// 60fps frame (~16.67ms), which is inside the noise floor of Android's
+	// audio channel position readback: measured drift stayed flat at
+	// ~16-32ms regardless of whether fps was 250 or 64, instead of scaling
+	// with lag like a real desync would -- so this was firing on
+	// measurement noise, several times a second, every call doing a real
+	// native seek/restart (measured up to ~190ms each). That cost pushed
+	// the frame over budget, which produced more "drift" next step: a
+	// self-inflicted feedback loop. Gate the actual correction the same way
+	// the log line already is; severe drift still bypasses the cooldown so
+	// a genuine desync (e.g. after a hitch) still gets fixed immediately.
+	var _lastVocalResyncTime:Float = -999.0;
+	static inline final VOCAL_RESYNC_COOLDOWN:Float = 0.3;
+
 	/**
 	 * Group of general scripts.
 	 */
@@ -4620,16 +4636,23 @@ class PlayState extends MusicBeatState
 				// timed here (not just logged) to find out whether the
 				// correction itself is a meaningful CPU cost on top of being
 				// an audible glitch. stepHit() runs once per STEP (several
-				// times a second), and this branch isn't cooldown-gated the
-				// way the log line below is, so a chronically drifting track
-				// can call this far more often than the log's throttled
-				// output alone would suggest.
-				#if android final _resyncT0 = haxe.Timer.stamp(); #end
-				final _tracksRestarted = resyncVocals();
-				#if android
-				final _resyncMs = (haxe.Timer.stamp() - _resyncT0) * 1000;
-				SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', Math.max(instDrift, vocalDrift), Conductor.songPosition, _tracksRestarted, _resyncMs);
-				#end
+				// times a second), so the correction itself is cooldown-gated
+				// below (see _lastVocalResyncTime) to stop it firing on every
+				// single step while a track sits right at the threshold --
+				// only the log line used to be throttled, not this call.
+				final _worstDrift = Math.max(instDrift, vocalDrift);
+				final _now = haxe.Timer.stamp();
+				final _severeDrift = _worstDrift > maxToleratedOffset * 4;
+				if (_severeDrift || _now - _lastVocalResyncTime >= VOCAL_RESYNC_COOLDOWN)
+				{
+					_lastVocalResyncTime = _now;
+					#if android final _resyncT0 = haxe.Timer.stamp(); #end
+					final _tracksRestarted = resyncVocals();
+					#if android
+					final _resyncMs = (haxe.Timer.stamp() - _resyncT0) * 1000;
+					SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', _worstDrift, Conductor.songPosition, _tracksRestarted, _resyncMs);
+					#end
+				}
 			}
 		}
 		
