@@ -165,12 +165,33 @@ class GlobalScriptManager
 
 	/**
 	 * Called by MusicBeatState when a state is created.
+	 *
+	 * Dev-only: reloads every global script from disk first, so editing a
+	 * file in the external `scripts/` folder takes effect on the next state
+	 * entry (e.g. backing out to a menu and back into a song) instead of
+	 * requiring a full app restart -- the previous behaviour, since
+	 * `_loadScripts()` only ever ran once from `init()`.
 	 */
 	public function onStateCreate(state:Dynamic):Void
 	{
+		if (funkin.data.ClientPrefs.inDevMode) reload();
+
 		_updateParent();
 		scriptGroup.set('state', state);
 		scriptGroup.call('onStateCreate', [state]);
+	}
+
+	/**
+	 * Tears down and re-scans all global scripts from disk (external
+	 * storage first, then the bundled fallback) -- see `onStateCreate()`'s
+	 * doc comment for why this runs automatically in dev mode.
+	 */
+	public function reload():Void
+	{
+		scriptGroup.call('onDestroy');
+		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
+		scriptGroup = new ScriptGroup();
+		_loadScripts();
 	}
 
 	/**
