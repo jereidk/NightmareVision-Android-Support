@@ -242,12 +242,29 @@ class FunkinCache
 				if (key.indexOf('flixel') >= 0) continue;
 
 				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
-				if (g != null)
-				{
-					disposeGraphic(g);
-					disposed++;
-					if (disposedKeys != null) disposedKeys.push(key);
-				}
+				if (g == null) continue;
+
+				// persist is FlxGraphic's own "never auto-dispose this" flag
+				// (Flixel's built-in clearUnusedMemory sweep already honors it:
+				// `if (useCount <= 0 && destroyOnNoUse && !persist)`), and
+				// flixel-animate's FilterRenderer relies on exactly that
+				// contract for baked-filter/masked results meant to survive
+				// past a single PlayState (frame.parent.persist = true;
+				// frame.parent.destroyOnNoUse = false;) -- those graphics are
+				// never registered with this project's own currentTrackedGraphics,
+				// so without this check they looked like plain forgotten
+				// ephemeral graphics and got force-disposed here anyway. A
+				// stage/character whose FlxAnimateFrames atlas is cached across
+				// retries (confirmed live via a symbolicated
+				// native_crash_trace.log SIGSEGV in FilterRenderer._bakeFilters,
+				// e.g. doubletrouble.hx's cross-retry "red placeholder" cache)
+				// then kept its already-baked MovieClipInstance/Frame around
+				// with its texture ripped out from under it on the next visit.
+				if (g.persist) continue;
+
+				disposeGraphic(g);
+				disposed++;
+				if (disposedKeys != null) disposedKeys.push(key);
 			}
 		}
 
