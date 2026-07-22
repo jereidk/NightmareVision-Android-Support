@@ -110,7 +110,27 @@ class Character extends Bopper implements IFlags
 	 * Array of all ghosts
 	 */
 	public var doubleGhosts:Array<FunkinSprite> = [];
-	
+
+	/**
+	 * Workaround for a screen/lighten-blend "glow" symbol (e.g. green/parasite's
+	 * eye glow) not rendering when drawn as part of the character's own ~20+
+	 * layer timeline -- confirmed on-device that the SAME symbol renders fine
+	 * completely standalone (FlxAnimateController.addBySymbol), just not when
+	 * nested in the full rig, on any character tried (green, maroonParasite,
+	 * bf-ghost), with or without useRenderTexture. Root cause not isolated
+	 * (not occlusion, not masking, not the stage shader) -- this sidesteps it
+	 * by drawing the glow as a second, fully independent FunkinSprite showing
+	 * ONLY that symbol, manually kept in sync with this character every frame.
+	 * Opt in per-character via the JSON `flags` map:
+	 *   "flags": { "glowSymbol": "glow shit", "glowOffset": [x, y] }
+	 * `glowOffset` is in this character's own local space (before `scale`) --
+	 * the symbol's standalone bounds don't line up with its nested position,
+	 * so this needs calibrating by eye per character/symbol.
+	 */
+	var glowSprite:Null<FunkinSprite> = null;
+	var glowOffsetX:Float = 0;
+	var glowOffsetY:Float = 0;
+
 	/**
 	 * Array of all ghosts tweens
 	 */
@@ -238,7 +258,27 @@ class Character extends Bopper implements IFlags
 		this.gameoverInitialDeathSound = json.gameover_intial_sound;
 		
 		loadAtlas(imageFile, LOOSE);
-		
+
+		glowSprite = FlxDestroyUtil.destroy(glowSprite);
+		glowOffsetX = 0;
+		glowOffsetY = 0;
+		if (flags != null && hasFlag('glowSymbol'))
+		{
+			final glowSymbolName:String = getFlag('glowSymbol');
+			final offset:Array<Float> = getFlag('glowOffset');
+			if (offset != null && offset.length > 1)
+			{
+				glowOffsetX = offset[0];
+				glowOffsetY = offset[1];
+			}
+
+			glowSprite = new FunkinSprite();
+			glowSprite.loadAtlas(imageFile, LOOSE);
+			glowSprite.anim.addBySymbol('glow', glowSymbolName, 24, true);
+			glowSprite.anim.play('glow');
+			glowSprite.antialiasing = antialiasing;
+		}
+
 		if (jsonScale != 1)
 		{
 			scale.set(jsonScale, jsonScale);
@@ -369,10 +409,22 @@ class Character extends Bopper implements IFlags
 			for (ghost in doubleGhosts)
 				ghost.update(elapsed);
 		}
-		
+
+		if (glowSprite != null)
+		{
+			glowSprite.x = x + glowOffsetX * scale.x;
+			glowSprite.y = y + glowOffsetY * scale.y;
+			glowSprite.scale.copyFrom(scale);
+			glowSprite.flipX = flipX;
+			glowSprite.visible = visible;
+			glowSprite.alpha = alpha;
+			glowSprite.color = color;
+			glowSprite.update(elapsed);
+		}
+
 		super.update(elapsed);
 	}
-	
+
 	override function draw()
 	{
 		#if android SystemMonitor.profBegin('charDraw'); #end
@@ -384,6 +436,7 @@ class Character extends Bopper implements IFlags
 			}
 		}
 		super.draw();
+		if (glowSprite != null && glowSprite.visible) glowSprite.draw();
 		#if android SystemMonitor.profEnd(); #end
 	}
 	
@@ -519,7 +572,9 @@ class Character extends Bopper implements IFlags
 		ghostTweenGrp = FlxDestroyUtil.destroyArray(ghostTweenGrp);
 		
 		doubleGhosts = FlxDestroyUtil.destroyArray(doubleGhosts);
-		
+
+		glowSprite = FlxDestroyUtil.destroy(glowSprite);
+
 		flags = null;
 		
 		super.destroy();
