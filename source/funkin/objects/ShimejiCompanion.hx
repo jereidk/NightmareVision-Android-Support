@@ -170,6 +170,10 @@ class ShimejiCompanion extends Pet
 	static inline final HOP_SQUASH:Float = 0.28;
 	static inline final TAP_BOUNCE_DURATION:Float = 0.5;
 
+	// A press+release under this distance (world px) counts as a tap
+	// (dance reaction); over it counts as a drag that just repositions it.
+	static inline final DRAG_TAP_THRESHOLD:Float = 6;
+
 	var moveStyle:MoveStyle;
 	var idleTimer:Float = 0;
 	var walking:Bool = false;
@@ -177,6 +181,12 @@ class ShimejiCompanion extends Pet
 	var walkTargetY:Float = 0;
 	var bobPhase:Float = 0;
 	var tapBounceTimer:Float = 0;
+
+	var dragging:Bool = false;
+	var dragOffsetX:Float = 0;
+	var dragOffsetY:Float = 0;
+	var dragStartX:Float = 0;
+	var dragStartY:Float = 0;
 
 	// scale.x/y as loaded by Pet.loadPet() (via data.scale) -- Hop's
 	// squash/stretch multiplies on top of this every frame rather than
@@ -217,6 +227,20 @@ class ShimejiCompanion extends Pet
 			y = FlxG.height - height - GROUND_MARGIN;
 		}
 
+		_pickNewIdlePause();
+	}
+
+	// Used when the equipped pet changes while this instance is already on
+	// screen -- see the live pet-swap check at the top of update(). Same
+	// setup the constructor does after loading a pet, just re-run for a
+	// new identity instead of once at construction.
+	function _applyPet(name:String):Void
+	{
+		baseCurPet = name;
+		loadPet(baseCurPet);
+		runVariant = RUN_VARIANTS.get(baseCurPet);
+		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
+		baseScale = scale.x;
 		_pickNewIdlePause();
 	}
 
@@ -301,102 +325,154 @@ class ShimejiCompanion extends Pet
 
 	override function update(elapsed:Float):Void
 	{
-		switch (moveStyle)
-		{
-			case Shuffle:
-				// Never translates -- just keeps cycling idle pauses so its
-				// own timing stays consistent with Walk/Fly, x/y just never move.
-				idleTimer -= elapsed;
-				if (idleTimer <= 0) _pickNewIdlePause();
-
-			case Walk, Hop, Roll:
-				_updateGroundMovement(elapsed);
-
-			case Fly:
-				_updateFlightMovement(elapsed);
-		}
-
-		// Bounds are read live off FlxG.width/height every frame, never
-		// cached -- these already track the CURRENT aspect-ratio mode (fit
-		// vs. expand vs. stretch, see FunkinRatioScaleMode.updateGameSize(),
-		// which reassigns FlxG.width/height whenever that mode or the
-		// device orientation changes). Re-deriving both x and y bounds here
-		// instead of trusting a value computed once at spawn/idle-pick time
-		// keeps the whole hitbox on screen -- every side, not just where it
-		// happened to be -- through any of those changes mid-session.
-		x = FlxMath.bound(x, 0, Math.max(0, FlxG.width - width));
-
-		if (moveStyle == Fly)
-			y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
-		else
-			// Walk/Hop/Roll/Shuffle are ground-anchored -- always exactly
-			// on the current bottom edge, not just clamped into range,
-			// since nothing else ever moves their y.
-			y = FlxG.height - height - GROUND_MARGIN;
+		// The Locker (CosmeticsSubstate) lets you change your equipped pet
+		// without leaving/re-entering a layer -- addShimeji() only reads
+		// ClientPrefs.equipment.get('pet') once, at construction, so
+		// without this the companion would keep showing the OLD pet until
+		// the next full state/substate transition recreates it. Cheap
+		// enough to poll every frame (a map lookup + string compare).
+		final equippedPet = ClientPrefs.equipment.get('pet') ?? '';
+		if (equippedPet.length > 0 && equippedPet != baseCurPet) _applyPet(equippedPet);
 
 		#if mobile
 		final pointerOk = MobileNavUtil.allowPointerNav();
 		#else
 		final pointerOk = true;
 		#end
-		// "Interacts with the player" -- a tap/click makes it stop and dance
-		// on the spot, reusing Bopper.dance() (same idle/danceLeft-or-Right
-		// picking every other pet/character already uses) instead of
-		// inventing a new animation state.
 		// Explicit camera: this sprite renders on its own dedicated
 		// shimejiCam (see MusicBeatState.hx/MusicBeatSubstate.hx's
-		// addShimeji()), not FlxG.camera -- overlaps() defaults to FlxG.camera
-		// for the world-position lookup when no camera is passed, which would
-		// silently mis-hit-test whenever the owning state's own main camera
-		// is scrolled/zoomed/shaking differently than this fixed overlay.
+		// addShimeji()), not FlxG.camera -- overlaps()/getWorldPosition()
+		// default to FlxG.camera when no camera is passed, which would
+		// silently mis-hit-test/mis-map the pointer whenever the owning
+		// state's own main camera is scrolled/zoomed/shaking differently
+		// than this fixed overlay.
 		final hitCamera = (cameras != null && cameras.length > 0) ? cameras[0] : null;
-		if (pointerOk && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
+
+		if (pointerOk && dragging && !FlxG.mouse.pressed)
 		{
-			_pickNewIdlePause();
-			dance(true);
-			tapBounceTimer = TAP_BOUNCE_DURATION;
-		}
+			// Released -- if the pointer barely moved since it was
+			// pressed, treat it as the existing tap-to-dance reaction
+			// instead of a drag; an actual drag just resumes wandering
+			// from wherever it was dropped.
+			dragging = false;
 
-		if (tapBounceTimer > 0) tapBounceTimer -= elapsed;
+			final mp = FlxG.mouse.getWorldPosition(hitCamera);
+			final movedX = mp.x - dragStartX;
+			final movedY = mp.y - dragStartY;
 
-		// The animation-frame fix below (isAnimFinished()) sells the pet's
-		// OWN art; this sells the movement itself -- a hop timed to actual
-		// travel, so walking/reacting reads as physical motion with some
-		// weight instead of gliding on a fixed line. Ground styles only
-		// (Walk/Hop/Roll/Shuffle): their y is fully recomputed from the
-		// current screen bottom every frame just above, so this offset
-		// never carries over into next frame's position. Deliberately
-		// excluded for Fly -- its y IS the authoritative, carried-over-
-		// frame flight position (see _updateFlightMovement above), so
-		// nudging it here would feed straight back into next frame's
-		// movement math and drift.
-		// Roll only bounces for the tap reaction, never while actually
-		// rolling -- a wheeled pet gliding smoothly is the whole point of
-		// giving it its own style instead of reusing Walk/Hop.
-		final movingBounce = walking && moveStyle != Roll;
-		if (moveStyle != Fly && (movingBounce || tapBounceTimer > 0))
-		{
-			final hopping = (moveStyle == Hop);
-			bobPhase += elapsed * (hopping ? HOP_SPEED : BOB_SPEED);
-
-			// 0 at ground contact (start/end of each arc), 1 at the peak.
-			final arc = Math.abs(Math.sin(bobPhase));
-			y -= arc * (hopping ? HOP_HEIGHT : BOB_HEIGHT);
-
-			if (hopping)
+			if (movedX * movedX + movedY * movedY <= DRAG_TAP_THRESHOLD * DRAG_TAP_THRESHOLD)
 			{
-				// Squashed wide/flat right at ground contact, back to its
-				// normal proportions by the top of the arc -- the "IS its
-				// walk cycle" bounce Hop pets don't get from frames.
-				final squash = (1 - arc) * HOP_SQUASH;
-				scale.set(baseScale * (1 + squash), baseScale * (1 - squash));
+				dance(true);
+				tapBounceTimer = TAP_BOUNCE_DURATION;
 			}
+
+			_pickNewIdlePause();
 		}
-		else
+		else if (pointerOk && !dragging && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
 		{
+			// Grabbed -- keep wherever on the sprite it was picked up
+			// instead of snapping its origin to the cursor.
+			dragging = true;
+
+			final mp = FlxG.mouse.getWorldPosition(hitCamera);
+			dragOffsetX = x - mp.x;
+			dragOffsetY = y - mp.y;
+			dragStartX = mp.x;
+			dragStartY = mp.y;
+		}
+
+		if (dragging)
+		{
+			final mp = FlxG.mouse.getWorldPosition(hitCamera);
+			x = mp.x + dragOffsetX;
+			y = mp.y + dragOffsetY;
+
+			// Still can't be dragged off screen -- the full range, not
+			// the style-specific band (Fly's upper-half limit, ground's
+			// fixed line). Those resume the instant it's let go, in the
+			// normal (non-dragging) branch below.
+			x = FlxMath.bound(x, 0, Math.max(0, FlxG.width - width));
+			y = FlxMath.bound(y, 0, Math.max(0, FlxG.height - height));
+
 			bobPhase = 0;
 			if (moveStyle == Hop) scale.set(baseScale, baseScale);
 		}
+		else
+		{
+			switch (moveStyle)
+			{
+				case Shuffle:
+					// Never translates -- just keeps cycling idle pauses so its
+					// own timing stays consistent with Walk/Fly, x/y just never move.
+					idleTimer -= elapsed;
+					if (idleTimer <= 0) _pickNewIdlePause();
+
+				case Walk, Hop, Roll:
+					_updateGroundMovement(elapsed);
+
+				case Fly:
+					_updateFlightMovement(elapsed);
+			}
+
+			// Bounds are read live off FlxG.width/height every frame, never
+			// cached -- these already track the CURRENT aspect-ratio mode (fit
+			// vs. expand vs. stretch, see FunkinRatioScaleMode.updateGameSize(),
+			// which reassigns FlxG.width/height whenever that mode or the
+			// device orientation changes). Re-deriving both x and y bounds here
+			// instead of trusting a value computed once at spawn/idle-pick time
+			// keeps the whole hitbox on screen -- every side, not just where it
+			// happened to be -- through any of those changes mid-session.
+			x = FlxMath.bound(x, 0, Math.max(0, FlxG.width - width));
+
+			if (moveStyle == Fly)
+				y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
+			else
+				// Walk/Hop/Roll/Shuffle are ground-anchored -- always exactly
+				// on the current bottom edge, not just clamped into range,
+				// since nothing else ever moves their y.
+				y = FlxG.height - height - GROUND_MARGIN;
+
+			// The animation-frame fix below (isAnimFinished()) sells the pet's
+			// OWN art; this sells the movement itself -- a hop timed to actual
+			// travel, so walking/reacting reads as physical motion with some
+			// weight instead of gliding on a fixed line. Ground styles only
+			// (Walk/Hop/Roll/Shuffle): their y is fully recomputed from the
+			// current screen bottom every frame just above, so this offset
+			// never carries over into next frame's position. Deliberately
+			// excluded for Fly -- its y IS the authoritative, carried-over-
+			// frame flight position (see _updateFlightMovement above), so
+			// nudging it here would feed straight back into next frame's
+			// movement math and drift.
+			// Roll only bounces for the tap reaction, never while actually
+			// rolling -- a wheeled pet gliding smoothly is the whole point of
+			// giving it its own style instead of reusing Walk/Hop.
+			final movingBounce = walking && moveStyle != Roll;
+			if (moveStyle != Fly && (movingBounce || tapBounceTimer > 0))
+			{
+				final hopping = (moveStyle == Hop);
+				bobPhase += elapsed * (hopping ? HOP_SPEED : BOB_SPEED);
+
+				// 0 at ground contact (start/end of each arc), 1 at the peak.
+				final arc = Math.abs(Math.sin(bobPhase));
+				y -= arc * (hopping ? HOP_HEIGHT : BOB_HEIGHT);
+
+				if (hopping)
+				{
+					// Squashed wide/flat right at ground contact, back to its
+					// normal proportions by the top of the arc -- the "IS its
+					// walk cycle" bounce Hop pets don't get from frames.
+					final squash = (1 - arc) * HOP_SQUASH;
+					scale.set(baseScale * (1 + squash), baseScale * (1 - squash));
+				}
+			}
+			else
+			{
+				bobPhase = 0;
+				if (moveStyle == Hop) scale.set(baseScale, baseScale);
+			}
+		}
+
+		if (tapBounceTimer > 0) tapBounceTimer -= elapsed;
 
 		super.update(elapsed);
 
