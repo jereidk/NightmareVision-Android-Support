@@ -111,6 +111,12 @@ class ClientPrefs
 	
 	@saveVar public static var streamedMusic:Bool = false;
 
+	// Free-roaming desktop-companion pet -- see funkin.objects.ShimejiCompanion
+	// and MusicBeatState.hx/MusicBeatSubstate.hx's addShimeji(). Opt-in
+	// (default off); uses whatever pet is already equipped (equipment.get('pet')),
+	// never shown during an actual gameplay session (PlayState.instance != null).
+	@saveVar public static var shimejiEnabled:Bool = false;
+
 	// Toggle for LoadingState's background-thread preload/prefetch
 	// (startPreload()/prefetchSong() in LoadingState.hx). Default ON since
 	// it's what avoids the freeze-on-transition this whole system exists

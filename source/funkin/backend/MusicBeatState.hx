@@ -159,6 +159,46 @@ class MusicBeatState extends FlxUIState
 	}
 	#end
 
+	// Free-roaming desktop-companion pet (see funkin.objects.ShimejiCompanion).
+	// Not #if mobile-gated -- reacts to FlxG.mouse, which already covers touch
+	// on mobile the same way ControlsSubState.hx's own tap handling does.
+	// Own camera per layer, same reasoning as virtualPad/virtualPadCam above:
+	// FunkinGame.switchState()'s FlxG.cameras.reset() destroys every camera on
+	// every full switch, so nothing here can assume one survives past its own
+	// owning state's lifetime -- each state creates and destroys its own.
+	public var shimeji:funkin.objects.ShimejiCompanion;
+	public var shimejiCam:FlxCamera;
+
+	public function addShimeji():Void
+	{
+		if (!ClientPrefs.shimejiEnabled) return;
+		if (funkin.states.PlayState.instance != null) return;
+		if ((ClientPrefs.equipment.get('pet') ?? '').length == 0) return;
+
+		shimeji = new funkin.objects.ShimejiCompanion();
+		shimejiCam = new FlxCamera();
+		shimejiCam.bgColor.alpha = 0;
+		FlxG.cameras.add(shimejiCam, false);
+		shimeji.cameras = [shimejiCam];
+		add(shimeji);
+	}
+
+	public function removeShimeji():Void
+	{
+		if (shimeji != null)
+		{
+			remove(shimeji);
+			shimeji = FlxDestroyUtil.destroy(shimeji);
+		}
+
+		if (shimejiCam != null)
+		{
+			// Same reset()-already-beat-us-to-it guard as removeVirtualPad() above.
+			if (FlxG.cameras.list.indexOf(shimejiCam) != -1) FlxG.cameras.remove(shimejiCam);
+			shimejiCam = FlxDestroyUtil.destroy(shimejiCam);
+		}
+	}
+
 	// poppy playtime (rozebud edition)
 	private static var playTimeHooksBound:Bool = false;
 	private static var playTimeDirty:Bool = false;
@@ -303,6 +343,7 @@ class MusicBeatState extends FlxUIState
 		
 		PluginsManager.callOnScripts('onStateCreate');
 		GlobalScriptManager.instance?.onStateCreate(this);
+		addShimeji();
 	}
 	
 	var _updatedMods:Bool = false;
@@ -504,6 +545,8 @@ class MusicBeatState extends FlxUIState
 		removeVirtualPad();
 		removeMobileControls();
 		#end
+
+		removeShimeji();
 	}
 	
 	override function closeSubState()

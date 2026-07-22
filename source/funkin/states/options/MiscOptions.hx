@@ -17,6 +17,13 @@ class MiscOptions
 		opts.push(new Option(Lang.str('opt_splashscreen', 'NMV Splash Screen'),
 			Lang.str('opt_splashscreen_desc', "If unchecked, it will completely skip the splash screen upon the engine's boot up."), 'toggleSplashScreen', 'bool', true));
 
+		opts.push(new Option(Lang.str('opt_category_companion', 'Companion').toUpperCase(), '', '', 'label'));
+
+		opts.push(new Option(Lang.str('opt_shimeji', 'Desktop Companion'),
+			Lang.str('opt_shimeji_desc',
+				"If checked, your currently equipped pet wanders around the screen and reacts when tapped, everywhere except during an actual song.\nEquip a pet first from the Locker -- this has nothing to show without one."),
+			'shimejiEnabled', 'bool', false));
+
 		opts.push(new Option(Lang.str('opt_category_developer', 'Developer').toUpperCase(), '', '', 'label'));
 
 		// defaultValue was 'true' (inherited from upstream) -- ClientPrefs.

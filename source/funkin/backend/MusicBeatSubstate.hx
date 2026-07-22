@@ -36,6 +36,14 @@ class MusicBeatSubstate extends FlxSubState
 		_previousInstance = instance;
 		instance = this;
 		#if mobile controls.isInSubstate = true; #end
+
+		// Not every substate calls initStateScript() (only ~11 of the ~30
+		// MusicBeatSubstate subclasses do, confirmed via grep), so this can't
+		// piggyback that call's GlobalScriptManager hook the way
+		// MusicBeatState.hx's addShimeji() does off its own unconditional
+		// create() override -- the constructor is the only thing every
+		// subclass is guaranteed to run.
+		addShimeji();
 	}
 	
 	public var curSection:Int = 0;
@@ -183,6 +191,91 @@ class MusicBeatSubstate extends FlxSubState
 		}
 	}
 	#end
+
+	// Free-roaming desktop-companion pet (see funkin.objects.ShimejiCompanion
+	// and MusicBeatState.hx's matching addShimeji()/removeShimeji() -- same
+	// per-layer-owned-camera reasoning there). A substate opening on top of an
+	// already-visible companion (the base state's, or another substate's)
+	// must hide that one first, or two would render stacked at once, since
+	// every layer here gets its own instance. Mirrors addVirtualPad()'s
+	// _hidParentPad chain above, but checks _previousInstance (this
+	// substate's own immediate predecessor, correct at any nesting depth)
+	// first, falling back to the base MusicBeatState only when this is the
+	// outermost substate.
+	public var shimeji:funkin.objects.ShimejiCompanion;
+	public var shimejiCam:FlxCamera;
+	var _hidPreviousShimeji:Bool = false;
+
+	public function addShimeji():Void
+	{
+		if (!ClientPrefs.shimejiEnabled) return;
+		if (funkin.states.PlayState.instance != null) return;
+		if ((ClientPrefs.equipment.get('pet') ?? '').length == 0) return;
+		// Transition substates (BaseTransitionState and its subclasses, e.g.
+		// SwipeTransition) open and close on EVERY single state creation --
+		// MusicBeatState.create() opens one before its own addShimeji() call
+		// even runs. Giving one its own companion would spawn-then-instantly-
+		// destroy a second instance on every scene change, fighting the real
+		// one's position bookkeeping for no visible benefit (a transition
+		// overlay has nothing for a companion to meaningfully react to).
+		if (Std.isOfType(this, funkin.backend.BaseTransitionState)) return;
+
+		shimeji = new funkin.objects.ShimejiCompanion();
+		shimejiCam = new FlxCamera();
+		shimejiCam.bgColor.alpha = 0;
+		FlxG.cameras.add(shimejiCam, false);
+		shimeji.cameras = [shimejiCam];
+		add(shimeji);
+
+		if (_previousInstance != null)
+		{
+			if (_previousInstance.shimeji != null && _previousInstance.shimeji.visible)
+			{
+				_previousInstance.shimeji.visible = false;
+				_hidPreviousShimeji = true;
+			}
+		}
+		else
+		{
+			final parent = funkin.backend.MusicBeatState.instance;
+			if (parent != null && parent.shimeji != null && parent.shimeji.visible)
+			{
+				parent.shimeji.visible = false;
+				_hidPreviousShimeji = true;
+			}
+		}
+	}
+
+	public function removeShimeji():Void
+	{
+		if (shimeji != null)
+		{
+			remove(shimeji);
+			shimeji = FlxDestroyUtil.destroy(shimeji);
+		}
+
+		if (shimejiCam != null)
+		{
+			// Same reset()-already-beat-us-to-it guard as MusicBeatState's own.
+			if (FlxG.cameras.list.indexOf(shimejiCam) != -1) FlxG.cameras.remove(shimejiCam);
+			shimejiCam = FlxDestroyUtil.destroy(shimejiCam);
+		}
+
+		if (_hidPreviousShimeji)
+		{
+			_hidPreviousShimeji = false;
+
+			if (_previousInstance != null)
+			{
+				if (_previousInstance.exists && _previousInstance.shimeji != null) _previousInstance.shimeji.visible = true;
+			}
+			else
+			{
+				final parent = funkin.backend.MusicBeatState.instance;
+				if (parent != null && parent.shimeji != null && parent.shimeji.exists) parent.shimeji.visible = true;
+			}
+		}
+	}
 
 	public var scripted:Bool = false;
 	public var scriptName:String = '';
@@ -332,6 +425,11 @@ class MusicBeatSubstate extends FlxSubState
 	
 	override function destroy()
 	{
+		// Must run before _previousInstance gets nulled out below (inside the
+		// #if mobile instance-chain fixup) -- removeShimeji() needs to read it
+		// to know which layer's companion to restore.
+		removeShimeji();
+
 		scriptGroup.call('onDestroy', _emptyArgs);
 
 		scriptGroup = FlxDestroyUtil.destroy(scriptGroup);
