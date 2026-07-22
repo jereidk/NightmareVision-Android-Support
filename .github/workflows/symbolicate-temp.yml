@@ -1,0 +1,56 @@
+name: TEMP - Symbolicate native crash trace
+
+# One-shot diagnostic workflow: downloads the unstripped libApplicationMain.so
+# artifact from a specified devBuilds.yml run (already built by the
+# arm64-debugsymbols target -- no recompiling here) and resolves a fixed list
+# of rel_pc offsets from a captured native_crash_trace.log's crashing thread
+# via addr2line. Delete once the touch-nav crash investigation is closed.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'devBuilds.yml run ID that produced the unstripped .so artifact'
+        required: true
+        type: string
+
+jobs:
+  symbolicate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download unstripped .so artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: Unstripped libApplicationMain.so (Android ARM64)
+          path: unstripped
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Locate NDK addr2line
+        id: ndk
+        run: |
+          NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          A2L="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-addr2line"
+          if [ ! -f "$A2L" ]; then
+            echo "llvm-addr2line not found at $A2L, falling back to system addr2line"
+            A2L="addr2line"
+          fi
+          echo "bin=$A2L" >> "$GITHUB_OUTPUT"
+
+      - name: Symbolicate crashing thread's backtrace (SDLThread tid=29163)
+        run: |
+          set -euo pipefail
+          SO="unstripped/libApplicationMain.so"
+          ls -la "$SO"
+          file "$SO"
+          echo ""
+          echo "=== Frames 0-20 (unresolved app-code frames from the tombstone, innermost first) ==="
+          OFFSETS="0xd49ae4 0x16a9d3c 0x80903c 0x1ba0298 0x1b9f7e4 0x1b9f64c 0x933564 0x11e0340 0x933564 0x16f80c4 0x16f81b4 0x8103d8 0x1dbff54 0x1dc0068 0x1f450a0 0x3774e8 0x376640 0x1dbf068 0x1b32b9c 0xce4b0c 0xce3cc0"
+          i=0
+          for off in $OFFSETS; do
+            echo "--- frame $i (rel_pc=$off) ---"
+            ${{ steps.ndk.outputs.bin }} -f -C -i -e "$SO" "$off" || echo "FAILED to resolve $off"
+            i=$((i+1))
+          done
+          echo ""
+          echo "=== Frame 21 (expected: hxcpp_main, sanity check) ==="
+          ${{ steps.ndk.outputs.bin }} -f -C -i -e "$SO" 0x1ed3d3c
