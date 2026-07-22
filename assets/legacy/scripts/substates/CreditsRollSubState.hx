@@ -532,9 +532,20 @@ function loadCredits():Void
 {
 	for (sprite in creditsGroup)
 		sprite.destroy();
-		
+
 	creditsGroup.clear();
-	
+
+	// outline2.frag has no per-instance uniforms (only bitmap/
+	// openfl_TextureCoordv, which OpenFL rebinds per sprite automatically at
+	// draw time) -- one shared instance is enough for every icon below.
+	// newShader() creates a brand new FunkinRuntimeShader (reads the source
+	// off disk and compiles it) EVERY call; with 120+ credited people having
+	// an icon, doing that per-icon instead of once was most of this
+	// function's cost -- confirmed via CreditsRollSubState::onLoad taking
+	// 6.3s in a device log, ~3s of which was a separate FlxAnimate atlas
+	// load, leaving the rest unaccounted for until this loop.
+	var iconOutlineShader = newShader('outline2');
+
 	var y:Float = 0;
 	for (credit in credits)
 	{
@@ -578,7 +589,7 @@ function loadCredits():Void
 			var icon:FlxSprite = new FlxSprite(0, 0, Paths.image(iconExists ? iconPath : 'credits/icons/unknown', null, null, PathsTestMode.LOOSE));
 			
 			icon.visible = iconExists;
-			icon.shader = newShader('outline2');
+			icon.shader = iconOutlineShader;
 			icon.scale.set(isFlagIcon ? .5 : .5, isFlagIcon ? .5 : .5);
 			icon.updateHitbox();
 			
