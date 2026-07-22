@@ -107,6 +107,7 @@ class ShimejiCompanion extends Pet
 	// Keep flyers in the upper half-ish of the screen, out of the way of
 	// bottom-anchored HUD/virtual-pad chrome most menus have.
 	static inline final FLY_MAX_Y_FRACTION:Float = 0.55;
+	static inline final GROUND_MARGIN:Float = 40;
 	static inline final IDLE_MIN:Float = 2;
 	static inline final IDLE_MAX:Float = 6;
 
@@ -143,8 +144,10 @@ class ShimejiCompanion extends Pet
 		else
 		{
 			// First-ever spawn this session -- rest near the bottom middle.
+			// update() re-anchors y live every frame anyway (see below), this
+			// is just what's on screen for the first frame before that runs.
 			x = (FlxG.width - width) * 0.5;
-			y = FlxG.height - height - 40;
+			y = FlxG.height - height - GROUND_MARGIN;
 		}
 
 		_pickNewIdlePause();
@@ -246,8 +249,23 @@ class ShimejiCompanion extends Pet
 				_updateFlightMovement(elapsed);
 		}
 
+		// Bounds are read live off FlxG.width/height every frame, never
+		// cached -- these already track the CURRENT aspect-ratio mode (fit
+		// vs. expand vs. stretch, see FunkinRatioScaleMode.updateGameSize(),
+		// which reassigns FlxG.width/height whenever that mode or the
+		// device orientation changes). Re-deriving both x and y bounds here
+		// instead of trusting a value computed once at spawn/idle-pick time
+		// keeps the whole hitbox on screen -- every side, not just where it
+		// happened to be -- through any of those changes mid-session.
 		x = FlxMath.bound(x, 0, Math.max(0, FlxG.width - width));
-		if (moveStyle == Fly) y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
+
+		if (moveStyle == Fly)
+			y = FlxMath.bound(y, FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
+		else
+			// Walk/Shuffle are ground-anchored -- always exactly on the
+			// current bottom edge, not just clamped into range, since
+			// nothing else ever moves their y.
+			y = FlxG.height - height - GROUND_MARGIN;
 
 		#if mobile
 		final pointerOk = MobileNavUtil.allowPointerNav();
