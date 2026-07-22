@@ -191,10 +191,9 @@ class Conductor
 			return;
 		}
 		
-		var initialBeats:Int = (song.notes[0]?.sectionBeats ?? 4);
-		bpmChangeMap = defaultBPMChangeMap(song.bpm, initialBeats);
-		
-		var curSectionBeats:Int = initialBeats;
+		bpmChangeMap = defaultBPMChangeMap(song.bpm);
+
+		var curSectionBeats:Int = 4;
 		var curBPM:Float = song.bpm;
 		var totalSteps:Int = 0;
 		var totalPos:Float = 0;

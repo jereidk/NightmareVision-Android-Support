@@ -216,8 +216,9 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		}
 		
 		final timeStr:String = FlxStringUtil.formatTime(skipToTime / 1000, false);
-		
-		skipToTimeOption.text = (Lang.hasSpecial('rightToLeft') ? '$timeStr \t$skipStr' : '$skipStr \t$timeStr');
+		final lengthStr:String = FlxStringUtil.formatTime((PlayState.instance.audio.inst?.length ?? PlayState.instance.songLength) / 1000, false);
+
+		skipToTimeOption.text = (Lang.hasSpecial('rightToLeft') ? '$timeStr / $lengthStr \t$skipStr' : '$skipStr \t$timeStr / $lengthStr');
 	}
 	
 	public function changeSkipTime(secs:Float /* wait thats funny */):Void
