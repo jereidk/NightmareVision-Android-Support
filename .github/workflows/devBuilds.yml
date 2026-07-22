@@ -30,6 +30,10 @@ on:
         description: 'Space-separated hex rel_pc offsets (e.g. "0xd49ae4 0x16a9d3c ...") from a native_crash_trace.log crashing thread, innermost frame first.'
         required: false
         type: string
+      inspect_glob:
+        description: 'Diagnostic: find(1) -path glob under .haxelib to cat (e.g. "*flixel-animate*/src/animate/internal/FilterRenderer.hx"). Leave empty to skip. See the InspectSource job.'
+        required: false
+        type: string
   workflow_call:
     inputs:
       buildFlags:
@@ -46,7 +50,7 @@ jobs:
     # workflow_dispatch respects `target`, defaulting to arm64-only so an
     # unattended "Run workflow" click doesn't burn CI minutes on ABIs nobody
     # asked for.
-    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'fat' || inputs.target == 'all') && inputs.symbolicate_run_id == ''
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'fat' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == ''
     runs-on: ubuntu-latest
     # actions: write is only used by the cache-pruning steps below (gh api
     # DELETE on stale Actions caches); contents: read is what checkout needs.
@@ -491,7 +495,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64:
     name: Build Android (ARM64)
-    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm64' || inputs.target == 'all') && inputs.symbolicate_run_id == ''
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm64' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -924,7 +928,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM32:
     name: Build Android (ARM32)
-    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm32' || inputs.target == 'all') && inputs.symbolicate_run_id == ''
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm32' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1382,7 +1386,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────────
   Android-ARM64-DebugSymbols:
     name: Build Android (ARM64, debug symbols)
-    if: inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == ''
+    if: inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == '' && inputs.inspect_glob == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1824,7 +1828,7 @@ jobs:
   Prune-DebugSymbols-Cache:
     name: Prune stale debug-symbols hxcpp cache
     needs: Android-ARM64-DebugSymbols
-    if: always() && inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == ''
+    if: always() && inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == '' && inputs.inspect_glob == ''
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -1904,3 +1908,50 @@ jobs:
             "${{ steps.ndk.outputs.bin }}" -f -C -i -e "$SO" "$off" || echo "FAILED to resolve $off"
             i=$((i+1))
           done
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # Reusable job to inspect a haxelib dependency's actual source (e.g. to write
+  # a precise patch against third-party code like flixel-animate without
+  # guessing at its exact text). Only sets up Haxe/haxelib and installs
+  # dependencies -- no compiling -- so it's fast. Only runs when inspect_glob
+  # is explicitly provided.
+  # ───────────────────────────────────────────────────────────────────────────────
+  InspectSource:
+    name: Inspect haxelib source
+    if: inputs.inspect_glob != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install --force
+
+      - name: List matches
+        run: |
+          find .haxelib -path "${{ inputs.inspect_glob }}" -type f 2>/dev/null | tee /tmp/matches.txt
+          if [ ! -s /tmp/matches.txt ]; then
+            echo "No files matched glob: ${{ inputs.inspect_glob }}"
+            exit 1
+          fi
+
+      - name: Cat matched files
+        run: |
+          while IFS= read -r f; do
+            echo "=== $f ==="
+            cat -n "$f"
+            echo ""
+          done < /tmp/matches.txt
