@@ -412,6 +412,16 @@ jobs:
       - name: Enable native debug symbols output for release
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
+      # Adds a Gradle task (extractNativeSymbols) to Lime's build.gradle
+      # template that reads the unstripped .so straight out of
+      # src/main/jniLibs (already there before Gradle even starts -- see the
+      # script's own doc comment) and writes the symbol table asset before
+      # Gradle's own asset-merge task runs. Lets the single Compile step
+      # below produce a fully-packaged APK with the symbol table already
+      # bundled, no second "lime build android" repackage pass needed.
+      - name: Enable in-pipeline symbol table extraction
+        run: bash .github/scripts/patch-lime-gradle-symbol-extraction.sh
+
       - name: Cache hxcpp compile cache
         uses: actions/cache@v4
         with:
@@ -449,53 +459,24 @@ jobs:
       # full investigation of why this, not Gradle's debugSymbolLevel, is
       # the only reliable source of our own library's debug info) -- doesn't
       # change what actually ships: Gradle's own packaging always re-strips
-      # the final APK's .so regardless of this flag. Needed here so the
-      # "Extract native symbol tables" step below has something to read from
-      # before this same job repackages the real APK further down.
+      # the final APK's .so regardless of this flag. Needed so the
+      # extractNativeSymbols Gradle task (added above) has an unstripped .so
+      # to read from src/main/jniLibs before Gradle packages assets.
+      # SYMBOL_EXTRACT_SCRIPT is an absolute path (the generated Android
+      # project lives several directories deep under export/, so a relative
+      # path from build.gradle wouldn't reliably resolve) -- that Gradle
+      # task writes symbols-{arm64,armv7}.txt straight into the generated
+      # project's own src/main/assets/data/, so this single invocation
+      # produces a fully-packaged APK with the symbol table already bundled.
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: "4"
           HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
+          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-symbol-table.sh
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
-          BUILD_FLAGS="${{inputs.buildFlags}}"
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
-          else
-            haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK
-          fi
-
-      # Writes assets/embeds/data/symbols-{arm64,armv7}.txt (gitignored,
-      # generated per-build) from the unstripped .so this same Compile step
-      # just produced -- see extract-symbol-table.sh's own doc comment for
-      # the format. Both architectures get their own table since this job
-      # (unlike Android-ARM64/ARM32) builds both in one pass. Bundled into
-      # the APK by the repackage step below so the app can resolve its own
-      # native_crash_trace.log crashes on next launch without any external
-      # tooling.
-      - name: Extract native symbol tables
-        run: |
-          BUILD_DIR="export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}"
-          bash .github/scripts/extract-symbol-table.sh \
-            "$BUILD_DIR/android/obj/libApplicationMain-64.so" \
-            assets/embeds/data/symbols-arm64.txt
-          bash .github/scripts/extract-symbol-table.sh \
-            "$BUILD_DIR/android/obj/libApplicationMain-v7.so" \
-            assets/embeds/data/symbols-armv7.txt
-
-      # Repackages the APK now that the symbol table assets exist -- hxcpp's
-      # own object cache means the native .so itself doesn't need relinking
-      # (nothing it depends on changed), so this only redoes Gradle's own
-      # asset-packaging + APK assembly, not a full native rebuild.
-      - name: Compile (repackage with symbol tables)
-        env:
-          HXCPP_COMPILE_THREADS: "4"
-          HXCPP_CACHE_MB: "4000"
-          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
-        run: |
-          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
@@ -868,6 +849,10 @@ jobs:
       - name: Enable native debug symbols output for release
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
+      # See the fat Android job's identical step for the full reasoning.
+      - name: Enable in-pipeline symbol table extraction
+        run: bash .github/scripts/patch-lime-gradle-symbol-extraction.sh
+
       - name: Cache hxcpp build artifacts (ARM64)
         uses: actions/cache@v4
         with:
@@ -921,38 +906,17 @@ jobs:
       # into export/.../obj above. Matches this job's own cache path (added
       # ~/.hxcpp_cache to the step above) instead of introducing a second cache.
       # -D HXCPP_DEBUG_LINK: see the fat Android job's identical Compile step
-      # comment for why this is here (needed by "Extract native symbol
-      # tables" below; doesn't change what actually ships).
+      # comment for why this is here (needed by the extractNativeSymbols
+      # Gradle task; doesn't change what actually ships).
       - name: Compile
         env:
           HXCPP_COMPILE_THREADS: 4
           HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
+          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-symbol-table.sh
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
-          BUILD_FLAGS="${{inputs.buildFlags}}"
-          if [ -n "$BUILD_FLAGS" ]; then
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
-          else
-            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
-          fi
-
-      # See the fat Android job's identical step for the full reasoning.
-      - name: Extract native symbol tables
-        run: |
-          BUILD_DIR="export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}"
-          bash .github/scripts/extract-symbol-table.sh \
-            "$BUILD_DIR/android/obj/libApplicationMain-64.so" \
-            assets/embeds/data/symbols-arm64.txt
-
-      - name: Compile (repackage with symbol tables)
-        env:
-          HXCPP_COMPILE_THREADS: 4
-          HXCPP_CACHE_MB: "4000"
-          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
-        run: |
-          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           BUILD_FLAGS="${{inputs.buildFlags}}"
           if [ -n "$BUILD_FLAGS" ]; then
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
