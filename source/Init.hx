@@ -9,6 +9,7 @@ import flixel.input.keyboard.FlxKey;
 import funkin.backend.math.Vector3;
 import funkin.backend.Logger;
 import funkin.backend.Logger.Severity;
+import StringTools;
 
 /**
  * Initiation state that prepares backend classes and returns to menus when finished
@@ -100,7 +101,12 @@ class Init extends FlxState
 			//    also have a pending crash.log would risk losing that trace for
 			//    good to another app's crash evicting it, not just delaying
 			//    when we'd notice it.
-			final nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
+			var nativeInfo = mobile.backend.JavaCrashHandler.readPreviousNativeCrash();
+			// Resolves each reported trace's crashing thread against the
+			// bundled per-ABI symbol table (see resolveNativeCrashTraces()'s
+			// own doc comment) -- best-effort, never removes anything from
+			// the original summary even if resolution fails entirely.
+			if (nativeInfo != null) nativeInfo = resolveNativeCrashTraces(nativeInfo);
 
 			if (crashLogMessage != null && nativeInfo != null && nativeInfo.length > 0)
 				_pendingCrashMessage = crashLogMessage + '\n\n=== Crash nativo (misma o distinta sesión) ===\n\n' + nativeInfo;
@@ -339,4 +345,74 @@ class Init extends FlxState
 		final nextState:Class<FlxState> = Main.startMeta.skipSplash || !ClientPrefs.toggleSplashScreen ? Main.startMeta.initialState : Splash;
 		FlxG.switchState(() -> Type.createInstance(nextState, []));
 	}
+
+	#if (android && sys)
+	/**
+	 * Extracts every "Trace guardado en: <path>" entry from
+	 * JavaCrashHandler.readPreviousNativeCrash()'s summary text, resolves
+	 * each trace's crashing thread's unresolved (our own, stripped-code)
+	 * frames against the bundled per-ABI symbol table (see
+	 * TombstoneParser/SymbolResolver's own doc comments), and appends a
+	 * human-readable resolved-backtrace block right after each matching
+	 * line -- the popup and last_crash_summary.log then show function
+	 * names directly, without needing the CI Symbolicate job or the full
+	 * unstripped .so this session's crash hunts otherwise required.
+	 *
+	 * Best-effort throughout: any failure for a given trace (missing symbol
+	 * table for this build, corrupt/foreign trace, nothing to resolve) just
+	 * skips that one trace -- the original summary text is never altered or
+	 * removed, only ever appended to.
+	 */
+	static function resolveNativeCrashTraces(info:String):String
+	{
+		final marker = 'Trace guardado en: ';
+		final lines = info.split('\n');
+		final out:Array<String> = [];
+
+		for (line in lines)
+		{
+			out.push(line);
+
+			final idx = line.indexOf(marker);
+			if (idx < 0) continue;
+
+			final tracePath = line.substr(idx + marker.length);
+			if (tracePath.length == 0) continue;
+
+			try
+			{
+				final resolved = resolveOneTrace(tracePath);
+				if (resolved != null) out.push(resolved);
+			}
+			catch (e:Dynamic) {}
+		}
+
+		return out.join('\n');
+	}
+
+	static function resolveOneTrace(tracePath:String):Null<String>
+	{
+		final threadInfo = mobile.backend.TombstoneParser.parse(tracePath);
+		if (threadInfo == null) return null;
+
+		final abi = mobile.backend.TombstoneParser.readHeaderField(tracePath, 'abi');
+		if (!mobile.backend.SymbolResolver.load(abi)) return null;
+
+		final resolvedLines:Array<String> = [];
+		for (frame in threadInfo.frames)
+		{
+			if (frame.funcName != '') continue; // already resolved by the OS's own unwinder
+			if (frame.fileName.indexOf('base.apk') < 0) continue; // not our own code
+
+			final name = mobile.backend.SymbolResolver.resolve(frame.relPc);
+			if (name == null) continue;
+
+			resolvedLines.push('    0x' + StringTools.hex(frame.relPc) + ': ' + name);
+		}
+
+		if (resolvedLines.length == 0) return null;
+
+		return '  Hilo crasheado: ${threadInfo.name} (tid=${threadInfo.tid})\n  Backtrace resuelto:\n' + resolvedLines.join('\n');
+	}
+	#end
 }
