@@ -979,16 +979,25 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			defaultVal: 'Normal'
 		});
 
-		// Visual skin for the on-screen pad buttons (applies to both menu-nav and
-		// gameplay pads). Modern = translucent glass circles + FNF note arrows.
-		_opts.push({
-			id: 'padSkin', kind: 'string',
-			label: Lang.str('opt_padskin', 'Pad Skin'),
-			desc:  Lang.str('opt_padskin_desc', 'Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.'),
-			choices: [Lang.str('choice_padskin_modern', 'Modern'), Lang.str('choice_padskin_classic', 'Classic')],
-			stored:  ['modern', 'classic'],
-			defaultVal: 'modern'
-		});
+		// Visual skin for the on-screen pad buttons -- applies to BOTH the
+		// menu-nav pad (shown whenever navInputMode == 'Virtual Pad', on any
+		// screen) and the gameplay pad (gameInputMode == 'Virtual Pad'), so
+		// it needs its own condition rather than living inside the
+		// gameInputMode-only branch below: hiding it whenever neither pad
+		// can ever appear (e.g. Touch nav + Hitbox gameplay, where no
+		// virtual pad exists anywhere) instead of showing a skin picker with
+		// nothing on screen for it to actually change.
+		if (ClientPrefs.navInputMode == 'Virtual Pad' || ClientPrefs.gameInputMode == 'Virtual Pad')
+		{
+			_opts.push({
+				id: 'padSkin', kind: 'string',
+				label: Lang.str('opt_padskin', 'Pad Skin'),
+				desc:  Lang.str('opt_padskin_desc', 'Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.'),
+				choices: [Lang.str('choice_padskin_modern', 'Modern'), Lang.str('choice_padskin_classic', 'Classic')],
+				stored:  ['modern', 'classic'],
+				defaultVal: 'modern'
+			});
+		}
 
 		if (ClientPrefs.gameInputMode == 'Hitbox')
 		{
