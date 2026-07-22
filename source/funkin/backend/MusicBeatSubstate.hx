@@ -108,7 +108,18 @@ class MusicBeatSubstate extends FlxSubState
 		if (virtualPad != null)
 		{
 			remove(virtualPad);
-			virtualPad = FlxDestroyUtil.destroy(virtualPad);
+			// TEMP EXPERIMENT (touch-nav crash bisection): skip the actual
+			// destroy() -- deliberately leaked, diagnostic-only. Tests whether
+			// destroying this whole batch of buttons/labels/tweens at once is
+			// what leaves something native-level corrupted, which a later
+			// touch's FlxG.mouse.overlaps() calls (the only thing guaranteed
+			// to run on every single tap regardless of position) then trips
+			// over. If the crash disappears with this in place, destroy() is
+			// confirmed as the trigger; if it still crashes, look elsewhere.
+			// Revert to `virtualPad = FlxDestroyUtil.destroy(virtualPad);`
+			// once resolved either way.
+			virtualPad.kill();
+			virtualPad = null;
 		}
 
 		// Un-hide the parent state's pad if we were the one hiding it (see
@@ -128,8 +139,9 @@ class MusicBeatSubstate extends FlxSubState
 			// already wiped this camera via FlxG.cameras.reset(), so check
 			// before removing again to avoid the "not a part of the game"
 			// warning.
+			// TEMP EXPERIMENT: same as above -- skip destroy(), just detach.
 			if (FlxG.cameras.list.indexOf(virtualPadCam) != -1) FlxG.cameras.remove(virtualPadCam);
-			virtualPadCam = FlxDestroyUtil.destroy(virtualPadCam);
+			virtualPadCam = null;
 		}
 	}
 
