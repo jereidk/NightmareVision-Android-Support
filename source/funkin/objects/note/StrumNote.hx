@@ -40,6 +40,32 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 	public static final VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL:Float = 11;
 
 	/**
+	 * Upscroll (the default) rendered the strumline flush at
+	 * safeTop + STRUMLINE_Y_OFFSET (24px) -- directly under/overlapping
+	 * PsychHUD's timeTxt/timeBar cluster, which itself sits at y=19 and
+	 * extends to roughly y=60 (timeTxt: 32pt font + 2px border; timeBar:
+	 * anchored at timeTxt.y + timeTxt.height/4, own height on top of that).
+	 * Reported via a device screenshot showing the strumline arrows
+	 * overlapping the FPS/GC debug overlay and the time HUD. Pushed below
+	 * that cluster with a safety margin; not pixel-measured against a
+	 * reference the way VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL was, so may need
+	 * another calibration pass once confirmed on-device.
+	 */
+	public static final VSLICE_UPSCROLL_Y_OFFSET:Float = 90;
+
+	/**
+	 * getVSliceOpponentBaseY() used to stay flush near the top
+	 * (safeTop + VSLICE_OPPONENT_Y_OFFSET) regardless of downScroll --
+	 * documented as matching real mobile VSlice's always-top-anchored
+	 * opponent strumline, but that was only ever confirmed against
+	 * downscroll reference screenshots. Reported on upscroll: the opponent
+	 * strumline/notes should sit further down, not hardcoded to the
+	 * downscroll position. Same not-yet-pixel-measured caveat as
+	 * VSLICE_UPSCROLL_Y_OFFSET above.
+	 */
+	public static final VSLICE_OPPONENT_UPSCROLL_Y_OFFSET:Float = 130;
+
+	/**
 	 * Real mobile VSlice (FunkinDroid) doesn't actually reuse desktop
 	 * Strumline.hx's positioning for the opponent -- it renders a small,
 	 * always-top-anchored strumline for the opponent instead of a full-size
@@ -388,28 +414,16 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 
 		final result = ClientPrefs.downScroll
 			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET + VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL)
-			: (safeTop + STRUMLINE_Y_OFFSET);
-
-		// Diagnostic for the "expand mode ignores upscroll" report -- reading
-		// this function's own inputs at the exact moment it decides top vs.
-		// bottom is the only way to tell "ClientPrefs.downScroll read true when
-		// it shouldn't have" apart from "the formula is fine but something
-		// else about 'expand' overrides/ignores the result", since nothing
-		// else in the codebase branches on aspectRatioMode == 'expand' at all
-		// (grepped the whole source tree -- only FunkinRatioScaleMode itself
-		// does). Remove once the log confirms which one it is.
-		#if android
-		Logger.log('[StrumNote] getVSliceBaseY: downScroll=${ClientPrefs.downScroll} aspectRatioMode=${ClientPrefs.aspectRatioMode} '
-			+ 'FlxG.width=${FlxG.width} FlxG.height=${FlxG.height} cutout=(${funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x},${funkin.backend.FunkinRatioScaleMode.gameCutoutSize.y}) '
-			+ 'safeTop=$safeTop safeBottom=$safeBottom -> result=$result', NOTICE);
-		#end
+			: (safeTop + VSLICE_UPSCROLL_Y_OFFSET);
 
 		return result;
 	}
 
 	/**
-	 * Y position for the opponent's compact strumline on mobile -- always
-	 * flush near the top, regardless of downscroll (see VSLICE_OPPONENT_SCALE).
+	 * Y position for the opponent's compact strumline on mobile. Downscroll
+	 * stays flush near the top (VSLICE_OPPONENT_Y_OFFSET, confirmed against
+	 * reference screenshots); upscroll uses a separate, lower offset -- see
+	 * VSLICE_OPPONENT_UPSCROLL_Y_OFFSET's doc comment.
 	 */
 	public static function getVSliceOpponentBaseY():Float
 	{
@@ -418,7 +432,7 @@ class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 		safeTop = mobile.backend.ScreenUtil.safeArea().top;
 		#end
 
-		return safeTop + VSLICE_OPPONENT_Y_OFFSET;
+		return safeTop + (ClientPrefs.downScroll ? VSLICE_OPPONENT_Y_OFFSET : VSLICE_OPPONENT_UPSCROLL_Y_OFFSET);
 	}
 
 	override function update(elapsed:Float)
