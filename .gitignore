@@ -32,3 +32,8 @@ dump/*
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Native crash symbol tables -- generated per-build by
+# .github/scripts/extract-symbol-table.sh (addresses only match the exact
+# build they came from), never source.
+/assets/embeds/data/symbols-*.txt
