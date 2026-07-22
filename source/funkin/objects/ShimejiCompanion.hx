@@ -52,12 +52,22 @@ class ShimejiCompanion extends Pet
 	// fixes "this is a portrait icon, not a character".
 	static final EXCLUDED_PETS:Array<String> = ['hampton', 'hamptonrun'];
 
+	// Keys here must be identities a player can actually equip -- i.e. an
+	// item's fileName under assets/legacy/data/cosmicube/impostor/*.json
+	// with "type":"pet" (confirmed the authoritative equip list: it's what
+	// ClientPrefs.pet's setter stores into equipment.get('pet') verbatim).
+	// A handful of assets/legacy/data/pets/*.json entries (stickminrun,
+	// elliepetrun, elliepetfall, hamptonrun, minicrewmaterun/fall,
+	// stickminfall, slugmaterun, fishuscooked, plus helicopter-toppat) are
+	// NOT in that list -- they only exist as mid-song swap targets read via
+	// each base pet's own "variants" flag (see PlayState's checkStageFlag),
+	// so ClientPrefs.equipment.get('pet') can never actually resolve to one
+	// of them and listing them here would be dead code.
 	static final MOVE_STYLES:Map<String, MoveStyle> = [
-		'stickminrun' => Walk,
 		'elliepet' => Walk,
-		'elliepetrun' => Walk,
+		'dog' => Walk,
+		'frankendog' => Walk,
 		'helicopter' => Fly,
-		'helicopter-toppat' => Fly,
 		'ufo' => Fly,
 	];
 
