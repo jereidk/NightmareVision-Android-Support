@@ -262,6 +262,26 @@ class ShimejiCompanion extends Pet
 		_pickNewIdlePause();
 	}
 
+	// FlxSprite.updateHitbox() (called by Pet._loadPetFile() on every
+	// loadPet(), i.e. construction and every RUN_VARIANTS/FALL_VARIANTS
+	// swap) always ends with centerOrigin() -- scale.set() then grows or
+	// shrinks the sprite around the FRAME CENTER, not its feet. That's
+	// exactly why Hop's squash/stretch and Fall's stretch looked wrong on
+	// device: the pet's visual bottom edge (where its own shadow art sits)
+	// drifted up/down with every bounce instead of staying planted, and
+	// its horizontal center could drift too. Re-anchoring origin to
+	// bottom-center after every hitbox update makes scale.set() grow/
+	// shrink the sprite from its feet instead -- confirmed by the same
+	// rect-position math FlxSprite itself uses (getScreenBounds()): at
+	// scale 1 (idle) the origin term cancels out entirely regardless of
+	// its value, so this only changes anything WHILE actively bounced,
+	// never the resting pose.
+	override function updateHitbox():Void
+	{
+		super.updateHitbox();
+		origin.set(frameWidth * 0.5, frameHeight);
+	}
+
 	// Used when the equipped pet changes while this instance is already on
 	// screen -- see the live pet-swap check at the top of update(). Same
 	// setup the constructor does after loading a pet, just re-run for a
@@ -315,17 +335,33 @@ class ShimejiCompanion extends Pet
 		if (curPet != baseCurPet) loadPet(baseCurPet);
 	}
 
+	// Not every pet's raw spritesheet was drawn facing the same way --
+	// Pet.loadPet() already reads each identity's own correction for that
+	// into baseFlipX (data.flip_x, "flip so this pet's DEFAULT/idle pose
+	// looks right-facing"). Setting flipX = movingLeft outright (what this
+	// used to do) threw that correction away, so any pet whose own art
+	// needed flip_x:true to look right-facing at rest ended up facing the
+	// WRONG way while moving -- confirmed on-device (report: "el pet mira
+	// a la derecha pero se va a la izquierda"). XOR-ing with baseFlipX
+	// instead preserves each pet's own correction regardless of which way
+	// its raw frames happen to be drawn.
+	inline function _faceTravelDirection(movingLeft:Bool):Void
+	{
+		flipX = (baseFlipX ?? false) != movingLeft;
+	}
+
 	function _pickNewWalkTarget():Void
 	{
 		walking = true;
 		walkTargetX = FlxG.random.float(0, Math.max(0, FlxG.width - width));
 
 		// Swap to the running variant's art before setting flipX below --
-		// loadPet() reloads flip_x from that variant's own JSON, which
-		// would otherwise clobber the facing direction we're about to set.
+		// loadPet() reloads flip_x (baseFlipX) from that variant's own
+		// JSON, which would otherwise clobber the facing direction we're
+		// about to set.
 		if (runVariant != null) loadPet(runVariant);
 
-		flipX = (walkTargetX < x);
+		_faceTravelDirection(walkTargetX < x);
 	}
 
 	function _pickNewFlyTarget():Void
@@ -333,7 +369,7 @@ class ShimejiCompanion extends Pet
 		walking = true;
 		walkTargetX = FlxG.random.float(0, Math.max(0, FlxG.width - width));
 		walkTargetY = FlxG.random.float(FLY_MIN_Y, Math.max(FLY_MIN_Y, FlxG.height * FLY_MAX_Y_FRACTION - height));
-		flipX = (walkTargetX < x);
+		_faceTravelDirection(walkTargetX < x);
 	}
 
 	function _updateGroundMovement(elapsed:Float):Void
