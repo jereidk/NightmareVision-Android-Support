@@ -173,7 +173,7 @@ class MusicBeatState extends FlxUIState
 	{
 		if (!ClientPrefs.shimejiEnabled) return;
 		if (funkin.states.PlayState.instance != null) return;
-		if ((ClientPrefs.equipment.get('pet') ?? '').length == 0) return;
+		if (!funkin.objects.ShimejiCompanion.isUsable(ClientPrefs.equipment.get('pet'))) return;
 
 		shimeji = new funkin.objects.ShimejiCompanion();
 		shimejiCam = new FlxCamera();
