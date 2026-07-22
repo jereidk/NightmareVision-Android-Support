@@ -218,7 +218,12 @@ class ShimejiCompanion extends Pet
 	// scale.x/y as loaded by Pet.loadPet() (via data.scale) -- Hop's
 	// squash/stretch multiplies on top of this every frame rather than
 	// the previous frame's already-squashed value, so it never compounds.
-	var baseScale:Float = 1;
+	// Underscore-prefixed (unlike this class's other fields) because
+	// FunkinSprite already declares its own unrelated `baseScale` (an
+	// FlxPoint, for scalableOffsets) -- Haxe doesn't allow a subclass
+	// field to redeclare a superclass field name at all, even with a
+	// different type.
+	var _baseScale:Float = 1;
 
 	// The equipped identity as of construction -- curPet itself gets
 	// overwritten by loadPet() whenever we swap to/from the running
@@ -237,7 +242,7 @@ class ShimejiCompanion extends Pet
 		baseCurPet = curPet;
 		runVariant = RUN_VARIANTS.get(baseCurPet);
 		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
-		baseScale = scale.x;
+		_baseScale = scale.x;
 
 		if (lastX != null && lastY != null)
 		{
@@ -267,7 +272,7 @@ class ShimejiCompanion extends Pet
 		loadPet(baseCurPet);
 		runVariant = RUN_VARIANTS.get(baseCurPet);
 		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
-		baseScale = scale.x;
+		_baseScale = scale.x;
 		_pickNewIdlePause();
 	}
 
@@ -462,7 +467,7 @@ class ShimejiCompanion extends Pet
 			y = FlxMath.bound(y, 0, Math.max(0, FlxG.height - height));
 
 			bobPhase = 0;
-			if (moveStyle == Hop) scale.set(baseScale, baseScale);
+			if (moveStyle == Hop) scale.set(_baseScale, _baseScale);
 		}
 		else if (falling)
 		{
@@ -477,7 +482,7 @@ class ShimejiCompanion extends Pet
 				y = restY;
 				falling = false;
 				fallVelocity = 0;
-				scale.set(baseScale, baseScale);
+				scale.set(_baseScale, _baseScale);
 
 				if (curPet != baseCurPet) loadPet(baseCurPet);
 
@@ -493,7 +498,7 @@ class ShimejiCompanion extends Pet
 				// FALL_STRETCH). Pets WITH a fall variant are already
 				// showing that real art, loaded in _startFallIfDropped(),
 				// so they don't also get stretched.
-				scale.set(baseScale * (1 - FALL_STRETCH), baseScale * (1 + FALL_STRETCH));
+				scale.set(_baseScale * (1 - FALL_STRETCH), _baseScale * (1 + FALL_STRETCH));
 			}
 		}
 		else
@@ -561,13 +566,13 @@ class ShimejiCompanion extends Pet
 					// normal proportions by the top of the arc -- the "IS its
 					// walk cycle" bounce Hop pets don't get from frames.
 					final squash = (1 - arc) * HOP_SQUASH;
-					scale.set(baseScale * (1 + squash), baseScale * (1 - squash));
+					scale.set(_baseScale * (1 + squash), _baseScale * (1 - squash));
 				}
 			}
 			else
 			{
 				bobPhase = 0;
-				if (moveStyle == Hop) scale.set(baseScale, baseScale);
+				if (moveStyle == Hop) scale.set(_baseScale, _baseScale);
 			}
 		}
 

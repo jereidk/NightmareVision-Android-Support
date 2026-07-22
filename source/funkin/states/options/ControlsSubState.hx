@@ -408,7 +408,13 @@ class ControlsSubState extends MusicBeatSubstate
 				// actual press edge, buttons only.
 				final key = FlxG.keys.firstJustPressed();
 				final gamepadCandidate = FlxG.gamepads.getFirstActiveGamepad();
-				final gamepadJustPressed = (gamepadCandidate != null && gamepadCandidate.firstJustPressedID() > -1);
+				// Typed :Int (not compared inline) so FlxGamepadInputID's
+				// `to Int` cast actually kicks in -- same reason the REBIND
+				// case below assigns to a typed Int instead of comparing
+				// the enum abstract directly; Haxe won't implicitly resolve
+				// `> -1` against the abstract on its own.
+				final gamepadFirstPressed:Int = (gamepadCandidate != null) ? gamepadCandidate.firstJustPressedID() : -1;
+				final gamepadJustPressed = (gamepadFirstPressed > -1);
 
 				device = switch (device)
 				{
