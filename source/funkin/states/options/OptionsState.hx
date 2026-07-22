@@ -934,15 +934,23 @@ class OptionsState extends MusicBeatState
 
 		if (subState != null && subState is funkin.states.substates.CreditsRollSubState) mouseControlActive = false;
 
-		// Was missing !blockInput, unlike every other interactive element below
-		// (tabs, action buttons, reset icon) -- OptionsState keeps updating
-		// underneath any open substate (persistentUpdate = true), so this
-		// stayed clickable the whole time Mobile Settings/DLC/Credits/the
-		// Language Picker covered the screen. A tap meant for that substate
-		// landing on this exact spot would exitToParent(), switching away
-		// from the entire Options screen (and destroying whatever substate
-		// was open) with no visible cause.
-		if (pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton) && !blockAllInput && !blockInput)
+		// !blockAllInput/!blockInput must come BEFORE the overlaps() call, not
+		// after -- Haxe's && short-circuits left-to-right, so the previous
+		// order (overlaps() first, blockInput checks last) only ever guarded
+		// exitToParent() itself, not the FlxG.mouse.overlaps(menuBackButton)
+		// call, which kept running unconditionally on every tap regardless of
+		// blockInput. OptionsState keeps updating underneath any open
+		// substate (persistentUpdate = true), so that stray overlaps() call
+		// still fired the whole time Mobile Settings/DLC/Credits/the Language
+		// Picker covered the screen -- confirmed via a symbolicated
+		// native_crash_trace.log (SIGSEGV / null pointer dereference) that
+		// resolved straight to this line's FlxG.mouse.overlaps() -> hxcpp
+		// ObjectPtr<FlxBasic> copy constructor, reproduced by switching to
+		// Touch nav mode inside Mobile Settings and tapping anywhere on
+		// screen. Reordering so the guards short-circuit BEFORE overlaps()
+		// ever runs stops that call (and the crash) from happening at all
+		// while a substate has input blocked.
+		if (!blockAllInput && !blockInput && pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton))
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			exitToParent();
