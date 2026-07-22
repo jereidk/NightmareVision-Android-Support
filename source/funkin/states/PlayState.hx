@@ -1971,7 +1971,7 @@ class PlayState extends MusicBeatState
 		if (paused) audio.pause();
 		
 		// Updating Discord Rich Presence (with Time Left)
-		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName, null, true, songLength, songDurationMs: songLength);
+		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName, null, true, songLength, 'icon', songLength);
 		_discordSyncTimer = 0;
 		
 		scripts.call('onSongStart', _scriptEmptyArgs);
@@ -2520,7 +2520,7 @@ class PlayState extends MusicBeatState
 	inline function resetDiscordRPC(showTime:Bool = false)
 	{
 		if (!showTime) DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon);
-		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset, songDurationMs: songLength);
+		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset, 'icon', songLength);
 		_discordSyncTimer = 0;
 	}
 	
