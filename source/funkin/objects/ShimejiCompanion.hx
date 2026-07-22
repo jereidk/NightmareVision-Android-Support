@@ -135,6 +135,20 @@ class ShimejiCompanion extends Pet
 		'slugmate' => 'slugmaterun',
 	];
 
+	// Same idea as RUN_VARIANTS, but each base's flags.variants.falling
+	// target instead of .running -- checked directly against every pets/
+	// *.json this session: only these three bases actually have one
+	// (slugmate has a running variant but no falling one, so it's not
+	// here -- falls back to the generic stretch effect below like anything
+	// else without dedicated fall art). Used only while falling (see
+	// _startFallIfDropped()/update()), swapped back on landing exactly
+	// like RUN_VARIANTS swaps back on stopping.
+	static final FALL_VARIANTS:Map<String, String> = [
+		'stickmin' => 'stickminfall',
+		'elliepet' => 'elliepetfall',
+		'minicrewmate' => 'minicrewmatefall',
+	];
+
 	/** Whether `petName` should ever get a ShimejiCompanion at all -- checked before construction, not in here. */
 	public static function isUsable(petName:String):Bool
 	{
@@ -174,6 +188,16 @@ class ShimejiCompanion extends Pet
 	// (dance reaction); over it counts as a drag that just repositions it.
 	static inline final DRAG_TAP_THRESHOLD:Float = 6;
 
+	static inline final FALL_GRAVITY:Float = 900;
+	// Dropped from less than this far above its resting line, it just
+	// resumes normally -- no point falling half an inch.
+	static inline final FALL_TRIGGER_HEIGHT:Float = 24;
+	// "Speed lines" stand-in for pets with no FALL_VARIANTS entry --
+	// stretched taller/thinner while actually falling, the same
+	// squash/stretch language Hop already uses, just inverted (stretch
+	// instead of squash) and one-directional instead of arc-synced.
+	static inline final FALL_STRETCH:Float = 0.35;
+
 	var moveStyle:MoveStyle;
 	var idleTimer:Float = 0;
 	var walking:Bool = false;
@@ -187,6 +211,9 @@ class ShimejiCompanion extends Pet
 	var dragOffsetY:Float = 0;
 	var dragStartX:Float = 0;
 	var dragStartY:Float = 0;
+
+	var falling:Bool = false;
+	var fallVelocity:Float = 0;
 
 	// scale.x/y as loaded by Pet.loadPet() (via data.scale) -- Hop's
 	// squash/stretch multiplies on top of this every frame rather than
@@ -242,6 +269,35 @@ class ShimejiCompanion extends Pet
 		moveStyle = MOVE_STYLES.get(baseCurPet) ?? (runVariant != null ? Walk : Shuffle);
 		baseScale = scale.x;
 		_pickNewIdlePause();
+	}
+
+	// Called right after a real drag (not a tap) ends -- decides whether
+	// it was dropped high enough above its resting spot to actually fall,
+	// instead of just teleporting back down like every other bounds
+	// change already does.
+	function _startFallIfDropped():Void
+	{
+		// Fly doesn't have "the ground" to fall onto -- it just resumes
+		// floating in its band as before, no fall state for it.
+		if (moveStyle == Fly)
+		{
+			_pickNewIdlePause();
+			return;
+		}
+
+		final restY = FlxG.height - height - GROUND_MARGIN;
+		if (restY - y > FALL_TRIGGER_HEIGHT)
+		{
+			falling = true;
+			fallVelocity = 0;
+
+			final fallVariant = FALL_VARIANTS.get(baseCurPet);
+			if (fallVariant != null) loadPet(fallVariant);
+		}
+		else
+		{
+			_pickNewIdlePause();
+		}
 	}
 
 	function _pickNewIdlePause():Void
@@ -364,15 +420,26 @@ class ShimejiCompanion extends Pet
 			{
 				dance(true);
 				tapBounceTimer = TAP_BOUNCE_DURATION;
+				_pickNewIdlePause();
 			}
-
-			_pickNewIdlePause();
+			else
+			{
+				// A real drag, not a tap -- fall if it was dropped high
+				// enough above where it belongs (see _startFallIfDropped()).
+				_startFallIfDropped();
+			}
 		}
 		else if (pointerOk && !dragging && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
 		{
 			// Grabbed -- keep wherever on the sprite it was picked up
-			// instead of snapping its origin to the cursor.
+			// instead of snapping its origin to the cursor. Also cancels
+			// an in-progress fall (catching it mid-air): without this,
+			// falling would stay true and, if this grab ends up being
+			// released as a tap (see above), nothing else would ever
+			// clear it, and the OLD fall would incorrectly resume next
+			// frame instead of a normal tap reaction.
 			dragging = true;
+			falling = false;
 
 			final mp = FlxG.mouse.getWorldPosition(hitCamera);
 			dragOffsetX = x - mp.x;
@@ -396,6 +463,38 @@ class ShimejiCompanion extends Pet
 
 			bobPhase = 0;
 			if (moveStyle == Hop) scale.set(baseScale, baseScale);
+		}
+		else if (falling)
+		{
+			fallVelocity += FALL_GRAVITY * elapsed;
+			y += fallVelocity * elapsed;
+			x = FlxMath.bound(x, 0, Math.max(0, FlxG.width - width));
+
+			final restY = FlxG.height - height - GROUND_MARGIN;
+			if (y >= restY)
+			{
+				// Landed.
+				y = restY;
+				falling = false;
+				fallVelocity = 0;
+				scale.set(baseScale, baseScale);
+
+				if (curPet != baseCurPet) loadPet(baseCurPet);
+
+				_pickNewIdlePause();
+				// A little squash on impact -- same landing "thud"
+				// language the tap reaction already uses.
+				tapBounceTimer = TAP_BOUNCE_DURATION;
+			}
+			else if (!FALL_VARIANTS.exists(baseCurPet))
+			{
+				// No dedicated fall pose for this pet -- stretch it
+				// taller/thinner while it's actually falling instead (see
+				// FALL_STRETCH). Pets WITH a fall variant are already
+				// showing that real art, loaded in _startFallIfDropped(),
+				// so they don't also get stretched.
+				scale.set(baseScale * (1 - FALL_STRETCH), baseScale * (1 + FALL_STRETCH));
+			}
 		}
 		else
 		{
