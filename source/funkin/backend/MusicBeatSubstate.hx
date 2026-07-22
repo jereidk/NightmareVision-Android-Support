@@ -114,11 +114,25 @@ class MusicBeatSubstate extends FlxSubState
 		// Un-hide the parent state's pad if we were the one hiding it (see
 		// addVirtualPad). exists-guarded: on a full state switch the parent
 		// (and its pad) may already be destroyed by the time this runs.
+		//
+		// Also navInputMode-guarded: this removeVirtualPad() call itself can
+		// be the result of switching TO Touch (see
+		// MobileSettingsSubState._refreshVirtualPadForNavMode()), in which
+		// case the parent's pad must stay hidden -- it's still Virtual-Pad
+		// styled and, critically, the parent state's own update() (and thus
+		// its pad's checkTouchOverlap()) keeps running underneath any
+		// substate that has persistentUpdate = true (OptionsState does).
+		// Unconditionally restoring visibility here brought that whole pad
+		// back to life -- real camera, real buttons, actually processing
+		// every touch on screen -- while the user had just told the game to
+		// stop using Virtual Pad input, which is exactly the state the
+		// touch-anywhere-crashes-after-switching-to-Touch bug reproduced in.
 		if (_hidParentPad)
 		{
 			_hidParentPad = false;
 			final parent = funkin.backend.MusicBeatState.instance;
-			if (parent != null && parent.virtualPad != null && parent.virtualPad.exists)
+			if (parent != null && parent.virtualPad != null && parent.virtualPad.exists
+				&& funkin.data.ClientPrefs.navInputMode == 'Virtual Pad')
 				parent.virtualPad.visible = true;
 		}
 		if (virtualPadCam != null)
