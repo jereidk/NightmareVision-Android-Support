@@ -1350,8 +1350,11 @@ jobs:
   # <include>s -- HXCPP_DEBUG_LINK_AND_STRIP unconditionally strips the
   # linked .so via hxcpp's own external `strip` call; plain HXCPP_DEBUG_LINK
   # does not). That leaves a permanently-unstripped copy sitting at
-  # export/release/android/obj/obj/androidarm64-64/libApplicationMain.so
-  # (Linker.hx's getUnstrippedFilename()) the whole time -- zipped and
+  # export/release/android/obj/libApplicationMain-64.so (confirmed via the
+  # "Diagnostic - inspect .so files after build" step's own `file` output --
+  # not the obj/androidarm64-64/libApplicationMain.so path Linker.hx's
+  # getUnstrippedFilename() was assumed to resolve to, which has never
+  # actually existed on this hxcpp/Lime pin) the whole time -- zipped and
   # uploaded as its own artifact below, bypassing Gradle's packaging
   # pipeline (and whatever it's doing to strip our library) entirely. The
   # packaged .apk from this job ends up identical to what Android-ARM64
@@ -1741,13 +1744,21 @@ jobs:
 
       # The actual symbol source -- see the top-of-job comment for why this
       # bypasses Gradle's packaging entirely instead of trying to ship the
-      # unstripped library inside the APK itself. getUnstrippedFilename()
-      # in hxcpp's Linker.hx resolves to <objDir>/libApplicationMain.so; for
-      # this job's arm64-only build that's obj/androidarm64-64.
+      # unstripped library inside the APK itself. The doc comment this
+      # replaced claimed getUnstrippedFilename() in hxcpp's Linker.hx
+      # resolves to <objDir>/libApplicationMain.so (obj/androidarm64-64/...
+      # for this job's arm64-only build) -- but the "Diagnostic - inspect
+      # .so files after build" step above proved that path has never
+      # existed on this hxcpp/Lime pin: the real unstripped output (ELF
+      # with debug_info, not stripped, confirmed via `file`) lands flat at
+      # obj/libApplicationMain-64.so instead. Every run of this job through
+      # today silently skipped the zip/upload of the actual symbol source
+      # because of this (the step failed, and the upload steps after it
+      # have no if: always() to still attempt with whatever's on disk).
       - name: Zip unstripped game library
         run: |
           set -euo pipefail
-          UNSTRIPPED_SO="export/release/android/obj/obj/androidarm64-64/libApplicationMain.so"
+          UNSTRIPPED_SO="export/release/android/obj/libApplicationMain-64.so"
           if [ ! -f "$UNSTRIPPED_SO" ]; then
             echo "ERROR: $UNSTRIPPED_SO not found -- HXCPP_DEBUG_LINK may not have taken effect, or hxcpp's obj dir layout changed"
             exit 1
