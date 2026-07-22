@@ -291,6 +291,21 @@ class ShimejiCompanion extends Pet
 
 		super.update(elapsed);
 
+		// Pet.loadPet() always ends with finishAnim(), which freezes on the
+		// LAST frame instead of looping -- correct for a static Locker
+		// preview, but every equippable pet's own idle art is genuinely
+		// multi-frame (14 up to 204 frames, confirmed by direct inspection
+		// of assets/legacy/images/pets/*.xml), so left alone it just shows
+		// as a single static image once it plays through. Inside an actual
+		// song, PlayState re-triggers this via beat-synced dance() calls;
+		// there's no guaranteed active Conductor out here, so force a
+		// replay from frame 0 the moment it finishes instead -- same
+		// mechanism (dance(), reused as-is), just time- rather than
+		// beat-driven. Applies regardless of moveStyle, so a Walk pet's
+		// legs actually keep alternating while it's translating too,
+		// instead of sliding across the screen on one frozen frame.
+		if (isAnimFinished()) dance(true);
+
 		lastX = x;
 		lastY = y;
 		lastFlipX = flipX;
