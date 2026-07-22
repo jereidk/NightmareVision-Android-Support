@@ -1180,9 +1180,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 
 	function _updateRows():Void
 	{
-		// TEMP DIAGNOSTIC (touch-nav crash bisection): remove once found.
-		Logger.log('[SHIMEJI-DBG] _updateRows() ENTER _scrollOffset=$_scrollOffset _selVisual=$_selVisual _sel=$_sel _opts.length=${_opts.length}', WARN, false);
-
 		// Which option index is at the top of the visible window — deliberately
 		// the STABLE target (_scrollOffset), not the smoothed _scrollOffsetVisual.
 		// _scrollOffsetVisual only ever asymptotically approaches its target
@@ -1196,8 +1193,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		// highlight/scrollbar sliding needs to be smooth, not this.
 		final topIndex = Std.int(_scrollOffset / OPT_H);
 
-		Logger.log('[SHIMEJI-DBG] _updateRows() before highlight loop, topIndex=$topIndex', WARN, false);
-
 		// Highlight position is fully continuous (no topIndex/rounding in the
 		// formula at all), so it still slides smoothly between rows even
 		// though which slot it's assigned to (via visualIndex below) now
@@ -1209,8 +1204,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (visualIndex == _sel)
 				_rowHi[i].y = highlightY;
 		}
-
-		Logger.log('[SHIMEJI-DBG] _updateRows() before row-content loop', WARN, false);
 
 		for (i in 0...MAX_OPT)
 		{
@@ -1246,12 +1239,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			}
 		}
 
-		Logger.log('[SHIMEJI-DBG] _updateRows() before descText assignment', WARN, false);
-
 		final sel = (_sel >= 0 && _sel < _opts.length) ? _opts[_sel] : null;
 		_descText.text = (sel != null) ? sel.desc : '';
-
-		Logger.log('[SHIMEJI-DBG] _updateRows() before scrollbar block, needsScroll check', WARN, false);
 
 		// Update scrollbar visibility and thumb position
 		final needsScroll = _opts.length > MAX_OPT;
@@ -1263,12 +1252,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// Position thumb based on scroll offset
 			final maxScroll = (_opts.length - MAX_OPT) * OPT_H;
 			final thumbRange = MAX_OPT * OPT_H - 40;
-			Logger.log('[SHIMEJI-DBG] _updateRows() scrollbar: maxScroll=$maxScroll thumbRange=$thumbRange _scrollOffsetVisual=$_scrollOffsetVisual', WARN, false);
 			final thumbY = OPT_Y0 + (_scrollOffsetVisual / maxScroll) * thumbRange;
 			_scrollThumb.y = thumbY;
 		}
-
-		Logger.log('[SHIMEJI-DBG] _updateRows() before descBg/descText visibility block', WARN, false);
 
 		// Was previously gated on "_scrollOffsetVisual < OPT_H" -- the
 		// description box sits at a fixed position below all MAX_OPT row
@@ -1283,8 +1269,6 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_descBg.visible = descVisible;
 			_descText.visible = descVisible;
 		}
-
-		Logger.log('[SHIMEJI-DBG] _updateRows() EXIT', WARN, false);
 	}
 
 	// ── Preview canvas ───────────────────────────────────────────────────────
