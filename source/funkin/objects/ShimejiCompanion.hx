@@ -335,19 +335,24 @@ class ShimejiCompanion extends Pet
 		if (curPet != baseCurPet) loadPet(baseCurPet);
 	}
 
-	// Not every pet's raw spritesheet was drawn facing the same way --
-	// Pet.loadPet() already reads each identity's own correction for that
-	// into baseFlipX (data.flip_x, "flip so this pet's DEFAULT/idle pose
-	// looks right-facing"). Setting flipX = movingLeft outright (what this
-	// used to do) threw that correction away, so any pet whose own art
-	// needed flip_x:true to look right-facing at rest ended up facing the
-	// WRONG way while moving -- confirmed on-device (report: "el pet mira
-	// a la derecha pero se va a la izquierda"). XOR-ing with baseFlipX
-	// instead preserves each pet's own correction regardless of which way
-	// its raw frames happen to be drawn.
+	// Checked every pets/*.json (including all four -run variants) --
+	// none of them set flip_x, so baseFlipX is false across the board and
+	// XOR-ing against it alone (an earlier attempt at this fix) was a
+	// no-op. Confirmed on-device instead: the facing bug hits EVERY Hop
+	// pet uniformly (crab, slug, squig, tomong, ham, magmate, lilmungus,
+	// fishus, snowball, snowmate, thenug, fribbit -- the whole previously-
+	// Shuffle set), while Walk (dog/frankendog, the -run variants) is
+	// fine. That uniformity across a whole art batch, with zero exceptions,
+	// points at those cosmetic pets' raw frames all being drawn facing the
+	// OPPOSITE way from the "faces right by default" convention every
+	// pet that was actually designed to move follows -- not a per-pet art
+	// quirk. Hop specifically wants the opposite sense of "moving left"
+	// from everyone else; baseFlipX stays in the mix so a future pet that
+	// DOES get a real flip_x value is still handled correctly.
 	inline function _faceTravelDirection(movingLeft:Bool):Void
 	{
-		flipX = (baseFlipX ?? false) != movingLeft;
+		final wantsLeftFacing = (moveStyle == Hop) ? !movingLeft : movingLeft;
+		flipX = (baseFlipX ?? false) != wantsLeftFacing;
 	}
 
 	function _pickNewWalkTarget():Void
