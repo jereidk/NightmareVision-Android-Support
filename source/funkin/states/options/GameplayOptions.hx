@@ -10,8 +10,17 @@ class GameplayOptions
 		opts.push(new Option(Lang.str('opt_downscroll', 'Downscroll'),
 			Lang.str('opt_downscroll_desc', 'If checked, notes go Down instead of Up, simple enough.'), 'downScroll', 'bool', false));
 
-		// Was "it dcroll middle" -- garbled leftover placeholder text, not an actual description.
-		opts.push(new Option(Lang.str('opt_middlescroll', 'Middlescroll'), Lang.str('opt_middlescroll_desc', "If checked, centers your notes instead of splitting them to the sides."), 'middleScroll', 'bool', false));
+		// VSlice always shows both strumlines side by side at fixed positions
+		// (see StrumNote.getCenteredXPos()) -- middleScroll's "collapse to the
+		// middle, hide the opponent" behaviour has nothing to apply to there,
+		// so the option is hidden entirely instead of showing a toggle that
+		// silently does nothing (PlayState.hx also ignores the stored value
+		// while VSlice is active, in case it was left on from Normal layout).
+		if (ClientPrefs.noteLayout != 'VSlice')
+		{
+			// Was "it dcroll middle" -- garbled leftover placeholder text, not an actual description.
+			opts.push(new Option(Lang.str('opt_middlescroll', 'Middlescroll'), Lang.str('opt_middlescroll_desc', "If checked, centers your notes instead of splitting them to the sides."), 'middleScroll', 'bool', false));
+		}
 
 		opts.push(new Option(Lang.str('opt_ghosttapping', 'Ghost Tapping'),
 			Lang.str('opt_ghosttapping_desc', "If checked, you won't get misses from pressing keys\nwhile there are no notes able to be hit."), 'ghostTapping', 'bool', true));

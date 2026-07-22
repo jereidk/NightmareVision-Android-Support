@@ -1187,14 +1187,19 @@ class PlayState extends MusicBeatState
 		generateSong(SONG.song);
 		_logPhase('generateSong');
 		
-		if (!ClientPrefs.opponentStrums || ClientPrefs.middleScroll)
+		// VSlice always shows both strumlines side by side (see getCenteredXPos()'s
+		// comment) -- middleScroll's "collapse the player's notes to the middle,
+		// hide the opponent" behaviour would fight that fixed dual-strumline
+		// layout, so it's ignored entirely while VSlice is active.
+		final effectiveMiddleScroll = ClientPrefs.middleScroll && ClientPrefs.noteLayout != 'VSlice';
+		if (!ClientPrefs.opponentStrums || effectiveMiddleScroll)
 		{
 			for (playField in playFields)
 			{
 				if (playField.isPlayer)
 				{
-					if (ClientPrefs.middleScroll) modManager.setValue('opponentSwap', .5, playField.ID);
-					
+					if (effectiveMiddleScroll) modManager.setValue('opponentSwap', .5, playField.ID);
+
 					continue;
 				}
 				
