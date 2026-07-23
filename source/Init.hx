@@ -115,25 +115,26 @@ class Init extends FlxState
 			else
 				_pendingCrashMessage = crashLogMessage;
 
-			// readPreviousNativeCrash() can now report several accumulated exits
-			// at once (see JavaCrashHandler.java) -- cap the popup the same way
-			// crash.log's own content already was, so a long stretch without
-			// launching the app can't balloon this into an unreadable wall of
-			// text in PopUp's dialog.
-			if (_pendingCrashMessage != null && _pendingCrashMessage.length > 2000)
-				_pendingCrashMessage = _pendingCrashMessage.substr(0, 2000) + '\n[truncated…]';
-
-			// Persist immediately, independent of the popup below and of
-			// GameLogger (which isn't initialized yet -- it waits on
-			// ClientPrefs.load(), see the comment near the top of this
-			// function). readPreviousNativeCrash() already marked this
-			// exit as "seen" on the Java side the instant it was read
-			// (JavaCrashHandler.java's saveLastSeenTimestamp()), so if
-			// THIS session also crashes before ever reaching the popup
-			// at super.create() below -- a real observed case, back-to-
-			// back crashes a few seconds apart -- the summary would
-			// otherwise be gone for good: Android's own history never
-			// re-reports an exit once its timestamp has been consumed.
+			// Persist the FULL message (untruncated) to disk BEFORE capping it
+			// for the in-game popup below -- last_crash_summary.log is meant
+			// to be pulled off the device and inspected on a PC, so there's
+			// no reason to clip it the same way the popup needs to be. This
+			// used to run AFTER the 2000-char cap below, silently losing most
+			// of a resolved on-device backtrace (demangled C++ template
+			// signatures alone can easily blow past 2000 chars for a handful
+			// of frames) -- confirmed via a real device trace whose saved
+			// last_crash_summary.log cut off mid-frame.
+			//
+			// Independent of the popup below and of GameLogger (which isn't
+			// initialized yet -- it waits on ClientPrefs.load(), see the
+			// comment near the top of this function). readPreviousNativeCrash()
+			// already marked this exit as "seen" on the Java side the instant
+			// it was read (JavaCrashHandler.java's saveLastSeenTimestamp()),
+			// so if THIS session also crashes before ever reaching the popup
+			// at super.create() below -- a real observed case, back-to-back
+			// crashes a few seconds apart -- the summary would otherwise be
+			// gone for good: Android's own history never re-reports an exit
+			// once its timestamp has been consumed.
 			if (_pendingCrashMessage != null)
 			{
 				try
@@ -145,6 +146,14 @@ class Init extends FlxState
 				}
 				catch (e:Dynamic) {}
 			}
+
+			// readPreviousNativeCrash() can now report several accumulated exits
+			// at once (see JavaCrashHandler.java) -- cap the POPUP (not the file
+			// already saved above) the same way crash.log's own content already
+			// was, so a long stretch without launching the app can't balloon
+			// this into an unreadable wall of text in PopUp's dialog.
+			if (_pendingCrashMessage != null && _pendingCrashMessage.length > 2000)
+				_pendingCrashMessage = _pendingCrashMessage.substr(0, 2000) + '\n[truncated…]';
 		}
 		catch (e:Dynamic) { Logger.log('Failed to check for previous crashes: $e', WARN); }
 		#end
