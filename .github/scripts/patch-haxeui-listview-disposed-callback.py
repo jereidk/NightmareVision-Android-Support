@@ -26,6 +26,16 @@ Confirmed live via a symbolicated native_crash_trace.log (file:line
 resolution, SIGSEGV / null pointer dereference) landing inside
 ComponentBase.dispatch()'s own first field access, called from this exact
 closure via CallLaterImpl's next-frame queue -- entering CharacterEditorState.
+The specific over-triggering call site in our own project (updateCurrentAnimOffsets()
+re-queuing this every single frame while dragging an offset) is fixed
+separately in CharacterEditorState.hx -- this guard is a library-wide
+safety net for any OTHER caller that races the same way.
+
+Also logs (funkin.backend.Logger, WARN) whenever the guard actually skips
+a dispatch -- a silent guard would hide that some other call site is still
+racing dataSource updates against the list being disposed; this keeps
+that visible in game.log instead of just making the crash go away with no
+trace of it.
 
 Usage: patch-haxeui-listview-disposed-callback.py <path to ListView.hx>
 """
@@ -59,6 +69,8 @@ NEW = (
     "            // exception on cpp; confirmed via a real crash trace.\n"
     "            if (_component != null) {\n"
     "                _component.dispatch(new UIEvent(UIEvent.PROPERTY_CHANGE, false, \"dataSource\"));\n"
+    "            } else {\n"
+    "                funkin.backend.Logger.log(\"ListView.DataSourceBehaviour guard fired: skipped a deferred dispatch because _component was already disposed. If this fires often, something is re-triggering dataSource updates too close to the list being closed.\", funkin.backend.Logger.Severity.WARN);\n"
     "            }\n"
     "        });\n"
     "    }\n"

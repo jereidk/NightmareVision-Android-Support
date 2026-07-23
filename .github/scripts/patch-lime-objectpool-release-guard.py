@@ -23,6 +23,12 @@ Element.destroy() entirely.
 Fixing ObjectPool.release() itself closes this off for every caller at
 once instead of patching call sites one at a time.
 
+Also logs (funkin.backend.Logger, WARN) every time the guard actually
+skips a release -- a silent guard would hide the fact that something
+upstream is still calling release() incorrectly; this keeps that visible
+in game.log for whoever investigates next, instead of just making the
+crash go away with no trace of the underlying bug.
+
 Usage: patch-lime-objectpool-release-guard.py <path to lime/utils/ObjectPool.hx>
 """
 
@@ -77,6 +83,7 @@ NEW = (
     "\t\t\t#if debug\n"
     "\t\t\tLog.error(\"Object is not a member of the pool\");\n"
     "\t\t\t#end\n"
+    "\t\t\tfunkin.backend.Logger.log(\"ObjectPool.release() guard fired: skipped releasing a null/untracked object (would have crashed in clean()). Something upstream is still calling release() incorrectly -- worth tracking down.\", funkin.backend.Logger.Severity.WARN);\n"
     "\t\t\treturn;\n"
     "\t\t}\n"
     "\n"
