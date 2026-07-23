@@ -379,6 +379,21 @@ jobs:
             python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
           done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -821,6 +836,21 @@ jobs:
             echo "Found: $POOL_FILE"
             python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
           done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
@@ -1269,6 +1299,21 @@ jobs:
             python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
           done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -1711,6 +1756,21 @@ jobs:
             echo "Found: $POOL_FILE"
             python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
           done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         run: |
