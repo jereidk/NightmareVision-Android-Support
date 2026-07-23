@@ -394,6 +394,20 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -851,6 +865,20 @@ jobs:
             echo "Found: $FILTER_RENDERER_FILE"
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
 
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
@@ -1314,6 +1342,20 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
       # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
       # a cache hit no longer guarantees the binaries are there. Two things can
       # wipe them after the cache restore: (a) "Install Haxe libraries" runs
@@ -1771,6 +1813,20 @@ jobs:
             echo "Found: $FILTER_RENDERER_FILE"
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
         run: |
