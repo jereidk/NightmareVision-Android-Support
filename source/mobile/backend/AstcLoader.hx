@@ -393,7 +393,12 @@ class AstcLoader
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		while (gl.getError() != 0) {} // drain any pre-existing errors so the check below is unambiguous
-		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgData);
+		// gl is Dynamic (context3D.gl, not the statically-typed lime.graphics.opengl.GL),
+		// so a wrong argument count here compiles fine and only fails at runtime as a driver-
+		// level GL error -- lime.graphics.opengl.GL.compressedTexImage2D's real signature is
+		// (target, level, internalformat, width, height, border, imageSize, data); this was
+		// missing imageSize entirely, silently shifting/dropping args at the native call.
+		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgLen, imgData);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 
 		var glErr:Int = gl.getError();
