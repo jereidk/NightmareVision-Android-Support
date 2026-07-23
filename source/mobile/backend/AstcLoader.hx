@@ -330,7 +330,11 @@ class AstcLoader
 		var width:Int  = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
 		var height:Int = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
 
-		if (width <= 0 || height <= 0 || width > 16384 || height > 16384) return null;
+		if (width <= 0 || height <= 0 || width > 16384 || height > 16384)
+		{
+			Logger.log('AstcLoader: invalid dimensions ${width}x${height} parsed from $path (bytes.length=${bytes.length}) — corrupt/truncated file?', WARN);
+			return null;
+		}
 
 		var glFormat:Int = blockSizeToGlFormat(blockW, blockH);
 		if (glFormat == 0)
@@ -347,7 +351,7 @@ class AstcLoader
 		}
 		var gl = context3D.gl;
 
-		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat);
+		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat, path);
 		if (astcTex == null) return null;
 
 		// -----------------------------------------------------------------------
@@ -378,7 +382,7 @@ class AstcLoader
 	 * texture with the given compressed format and returns the texture object,
 	 * or null on GL error.
 	 */
-	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
+	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int, path:String):Dynamic
 	{
 		var imgLen:Int = bytes.length - HEADER_SIZE;
 		// Zero-copy view: UInt8Array.fromBytes wraps the existing haxe.io.Bytes (ArrayBuffer
@@ -405,7 +409,7 @@ class AstcLoader
 		if (glErr != 0)
 		{
 			gl.deleteTexture(astcTex);
-			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)}', WARN);
+			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)} uploading $path (${width}x${height}, glFormat=0x${StringTools.hex(glFormat, 4)}, imgLen=$imgLen)', WARN);
 			return null;
 		}
 
