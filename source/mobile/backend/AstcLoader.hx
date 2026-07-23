@@ -501,7 +501,7 @@ class AstcLoader
 				continue;
 			}
 
-			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat);
+			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat, entry.astcPath);
 			if (freshTex == null)
 			{
 				// GL upload error (driver-side failure). PNG fallback won't help
