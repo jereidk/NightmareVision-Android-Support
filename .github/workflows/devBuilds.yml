@@ -469,7 +469,7 @@ jobs:
       # SYMBOL_EXTRACT_SCRIPT is an absolute path (the generated Android
       # project lives several directories deep under export/, so a relative
       # path from build.gradle wouldn't reliably resolve) -- that Gradle
-      # task writes symbols-{arm64,armv7}.txt straight into the generated
+      # task writes symbols-{arm64,armv7}.sym straight into the generated
       # project's own src/main/assets/data/, so this single invocation
       # produces a fully-packaged APK with the symbol table already bundled.
       - name: Compile
@@ -477,7 +477,7 @@ jobs:
           HXCPP_COMPILE_THREADS: "4"
           HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
-          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-symbol-table.sh
+          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-dwarf-symbols.sh
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"
@@ -917,7 +917,7 @@ jobs:
           HXCPP_COMPILE_THREADS: 4
           HXCPP_CACHE_MB: "4000"
           BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
-          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-symbol-table.sh
+          SYMBOL_EXTRACT_SCRIPT: ${{ github.workspace }}/.github/scripts/extract-dwarf-symbols.sh
         run: |
           export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
           mkdir -p "$HXCPP_COMPILE_CACHE"

@@ -41,7 +41,7 @@ class JavaCrashHandler
 	 * Android's own AssetManager, bypassing OpenFL's asset system (see
 	 * SymbolResolver.hx / JavaCrashHandler.java's own doc comment for why).
 	 *
-	 * @param path relative to the APK's assets/ root, e.g. "data/symbols-arm64.txt".
+	 * @param path relative to the APK's assets/ root, e.g. "data/symbols-arm64.sym".
 	 */
 	public static function readRawTextAsset(path:String):Null<String>
 		return _readRawTextAsset(path);

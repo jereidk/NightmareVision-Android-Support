@@ -17,7 +17,7 @@
 # symbol tables)" double-compile step this replaces.
 #
 # Requires the SYMBOL_EXTRACT_SCRIPT env var to be set to this repo's own
-# .github/scripts/extract-symbol-table.sh, as an ABSOLUTE path -- the
+# .github/scripts/extract-dwarf-symbols.sh, as an ABSOLUTE path -- the
 # generated Android project lives several directories deep under export/,
 # so a relative path from build.gradle wouldn't reliably resolve. Silently
 # skipped (not an error) if unset, e.g. a local/non-CI build.
@@ -52,7 +52,7 @@ task extractNativeSymbols {
 		abiMap.each { abiDir, suffix ->
 			def soFile = new File(jniLibsDir, "${abiDir}/libApplicationMain.so")
 			if (soFile.exists()) {
-				def outFile = file("src/main/assets/data/symbols-${suffix}.txt")
+				def outFile = file("src/main/assets/data/symbols-${suffix}.sym")
 				outFile.parentFile.mkdirs()
 				exec {
 					commandLine 'bash', scriptPath, soFile.absolutePath, outFile.absolutePath

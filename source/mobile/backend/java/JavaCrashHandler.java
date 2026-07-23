@@ -77,7 +77,7 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
      *
      * @param path relative to the APK's assets/ root (no leading "assets/",
      * matching AssetManager.open()'s own convention), e.g.
-     * "data/symbols-arm64.txt".
+     * "data/symbols-arm64.sym".
      * @return the asset's full text content (UTF-8), or null if it doesn't
      * exist or can't be read.
      */

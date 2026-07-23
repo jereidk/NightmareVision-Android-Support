@@ -360,12 +360,13 @@ class Init extends FlxState
 	 * Extracts every "Trace guardado en: <path>" entry from
 	 * JavaCrashHandler.readPreviousNativeCrash()'s summary text, resolves
 	 * each trace's crashing thread's unresolved (our own, stripped-code)
-	 * frames against the bundled per-ABI symbol table (see
+	 * frames against the bundled per-ABI symbol file (see
 	 * TombstoneParser/SymbolResolver's own doc comments), and appends a
 	 * human-readable resolved-backtrace block right after each matching
 	 * line -- the popup and last_crash_summary.log then show function
-	 * names directly, without needing the CI Symbolicate job or the full
-	 * unstripped .so this session's crash hunts otherwise required.
+	 * name (and file:line, when a line record covers the address) directly,
+	 * without needing the CI Symbolicate job or the full unstripped .so
+	 * this session's crash hunts otherwise required.
 	 *
 	 * Best-effort throughout: any failure for a given trace (missing symbol
 	 * table for this build, corrupt/foreign trace, nothing to resolve) just
@@ -418,18 +419,34 @@ class Init extends FlxState
 			return null;
 
 		final abi = mobile.backend.TombstoneParser.readHeaderField(tracePath, 'abi');
-		if (!mobile.backend.SymbolResolver.load(abi)) return null;
 
-		final resolvedLines:Array<String> = [];
+		// Gather every unresolved frame's address first so the whole trace
+		// only costs ONE pass over the (tens-of-MB) symbol file -- see
+		// SymbolResolver.resolveBatch()'s own doc comment for why it's
+		// designed as a batch call rather than one lookup per frame.
+		final targets:Array<Int> = [];
 		for (frame in threadInfo.frames)
 		{
 			if (frame.funcName != '') continue; // already resolved by the OS's own unwinder
 			if (frame.fileName.indexOf('base.apk') < 0) continue; // not our own code
+			targets.push(frame.relPc);
+		}
+		if (targets.length == 0) return null;
 
-			final name = mobile.backend.SymbolResolver.resolve(frame.relPc);
-			if (name == null) continue;
+		final resolved = mobile.backend.SymbolResolver.resolveBatch(targets, abi);
 
-			resolvedLines.push('    0x' + StringTools.hex(frame.relPc) + ': ' + name);
+		final resolvedLines:Array<String> = [];
+		for (frame in threadInfo.frames)
+		{
+			if (frame.funcName != '') continue;
+			if (frame.fileName.indexOf('base.apk') < 0) continue;
+
+			final r = resolved.get(frame.relPc);
+			if (r == null) continue;
+
+			var line = '    0x' + StringTools.hex(frame.relPc) + ': ' + r.funcName;
+			if (r.file != null && r.line != null) line += ' (' + r.file + ':' + r.line + ')';
+			resolvedLines.push(line);
 		}
 
 		if (resolvedLines.length == 0) return null;
