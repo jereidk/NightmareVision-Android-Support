@@ -81,7 +81,24 @@ class AstcLoader
 
 	/**
 	 * Installs the CONTEXT3D_CREATE listener that re-uploads all tracked ASTC
-	 * textures after an OpenGL context loss/restore cycle.
+	 * textures after an OpenGL context loss/restore cycle, and requests the
+	 * Stage3D's Context3D so tryLoad()/_loadInternal() actually get one.
+	 *
+	 * Nothing else in this codebase (or in OpenFL's own OpenGL-renderer
+	 * bootstrap) ever calls `stage3D.requestContext3D()` on its own -- that
+	 * call is the only thing that populates `stage3Ds[0].context3D`
+	 * (Stage3D.__createContext() just does `context3D = stage.context3D`,
+	 * a reference to the SAME Context3D OpenFL's normal 2D renderer already
+	 * created and is already drawing every frame with -- see
+	 * openfl.display.Stage's own OPENGL-renderer setup -- so this does not
+	 * create a second/competing GL context or affect 2D rendering at all).
+	 * Without ever requesting it, `stage3Ds[0].context3D` stays null for the
+	 * entire session, so every tryLoad() call permanently no-ops past its
+	 * "no Stage3D context yet" guard and silently falls through to the PNG
+	 * fallback -- fine for assets that ship both, but the actual bug behind
+	 * DLC/optional song assets that ship ASTC-only ever rendering as the
+	 * Flixel-logo fallback instead of loading.
+	 *
 	 * Safe to call multiple times — only installs once.
 	 * Call from Init.hx right after AstcSupport.check().
 	 */
@@ -90,7 +107,10 @@ class AstcLoader
 		#if (android && cpp)
 		if (_listenerInstalled) return;
 		_listenerInstalled = true;
-		FlxG.stage.stage3Ds[0].addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		var stage3D = FlxG.stage.stage3Ds[0];
+		// Must add the listener before requestContext3D() -- it throws if none is present.
+		stage3D.addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		stage3D.requestContext3D();
 		#end
 	}
 
