@@ -1824,6 +1824,69 @@ jobs:
           path: unstripped-libApplicationMain-arm64.zip
           if-no-files-found: error
 
+      # Diagnostic only -- does NOT touch the shipped APK. Measures the real
+      # size of a Breakpad-format .sym file (dump_syms, converts DWARF ->
+      # compact text with FUNC/line records for file:line, and
+      # INLINE/INLINE_ORIGIN records for full inline chains -- see
+      # https://github.com/mozilla/dump_syms and
+      # https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/symbol_files.md)
+      # generated from this same unstripped .so, to find out whether
+      # embedding file:line + inlining resolution on-device (replacing the
+      # current function-name-only `nm` table, see extract-symbol-table.sh)
+      # is worth the extra APK size before committing to shipping it.
+      # continue-on-error so a download hiccup here can't fail this job's
+      # actual purpose (producing the unstripped .so artifact above).
+      - name: Measure dump_syms (.sym) output size (diagnostic only)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          UNSTRIPPED_SO="export/release/android/obj/libApplicationMain-64.so"
+          if [ ! -f "$UNSTRIPPED_SO" ]; then
+            echo "ERROR: $UNSTRIPPED_SO not found"
+            exit 1
+          fi
+
+          DUMP_SYMS_VERSION="v2.3.7"
+          curl -sSL -o dump_syms.tar.xz \
+            "https://github.com/mozilla/dump_syms/releases/download/${DUMP_SYMS_VERSION}/dump_syms-x86_64-unknown-linux-gnu.tar.xz"
+          mkdir -p dump_syms_extracted
+          tar -xJf dump_syms.tar.xz -C dump_syms_extracted
+
+          DUMP_SYMS_BIN=$(find dump_syms_extracted -maxdepth 3 -type f -iname "dump_syms")
+          if [ -z "$DUMP_SYMS_BIN" ]; then
+            echo "ERROR: dump_syms binary not found inside the downloaded release archive"
+            exit 1
+          fi
+          chmod +x "$DUMP_SYMS_BIN"
+
+          echo "=== dump_syms (file:line only, no inlines) ==="
+          "$DUMP_SYMS_BIN" -o symbols-noinline.sym "$UNSTRIPPED_SO"
+          ls -la symbols-noinline.sym
+          echo "Lines: $(wc -l < symbols-noinline.sym)"
+          echo "Gzip -9 size: $(gzip -9 -c symbols-noinline.sym | wc -c) bytes"
+
+          echo ""
+          echo "=== dump_syms --inlines (file:line + full inline chains) ==="
+          "$DUMP_SYMS_BIN" --inlines -o symbols-inlines.sym "$UNSTRIPPED_SO"
+          ls -la symbols-inlines.sym
+          echo "Lines: $(wc -l < symbols-inlines.sym)"
+          echo "Gzip -9 size: $(gzip -9 -c symbols-inlines.sym | wc -c) bytes"
+
+          echo ""
+          echo "=== record counts (context on where the size comes from) ==="
+          echo "FUNC records:   $(grep -c '^FUNC ' symbols-inlines.sym || true)"
+          echo "INLINE records: $(grep -c '^INLINE ' symbols-inlines.sym || true)"
+          echo "FILE records:   $(grep -c '^FILE ' symbols-inlines.sym || true)"
+
+      - name: Upload dump_syms output (diagnostic only)
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dump_syms diagnostic output (Android ARM64)
+          path: |
+            symbols-noinline.sym
+            symbols-inlines.sym
+          if-no-files-found: warn
+
       # Same APK Android-ARM64 already produces (stripped, like any normal
       # release build) -- uploaded here too just so this job is
       # self-contained: install it, reproduce the crash, then symbolize the
