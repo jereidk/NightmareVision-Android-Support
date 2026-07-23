@@ -7,6 +7,10 @@ package mobile.backend;
  * format) and resolves a native_crash_trace.log frame's rel_pc offset to the
  * nearest-preceding function's name.
  *
+ * Read via JavaCrashHandler.readRawTextAsset() (Android's AssetManager
+ * directly), not funkin.FunkinAssets/openfl.Assets -- see that function's
+ * doc comment for why OpenFL's own asset system can't see this file.
+ *
  * Nearest-preceding (binary search for the largest table address <= the
  * target) rather than an exact/ranged match -- no symbol size is kept, so
  * this is the same approximation addr2line itself falls back to between
@@ -45,10 +49,17 @@ class SymbolResolver
 			final mapped = mapAbi(abi);
 			if (mapped == null) return false;
 
-			final path = 'assets/data/symbols-$mapped.txt';
-			if (!funkin.FunkinAssets.exists(path)) return false;
+			// Read via JavaCrashHandler's AssetManager-backed reader, not
+			// funkin.FunkinAssets/openfl.Assets -- this file is written into
+			// src/main/assets/ by the CI's Gradle-side extractNativeSymbols
+			// task, which runs AFTER Lime's own asset manifest is already
+			// finalized, so OpenFL's Assets.exists()/getContent() never see
+			// it even though it's genuinely inside the APK (see
+			// JavaCrashHandler.java's readRawTextAsset() doc comment).
+			final path = 'data/symbols-$mapped.txt';
+			final content = mobile.backend.JavaCrashHandler.readRawTextAsset(path);
+			if (content == null) return false;
 
-			final content = funkin.FunkinAssets.getContent(path);
 			final addresses:Array<Int> = [];
 			final names:Array<String> = [];
 

@@ -9,6 +9,7 @@ import android.os.Build;
 import org.haxe.extension.Extension;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -56,6 +57,49 @@ public class JavaCrashHandler extends Extension implements Thread.UncaughtExcept
         sCrashLogPath = crashLogPath;
         sOriginalHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler(new JavaCrashHandler());
+    }
+
+    /**
+     * Reads a raw text asset bundled inside the APK's assets/ folder
+     * directly via Android's own AssetManager, bypassing OpenFL's asset
+     * system entirely.
+     *
+     * Needed because assets written into src/main/assets/ by the CI's
+     * Gradle-side extractNativeSymbols task (see
+     * patch-lime-gradle-symbol-extraction.sh) are added AFTER Lime's own
+     * asset manifest (openfl.Assets, generated during Lime's "update" phase
+     * at the very start of "lime build android") has already been
+     * finalized. The file genuinely ends up inside the packaged APK, but
+     * openfl.Assets.exists()/getContent() only ever check that compile-time
+     * manifest -- never the real APK contents -- so they silently never see
+     * it. AssetManager.open() reads the real, current assets/ contents
+     * directly, sidestepping that mismatch.
+     *
+     * @param path relative to the APK's assets/ root (no leading "assets/",
+     * matching AssetManager.open()'s own convention), e.g.
+     * "data/symbols-arm64.txt".
+     * @return the asset's full text content (UTF-8), or null if it doesn't
+     * exist or can't be read.
+     */
+    public static String readRawTextAsset(String path) {
+        Activity activity = mainActivity;
+        if (activity == null) return null;
+
+        InputStream in = null;
+        try {
+            in = activity.getAssets().open(path);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (in != null) {
+                try { in.close(); } catch (IOException ignored) {}
+            }
+        }
     }
 
     /**
