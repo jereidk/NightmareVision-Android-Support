@@ -26,7 +26,6 @@ import funkin.states.options.*;
 import funkin.states.*;
 import funkin.states.substates.CreditsRollSubState;
 import funkin.states.editors.MasterEditorMenu;
-import funkin.states.editors.ChartEditorState;
 
 class MainMenuState extends MusicBeatState
 {
@@ -156,7 +155,7 @@ class MainMenuState extends MusicBeatState
 	static inline final DEV_COL_DANGER_ARMED:Int = 0xFFFF4444;
 	static inline final DEV_COL_CLOSE:Int = 0xFF241A1A;
 	// Deliberately its own cool blue, apart from the warm gold/green/red
-	// palette every other row uses -- makes the Chart Editor entry read as
+	// palette every other row uses -- makes the Editors entry read as
 	// its own distinct category (a tool, not a cheat) at a glance.
 	static inline final DEV_COL_TOOL:Int = 0xFF1E3A5F;
 
@@ -1247,7 +1246,7 @@ class MainMenuState extends MusicBeatState
 
 		rowY += 6;
 		sectionLabel('TOOLS');
-		addRow('Chart Editor', DEV_COL_TOOL, 7, 'devpanel_tool');
+		addRow('Editors', DEV_COL_TOOL, 7, 'devpanel_tool');
 
 		rowY += 6;
 		sectionLabel('DANGER ZONE');
@@ -1502,9 +1501,9 @@ class MainMenuState extends MusicBeatState
 			case 6: // Close
 				closeDevPanel();
 
-			case 7: // Chart Editor -- same no-song-yet fallback MasterEditorMenu's own entry uses
+			case 7: // Editors -- full MasterEditorMenu hub, not just the chart editor directly
 				closeDevPanel();
-				FlxG.switchState(ChartEditorState.new);
+				FlxG.switchState(new MasterEditorMenu());
 		}
 	}
 

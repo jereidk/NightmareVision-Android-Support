@@ -3442,17 +3442,37 @@ class PlayState extends MusicBeatState
 	{
 		ChartEditorState._song = SONG;
 		FlxG.camera.followLerp = 0;
-		
+
 		persistentUpdate = false;
 		paused = true;
 		CoolUtil.cancelMusicFadeTween();
-		
+
 		FlxG.switchState(ChartEditorState.new);
 		chartingMode = true;
-		
+
 		DiscordClient.changePresence('Chart Editor');
 	}
-	
+
+	// Same song-context setup as openChartEditor() above (ChartEditorState._song
+	// keeps working if 'Chart Editor' is picked from the hub, since it's a static
+	// field that survives the switch), but lands on MasterEditorMenu instead of
+	// jumping straight into the chart editor -- this is the only mid-song path to
+	// every other editor (Character Editor, Chart Converter), not just charting.
+	// chartingMode isn't set here: ChartEditorState.hx sets it itself once it
+	// actually has a song loaded, and leaving it false is correct if the hub is
+	// used to reach a different editor instead.
+	public function openEditorsMenu():Void
+	{
+		ChartEditorState._song = SONG;
+		FlxG.camera.followLerp = 0;
+
+		persistentUpdate = false;
+		paused = true;
+		CoolUtil.cancelMusicFadeTween();
+
+		FlxG.switchState(() -> new MasterEditorMenu());
+	}
+
 	function openCharacterEditor():Void
 	{
 		FlxG.camera.followLerp = 0;
