@@ -404,6 +404,19 @@ class Init extends FlxState
 		final threadInfo = mobile.backend.TombstoneParser.parse(tracePath);
 		if (threadInfo == null) return null;
 
+		// The bundled symbol table only ever matches the CURRENTLY installed
+		// build's own .so -- if the app was updated between the crash and
+		// this launch, the trace's addresses belong to a DIFFERENT binary
+		// than what's now bundled, and resolving against it would silently
+		// produce a confidently WRONG function name instead of no answer at
+		// all (worse than not resolving). The trace's own header always
+		// stamps the versionCode it came from (see JavaCrashHandler.java's
+		// buildCurrentBuildInfo()), so bail out on any mismatch.
+		final traceVersionCode = mobile.backend.TombstoneParser.readHeaderField(tracePath, 'versionCode');
+		final currentVersionCode = lime.app.Application.current.meta.get('build');
+		if (traceVersionCode != null && currentVersionCode != null && traceVersionCode != currentVersionCode)
+			return null;
+
 		final abi = mobile.backend.TombstoneParser.readHeaderField(tracePath, 'abi');
 		if (!mobile.backend.SymbolResolver.load(abi)) return null;
 
