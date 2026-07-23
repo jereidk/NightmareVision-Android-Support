@@ -10,6 +10,10 @@ hmm.json
 .DS_Store
 .icloud
 
+### Python (byte-compiled scripts, e.g. from py_compile checks on .github/scripts)
+__pycache__/
+*.pyc
+
 ### VS Code
 vscode-project.hxml
 export/*
