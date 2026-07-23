@@ -29,10 +29,11 @@ second call is now a safe no-op for these two fields instead of a crash,
 regardless of what upstream in this pinned commit is causing destroy() to
 run twice in the first place.
 
-Also logs (funkin.backend.Logger, WARN) whenever a guard actually skips a
-release -- a silent guard would hide that something is still calling
-destroy() twice (or destroy()ing a never-initialized element); this keeps
-that visible in game.log instead of just making the crash go away with no
+Also logs (plain trace(), captured into game.log via GameLogger's
+haxe.Log.trace interceptor) whenever a guard actually skips a release --
+a silent guard would hide that something is still calling destroy()
+twice (or destroy()ing a never-initialized element); this keeps that
+visible in game.log instead of just making the crash go away with no
 trace of it.
 
 Usage: patch-flixel-animate-element-destroy.py <path to Element.hx>
@@ -81,7 +82,7 @@ NEW = (
     "\t\t}\n"
     "\t\telse\n"
     "\t\t{\n"
-    "\t\t\tfunkin.backend.Logger.log(\"Element.destroy() guard fired: _mat already null (likely a repeat destroy() call on the same element). Worth tracking down the double-destroy source.\", funkin.backend.Logger.Severity.WARN);\n"
+    "\t\t\ttrace(\"Element.destroy() guard fired: _mat already null (likely a repeat destroy() call on the same element). Worth tracking down the double-destroy source.\");\n"
     "\t\t}\n"
     "\n"
     "\t\tif (matrix != null)\n"
@@ -91,7 +92,7 @@ NEW = (
     "\t\t}\n"
     "\t\telse\n"
     "\t\t{\n"
-    "\t\t\tfunkin.backend.Logger.log(\"Element.destroy() guard fired: matrix already null (likely a repeat destroy() call on the same element). Worth tracking down the double-destroy source.\", funkin.backend.Logger.Severity.WARN);\n"
+    "\t\t\ttrace(\"Element.destroy() guard fired: matrix already null (likely a repeat destroy() call on the same element). Worth tracking down the double-destroy source.\");\n"
     "\t\t}\n"
     "\n"
     "\t\ttransform = null;\n"

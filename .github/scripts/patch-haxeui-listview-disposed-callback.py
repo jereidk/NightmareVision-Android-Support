@@ -31,10 +31,11 @@ re-queuing this every single frame while dragging an offset) is fixed
 separately in CharacterEditorState.hx -- this guard is a library-wide
 safety net for any OTHER caller that races the same way.
 
-Also logs (funkin.backend.Logger, WARN) whenever the guard actually skips
-a dispatch -- a silent guard would hide that some other call site is still
-racing dataSource updates against the list being disposed; this keeps
-that visible in game.log instead of just making the crash go away with no
+Also logs (plain trace(), captured into game.log via GameLogger's
+haxe.Log.trace interceptor) whenever the guard actually skips a dispatch
+-- a silent guard would hide that some other call site is still racing
+dataSource updates against the list being disposed; this keeps that
+visible in game.log instead of just making the crash go away with no
 trace of it.
 
 Usage: patch-haxeui-listview-disposed-callback.py <path to ListView.hx>
@@ -70,7 +71,7 @@ NEW = (
     "            if (_component != null) {\n"
     "                _component.dispatch(new UIEvent(UIEvent.PROPERTY_CHANGE, false, \"dataSource\"));\n"
     "            } else {\n"
-    "                funkin.backend.Logger.log(\"ListView.DataSourceBehaviour guard fired: skipped a deferred dispatch because _component was already disposed. If this fires often, something is re-triggering dataSource updates too close to the list being closed.\", funkin.backend.Logger.Severity.WARN);\n"
+    "                trace(\"ListView.DataSourceBehaviour guard fired: skipped a deferred dispatch because _component was already disposed. If this fires often, something is re-triggering dataSource updates too close to the list being closed.\");\n"
     "            }\n"
     "        });\n"
     "    }\n"
