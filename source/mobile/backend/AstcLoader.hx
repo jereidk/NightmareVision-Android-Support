@@ -141,13 +141,7 @@ class AstcLoader
 	{
 		#if (android && cpp)
 		if (!AstcSupport.isSupported) {
-			// Was silently returning null here with the diagnostic commented
-			// out -- this and the "neither source has it" branch below were
-			// the only two ways this function fails without a trace anywhere
-			// in the log, which is exactly what made the "DLC images never
-			// load even though the .astc is confirmed sitting on disk"
-			// report impossible to diagnose from a game log alone.
-			Logger.log('[AstcLoader] ASTC not supported on this device — $pngPath falling through to PNG (which may not exist for ASTC-only DLC content)', NOTICE);
+			// Logger.log('[AstcLoader] ASTC not supported on this device', NOTICE);
 			return null;
 		}
 
@@ -184,7 +178,6 @@ class AstcLoader
 			}
 		}
 
-		Logger.log('[AstcLoader] $astcPath not found in external storage (FileSystem.exists=${sys.FileSystem.exists(astcPath)}, cwd=${Sys.getCwd()}) nor bundled in the APK (OflAssets.exists=${OflAssets.exists(astcPath)}) — falling through to PNG', WARN);
 		return null;
 		#else
 		return null;
@@ -321,10 +314,7 @@ class AstcLoader
 
 		// Require Stage3D context (available after the first render frame)
 		var context3D:Null<Context3D> = FlxG.stage.stage3Ds[0].context3D;
-		if (context3D == null) {
-			Logger.log('AstcLoader: no Stage3D context yet, dropping $path (another silent-failure branch this had)', WARN);
-			return null;
-		}
+		if (context3D == null) return null;
 		var gl = context3D.gl;
 
 		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat);
