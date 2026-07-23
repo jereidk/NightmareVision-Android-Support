@@ -48,8 +48,31 @@ task extractNativeSymbols {
 		def jniLibsDir = file('src/main/jniLibs')
 		if (!jniLibsDir.exists()) return
 
+		// hxcpp compiles BOTH architectures every run regardless of a
+		// single-ABI job's -D ANDROID_ARM64_ONLY/-D ANDROID_ARMV7_ONLY --
+		// only Gradle's own ndk.abiFilters (set earlier in this same file
+		// by patch-lime-gradle.sh, when the job targets one specific ABI)
+		// restricts which NATIVE LIB actually gets packaged. abiFilters has
+		// no effect on assets, so without checking it here, a single-ABI
+		// job would still bundle the OTHER architecture's .sym file too --
+		// a wasted asset nobody's device will ever use, roughly doubling
+		// this feature's APK size cost on arm64-only/armv7-only builds.
+		def restrictToAbis = null
+		try {
+			def abiFilters = android.defaultConfig.ndk.abiFilters
+			if (abiFilters != null && !abiFilters.isEmpty()) {
+				restrictToAbis = abiFilters
+			}
+		} catch (Exception ignored) {
+			// best-effort -- if this AGP version exposes it differently,
+			// fall back to "no restriction" (process whatever .so's exist)
+			// rather than fail the whole task.
+		}
+
 		def abiMap = ['arm64-v8a': 'arm64', 'armeabi-v7a': 'armv7']
 		abiMap.each { abiDir, suffix ->
+			if (restrictToAbis != null && !restrictToAbis.contains(abiDir)) return
+
 			def soFile = new File(jniLibsDir, "${abiDir}/libApplicationMain.so")
 			if (soFile.exists()) {
 				def outFile = file("src/main/assets/data/symbols-${suffix}.sym")
