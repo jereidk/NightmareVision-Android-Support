@@ -946,6 +946,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	
 	var wasDraggingCursor:Bool = false;
 	var wasTouchDraggingCursor:Bool = false;
+	var _lastOffsetText:Null<String> = null;
 
 	function updateBounds(elapsed:Float)
 	{
@@ -1037,9 +1038,24 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		}
 		
 		final text = character.getAnimName() + ': $offsets';
-		
+
+		// This runs every frame while dragging (see the update() call site
+		// above), and the dataSource re-set below is what actually repaints
+		// the list row -- but it also queues a HaxeUI Toolkit.callLater()
+		// UI-event dispatch every single time it runs. Re-queuing that on
+		// every frame of a drag needlessly stacks up pending callbacks that
+		// fire a frame late; if the editor closes (disposing the list) in
+		// that window, one of them dispatches against an already-disposed
+		// component (crashes -- see patch-haxeui-listview-disposed-callback.py
+		// for the library-side guard). Skipping the refresh when the label
+		// text hasn't actually changed (offsets are Std.int()-rounded, so
+		// most frames of a slow drag don't change it at all) removes most of
+		// that unnecessary queuing at the source instead of just tolerating it.
+		if (text == _lastOffsetText) return;
+		_lastOffsetText = text;
+
 		uiElements.animationList.animationList.selectedItem.text = text;
-		
+
 		// call the freaking setter DIE
 		uiElements.animationList.animationList.dataSource = uiElements.animationList.animationList.dataSource;
 	}
