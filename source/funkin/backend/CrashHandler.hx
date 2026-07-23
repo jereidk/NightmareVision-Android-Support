@@ -74,6 +74,29 @@ class CrashHandler
 		{
 			message = cast(event.error, ErrorEvent).text;
 		}
+		else
+		{
+			// Neither an Error nor an ErrorEvent -- message stays as
+			// Std.string(event.error), which for a plain thrown value can be
+			// uninformative on its own (e.g. a hardcoded generic literal with
+			// no embedded detail, like the recurring "Invalid field:value" seen
+			// out of CharacterEditorState that no source or vendored library
+			// grep has turned up the origin of). This is the only place that
+			// ever sees event.error's real runtime type, so capture it -- and
+			// an anonymous structure's fields -- here or it's gone for good.
+			try
+			{
+				final errClass = Type.getClass(event.error);
+				stateInfo += '\nError type: ' + (errClass != null ? (Type.getClassName(errClass) ?? 'N/A') : 'anonymous/Dynamic');
+				if (errClass == null)
+				{
+					final fields = Reflect.fields(event.error);
+					if (fields.length > 0)
+						stateInfo += '\nError fields: ' + [for (f in fields) '$f=${Reflect.field(event.error, f)}'].join(', ');
+				}
+			}
+			catch (e:Dynamic) {}
+		}
 
 		var stackMessage:String = '';
 

@@ -394,6 +394,22 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
       # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
       # ComponentBase.dispatch()'s own first field access, called with a
       # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
@@ -865,6 +881,22 @@ jobs:
             echo "Found: $FILTER_RENDERER_FILE"
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
 
       # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
       # ComponentBase.dispatch()'s own first field access, called with a
@@ -1342,6 +1374,22 @@ jobs:
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
 
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
       # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
       # ComponentBase.dispatch()'s own first field access, called with a
       # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
@@ -1813,6 +1861,22 @@ jobs:
             echo "Found: $FILTER_RENDERER_FILE"
             python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
           done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
 
       # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
       # ComponentBase.dispatch()'s own first field access, called with a
