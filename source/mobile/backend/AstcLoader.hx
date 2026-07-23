@@ -151,31 +151,34 @@ class AstcLoader
 			return null;
 		}
 
-		// External storage (extracted APK assets, DLC overrides) takes priority.
-		if (sys.FileSystem.exists(astcPath))
+		// On Android, convert relative path to absolute path for external storage.
+		// This matches the pattern already used by FunkinAssets.getBitmapData().
+		// See FunkinAssets.androidStoragePath() for why this is needed on Android.
+		var loadPath = funkin.FunkinAssets.androidStoragePath(astcPath);
+		
+		var bytes:Null<haxe.io.Bytes> = null;
+
+		try
 		{
-
-			try
+			// External storage (extracted APK assets, DLC overrides) takes priority.
+			if (sys.FileSystem.exists(loadPath))
 			{
-				var bytes = sys.io.File.getBytes(astcPath);
-
-				return loadAndTrack(pngPath, astcPath, bytes);
+				bytes = sys.io.File.getBytes(loadPath);
 			}
-			catch (e:Dynamic)
+			// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
+			else if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
 			{
-
-				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
-				return null;
+				bytes = OflAssets.getBytes(astcPath);
 			}
 		}
-
-		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
-		if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
+		catch (e:Dynamic)
 		{
-			var bytes = OflAssets.getBytes(astcPath);
-			if (bytes != null) {
-				return loadAndTrack(pngPath, astcPath, bytes);
-			}
+			Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
+		}
+
+		if (bytes != null)
+		{
+			return loadAndTrack(pngPath, astcPath, bytes);
 		}
 
 		return null;
@@ -439,8 +442,11 @@ class AstcLoader
 			{
 				try
 				{
-					if (sys.FileSystem.exists(entry.astcPath))
-						bytes = sys.io.File.getBytes(entry.astcPath);
+					// Convert to absolute path on Android (matching tryLoad() behavior)
+					var loadPath = funkin.FunkinAssets.androidStoragePath(entry.astcPath);
+					
+					if (sys.FileSystem.exists(loadPath))
+						bytes = sys.io.File.getBytes(loadPath);
 					else if (OflAssets.exists(entry.astcPath))
 						bytes = OflAssets.getBytes(entry.astcPath);
 				}
