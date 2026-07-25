@@ -88,6 +88,63 @@ class DLCManager {
         return StorageSystem.getStorageDirectory() + ".dlc_cache/";
     }
 
+    // ── Loose-install ("destOverride") version tracking ────────────────────
+    //
+    // A destOverride install (e.g. a weekbonus-* song, see BonusSongDLC) never
+    // writes a meta.json -- it extracts straight to the same relative path a
+    // bundled APK asset would use, with no per-DLC folder of its own to hold
+    // one. That leaves no record anywhere of WHICH version of that package is
+    // currently on disk, so a stale install from before a zip was last updated
+    // upstream looks identical to an up-to-date one forever: the chart file
+    // exists either way, and BonusSongDLC.isInstalled() had nothing else to
+    // check. This is a small separate JSON map (id -> installed version),
+    // written only for the destOverride path, that gives it something to
+    // compare the registry's declared version against.
+
+    static function _looseVersionsPath():String {
+        return StorageSystem.getStorageDirectory() + ".loose_dlc_versions.json";
+    }
+
+    static var _looseVersionsCache:Null<Map<String, String>> = null;
+
+    static function _readLooseVersions():Map<String, String> {
+        if (_looseVersionsCache != null) return _looseVersionsCache;
+        var result = new Map<String, String>();
+        #if sys
+        var path = _looseVersionsPath();
+        if (FileSystem.exists(path)) {
+            try {
+                var data:Dynamic = Json.parse(File.getContent(path));
+                for (key in Reflect.fields(data))
+                    result.set(key, Std.string(Reflect.field(data, key)));
+            } catch (e:Dynamic) { Logger.log('DLCManager: Failed to parse loose DLC versions: $e', WARN); }
+        }
+        #end
+        _looseVersionsCache = result;
+        return result;
+    }
+
+    #if sys
+    static function _writeLooseVersion(id:String, version:String):Void {
+        var map = _readLooseVersions();
+        map.set(id, version);
+        var obj:Dynamic = {};
+        for (key in map.keys()) Reflect.setField(obj, key, map.get(key));
+        try { File.saveContent(_looseVersionsPath(), Json.stringify(obj, null, "  ")); }
+        catch (e:Dynamic) { Logger.log('DLCManager: Failed to save loose DLC versions: $e', WARN); }
+    }
+    #end
+
+    /**
+     * Installed version of a destOverride ("loose") DLC package, or null if
+     * it either was never installed through this mechanism, or was installed
+     * before this version-tracking existed -- both cases should be treated
+     * the same way by a caller: as "not confirmed up to date".
+     */
+    public static function getLooseInstalledVersion(id:String):Null<String> {
+        return _readLooseVersions().get(id);
+    }
+
     // ── Installed-DLC queries (sync, main thread safe) ─────────────────────
 
     static var _installedCache:Null<Array<{id:String, name:String, folder:String}>> = null;
@@ -555,8 +612,12 @@ class DLCManager {
         // Ensure meta.json carries our dlcId marker, name, and global:true --
         // skipped for a destOverride install (loose asset overlay, not a
         // mod-manager-visible folder; nothing should ever read a meta.json
-        // from there, so writing one would just be stray clutter).
+        // from there, so writing one would just be stray clutter). That
+        // install style still needs SOME record of what version landed, so
+        // BonusSongDLC.isInstalled() can later tell a stale install apart
+        // from an up-to-date one -- see _writeLooseVersion() above.
         if (writeMeta) _writeMetaJson(destPath, entry);
+        else if (entry.version != null && entry.version != "") _writeLooseVersion(entry.id, entry.version);
     }
 
     static function _setStatus(state:DLCTaskState, progress:Int, msg:String):Void {

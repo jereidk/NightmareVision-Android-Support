@@ -47,6 +47,8 @@ class MarathonMenuState extends AmongUIState
 	{
 		initStateScript();
 
+		#if mobile BonusSongDLC.ensureRegistryFetched(); #end
+
 		// This whole detective-office composition is a set of fixed-position
 		// pieces authored for the 1280-wide design canvas -- same re-centering
 		// gap as AmongUIState's own upperBar (see its comment above), just on

@@ -217,7 +217,9 @@ class FreeplayState extends AmongUIState
 
 		PlayState.isStoryMode = false;
 		PlayState.chartingMode = false;
-		
+
+		#if mobile BonusSongDLC.ensureRegistryFetched(); #end
+
 		DiscordClient.changePresence("Freeplay Menu");
 		
 		funkin.data.CosmicubeData.reload();

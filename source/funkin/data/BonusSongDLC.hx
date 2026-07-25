@@ -104,7 +104,27 @@ class BonusSongDLC
 		if (DLCManager.taskState == BUSY && DLCManager.activeTaskId == id) return false;
 		#end
 		final slug = Paths.sanitize(songName);
-		return FunkinAssets.exists(Paths.json('$slug/data/normal'));
+		if (!FunkinAssets.exists(Paths.json('$slug/data/normal'))) return false;
+		#if mobile
+		// The chart file existing only means SOME version of this DLC was
+		// installed at some point -- it says nothing about whether it's the
+		// CURRENT version. A destOverride install has no meta.json to check
+		// (see DLCManager._extractZip()), so compare against
+		// DLCManager.getLooseInstalledVersion() instead: null covers both
+		// "never installed through this mechanism" and "installed before
+		// version-tracking existed at all" (i.e. every real player's existing
+		// weekbonus-* installs today), and either way that's treated as
+		// needing a (re)download, same as a fresh purchase. Only runs the
+		// comparison when the registry is actually loaded and has this id --
+		// otherwise there's nothing to compare against, so fall back to
+		// trusting the file exists (ensureRegistryFetched() below is what
+		// makes "registry not loaded yet" the rare case in practice).
+		final entry = findEntry(id);
+		if (entry != null && entry.version != null && entry.version != ""
+			&& DLCManager.getLooseInstalledVersion(id) != entry.version)
+			return false;
+		#end
+		return true;
 	}
 
 	#if mobile
@@ -175,6 +195,22 @@ class BonusSongDLC
 	/** Same install destination beginBackgroundDownload() uses -- exposed so BonusDLCDownloadSubstate's own retry can pass it too. */
 	public static function installRoot():String
 		return _installRoot();
+
+	/**
+	 * Kicks a background registry fetch if nothing has fetched one yet this
+	 * session (no-ops otherwise). isInstalled()'s stale-version check above
+	 * can only compare against a version it actually knows -- called from
+	 * FreeplayState/MarathonMenuState's create() so that, by the time the
+	 * player actually navigates to and picks a bonus-shop song, the registry
+	 * has almost always already arrived, instead of only ever discovering an
+	 * update the first time they happen to open the DLC/mobile options
+	 * screen.
+	 */
+	public static function ensureRegistryFetched():Void
+	{
+		if (DLCManager.taskState != BUSY && DLCManager.registryData == null)
+			DLCManager.fetchRegistryAsync();
+	}
 	#else
 	public static function beginBackgroundDownload(songName:String):Void {}
 	#end
