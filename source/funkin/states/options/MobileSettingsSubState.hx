@@ -13,6 +13,7 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.addons.display.FlxBackdrop;
 import openfl.display.BitmapData;
+import openfl.utils.Assets;
 import funkin.objects.menu.NineSlice;
 
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
@@ -951,6 +952,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				// UI_LEFT/UI_RIGHT are no longer held -- guaranteeing the new
 				// pad's buttons are constructed with nothing touching them.
 				#if mobile _pendingPadSkinRebuild = true; #end
+				// This test-zone preview, unlike the real nav pad above, isn't
+				// touch-interactive itself (see _addPadButtonZone()) -- nothing
+				// is ever "still pressing" one of its sprites, so rebuilding it
+				// immediately carries none of the same re-trigger risk.
+				_rebuildPreview();
 			case 'noteLayout': ClientPrefs.noteLayout = v;
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
@@ -1023,9 +1029,16 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_opts.push({
 				id: 'padSkin', kind: 'string',
 				label: Lang.str('opt_padskin', 'Pad Skin'),
-				desc:  Lang.str('opt_padskin_desc', 'Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.'),
-				choices: [Lang.str('choice_padskin_modern', 'Modern'), Lang.str('choice_padskin_classic', 'Classic')],
-				stored:  ['modern', 'classic'],
+				desc:  Lang.str('opt_padskin_desc',
+					'Look of the on-screen pad buttons.\nModern: translucent glass circles with FNF-style note arrows.\nClassic: the original button art.\nNeon: glowing outline rings.\nFlat: solid flat squircles, no gradient.\nPixel: chunky 8-bit-style blocks.'),
+				choices: [
+					Lang.str('choice_padskin_modern', 'Modern'),
+					Lang.str('choice_padskin_classic', 'Classic'),
+					Lang.str('choice_padskin_neon', 'Neon'),
+					Lang.str('choice_padskin_flat', 'Flat'),
+					Lang.str('choice_padskin_pixel', 'Pixel')
+				],
+				stored:  ['modern', 'classic', 'neon', 'flat', 'pixel'],
 				defaultVal: 'modern'
 			});
 		}
@@ -1550,9 +1563,26 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		return map;
 	}
 
+	/**
+	 * Resolves `graphicName` (e.g. 'up', 'a') against the currently selected
+	 * pad skin, mirroring MobileVirtualPad.hx's own createButton() fallback
+	 * chain exactly: skin folder -> classic root -> shared default.png. This
+	 * preview used to hardcode the classic-root path regardless of
+	 * ClientPrefs.virtualPadSkin, so picking Neon/Flat/Pixel/etc. changed the
+	 * REAL pad but left this test-zone preview showing the old art.
+	 */
+	function _resolvePadButtonPath(graphicName:String):String
+	{
+		final skinDir = (ClientPrefs.virtualPadSkin == 'classic') ? '' : ClientPrefs.virtualPadSkin + '/';
+		var path = 'assets/mobile/virtualpad/${skinDir}${graphicName}.png';
+		if (!Assets.exists(path)) path = 'assets/mobile/virtualpad/${graphicName}.png';
+		if (!Assets.exists(path)) path = 'assets/mobile/virtualpad/default.png';
+		return path;
+	}
+
 	function _addPadButtonZone(x:Float, y:Float, w:Float, h:Float, graphicName:String, colorIdx:Int):Void
 	{
-		var graphic = FlxG.bitmap.add('assets/mobile/virtualpad/$graphicName.png');
+		var graphic = FlxG.bitmap.add(_resolvePadButtonPath(graphicName));
 		var frames  = FlxTileFrames.fromGraphic(graphic, FlxPoint.weak(Std.int(graphic.width / 3), graphic.height));
 
 		var spr = new FlxSprite(x, y);

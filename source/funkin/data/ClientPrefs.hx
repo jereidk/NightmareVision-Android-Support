@@ -225,11 +225,16 @@ class ClientPrefs
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
 	/**
-	 * Visual skin for the on-screen virtual pad buttons.
-	 * 'modern' (default): translucent glass circles with FNF-style note arrows,
-	 *   loaded from mobile/virtualpad/modern/. 'classic': the original button art
-	 *   at mobile/virtualpad/. Art is greyscale+alpha and tinted per-button at
-	 *   runtime, so both skins keep the same per-direction colours.
+	 * Visual skin for the on-screen virtual pad buttons. Every value except
+	 * 'classic' loads from its own mobile/virtualpad/<value>/ folder (see
+	 * MobileVirtualPad.hx's createButton()); 'classic' is the odd one out,
+	 * loading from mobile/virtualpad/ directly (the original button art,
+	 * before any skin folder existed).
+	 * 'modern' (default): translucent glass circles with FNF-style note arrows.
+	 * 'neon': glowing outline rings. 'flat': solid flat squircles, no
+	 * gradient. 'pixel': chunky 8-bit-style blocks. All art is greyscale+
+	 * alpha and tinted per-button at runtime, so every skin keeps the same
+	 * per-direction colours.
 	 */
 	@saveVar public static var virtualPadSkin:String = 'modern';
 
