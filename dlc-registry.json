@@ -37,10 +37,10 @@
       "name": "Who (Bonus Song)",
       "description": "Chart, audio, and character/stage art for \"Who\" -- part of the Bonus Songs shop week. Downloaded automatically after purchase.",
       "author": "",
-      "version": "1.0",
+      "version": "1.1",
       "sizeMb": 2.35,
       "downloadUrl": "https://raw.githubusercontent.com/jereidk/NightmareVision-Android-Support/dev/dlc-packages/weekbonus-who.zip",
-      "sha256": "5da2314a482ed6873554ab8759aedf60a7a7d3ec8dee2951daaaa38eb0d49b9b",
+      "sha256": "0aba3df70182b36401c76215e87349c733e5c00f7a14545792f7888dd26d39b0",
       "tags": [
         "official",
         "weekbonus",
