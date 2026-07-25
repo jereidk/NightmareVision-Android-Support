@@ -125,7 +125,10 @@ function onLoad()
 	
 	mist6.color = mist7.color = FlxColor.fromRGB(160, 110, 255);
 	
-	bfIntro = new FunkinSprite(2100, 1080).loadAtlas(ext + 'bfIntro', {cacheOnLoad: true, swfMode: true});
+	// cacheOnLoad:false -- see FunkinSprite.hx's own loadAtlas() default for
+	// why (eager per-frame filter baking during construction, confirmed
+	// on-device as the cause of this exact stage's native crash).
+	bfIntro = new FunkinSprite(2100, 1080).loadAtlas(ext + 'bfIntro', {cacheOnLoad: false, swfMode: true});
 	bfIntro.addAnimByPrefix('intro', 'intro', 24, false);
 	bfIntro.playAnim('intro');
 	
