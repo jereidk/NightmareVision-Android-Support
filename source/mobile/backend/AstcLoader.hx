@@ -546,10 +546,13 @@ class AstcLoader
 		var fresh:Null<BitmapData> = null;
 		try
 		{
-			// Mirrors _restoreFromPng(): filesystem first (external storage /
-			// mods, absolute path), then OflAssets for APK-bundled assets.
-			if (sys.FileSystem.exists(key))
-				fresh = BitmapData.fromFile(key);
+			// Filesystem first (external storage / mods, absolute path),
+			// then OflAssets for APK-bundled assets.  Uses androidStoragePath()
+			// so mod overrides on external storage are found before falling
+			// through to the bundled APK copy.
+			var gpuLoadPath = funkin.FunkinAssets.androidStoragePath(key);
+			if (sys.FileSystem.exists(gpuLoadPath))
+				fresh = BitmapData.fromFile(gpuLoadPath);
 			else if (OflAssets.exists(key))
 				// useCache=false: always decode fresh, never the cached
 				// copy -- it may be this exact same disposed bitmap.
@@ -592,12 +595,13 @@ class AstcLoader
 		var pngBitmap:Null<BitmapData> = null;
 		try
 		{
-			// Mirrors FunkinAssets.getBitmapData: filesystem first (external
-			// storage / mods, absolute path), then OflAssets for APK-bundled
-			// assets (relative path — not on the real filesystem, so
-			// sys.FileSystem.exists returns false and we fall through).
-			if (sys.FileSystem.exists(pngPath))
-				pngBitmap = BitmapData.fromFile(pngPath);
+			// Filesystem first (external storage / mods, absolute path),
+			// then OflAssets for APK-bundled assets.  Uses androidStoragePath()
+			// so mod overrides on external storage are found before falling
+			// through to the bundled APK copy.
+			var pngLoadPath = funkin.FunkinAssets.androidStoragePath(pngPath);
+			if (sys.FileSystem.exists(pngLoadPath))
+				pngBitmap = BitmapData.fromFile(pngLoadPath);
 			else if (OflAssets.exists(pngPath))
 				// useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
 				pngBitmap = OflAssets.getBitmapData(pngPath, false);

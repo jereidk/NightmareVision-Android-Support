@@ -1340,6 +1340,15 @@ class MainMenuState extends MusicBeatState
 			for (thing in devPanelAll) thing.cameras = [devPanelCam];
 			if (devPanelSelector != null) devPanelSelector.cameras = [devPanelCam];
 			if (devPanelGlow != null) devPanelGlow.cameras = [devPanelCam];
+			// Move virtualPadCam to render ABOVE devPanelCam so the
+			// virtual-pad buttons stay visible/tappable while the panel
+			// is open.  FlxG.cameras draws in list order; removing and
+			// re-adding virtualPadCam puts it at the very end.
+			if (virtualPadCam != null)
+			{
+				FlxG.cameras.remove(virtualPadCam);
+				FlxG.cameras.add(virtualPadCam, false);
+			}
 		}
 
 		// Layered with unlockSong (the same fanfare the "Grant every
