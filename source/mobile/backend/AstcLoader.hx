@@ -6,17 +6,36 @@ import funkin.backend.Logger;
 import openfl.display.BitmapData;
 import openfl.display3D.Context3D;
 import openfl.display3D.Context3DTextureFormat;
+import openfl.display3D.textures.ASTCTexture;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.Assets as OflAssets;
 import openfl.Assets;
 import openfl.events.Event;
-import lime.utils.UInt8Array;
 #end
 
 /**
- * Loads raw ASTC texture files (16-byte header + compressed blocks) into
- * OpenFL BitmapData backed by a GPU-side compressed texture.
+ * Loads raw ASTC texture files into OpenFL BitmapData backed by a GPU-side
+ * compressed texture, via Context3D.createASTCTexture() -- the same public
+ * API openfl.utils.Assets.getBitmapData() already uses internally (see
+ * openfl/utils/Assets.hx) to transparently load every APK-bundled ASTC-only
+ * asset in this game. That existing path only ever checks Lime's compiled
+ * asset manifest (LimeAssets.exists/getBytes), so it can never see loose
+ * files added after the APK was built -- e.g. downloaded song DLC extracted
+ * onto external storage. This class exists purely to cover THAT gap: same
+ * upload mechanism, external storage (and APK) checked directly instead.
+ *
+ * Previously this class hand-rolled its own GL texture upload against
+ * FlxG.stage.stage3Ds[0].context3D -- a *separate* Stage3D object nothing
+ * in this codebase ever calls requestContext3D() on, so that context3D was
+ * permanently null and this loader never actually uploaded a single texture
+ * in any shipped build (every asset silently fell through past it). Fixed
+ * by routing through openfl.Lib.current.stage.context3D instead -- the
+ * main Stage's own Context3D, already created unconditionally by OpenFL's
+ * renderer setup (openfl/display/Stage.hx) and already what the native
+ * Assets.getBitmapData() ASTC path above uses -- and letting
+ * createASTCTexture() do its own (already-correct) header parsing/GL
+ * upload instead of reimplementing it by hand.
  *
  * ASTC files live next to their PNG counterpart with a .astc extension:
  *   assets/images/characters/bf.png  →  assets/images/characters/bf.astc
@@ -27,9 +46,13 @@ import lime.utils.UInt8Array;
  * Context-loss recovery: Android destroys the GPU context when the app is
  * backgrounded. BitmapData.fromTexture() has no CPU pixels and cannot be
  * restored automatically by OpenFL. This class registers a CONTEXT3D_CREATE
- * listener that re-uploads every tracked ASTC texture when the GL context
- * comes back, patching the existing RectangleTexture handles in-place so
- * all live BitmapData instances automatically see fresh GPU data.
+ * listener (still on FlxG.stage.stage3Ds[0] -- confirmed in openfl/display/
+ * Stage.hx's __onLimeRenderContextRestored() that EVERY registered Stage3D,
+ * including ones that never called requestContext3D(), gets its
+ * __restoreContext() -- and therefore this event -- fired on a genuine
+ * render-context restore) that re-uploads every tracked ASTC texture,
+ * patching the existing ASTCTexture's GL handle in-place so all live
+ * BitmapData instances automatically see fresh GPU data.
  *
  * PNG fallback: if the .astc file is missing when the context is restored
  * (e.g. DLC uninstalled, SD-card corruption), the loader falls back to the
@@ -41,15 +64,6 @@ import lime.utils.UInt8Array;
 @:access(openfl.display.BitmapData)
 class AstcLoader
 {
-	// ASTC magic bytes (little-endian 0x5CA1AB13)
-	static inline final MAGIC_0:Int = 0x13;
-	static inline final MAGIC_1:Int = 0xAB;
-	static inline final MAGIC_2:Int = 0xA1;
-	static inline final MAGIC_3:Int = 0x5C;
-
-	// ASTC header size in bytes
-	static inline final HEADER_SIZE:Int = 16;
-
 	// Compressed payloads at or below this size are kept in RAM so context
 	// restoration can skip the disk re-read for small/medium textures.
 	// At ASTC 8×8 this covers textures up to ~1024×1024.
@@ -59,15 +73,13 @@ class AstcLoader
 
 	#if (android && cpp)
 	// Keyed by PNG path (= FunkinCache cache key).
-	// glFormat == 0 is the PNG-fallback sentinel — valid ASTC entries always
-	// arrive here with glFormat != 0 (blockSizeToGlFormat guards this).
 	static var _recovery:Map<String, {
-		astcPath:    String,
-		rectTex:     RectangleTexture,
-		width:       Int,
-		height:      Int,
-		glFormat:    Int,
-		cachedBytes: Null<haxe.io.Bytes>
+		astcPath:      String,
+		astcTex:       ASTCTexture,
+		width:         Int,
+		height:        Int,
+		isPngFallback: Bool,
+		cachedBytes:   Null<haxe.io.Bytes>
 	}> = [];
 	static var _listenerInstalled:Bool = false;
 
@@ -151,34 +163,31 @@ class AstcLoader
 			return null;
 		}
 
-		// On Android, convert relative path to absolute path for external storage.
-		// This matches the pattern already used by FunkinAssets.getBitmapData().
-		// See FunkinAssets.androidStoragePath() for why this is needed on Android.
-		var loadPath = funkin.FunkinAssets.androidStoragePath(astcPath);
-		
-		var bytes:Null<haxe.io.Bytes> = null;
-
-		try
+		// External storage (extracted APK assets, DLC overrides) takes priority.
+		if (sys.FileSystem.exists(astcPath))
 		{
-			// External storage (extracted APK assets, DLC overrides) takes priority.
-			if (sys.FileSystem.exists(loadPath))
+
+			try
 			{
-				bytes = sys.io.File.getBytes(loadPath);
+				var bytes = sys.io.File.getBytes(astcPath);
+
+				return loadAndTrack(pngPath, astcPath, bytes);
 			}
-			// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
-			else if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
+			catch (e:Dynamic)
 			{
-				bytes = OflAssets.getBytes(astcPath);
+
+				Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
+				return null;
 			}
 		}
-		catch (e:Dynamic)
-		{
-			Logger.log('AstcLoader: failed to read $astcPath — $e', WARN);
-		}
 
-		if (bytes != null)
+		// Bundled APK asset — allows shipping pre-compressed ASTC inside the APK.
+		if (OflAssets.exists(astcPath) || Assets.exists(astcPath))
 		{
-			return loadAndTrack(pngPath, astcPath, bytes);
+			var bytes = OflAssets.getBytes(astcPath);
+			if (bytes != null) {
+				return loadAndTrack(pngPath, astcPath, bytes);
+			}
 		}
 
 		return null;
@@ -261,16 +270,15 @@ class AstcLoader
 			// Keep the compressed bytes in RAM for small textures so context
 			// restoration can skip the disk I/O round-trip. The bytes reference
 			// is shared (no copy) — we just prevent it from being GC'd.
-			var payloadSize = bytes.length - HEADER_SIZE;
-			var cached:Null<haxe.io.Bytes> = (payloadSize <= BYTES_CACHE_LIMIT) ? bytes : null;
+			var cached:Null<haxe.io.Bytes> = (bytes.length <= BYTES_CACHE_LIMIT) ? bytes : null;
 
 			_recovery.set(pngPath, {
-				astcPath:    astcPath,
-				rectTex:     result.rectTex,
-				width:       result.width,
-				height:      result.height,
-				glFormat:    result.glFormat,
-				cachedBytes: cached
+				astcPath:      astcPath,
+				astcTex:       result.astcTex,
+				width:         result.width,
+				height:        result.height,
+				isPngFallback: false,
+				cachedBytes:   cached
 			});
 
 			return result.bitmap;
@@ -283,120 +291,57 @@ class AstcLoader
 	}
 
 	/**
-	 * Parses the ASTC header, uploads the payload to the GPU, and returns the
-	 * BitmapData together with the metadata needed for context-loss re-upload.
+	 * Uploads the ASTC bytes to the GPU via Context3D.createASTCTexture() --
+	 * the same public OpenFL API openfl.utils.Assets.getBitmapData() already
+	 * uses for every APK-bundled ASTC asset -- and wraps the result in a
+	 * BitmapData. createASTCTexture() does its own header parsing/validation
+	 * and GL upload internally (see openfl/display3D/textures/ASTCTexture.hx),
+	 * so there is no manual magic-byte/block-size parsing or raw GL call here
+	 * to get wrong.
 	 */
-	static function _loadInternal(path:String, bytes:haxe.io.Bytes):Null<{bitmap:BitmapData, rectTex:RectangleTexture, width:Int, height:Int, glFormat:Int}>
+	static function _loadInternal(path:String, bytes:haxe.io.Bytes):Null<{bitmap:BitmapData, astcTex:ASTCTexture, width:Int, height:Int}>
 	{
-		if (bytes.length < HEADER_SIZE) return null;
-
-		// Verify ASTC magic
-		if (bytes.get(0) != MAGIC_0 || bytes.get(1) != MAGIC_1
-			|| bytes.get(2) != MAGIC_2 || bytes.get(3) != MAGIC_3)
-		{
-			Logger.log('AstcLoader: invalid magic in $path', WARN);
-			return null;
-		}
-
-		var blockW:Int = bytes.get(4);
-		var blockH:Int = bytes.get(5);
-		// bytes[6] = block depth, always 1 for 2-D textures
-
-		// Width and height are stored as 24-bit little-endian
-		var width:Int  = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
-		var height:Int = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
-
-		if (width <= 0 || height <= 0 || width > 16384 || height > 16384) return null;
-
-		var glFormat:Int = blockSizeToGlFormat(blockW, blockH);
-		if (glFormat == 0)
-		{
-			Logger.log('AstcLoader: unsupported block size ${blockW}x${blockH} in $path', WARN);
-			return null;
-		}
-
-		// Require Stage3D context (available after the first render frame)
-		var context3D:Null<Context3D> = FlxG.stage.stage3Ds[0].context3D;
+		// The main Stage's own Context3D -- created unconditionally by OpenFL's
+		// renderer setup (openfl/display/Stage.hx), NOT the separate
+		// FlxG.stage.stage3Ds[0] Stage3D this loader used to (and never
+		// successfully did, since nothing ever requests it).
+		var context3D:Null<Context3D> = openfl.Lib.current.stage.context3D;
 		if (context3D == null) return null;
-		var gl = context3D.gl;
 
-		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat);
-		if (astcTex == null) return null;
-
-		// -----------------------------------------------------------------------
-		// Wrap in an OpenFL RectangleTexture so BitmapData.fromTexture() works.
-		// createRectangleTexture allocates a throw-away placeholder GL texture;
-		// we delete it immediately and inject our ASTC texture instead.
-		// If either call throws (OOM, invalid context), clean up the GL handle
-		// before propagating so it doesn't leak.
-		// -----------------------------------------------------------------------
 		try
 		{
-			var rectTex:RectangleTexture = context3D.createRectangleTexture(width, height, Context3DTextureFormat.BGRA, false);
-			gl.deleteTexture(rectTex.__textureID); // free the placeholder
-			rectTex.__textureID = astcTex;         // inject ASTC texture
-			var bitmap = BitmapData.fromTexture(rectTex);
-			return {bitmap: bitmap, rectTex: rectTex, width: width, height: height, glFormat: glFormat};
+			var astcTex = context3D.createASTCTexture(bytes);
+			var bitmap = BitmapData.fromTexture(astcTex);
+			return {bitmap: bitmap, astcTex: astcTex, width: astcTex.__width, height: astcTex.__height};
 		}
 		catch (e:Dynamic)
 		{
-			gl.deleteTexture(astcTex);
-			Logger.log('AstcLoader: failed to wrap GL texture in $path — $e', WARN);
+			Logger.log('AstcLoader: createASTCTexture failed for $path — $e', WARN);
 			return null;
 		}
-	}
-
-	/**
-	 * Uploads the ASTC payload (bytes after the 16-byte header) to a new GL
-	 * texture with the given compressed format and returns the texture object,
-	 * or null on GL error.
-	 */
-	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
-	{
-		var imgLen:Int = bytes.length - HEADER_SIZE;
-		// Zero-copy view: UInt8Array.fromBytes wraps the existing haxe.io.Bytes (ArrayBuffer
-		// is an abstract over Bytes, so no allocation) and initBuffer assigns the reference
-		// directly — the payload starts at HEADER_SIZE so no offset math needed in GL.
-		var imgData = UInt8Array.fromBytes(bytes, HEADER_SIZE, imgLen);
-
-		var astcTex = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, astcTex);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		while (gl.getError() != 0) {} // drain any pre-existing errors so the check below is unambiguous
-		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgData);
-		gl.bindTexture(gl.TEXTURE_2D, null);
-
-		var glErr:Int = gl.getError();
-		if (glErr != 0)
-		{
-			gl.deleteTexture(astcTex);
-			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)}', WARN);
-			return null;
-		}
-
-		return astcTex;
 	}
 
 	/**
 	 * Called when the Stage3D context is created or recreated after context loss.
+	 * (FlxG.stage.stage3Ds[0]'s CONTEXT3D_CREATE still fires here even though
+	 * nothing ever calls requestContext3D() on it -- see this class's own doc
+	 * comment. What actually matters for a real re-upload is the MAIN Stage's
+	 * context3D below, which gets replaced with a brand-new Context3D instance
+	 * by OpenFL on every real context loss/restore cycle.)
 	 *
 	 * For each tracked texture:
-	 *   • glFormat != 0 (ASTC mode): uses cachedBytes if available (no I/O for
-	 *     small textures), else re-reads from disk/APK. On missing file, falls
-	 *     through to PNG fallback.
-	 *   • glFormat == 0 (PNG fallback mode): re-uploads from the original PNG.
+	 *   • isPngFallback == false (ASTC mode): uses cachedBytes if available (no
+	 *     I/O for small textures), else re-reads from disk/APK. On missing
+	 *     file, falls through to PNG fallback.
+	 *   • isPngFallback == true: re-uploads from the original PNG.
 	 *
 	 * On the initial CONTEXT3D_CREATE (before any ASTC textures are loaded) the
 	 * recovery map is empty and this function returns immediately.
 	 */
 	static function _onContextRestored(_:Dynamic):Void
 	{
-		var context3D:Null<Context3D> = FlxG.stage.stage3Ds[0].context3D;
+		var context3D:Null<Context3D> = openfl.Lib.current.stage.context3D;
 		if (context3D == null) return;
-		var gl = context3D.gl;
 
 		var restored = 0;
 		var failed = 0;
@@ -423,7 +368,7 @@ class AstcLoader
 
 			// PNG fallback mode — the .astc was missing on a previous restore;
 			// this entry now permanently uses the PNG source.
-			if (entry.glFormat == 0)
+			if (entry.isPngFallback)
 			{
 				if (_restoreFromPng(context3D, pngPath))
 					restored++;
@@ -442,11 +387,8 @@ class AstcLoader
 			{
 				try
 				{
-					// Convert to absolute path on Android (matching tryLoad() behavior)
-					var loadPath = funkin.FunkinAssets.androidStoragePath(entry.astcPath);
-					
-					if (sys.FileSystem.exists(loadPath))
-						bytes = sys.io.File.getBytes(loadPath);
+					if (sys.FileSystem.exists(entry.astcPath))
+						bytes = sys.io.File.getBytes(entry.astcPath);
 					else if (OflAssets.exists(entry.astcPath))
 						bytes = OflAssets.getBytes(entry.astcPath);
 				}
@@ -468,21 +410,27 @@ class AstcLoader
 				continue;
 			}
 
-			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat);
-			if (freshTex == null)
+			// The old __textureID is a dead handle after context loss; the driver
+			// already freed all GPU resources. Build a fresh ASTCTexture against
+			// the (also fresh) context3D purely to get a new, valid GL handle,
+			// then steal it into the ORIGINAL entry.astcTex object -- the live
+			// BitmapData's __texture already permanently references that same
+			// object, so patching its __textureID in place is all that's needed
+			// for the renderer to pick up the new handle on the next draw.
+			try
+			{
+				var freshTex = context3D.createASTCTexture(bytes);
+				entry.astcTex.__textureID = freshTex.__textureID;
+				freshTex.__textureID = 0; // orphan wrapper -- ownership moved to entry.astcTex
+				restored++;
+			}
+			catch (e:Dynamic)
 			{
 				// GL upload error (driver-side failure). PNG fallback won't help
 				// since the context itself may be in a bad state. Skip and log.
+				Logger.log('AstcLoader: context restore upload failed for ${entry.astcPath} — $e', WARN);
 				failed++;
-				continue;
 			}
-
-			// The old __textureID is a dead handle after context loss; the driver
-			// already freed all GPU resources. Overwrite with the fresh handle.
-			// The BitmapData holds a reference to this same RectangleTexture, so
-			// the renderer automatically uses the new handle on the next draw.
-			entry.rectTex.__textureID = freshTex;
-			restored++;
 		}
 
 		for (key in toRemove)
@@ -546,13 +494,10 @@ class AstcLoader
 		var fresh:Null<BitmapData> = null;
 		try
 		{
-			// Filesystem first (external storage / mods, absolute path),
-			// then OflAssets for APK-bundled assets.  Uses androidStoragePath()
-			// so mod overrides on external storage are found before falling
-			// through to the bundled APK copy.
-			var gpuLoadPath = funkin.FunkinAssets.androidStoragePath(key);
-			if (sys.FileSystem.exists(gpuLoadPath))
-				fresh = BitmapData.fromFile(gpuLoadPath);
+			// Mirrors _restoreFromPng(): filesystem first (external storage /
+			// mods, absolute path), then OflAssets for APK-bundled assets.
+			if (sys.FileSystem.exists(key))
+				fresh = BitmapData.fromFile(key);
 			else if (OflAssets.exists(key))
 				// useCache=false: always decode fresh, never the cached
 				// copy -- it may be this exact same disposed bitmap.
@@ -580,12 +525,15 @@ class AstcLoader
 	 *
 	 * Creates a temporary RectangleTexture, uploads the PNG BitmapData to it
 	 * via OpenFL's standard path (handles BGRA/RGBA format internally), then
-	 * transfers the GL handle to entry.rectTex. Sets the temporary wrapper's
-	 * __textureID to 0 so any future cleanup call on it is a harmless no-op
+	 * transfers the GL handle to entry.astcTex (still a valid TextureBase to
+	 * patch in place -- the live BitmapData's __texture already permanently
+	 * references that same object). Sets the temporary wrapper's __textureID
+	 * to 0 so any future cleanup call on it is a harmless no-op
 	 * (gl.deleteTexture(0) is defined as a no-op by the GL spec).
 	 *
-	 * Permanently marks the entry as PNG mode (glFormat = 0) so all subsequent
-	 * context-restore cycles also re-upload from PNG without retrying the ASTC.
+	 * Permanently marks the entry as PNG mode (isPngFallback = true) so all
+	 * subsequent context-restore cycles also re-upload from PNG without
+	 * retrying the ASTC.
 	 */
 	static function _restoreFromPng(context3D:Context3D, pngPath:String):Bool
 	{
@@ -595,13 +543,12 @@ class AstcLoader
 		var pngBitmap:Null<BitmapData> = null;
 		try
 		{
-			// Filesystem first (external storage / mods, absolute path),
-			// then OflAssets for APK-bundled assets.  Uses androidStoragePath()
-			// so mod overrides on external storage are found before falling
-			// through to the bundled APK copy.
-			var pngLoadPath = funkin.FunkinAssets.androidStoragePath(pngPath);
-			if (sys.FileSystem.exists(pngLoadPath))
-				pngBitmap = BitmapData.fromFile(pngLoadPath);
+			// Mirrors FunkinAssets.getBitmapData: filesystem first (external
+			// storage / mods, absolute path), then OflAssets for APK-bundled
+			// assets (relative path — not on the real filesystem, so
+			// sys.FileSystem.exists returns false and we fall through).
+			if (sys.FileSystem.exists(pngPath))
+				pngBitmap = BitmapData.fromFile(pngPath);
 			else if (OflAssets.exists(pngPath))
 				// useCache=false: always decode fresh — the cached copy may have had disposeImage() called on it
 				pngBitmap = OflAssets.getBitmapData(pngPath, false);
@@ -634,43 +581,16 @@ class AstcLoader
 		}
 
 		var handle = tempTex.__textureID;
-		tempTex.__textureID = 0; // orphan wrapper — handle ownership moves to entry.rectTex
-		entry.rectTex.__textureID = handle;
+		tempTex.__textureID = 0; // orphan wrapper — handle ownership moves to entry.astcTex
+		entry.astcTex.__textureID = handle;
 		pngBitmap.dispose();
 
 		// Mark entry as PNG mode for all future context-restore cycles.
-		entry.glFormat = 0;
+		entry.isPngFallback = true;
 		entry.cachedBytes = null; // ASTC bytes no longer needed
 
 		Logger.log('AstcLoader: PNG fallback succeeded for $pngPath', WARN);
 		return true;
-	}
-
-	/**
-	 * Maps an ASTC block size to the corresponding GL_COMPRESSED_RGBA_ASTC_*_KHR
-	 * constant (RGBA linear variants, 0x93B0-0x93BD).
-	 * Returns 0 for unknown block sizes.
-	 */
-	static function blockSizeToGlFormat(bw:Int, bh:Int):Int
-	{
-		return switch ([bw, bh])
-		{
-			case [4, 4]:   0x93B0; // GL_COMPRESSED_RGBA_ASTC_4x4_KHR
-			case [5, 4]:   0x93B1;
-			case [5, 5]:   0x93B2; // GL_COMPRESSED_RGBA_ASTC_5x5_KHR
-			case [6, 5]:   0x93B3;
-			case [6, 6]:   0x93B4; // GL_COMPRESSED_RGBA_ASTC_6x6_KHR
-			case [8, 5]:   0x93B5;
-			case [8, 6]:   0x93B6;
-			case [8, 8]:   0x93B7; // GL_COMPRESSED_RGBA_ASTC_8x8_KHR  ← default for this project
-			case [10, 5]:  0x93B8;
-			case [10, 6]:  0x93B9;
-			case [10, 8]:  0x93BA;
-			case [10, 10]: 0x93BB; // GL_COMPRESSED_RGBA_ASTC_10x10_KHR
-			case [12, 10]: 0x93BC;
-			case [12, 12]: 0x93BD; // GL_COMPRESSED_RGBA_ASTC_12x12_KHR
-			default: 0;
-		};
 	}
 
 	/**
