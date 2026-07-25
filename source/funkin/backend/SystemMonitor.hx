@@ -364,6 +364,26 @@ class SystemMonitor
 		logSnapshot('POST_STATE_' + toState);
 	}
 
+	/**
+	 * Whether LoadingState's background preload actually finished before it
+	 * handed off to PlayState, or MAX_WAIT_TIME's ceiling forced an early
+	 * switch with some assets still not finalized (PlayState then loads the
+	 * rest itself, synchronously, right in the countdown-adjacent frames a
+	 * [GAMEPLAY!] line would flag as a hitch). LoadingState already logs
+	 * this exact information via Logger.log() -- but that writes to the
+	 * separate game.log (GameLogger), not sysmon.log, so a sysmon.log-only
+	 * investigation of a startup hitch had no way to tell "preload genuinely
+	 * finished" from "silently timed out and PlayState picked up the slack"
+	 * without cross-referencing a second file. Call once, right at the
+	 * switch point.
+	 */
+	public static function logLoadingResult(songName:String, shownMs:Int, progressPct:Int, done:Bool, timedOut:Bool, decoded:Int, finalized:Int, total:Int):Void
+	{
+		if (!enabled) return;
+		final mark = (timedOut && !done) ? '!' : ' ';
+		_write('[LOADING$mark] song=$songName shownMs=$shownMs progress=$progressPct% done=$done timedOut=$timedOut decoded=$decoded/$total finalized=$finalized/$total');
+	}
+
 	// ==================== AUTO DIAGNOSTICS ====================
 
 	// Wall-clock timestamp of the previous checkFrame() call, used to measure

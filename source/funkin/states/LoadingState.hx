@@ -15,6 +15,7 @@ import funkin.data.CharacterData.CharacterParser;
 import funkin.objects.HealthIcon;
 import funkin.objects.note.NotePoolPlan;
 import funkin.Paths.PathsTestMode;
+import funkin.backend.SystemMonitor;
 
 #if (sys && cpp)
 import sys.thread.Thread;
@@ -886,6 +887,15 @@ class LoadingState extends MusicBeatState
 			FunkinAssets.cache.forceGcPass();
 
 			Logger.log('[LoadingState] ── switching to gameplay after ${Std.int(shownTime * 1000)}ms on screen (progress ${Std.int(p * 100)}%, done=$done, timedOut=$timedOut)', NOTICE, true);
+
+			#if android
+			_mutex.acquire();
+			final _dec = _completedDecodes;
+			final _fin = _completedFinalizes;
+			final _tot = _totalTasks;
+			_mutex.release();
+			SystemMonitor.logLoadingResult(PlayState.SONG?.song ?? '?', Std.int(shownTime * 1000), Std.int(p * 100), done, timedOut, _dec, _fin, _tot);
+			#end
 
 			switching = true;
 			FlxTransitionableState.skipNextTransIn = true;
