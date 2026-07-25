@@ -108,6 +108,12 @@ class ClientPrefs
 	
 	@saveVar public static var fpsDisplayType:String = 'Simple';
 	@saveVar public static var fpsRGB:Bool = false;
+
+	// Scale multiplier for DebugDisplay's whole overlay (text + memory bar) --
+	// 1.0 is the original fixed size. Read live every frame by
+	// DebugDisplay.setScale()/updateText(), so it applies immediately with no
+	// restart needed.
+	@saveVar public static var debugDisplaySize:Float = 1.0;
 	
 	@saveVar public static var streamedMusic:Bool = false;
 
@@ -158,7 +164,18 @@ class ClientPrefs
 	@saveVar public static var globalAntialiasing:Bool = true;
 	
 	@saveVar public static var lowQuality:Bool = false;
-	
+
+	// Skips creating a stage's background stageObjects entirely (see
+	// Stage.hx's buildStage()) -- characters, HUD and gameplay are untouched,
+	// since none of those are stageObjects. More aggressive than lowQuality
+	// (which just trims detail): no stage art is decoded/uploaded at all.
+	// A handful of custom stage scripts read/mutate those objects by id or by
+	// iterating stage.members directly -- with none created, those lookups
+	// just find nothing (a caught script error or a no-op empty loop, not a
+	// crash), so the trade-off is losing that stage's background-driven
+	// script flourishes (flickers, spotlights, etc.), not stability.
+	@saveVar public static var noStages:Bool = false;
+
 	@saveVar public static var shaders:Bool = true;
 	
 	@saveVar public static var framerate:Int = 60;

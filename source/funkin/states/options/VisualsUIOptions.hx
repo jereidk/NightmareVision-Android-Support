@@ -65,6 +65,15 @@ class VisualsUIOptions
 			Lang.str('opt_fpsrgb_desc', 'Cycles the FPS counter color through the rainbow.\nWorks with both Simple and Advanced display modes.'),
 			'fpsRGB', 'bool', false));
 
+		final debugDisplaySizeOption = new Option(Lang.str('opt_debugdisplaysize', 'Debug Display Size'),
+			Lang.str('opt_debugdisplaysize_desc', 'Scales the top-left FPS/debug overlay up or down.'),
+			'debugDisplaySize', 'percent', 1.0);
+		debugDisplaySizeOption.scrollSpeed = 1.6;
+		debugDisplaySizeOption.minValue = 0.5;
+		debugDisplaySizeOption.maxValue = 2.5;
+		debugDisplaySizeOption.changeValue = 0.1;
+		opts.push(debugDisplaySizeOption);
+
 		opts.push(new Option(Lang.str('opt_category_accessibility', 'Accessibility').toUpperCase(), '', '', 'label'));
 
 		opts.push(new Option(Lang.str('opt_photosensitivemode', 'Photosensitive Mode'),

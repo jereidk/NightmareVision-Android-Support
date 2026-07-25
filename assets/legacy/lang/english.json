@@ -658,6 +658,8 @@
 		"choice_cachemode_accumulative": "Accumulative",
 		"opt_lowquality": "Low Quality",
 		"opt_lowquality_desc": "Disables some background details,\ndecreases loading times and improves performance.",
+		"opt_nostages": "No Stages",
+		"opt_nostages_desc": "[EXPERIMENTAL] Stage backgrounds are never created at all -- biggest RAM/loading win, but a handful of stages use scripted background effects (flickers, spotlights) that will silently do nothing.\nCharacters and the HUD are unaffected.",
 		"opt_shaders": "Shaders",
 		"opt_shaders_desc": "Enables shaders across the mod.",
 		"opt_antialiasing": "Anti-Aliasing",
@@ -781,6 +783,8 @@
 		"opt_drs_desc": "Auto-drops render rate to ~30fps when the game falls below 30fps,\nkeeping gameplay logic at full speed.\nDisable if you prefer consistent frame pacing at all times.",
 		"opt_fpsrgb": "Animate FPS Color (RGB)",
 		"opt_fpsrgb_desc": "Cycles the FPS counter color through the rainbow.\nWorks with both Simple and Advanced display modes.",
+		"opt_debugdisplaysize": "Debug Display Size",
+		"opt_debugdisplaysize_desc": "Scales the top-left FPS/debug overlay up or down.",
 		"choice_debug_memory": "Memory",
 
 		// mobile settings — input & layout

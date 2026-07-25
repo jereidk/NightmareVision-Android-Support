@@ -233,7 +233,11 @@ class DebugDisplay extends Sprite
 	public dynamic function updateText():Void
 	{
 		__updateText();
-        #if mobile setScale(); #end
+        #if mobile
+        setScale();
+        #else
+        scaleX = scaleY = ClientPrefs.debugDisplaySize;
+        #end
 	}
 	
 	function __updateText()
@@ -437,7 +441,7 @@ class DebugDisplay extends Sprite
 	        var finalScale:Float = (scale < 1 ? scale : 1);
 	    #end
 
-	    scaleX = scaleY = finalScale;
+	    scaleX = scaleY = finalScale * ClientPrefs.debugDisplaySize;
 	}
 	#end
 

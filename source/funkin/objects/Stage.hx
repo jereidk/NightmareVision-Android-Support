@@ -98,6 +98,12 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 	 */
 	public function buildStage()
 	{
+		// "No Stages" optimization (GraphicsOptions.hx) -- skip creating any
+		// of this stage's background art entirely. Characters/HUD are added
+		// elsewhere by PlayState, never through stageObjects, so they're
+		// unaffected; runScript() below still runs normally.
+		if (ClientPrefs.noStages) return;
+
 		if (stageData.stageObjects != null)
 		{
 			for (info in stageData.stageObjects)
