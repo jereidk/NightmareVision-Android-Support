@@ -440,7 +440,23 @@ class ShimejiCompanion extends Pet
 		// silently mis-hit-test/mis-map the pointer whenever the owning
 		// state's own main camera is scrolled/zoomed/shaking differently
 		// than this fixed overlay.
-		final hitCamera = (cameras != null && cameras.length > 0) ? cameras[0] : null;
+		//
+		// A handful of states (CharacterEditorState, WIPNoteSkinEditor) call
+		// FlxG.cameras.reset() from their OWN create() -- AFTER super.create()
+		// already ran addShimeji() and handed this sprite a fresh shimejiCam.
+		// reset() destroys every registered camera (FlxCamera.destroy() nulls
+		// its `scroll` FlxPoint), but this sprite's `cameras` array still
+		// holds a strong reference to that now-destroyed object -- it's
+		// never told to let go of it. FlxG.mouse.overlaps()/getWorldPosition()
+		// unconditionally read camera.scroll, so calling them with a
+		// destroyed camera is a native null-pointer crash (confirmed via a
+		// real device SIGSEGV trace landing in FlxPointer::overlaps, entered
+		// from here). list.indexOf(...) != -1 is the exact same "did
+		// reset() already beat us to it" check removeShimeji() below already
+		// uses before touching this same camera -- treat a since-destroyed
+		// camera as no camera at all for the rest of this frame instead of
+		// dereferencing it.
+		final hitCamera = (cameras != null && cameras.length > 0 && FlxG.cameras.list.indexOf(cameras[0]) != -1) ? cameras[0] : null;
 
 		if (dragging && !FlxG.mouse.pressed)
 		{
