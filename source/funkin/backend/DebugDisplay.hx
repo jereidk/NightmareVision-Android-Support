@@ -131,6 +131,16 @@ class DebugDisplay extends Sprite
 	 * Task Memory (RSS) - Memoria física real del proceso
 	 */
 	public var taskMemory(get, never):Float;
+
+	/**
+	 * RAM total del dispositivo
+	 */
+	public var deviceTotalMemory(get, never):Float;
+
+	/**
+	 * RAM libre disponible del dispositivo
+	 */
+	public var deviceFreeMemory(get, never):Float;
 	
 	/**
 	 * Gráficos en cache de Flixel
@@ -243,15 +253,18 @@ class DebugDisplay extends Sprite
 			str += '\n|  Large Pool: ${FlxStringUtil.formatBytes(gcLargePool)}';
 			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(rss)}';
 			str += '\n|  Textures  : $cachedGraphics cached';
-			str += '\n+--------------------------------------+';
-			#elseif mobile
-			str += '\n+-- MEMORY --------------------------+';
-			str += '\n|  Textures  : $cachedGraphics cached';
-			str += '\n|  RSS (proc): ${FlxStringUtil.formatBytes(taskMemory)}';
-			str += '\n+--------------------------------------+';
-			#else
-			str += '\n| Textures: $cachedGraphics cached';
 			#end
+			#if android
+			final total = deviceTotalMemory;
+			final free = deviceFreeMemory;
+			final used = total - free;
+			final devPct = total > 0 ? Std.int(used / total * 100) : 0;
+			str += '\n+-- DEVICE -------------------------+';
+			str += '\n|  Used      : ${FlxStringUtil.formatBytes(used)}  ${devPct}%';
+			str += '\n|  Free      : ${FlxStringUtil.formatBytes(free)}';
+			str += '\n|  Total     : ${FlxStringUtil.formatBytes(total)}';
+			#end
+			str += '\n+--------------------------------------+';
 		}
 
 		if (displayType == FpsDisplayMode.ADVANCED)
@@ -305,9 +318,21 @@ class DebugDisplay extends Sprite
 		}
 		
 		textField.text = str;
-		textField.textColor = ClientPrefs.fpsRGB
-			? FlxColor.fromHSB((haxe.Timer.stamp() * 90) % 360, 1.0, 1.0)
-			: 0xFFFFFFFF;
+		if (ClientPrefs.fpsRGB)
+			textField.textColor = FlxColor.fromHSB((haxe.Timer.stamp() * 90) % 360, 1.0, 1.0);
+		else
+		{
+			#if android
+			final total = deviceTotalMemory;
+			final free = deviceFreeMemory;
+			final devPct = total > 0 ? (total - free) / total : 0.0;
+			textField.textColor = devPct > 0.85 ? 0xFFFF4444 :   // red: critical
+				devPct > 0.70 ? 0xFFFFAA00 :   // orange: warning
+				0xFFFFFFFF;                     // white: normal
+			#else
+			textField.textColor = 0xFFFFFFFF;
+			#end
+		}
 	}
 
 	inline function get_gcMemory():Float
@@ -387,6 +412,24 @@ class DebugDisplay extends Sprite
 	inline function get_taskMemory():Float
 	{
 		return external.Native.getTaskMemory();
+	}
+
+	inline function get_deviceTotalMemory():Float
+	{
+		#if (android && cpp)
+		return external.Native.getSystemTotalMemory();
+		#else
+		return 0;
+		#end
+	}
+
+	inline function get_deviceFreeMemory():Float
+	{
+		#if (android && cpp)
+		return external.Native.getSystemAvailableMemory();
+		#else
+		return 0;
+		#end
 	}
 
 	static inline function _pad(s:String, len:Int):String
