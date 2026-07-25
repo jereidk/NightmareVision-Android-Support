@@ -675,7 +675,16 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 			// the same accent family (gold selected-state, pink interactive
 			// accent) instead of a third, unrelated hue.
 			_rowLabel[i].color = isLabel ? 0xFFFFB84D : (selected ? OptionsTheme.GOLD : FlxColor.WHITE);
-			_rowLabel[i].size = isLabel ? 19 : 22;
+			// FlxText.set_size() has no "same value" early-out the way
+			// set_color()/set_bold() do -- it unconditionally calls
+			// updateDefaultFormat(), which sets _regen = true and forces a
+			// full text-field re-layout/re-render. Unguarded, this ran EVERY
+			// FRAME for EVERY visible row here (this function runs every
+			// frame), regardless of whether the row's size actually needs to
+			// change -- the single most expensive thing this list did per
+			// frame. Only assign it on an actual change.
+			final wantSize = isLabel ? 19 : 22;
+			if (_rowLabel[i].size != wantSize) _rowLabel[i].size = wantSize;
 			_rowLabel[i].bold = isLabel;
 
 			if (isLabel) continue;
