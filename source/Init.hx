@@ -8,6 +8,9 @@ import flixel.input.keyboard.FlxKey;
 
 import funkin.backend.math.Vector3;
 import funkin.backend.Logger;
+#if mobile
+import mobile.utils.MobileNavUtil;
+#end
 import funkin.backend.Logger.Severity;
 import StringTools;
 
@@ -268,7 +271,7 @@ class Init extends FlxState
 		FlxG.sound.volumeDownKeys = ClientPrefs.volumeDownKeys;
 		FlxG.sound.volumeUpKeys = ClientPrefs.volumeUpKeys;
 		FlxG.keys.preventDefaultKeys = [TAB];
-		FlxG.mouse.visible = false;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		FlxG.plugins.drawOnTop = true;
 		
 		FlxG.scaleMode = new funkin.backend.FunkinRatioScaleMode();

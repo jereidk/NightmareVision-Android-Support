@@ -27,9 +27,9 @@ class MobileNavUtil
 	public static inline function shouldShowMouse():Bool
 	{
 		#if mobile
-		return ClientPrefs.navInputMode != 'Virtual Pad';
+		return ClientPrefs.showCursor && ClientPrefs.navInputMode != 'Virtual Pad';
 		#else
-		return true;
+		return ClientPrefs.showCursor;
 		#end
 	}
 }

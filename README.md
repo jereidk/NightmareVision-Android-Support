@@ -6,7 +6,7 @@
 
 <h1 align="center">VS Impostor Legacy — Android Port</h1>
 
-<p align="center"><b>Current version:</b> 1.1.1bb &nbsp;·&nbsp; unofficial Android port, built on the <a href="https://github.com/NMVTeam/NightmareVision">NightmareVision engine</a></p>
+<p align="center"><b>Current version:</b> 1.1.2 &nbsp;·&nbsp; unofficial Android port, built on the <a href="https://github.com/NMVTeam/NightmareVision">NightmareVision engine</a></p>
 
 <p align="center">
 	Original PC mod available on

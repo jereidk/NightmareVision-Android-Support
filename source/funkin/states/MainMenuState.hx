@@ -10,6 +10,9 @@ import flixel.text.FlxInputText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+#if mobile
+import mobile.utils.MobileNavUtil;
+#end
 
 import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
@@ -333,7 +336,7 @@ class MainMenuState extends MusicBeatState
 		Conductor.bpm = 102;
 		Conductor.bpmChangeMap.resize(0);
 
-		FlxG.mouse.visible = true;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 
 		super.create();
 

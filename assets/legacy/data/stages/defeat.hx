@@ -116,11 +116,9 @@ function onCreatePost()
 	iconP2.visible = false;
 	// wait. I'm white!
 	
-	if (boyfriend.hasFlag('defeatRetro'))
-	{
-		defeatRetro = (boyfriend.getFlag('variants')?.retro ?? boyfriend.getFlag('defeatRetro'));
-		addCharacterToList(defeatRetro, 0);
-	}
+	defeatRetro = (boyfriend.getFlag('variants')?.retro ?? boyfriend.getFlag('defeatRetro'));
+	if (defeatRetro != null) addCharacterToList(defeatRetro, 0);
+	
 	addCharacterToList('blackold', 1);
 	
 	snapCamToPos(750, 500);

@@ -37,11 +37,12 @@ WEBSITE: https://vsimpostor.com/
 - Lithuanian
 
 # CHANGELOG
-Current version: **1.1.1b**
+Current version: **1.1.2**
 
-## 1.1.2 (? 2026)
+## 1.1.2 (july 23 2026)
 
 ### Additions
+- Who now has captions.
 - You can now skip time in the Pause menu, while Charting Mode is active.
 - Added `curDecSection`.
 - Updated some libraries.
@@ -64,6 +65,7 @@ Current version: **1.1.1b**
 - Black's Defeat sprite was re-exported to fix effects.
 - White's halo effect was fixed.
 - Fixed some variables not working correctly in Hscript.
+- Fixed Greatest Plan intro when Camera Zoom on Beat is disabled.
 - Pets are correctly scaled in Pip Towers stage.
 - Playable Green's scared animation is fixed.
 - Dark BF's down pose plays correctly.
@@ -79,9 +81,9 @@ Current version: **1.1.1b**
 - The Ejected cutscene is changed if using skins.
 - Meltdown uses a correct icon in the Freeplay menu.
 - FINALE stage was simplified for Low Quality mode.
-- Who given optional captions.
 - Girlfriend's sprite in Danger was updated for consistency.
 - Pink's Pretender sprite changed for consistency.
+- Updated note coloring.
 
 ## 1.1.1b (june 21 2026)
   

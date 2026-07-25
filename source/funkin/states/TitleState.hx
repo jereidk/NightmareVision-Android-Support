@@ -5,6 +5,9 @@ import flixel.FlxSprite;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.group.FlxGroup;
 import flixel.util.FlxColor;
+#if mobile
+import mobile.utils.MobileNavUtil;
+#end
 import flixel.util.FlxTimer;
 import flixel.addons.display.FlxBackdrop;
 
@@ -143,7 +146,7 @@ class TitleState extends MusicBeatState
 		
 		persistentUpdate = true;
 		
-		FlxG.mouse.visible = #if mobile false #else true #end;
+		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 	}
 
 	function startIntro()

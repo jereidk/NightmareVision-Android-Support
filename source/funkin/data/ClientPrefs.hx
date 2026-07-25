@@ -117,6 +117,12 @@ class ClientPrefs
 	// never shown during an actual gameplay session (PlayState.instance != null).
 	@saveVar public static var shimejiEnabled:Bool = false;
 
+	// Whether the mouse cursor is visible on screen. On mobile this interacts
+	// with the nav mode (Virtual Pad hides it, Touch shows it by default).
+	// Desktop always defaults to true; mobile defaults to the current
+	// MobileNavUtil.shouldShowMouse() result at boot time.
+	@saveVar public static var showCursor:Bool = #if mobile false #else true #end;
+
 	// Toggle for LoadingState's background-thread preload/prefetch
 	// (startPreload()/prefetchSong() in LoadingState.hx). Default ON since
 	// it's what avoids the freeze-on-transition this whole system exists

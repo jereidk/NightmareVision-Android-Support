@@ -52,13 +52,13 @@ class GraphicsOptions
 					// Low-end profile: free per-state, lowest RAM footprint.
 					ClientPrefs.cacheMode = 'Destructive';
 				case 'Medium':
-					#if !android ClientPrefs.gpuCaching = true; #end
+					ClientPrefs.gpuCaching = true;
 					ClientPrefs.lowQuality = false;
 					ClientPrefs.shaders = false;
 					ClientPrefs.globalAntialiasing = true;
 					ClientPrefs.cacheMode = 'Destructive';
 				case 'High':
-					#if !android ClientPrefs.gpuCaching = true; #end
+					ClientPrefs.gpuCaching = true;
 					ClientPrefs.lowQuality = false;
 					ClientPrefs.shaders = true;
 					ClientPrefs.globalAntialiasing = true;

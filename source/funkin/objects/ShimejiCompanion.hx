@@ -2,10 +2,6 @@ package funkin.objects;
 
 import flixel.FlxG;
 import flixel.math.FlxMath;
-#if mobile
-import mobile.utils.MobileNavUtil;
-#end
-
 /**
  * How a given pet identity should roam. Assigned per-pet in MOVE_STYLES
  * below, from a direct visual review of every pet's spritesheet (assets/
@@ -436,11 +432,7 @@ class ShimejiCompanion extends Pet
 		final equippedPet = ClientPrefs.equipment.get('pet') ?? '';
 		if (equippedPet.length > 0 && equippedPet != baseCurPet) _applyPet(equippedPet);
 
-		#if mobile
-		final pointerOk = MobileNavUtil.allowPointerNav();
-		#else
-		final pointerOk = true;
-		#end
+
 		// Explicit camera: this sprite renders on its own dedicated
 		// shimejiCam (see MusicBeatState.hx/MusicBeatSubstate.hx's
 		// addShimeji()), not FlxG.camera -- overlaps()/getWorldPosition()
@@ -450,7 +442,7 @@ class ShimejiCompanion extends Pet
 		// than this fixed overlay.
 		final hitCamera = (cameras != null && cameras.length > 0) ? cameras[0] : null;
 
-		if (pointerOk && dragging && !FlxG.mouse.pressed)
+		if (dragging && !FlxG.mouse.pressed)
 		{
 			// Released -- if the pointer barely moved since it was
 			// pressed, treat it as the existing tap-to-dance reaction
@@ -475,7 +467,7 @@ class ShimejiCompanion extends Pet
 				_startFallIfDropped();
 			}
 		}
-		else if (pointerOk && !dragging && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
+		else if (!dragging && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
 		{
 			// Grabbed -- keep wherever on the sprite it was picked up
 			// instead of snapping its origin to the cursor. Also cancels
