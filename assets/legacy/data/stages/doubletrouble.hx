@@ -421,7 +421,10 @@ function onCreatePost()
 		// more redElement into frame.elements without ever removing the
 		// previous retry's one, which by then wrapped an already-destroyed
 		// `red` -- onDestroy() below removes them again so the cache stays
-		// clean for the next retry.
+		// clean for the next retry. Frame.getBounds() (unlike _drawElements())
+		// doesn't check .visible before touching each element, so a stale
+		// entry left over from a previous retry is a real SIGSEGV risk, not
+		// just a leak -- confirmed by reading Frame.hx directly.
 		if (placeholder != null)
 			placeholder.timeline.layers[0].forEachFrame((frame) -> {
 				for (i in frame.elements)

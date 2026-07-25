@@ -103,7 +103,21 @@ class FunkinSprite extends FlxAnimate
 			if (isAtlasSprite)
 			{
 				trace('[FunkinSprite]   Loading FlxAnimate frames from: images/$path');
-				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', mode), null, null, null, false, settings ?? {cacheOnLoad: true});
+				// cacheOnLoad:false matches flixel-animate's own documented-safe
+				// default ("Disabled by default", FlxAnimateFrames.hx) -- forcing
+				// it to true here made every MovieClipInstance with filters bake
+				// ALL of its frames eagerly during construction (inside
+				// MovieClipInstance's own constructor, see cacheOnLoad handling in
+				// animate/internal/elements/MovieClipInstance.hx) instead of lazily
+				// per-frame during normal draw(). Confirmed on-device as the cause
+				// of the Double Trouble native crash (SIGSEGV in
+				// FilterRenderer._bakeFilters/_drawTimeline) -- flipping this one
+				// flag to false reproducibly fixed it. flixel-animate's own source
+				// already flags cacheOnLoad as unfinished ("TODO: fix some size
+				// issues when using cacheOnLoad with masks", animate/internal/
+				// Layer.hx), so this stops overriding their default rather than
+				// trying to out-guess a known-rough area of the library.
+				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', mode), null, null, null, false, settings ?? {cacheOnLoad: false});
 				trace('[FunkinSprite]   FlxAnimate frames loaded: ${atlas != null ? "OK" : "NULL"}');
 				if (atlas != null)
 				{
