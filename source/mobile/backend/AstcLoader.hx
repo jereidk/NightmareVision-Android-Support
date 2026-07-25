@@ -64,12 +64,10 @@ import openfl.events.Event;
 @:access(openfl.display.BitmapData)
 class AstcLoader
 {
-	// Compressed payloads at or below this size are kept in RAM so context
 	// restoration can skip the disk re-read for small/medium textures.
 	// At ASTC 8×8 this covers textures up to ~1024×1024.
 	// Larger spritemaps re-read from disk on restore (lower RAM overhead vs.
 	// occasional resume stutter is the accepted tradeoff).
-	static inline final BYTES_CACHE_LIMIT:Int = 512 * 1024; // 512 KB
 
 	#if (android && cpp)
 	// Keyed by PNG path (= FunkinCache cache key).
@@ -79,7 +77,6 @@ class AstcLoader
 		width:         Int,
 		height:        Int,
 		isPngFallback: Bool,
-		cachedBytes:   Null<haxe.io.Bytes>
 	}> = [];
 	static var _listenerInstalled:Bool = false;
 
@@ -267,18 +264,12 @@ class AstcLoader
 			var result = _loadInternal(astcPath, bytes);
 			if (result == null) return null;
 
-			// Keep the compressed bytes in RAM for small textures so context
-			// restoration can skip the disk I/O round-trip. The bytes reference
-			// is shared (no copy) — we just prevent it from being GC'd.
-			var cached:Null<haxe.io.Bytes> = (bytes.length <= BYTES_CACHE_LIMIT) ? bytes : null;
-
 			_recovery.set(pngPath, {
 				astcPath:      astcPath,
 				astcTex:       result.astcTex,
 				width:         result.width,
 				height:        result.height,
 				isPngFallback: false,
-				cachedBytes:   cached
 			});
 
 			return result.bitmap;
@@ -330,8 +321,7 @@ class AstcLoader
 	 * by OpenFL on every real context loss/restore cycle.)
 	 *
 	 * For each tracked texture:
-	 *   • isPngFallback == false (ASTC mode): uses cachedBytes if available (no
-	 *     I/O for small textures), else re-reads from disk/APK. On missing
+	 *   • isPngFallback == false (ASTC mode): re-reads from disk/APK. On missing
 	 *     file, falls through to PNG fallback.
 	 *   • isPngFallback == true: re-uploads from the original PNG.
 	 *
@@ -349,7 +339,6 @@ class AstcLoader
 
 		// pngPath (the map key) is the original PNG asset path, which doubles as
 		// the FunkinCache cache key. This loop is synchronous: small textures skip
-		// I/O via cachedBytes; large ones (> BYTES_CACHE_LIMIT) re-read from disk.
 		// If testing reveals a noticeable resume stutter, stagger 1-2 textures per
 		// frame with a FlxTimer queue — _recovery stays the authoritative source.
 		for (pngPath => entry in _recovery)
@@ -380,20 +369,16 @@ class AstcLoader
 				continue;
 			}
 
-			// ASTC mode: prefer in-RAM cached bytes (small textures), otherwise
-			// re-read from disk/APK to avoid an I/O stall only when necessary.
-			var bytes:Null<haxe.io.Bytes> = entry.cachedBytes;
-			if (bytes == null)
+			// ASTC mode: re-read from disk/APK on every restore.
+			var bytes:Null<haxe.io.Bytes> = null;
+			try
 			{
-				try
-				{
-					if (sys.FileSystem.exists(entry.astcPath))
-						bytes = sys.io.File.getBytes(entry.astcPath);
-					else if (OflAssets.exists(entry.astcPath))
-						bytes = OflAssets.getBytes(entry.astcPath);
-				}
-				catch (e:Dynamic) {}
+				if (sys.FileSystem.exists(entry.astcPath))
+					bytes = sys.io.File.getBytes(entry.astcPath);
+				else if (OflAssets.exists(entry.astcPath))
+					bytes = OflAssets.getBytes(entry.astcPath);
 			}
+			catch (e:Dynamic) {}
 
 			if (bytes == null)
 			{
@@ -587,7 +572,6 @@ class AstcLoader
 
 		// Mark entry as PNG mode for all future context-restore cycles.
 		entry.isPngFallback = true;
-		entry.cachedBytes = null; // ASTC bytes no longer needed
 
 		Logger.log('AstcLoader: PNG fallback succeeded for $pngPath', WARN);
 		return true;
