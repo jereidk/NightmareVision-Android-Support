@@ -2300,6 +2300,28 @@ class PlayState extends MusicBeatState
 		
 		checkEventNote();
 		generatedMusic = true;
+
+		// reportGameplayFrame() (PlayState.update()) starts firing the instant
+		// generatedMusic is true -- i.e. immediately, covering the whole
+		// countdown before a note is ever hit -- but resetGameplayTimer() used
+		// to only be called from startSong(), once the countdown reaches 0.
+		// That left every [GAMEPLAY] line during the countdown comparing
+		// against whatever _gameplayWindowStartStamp was last set to: stale
+		// from a previous song, or (the first song of a session) its field
+		// default, timestamped against nothing this song did at all. Confirmed
+		// on a real device log: the very first post-load line read
+		// "unaccounted=170217ms(97%)" with a single tag ("flxMemberLoop")
+		// alone summing to 2612ms -- both impossible for a real ~1s window,
+		// and both making that line, the ONE most likely to show a genuine
+		// stage-load/onCreatePost hitch, useless for actually diagnosing it.
+		// Resetting here as well (in addition to startSong()'s own reset, kept
+		// as-is for the moment real gameplay begins) means the countdown's
+		// own first report window starts from "chart generation just
+		// finished" instead of some unrelated earlier point in time.
+		#if android
+		SystemMonitor.resetGameplayTimer();
+		#end
+
 		trace('[PlayState] generateSong: END');
 	}
 	
