@@ -467,7 +467,7 @@ class ShimejiCompanion extends Pet
 				_startFallIfDropped();
 			}
 		}
-		else if (!dragging && FlxG.mouse.justPressed && FlxG.mouse.overlaps(this, hitCamera))
+		else if (!dragging && FlxG.mouse.justPressed && hitCamera != null && FlxG.mouse.overlaps(this, hitCamera))
 		{
 			// Grabbed -- keep wherever on the sprite it was picked up
 			// instead of snapping its origin to the cursor. Also cancels
