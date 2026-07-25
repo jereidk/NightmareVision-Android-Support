@@ -167,6 +167,10 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _holdTime:Float = 0.0;
 	var _touchingZone:Bool = false;
 
+	// Deferred pad-skin rebuild -- see _setStr()'s 'padSkin' case for why
+	// this can't just call _refreshVirtualPadForNavMode() immediately.
+	var _pendingPadSkinRebuild:Bool = false;
+
 	// Animation state
 	var _enterAlpha:Float = 0.0;
 	var _enterComplete:Bool = false;
@@ -548,6 +552,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_handleTouch();
 		#end
 
+		// Only actually rebuild the pad once whatever triggered the pending
+		// skin change has let go -- see _setStr()'s 'padSkin' case for why
+		// doing this immediately caused a runaway rebuild loop.
+		#if mobile
+		if (_pendingPadSkinRebuild && !controls.UI_LEFT && !controls.UI_RIGHT && !FlxG.mouse.pressed)
+		{
+			_pendingPadSkinRebuild = false;
+			_refreshVirtualPadForNavMode();
+		}
+		#end
+
 		// _scrollOffsetVisual/_selVisual above are lerped every single frame,
 		// but _updateRows() (the only place that reads them and repositions the
 		// rows) used to only run from inside _handleInput()/_handleTouch() on
@@ -919,7 +934,23 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'vpadLayout': ClientPrefs.virtualPadLayout = v;
 			case 'padSkin':
 				ClientPrefs.virtualPadSkin = v;
-				#if mobile _refreshVirtualPadForNavMode(); #end // rebuild so the new skin shows immediately
+				// Deferred, not called right here: in Virtual Pad nav mode this
+				// row is changed via the pad's OWN D-pad (controls.UI_LEFT_P/
+				// UI_RIGHT_P), and _refreshVirtualPadForNavMode() destroys and
+				// recreates that exact same pad while the finger causing this
+				// change is very likely still physically down on its D-pad
+				// button. A freshly constructed button has no "was this touch
+				// already down before I existed" memory, so it read the
+				// still-active touch as a brand new press -- immediately
+				// re-firing UI_LEFT_P/UI_RIGHT_P, which changed the skin AGAIN
+				// and rebuilt AGAIN, for as long as the finger stayed down
+				// (confirmed on-device: rapid repeated changes on a single tap,
+				// runaway repeats while held, and the lag of rebuilding the
+				// whole pad dozens of times a second). Rebuilding is deferred
+				// to update() below, which only actually does it once
+				// UI_LEFT/UI_RIGHT are no longer held -- guaranteeing the new
+				// pad's buttons are constructed with nothing touching them.
+				#if mobile _pendingPadSkinRebuild = true; #end
 			case 'noteLayout': ClientPrefs.noteLayout = v;
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
