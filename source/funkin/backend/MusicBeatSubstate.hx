@@ -237,6 +237,7 @@ class MusicBeatSubstate extends FlxSubState
 		shimeji = new funkin.objects.ShimejiCompanion();
 		shimejiCam = new FlxCamera();
 		shimejiCam.bgColor.alpha = 0;
+		shimejiCam.useBgAlphaBlending = true;
 		FlxG.cameras.add(shimejiCam, false);
 		shimeji.cameras = [shimejiCam];
 		add(shimeji);
