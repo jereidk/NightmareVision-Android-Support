@@ -36,6 +36,9 @@ var shine:FlxSprite;
 var rainIntensity:Float = .1;
 var heartRad:Float = 0;
 var rainShader; // ty base game
+// Reused every frame in onUpdatePost() instead of allocating a fresh
+// 4-element array literal each time -- same 4 values, updated in place.
+var rainCameraBounds:Array<Float> = [0, 0, 0, 0];
 
 var lightningDarken:Array<FlxSprite>;
 var lightningLighten:Array<FlxSprite>;
@@ -536,12 +539,15 @@ function onUpdatePost(elapsed:Float):Void
 	if (rainShader != null)
 	{
 		heartRad += elapsed;
-		rainShader.setFloatArray('uCameraBounds',
-			[game.camGame.scroll.x + game.camGame.viewMarginX, game.camGame.scroll.y + game.camGame.viewMarginY, game.camGame.scroll.x
-				+ game.camGame.viewMarginX
-				+ game.camGame.width, game.camGame.scroll.y
-				+ game.camGame.viewMarginY
-				+ game.camGame.height]);
+
+		final left = game.camGame.scroll.x + game.camGame.viewMarginX;
+		final top = game.camGame.scroll.y + game.camGame.viewMarginY;
+		rainCameraBounds[0] = left;
+		rainCameraBounds[1] = top;
+		rainCameraBounds[2] = left + game.camGame.width;
+		rainCameraBounds[3] = top + game.camGame.height;
+		rainShader.setFloatArray('uCameraBounds', rainCameraBounds);
+
 		rainShader.setFloat('uTime', heartRad);
 		rainShader.setFloat('uIntensity', rainIntensity);
 	}
