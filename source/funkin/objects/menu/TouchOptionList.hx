@@ -313,7 +313,18 @@ class TouchOptionList extends FlxTypedGroup<FlxSprite>
 		FunkinSound.play(Paths.sound('hover'), 0.5);
 
 		final maxScroll = getMaxScrollRows();
-		if (curSelected < _scrollOffset) _scrollOffset = curSelected;
+		if (curSelected < _scrollOffset)
+		{
+			// Also reveal this row's own section header immediately above it,
+			// if there is one -- moveSelection() always skips 'label' rows, so
+			// scrolling up (keyboard/pad) to a section's very first option
+			// would otherwise leave that section's own header permanently one
+			// row above the visible window: nothing ever selects the label
+			// itself, so nothing ever scrolled far enough to show it again.
+			var top = curSelected;
+			if (top > 0 && optionsArray[top - 1].type == 'label') top--;
+			_scrollOffset = top;
+		}
 		else if (curSelected > _scrollOffset + maxVisible - 1) _scrollOffset = curSelected - maxVisible + 1;
 		_scrollOffset = FlxMath.bound(_scrollOffset, 0, maxScroll);
 
