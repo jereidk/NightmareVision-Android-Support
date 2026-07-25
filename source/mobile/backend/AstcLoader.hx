@@ -81,7 +81,24 @@ class AstcLoader
 
 	/**
 	 * Installs the CONTEXT3D_CREATE listener that re-uploads all tracked ASTC
-	 * textures after an OpenGL context loss/restore cycle.
+	 * textures after an OpenGL context loss/restore cycle, and requests the
+	 * Stage3D's Context3D so tryLoad()/_loadInternal() actually get one.
+	 *
+	 * Nothing else in this codebase (or in OpenFL's own OpenGL-renderer
+	 * bootstrap) ever calls `stage3D.requestContext3D()` on its own -- that
+	 * call is the only thing that populates `stage3Ds[0].context3D`
+	 * (Stage3D.__createContext() just does `context3D = stage.context3D`,
+	 * a reference to the SAME Context3D OpenFL's normal 2D renderer already
+	 * created and is already drawing every frame with -- see
+	 * openfl.display.Stage's own OPENGL-renderer setup -- so this does not
+	 * create a second/competing GL context or affect 2D rendering at all).
+	 * Without ever requesting it, `stage3Ds[0].context3D` stays null for the
+	 * entire session, so every tryLoad() call permanently no-ops past its
+	 * "no Stage3D context yet" guard and silently falls through to the PNG
+	 * fallback -- fine for assets that ship both, but the actual bug behind
+	 * DLC/optional song assets that ship ASTC-only ever rendering as the
+	 * Flixel-logo fallback instead of loading.
+	 *
 	 * Safe to call multiple times — only installs once.
 	 * Call from Init.hx right after AstcSupport.check().
 	 */
@@ -90,7 +107,10 @@ class AstcLoader
 		#if (android && cpp)
 		if (_listenerInstalled) return;
 		_listenerInstalled = true;
-		FlxG.stage.stage3Ds[0].addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		var stage3D = FlxG.stage.stage3Ds[0];
+		// Must add the listener before requestContext3D() -- it throws if none is present.
+		stage3D.addEventListener(Event.CONTEXT3D_CREATE, _onContextRestored);
+		stage3D.requestContext3D();
 		#end
 	}
 
@@ -306,7 +326,11 @@ class AstcLoader
 		var width:Int  = bytes.get(7)  | (bytes.get(8)  << 8) | (bytes.get(9)  << 16);
 		var height:Int = bytes.get(10) | (bytes.get(11) << 8) | (bytes.get(12) << 16);
 
-		if (width <= 0 || height <= 0 || width > 16384 || height > 16384) return null;
+		if (width <= 0 || height <= 0 || width > 16384 || height > 16384)
+		{
+			Logger.log('AstcLoader: invalid dimensions ${width}x${height} parsed from $path (bytes.length=${bytes.length}) — corrupt/truncated file?', WARN);
+			return null;
+		}
 
 		var glFormat:Int = blockSizeToGlFormat(blockW, blockH);
 		if (glFormat == 0)
@@ -320,7 +344,7 @@ class AstcLoader
 		if (context3D == null) return null;
 		var gl = context3D.gl;
 
-		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat);
+		var astcTex = _uploadCompressed(gl, bytes, width, height, glFormat, path);
 		if (astcTex == null) return null;
 
 		// -----------------------------------------------------------------------
@@ -351,7 +375,7 @@ class AstcLoader
 	 * texture with the given compressed format and returns the texture object,
 	 * or null on GL error.
 	 */
-	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int):Dynamic
+	static function _uploadCompressed(gl:Dynamic, bytes:haxe.io.Bytes, width:Int, height:Int, glFormat:Int, path:String):Dynamic
 	{
 		var imgLen:Int = bytes.length - HEADER_SIZE;
 		// Zero-copy view: UInt8Array.fromBytes wraps the existing haxe.io.Bytes (ArrayBuffer
@@ -366,14 +390,19 @@ class AstcLoader
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		while (gl.getError() != 0) {} // drain any pre-existing errors so the check below is unambiguous
-		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgData);
+		// gl is Dynamic (context3D.gl, not the statically-typed lime.graphics.opengl.GL),
+		// so a wrong argument count here compiles fine and only fails at runtime as a driver-
+		// level GL error -- lime.graphics.opengl.GL.compressedTexImage2D's real signature is
+		// (target, level, internalformat, width, height, border, imageSize, data); this was
+		// missing imageSize entirely, silently shifting/dropping args at the native call.
+		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, glFormat, width, height, 0, imgLen, imgData);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 
 		var glErr:Int = gl.getError();
 		if (glErr != 0)
 		{
 			gl.deleteTexture(astcTex);
-			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)}', WARN);
+			Logger.log('AstcLoader: GL error 0x${StringTools.hex(glErr, 4)} uploading $path (${width}x${height}, glFormat=0x${StringTools.hex(glFormat, 4)}, imgLen=$imgLen)', WARN);
 			return null;
 		}
 
@@ -468,7 +497,7 @@ class AstcLoader
 				continue;
 			}
 
-			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat);
+			var freshTex = _uploadCompressed(gl, bytes, entry.width, entry.height, entry.glFormat, entry.astcPath);
 			if (freshTex == null)
 			{
 				// GL upload error (driver-side failure). PNG fallback won't help
