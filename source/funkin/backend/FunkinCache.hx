@@ -51,6 +51,18 @@ class FunkinCache
 	 */
 	public function clearStoredMemory() // maybe rename
 	{
+		// Accumulative mode: keep everything loaded — don't flag assets as
+		// inactive or purge sounds between states.  Only clear transient
+		// data that is always recreated on demand (temp atlas frames,
+		// OpenFL's internal song cache which is re-populated by each
+		// song load anyway).
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative')
+		{
+			Paths.tempAtlasFramesCache.clear();
+			openfl.Assets.cache.clear("songs");
+			return;
+		}
+
 		Paths.tempAtlasFramesCache.clear();
 
 		// clear all sounds that are cached
@@ -73,6 +85,16 @@ class FunkinCache
 	 */
 	public function clearUnusedMemory()
 	{
+		// Accumulative mode: keep everything loaded — skip the full sweep.
+		// Still run a GC pass so unreferenced temporaries (makeGraphic rects,
+		// FlxAnimate filter results not yet adopted by any live sprite) get
+		// collected without waiting for hxcpp's own scheduler.
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative')
+		{
+			forceGcPass();
+			return;
+		}
+
 		final graphicKeys = [for (k in currentTrackedGraphics.keys()) k];
 		for (key in graphicKeys)
 		{
