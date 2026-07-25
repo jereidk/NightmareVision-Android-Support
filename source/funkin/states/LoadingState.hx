@@ -7,6 +7,7 @@ import flixel.util.typeLimit.NextState;
 import openfl.display.BitmapData;
 import openfl.media.Sound;
 import openfl.utils.AssetType;
+import openfl.filters.ShaderFilter;
 import lime.media.AudioBuffer;
 import lime.media.vorbis.VorbisFile;
 
@@ -118,12 +119,37 @@ class LoadingState extends MusicBeatState
 	// what the resulting bitmap gets registered under (see PreloadTask's own
 	// doc comment for why that isn't always the same string as `astcPath`).
 	static var _pendingAstcTextures:Array<{cacheKey:String, astcPath:String, bytes:haxe.io.Bytes}> = [];
+
+	// Fragment-shader filenames (as passed to the stage script's own
+	// newShader(...)) statically scanned off the worker thread -- see
+	// resolveStageScriptShaders(). Warmed on the main thread in
+	// finalizePendingAssets() by actually compiling each one via a throwaway
+	// camera/filter (see _warmShader()), instead of letting the FIRST real
+	// PlayState frame pay for it. Unlike the bitmap/audio/ASTC queues above,
+	// constructing a shader/filter is cheap CPU-side work -- the expensive
+	// GPU driver compile happens naturally the next time this state's own
+	// camera renders, which was going to happen anyway every loading-bar
+	// frame, so there's no need for a time-budgeted drain loop here.
+	static var _pendingShaderWarm:Array<String> = [];
 	#end
 
 	// Progress bar
 	var progressBar:FlxSprite;
 	var progressBarBg:FlxSprite;
 	var progressLabel:FlxText;
+
+	// Dedicated 1x1, non-default-draw-target camera used purely to trigger
+	// each warmed shader's GPU compile (see _warmShader()) -- nothing is ever
+	// drawn TO it (no sprite sets .cameras to include it), so its own
+	// per-camera clear+filter render pass every frame has nothing visible to
+	// composite: same "tiny, invisible, exists purely so its render() call
+	// happens" trick as ShimejiCompanion's/the virtual pad's own dedicated
+	// cameras, just used here to force a filter chain to run instead of to
+	// host a sprite. Lazily created (only if a stage actually has a shader to
+	// warm) and left to whatever teardown FlxG.cameras.reset() already does
+	// on the next state switch -- same as every other per-state throwaway
+	// camera in this codebase.
+	var _shaderWarmCam:Null<FlxCamera> = null;
 
 	// Only set on Android — the list of asset keys the worker is opening.
 	#if (sys && cpp)
@@ -191,6 +217,7 @@ class LoadingState extends MusicBeatState
 			_pendingBitmaps.resize(0);
 			_pendingAudioBuffers.resize(0);
 			_pendingAstcTextures.resize(0);
+			_pendingShaderWarm.resize(0);
 			_prefetchComplete = false;
 			_prefetchForSongId = '';
 			_prefetchTotal = 0;
@@ -409,6 +436,57 @@ class LoadingState extends MusicBeatState
 	}
 
 	/**
+	 * Statically scans a script-built stage's .hx for newShader('name') calls
+	 * -- e.g. doubletrouble.hx's rain shader, applied as a camGame.filters
+	 * ShaderFilter. Confirmed on a real device log: the first PlayState frame
+	 * that actually renders through a freshly constructed shader/filter pays
+	 * for the GPU driver's one-time GLSL compile right there -- a 650ms+
+	 * draw/stageDraw spike (fps=14) during Double Trouble's countdown, gone
+	 * completely from every frame after. Nothing in this preload pipeline
+	 * warmed shaders before this -- only bitmap/audio/ASTC data -- so that
+	 * compile always landed on the first real gameplay frame no matter how
+	 * much art was already cached.
+	 *
+	 * Same plain-string-literal-only scope as resolveStageScriptAssets()
+	 * above (an `ext + 'name'`-built shader key would be missed) -- every
+	 * real newShader() call in this fork's stage scripts today uses a bare
+	 * literal (see doubletrouble.hx's 'rain', skeldpixel.hx's
+	 * 'stages/hologram'/'stages/screen'), so this covers all of them without
+	 * needing that extra complexity.
+	 */
+	static function resolveStageScriptShaders(stage:String):Array<String>
+	{
+		final result:Array<String> = [];
+		if (stage == null || stage.length == 0) return result;
+
+		var scriptPath:Null<String> = null;
+		for (cand in ['data/stages/$stage/script', 'data/stages/$stage', 'stages/$stage/script', 'stages/$stage'])
+		{
+			final p = funkin.scripts.FunkinScript.getPath(cand);
+			if (FunkinAssets.exists(p, TEXT)) { scriptPath = p; break; }
+		}
+		if (scriptPath == null) return result;
+
+		final src:String = FunkinAssets.getContent(scriptPath);
+		if (src == null || src.length == 0) return result;
+
+		final seen:Map<String, Bool> = new Map();
+		final shaderRe = ~/\bnewShader\s*\(\s*['"]([^'"$]+)['"]/;
+		var rest = src;
+		while (shaderRe.match(rest))
+		{
+			final name = shaderRe.matched(1);
+			rest = shaderRe.matchedRight();
+			if (name == null || name.length == 0 || seen.exists(name)) continue;
+			seen.set(name, true);
+			if (FunkinAssets.exists(Paths.fragment(name))) result.push(name);
+			if (result.length >= 16) break; // sanity cap
+		}
+
+		return result;
+	}
+
+	/**
 	 * Resolves one image key (always ending in .png, whether or not that's
 	 * the real file on disk) to the task that actually loads it --
 	 * preferring a .astc GPU-compressed sibling when one exists AND the
@@ -450,6 +528,7 @@ class LoadingState extends MusicBeatState
 			_pendingBitmaps.resize(0);
 			_pendingAudioBuffers.resize(0);
 			_pendingAstcTextures.resize(0);
+			_pendingShaderWarm.resize(0);
 			_prefetchComplete = false;
 			_prefetchTotal = 0;
 			_prefetchDone  = 0;
@@ -928,6 +1007,15 @@ class LoadingState extends MusicBeatState
 		}
 		#end
 
+		// Warm any stage-script shaders found -- not time-budgeted (unlike the
+		// three queues above): constructing a shader/ShaderFilter is cheap,
+		// and not counted toward _totalTasks/_completedFinalizes at all, since
+		// this is an invisible extra step, not a tracked preload task.
+		_mutex.acquire();
+		final shaderNames = _pendingShaderWarm.splice(0, _pendingShaderWarm.length);
+		_mutex.release();
+		for (name in shaderNames) _warmShader(name);
+
 		// All done?
 		if (_allFilesOpened && _pendingBitmaps.length == 0 && _pendingAudioBuffers.length == 0 && _pendingAstcTextures.length == 0)
 		{
@@ -942,6 +1030,56 @@ class LoadingState extends MusicBeatState
 			_mutex.release();
 			if (!_wasFinalized)
 				Logger.log('[LoadingState] finalize: all assets ready ("Ready!") — decoded=$_dec finalized=$_fin of $_tot task(s)', NOTICE, true);
+		}
+	}
+
+	/**
+	 * Actually constructs `fragFile`'s shader and attaches it as a
+	 * ShaderFilter to a dedicated, invisible 1x1 camera -- forcing the GPU
+	 * driver to compile the GLSL program during this loading-bar frame
+	 * instead of PlayState's first real one. Mirrors newShader()'s own
+	 * construction exactly (FunkinScript.hx) so this warms the identical
+	 * shader instance shape the stage script will build for real a moment
+	 * later (same source text, no vertex shader) -- uniform VALUES don't
+	 * matter here, only getting the program through a real render pass once.
+	 *
+	 * Main-thread only (constructs an FlxCamera / touches the display list) --
+	 * called from finalizePendingAssets(), never from the worker Thread.
+	 */
+	function _warmShader(fragFile:String):Void
+	{
+		final fragPath = Paths.fragment(fragFile);
+		if (!FunkinAssets.exists(fragPath)) return;
+
+		var fragSource:String = null;
+		try
+			fragSource = FunkinAssets.getContent(fragPath)
+		catch (e:Dynamic)
+		{
+			Logger.log('LoadingState: shader warm-up read failed for $fragFile: $e', WARN);
+			return;
+		}
+		if (fragSource == null || fragSource.length == 0) return;
+
+		try
+		{
+			if (_shaderWarmCam == null)
+			{
+				_shaderWarmCam = new FlxCamera(0, 0, 1, 1, 1);
+				_shaderWarmCam.bgColor.alpha = 0;
+				// FlxCamera.filters defaults to null (not []) -- start it as a
+				// real array right away so every later warm just concats onto
+				// it, instead of each call needing its own null guard.
+				_shaderWarmCam.filters = [];
+				FlxG.cameras.add(_shaderWarmCam, false);
+			}
+
+			final shader = new funkin.backend.FunkinShader.FunkinRuntimeShader(fragSource, null);
+			_shaderWarmCam.filters = _shaderWarmCam.filters.concat([new ShaderFilter(shader)]);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('LoadingState: shader warm-up failed for $fragFile: $e', WARN);
 		}
 	}
 	#end
@@ -1068,6 +1206,16 @@ class LoadingState extends MusicBeatState
 				if (_threadGeneration != myGen) return;
 				addSound(basePath, 'stagesfx');
 			}
+
+			// Stage — custom camera-filter shaders (e.g. doubletrouble.hx's
+			// rain). Just collects the names here (cheap text scan); the
+			// actual shader construction/GPU compile happens back on the main
+			// thread in finalizePendingAssets() (see _warmShader()), same
+			// split ASTC textures already use for their own GL upload step.
+			_mutex.acquire();
+			for (name in resolveStageScriptShaders(song.stage))
+				_pendingShaderWarm.push(name);
+			_mutex.release();
 
 			// Characters
 			final chars:Array<String> = [song.player1, song.player2];
