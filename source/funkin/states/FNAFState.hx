@@ -135,7 +135,20 @@ class FNAFState extends MusicBeatState
 		
 		if (FlxG.sound.music != null) FlxG.sound.music.stop();
 		
-		FlxG.cameras.bgColor = FlxColor.BLACK;
+		// FlxG.cameras.bgColor (the global setter) loops over EVERY camera
+		// currently in FlxG.cameras.list, not just the main one -- including
+		// the Shimeji companion's own dedicated camera, already created by
+		// super.create()'s addShimeji() above with its bgColor.alpha
+		// deliberately set to 0 (fully transparent, so it draws nothing but
+		// the pet sprite itself). Setting the GLOBAL bgColor here overwrote
+		// that camera's alpha back to opaque, so its per-frame clear-to-black
+		// fill painted over the entire screen for as long as this state was
+		// visible -- confirmed the actual cause of a real "screen stays solid
+		// black the whole time FNAFState is open, only Shimeji enabled"
+		// report. hudCam right below already gets its OWN bgColor set
+		// explicitly, confirming the intent here was only ever "make the
+		// MAIN camera's backdrop black", never "every camera, forever".
+		FlxG.camera.bgColor = FlxColor.BLACK;
 		
 		dialogueLines = [Lang.str('weirdroute0'), Lang.str('weirdroute1'), Lang.str('weirdroute2')];
 		postDialogueLines = [Lang.str('weirdroute3'), Lang.str('weirdroute4')];

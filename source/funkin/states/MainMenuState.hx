@@ -1342,6 +1342,24 @@ class MainMenuState extends MusicBeatState
 			if (devPanelGlow != null) devPanelGlow.cameras = [devPanelCam];
 		}
 
+		// devPanelCam is only ever created ONCE (guard above) and stays
+		// wherever it first landed in FlxG.cameras.list -- but the virtual
+		// pad's own camera was added even earlier, at create() time, so
+		// without this it would render BENEATH the panel's dim overlay every
+		// time the panel opens: exactly wrong for "Virtual Pad" nav mode,
+		// where devPanelSelector's own visibility (see
+		// updateDevPanelSelector()) assumes the player can actually SEE the
+		// pad they're navigating this panel with, not a dimmed shape buried
+		// under it. remove(cam, false) + add() re-stacks it on top without
+		// destroying it -- same non-destructive reorder pattern
+		// removeVirtualPad() already relies on elsewhere (list.indexOf(...)
+		// guard against a switch's FlxG.cameras.reset() beating it here).
+		if (virtualPadCam != null && FlxG.cameras.list.indexOf(virtualPadCam) != -1)
+		{
+			FlxG.cameras.remove(virtualPadCam, false);
+			FlxG.cameras.add(virtualPadCam, false);
+		}
+
 		// Layered with unlockSong (the same fanfare the "Grant every
 		// achievement" dev button and real content unlocks elsewhere use) so
 		// getting into the cheat menu itself feels like an unlock, not just
