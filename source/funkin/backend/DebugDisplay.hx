@@ -5,6 +5,7 @@ import openfl.display.Bitmap;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
 import openfl.Assets;
+import openfl.display.Graphics;
 import openfl.display.Sprite;
 import openfl.events.Event;
 
@@ -154,6 +155,12 @@ class DebugDisplay extends Sprite
 	var times:Array<Float> = [];
 	
 	var deltaTimeout:Float = 0.0;
+
+	// Memory bar
+	static inline final BAR_HEIGHT:Float = 4;
+	static inline final BAR_GAP:Float = 2;
+	static inline final BAR_UPDATE_INTERVAL:Float = 0.1; // 100ms
+	var _barTimer:Float = 0.0;
 	
 	public function new(x:Float = 10, y:Float = 10, color:Int = 0x000000)
 	{
@@ -210,7 +217,15 @@ class DebugDisplay extends Sprite
 		updateText();
 		textUnderlay.width = textField.width + 3;
 		textUnderlay.height = textField.height + (displayType == FpsDisplayMode.ADVANCED ? 0 : -5);
-		
+
+		// Redraw memory bar at reduced frequency (reads /proc on Android)
+		_barTimer += deltaTime;
+		if (_barTimer >= BAR_UPDATE_INTERVAL)
+		{
+			_barTimer = 0.0;
+			_drawMemoryBar();
+		}
+
 		deltaTimeout = 0.0;
 	}
 	
@@ -333,6 +348,38 @@ class DebugDisplay extends Sprite
 			textField.textColor = 0xFFFFFFFF;
 			#end
 		}
+	}
+
+	/**
+	 * Draws a thin horizontal bar showing app RAM usage as a proportion
+	 * of total device RAM. Green <50%, orange 50-75%, red >75%.
+	 */
+	function _drawMemoryBar():Void
+	{
+		final g:Graphics = this.graphics;
+		g.clear();
+
+		#if android
+		final total = deviceTotalMemory;
+		if (total <= 0) return;
+
+		final appRam = taskMemory;
+		final ratio = appRam / total;
+		final barWidth = textField.width;
+
+		// Background (dark gray)
+		g.beginFill(0x333333, 0.8);
+		g.drawRect(0, textField.height + BAR_GAP, barWidth, BAR_HEIGHT);
+		g.endFill();
+
+		// Filled portion (colored by pressure)
+		final fillColor:Int = ratio > 0.75 ? 0xFF4444 :   // red
+				ratio > 0.50 ? 0xFFAA00 :   // orange
+				0x44CC44;                     // green
+		g.beginFill(fillColor, 0.9);
+		g.drawRect(0, textField.height + BAR_GAP, barWidth * ratio, BAR_HEIGHT);
+		g.endFill();
+		#end
 	}
 
 	inline function get_gcMemory():Float
