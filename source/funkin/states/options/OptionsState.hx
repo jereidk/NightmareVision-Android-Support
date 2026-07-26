@@ -654,13 +654,25 @@ class OptionsState extends MusicBeatState
 		// Tap to clear -- plain text glyph instead of a new icon asset, same
 		// low-risk approach MobileSettingsSubState's '<  BACK' button uses.
 		// Not part of FlxInputText itself, so this stays a separate sprite.
-		languageSearchClear = new FlxText(areaEnd - 46, y, 40, 'X');
-		languageSearchClear.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.PINK, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		languageSearchClear.borderSize = 1.5;
-		languageSearchClear.y += Math.round((SEARCH_H - languageSearchClear.height) * .5);
-		languageSearchClear.antialiasing = ClientPrefs.globalAntialiasing;
-		languageSearchClear.visible = false;
-		add(languageSearchClear);
+		//
+		// Touch-only: its tap test is gated to Touch nav mode (searchVisible
+		// below requires pointerNavAllowed), and Virtual Pad has no
+		// keyboard-driven way to reach this field either -- skip creating it
+		// entirely there, same convention as the other Touch-only 'X'
+		// buttons elsewhere this session. The visibility-update/tap-check
+		// sites below null-guard it accordingly.
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			languageSearchClear = new FlxText(areaEnd - 46, y, 40, 'X');
+			languageSearchClear.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.PINK, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			languageSearchClear.borderSize = 1.5;
+			languageSearchClear.y += Math.round((SEARCH_H - languageSearchClear.height) * .5);
+			languageSearchClear.antialiasing = ClientPrefs.globalAntialiasing;
+			languageSearchClear.visible = false;
+			add(languageSearchClear);
+		}
 	}
 
 	/** Rebuilds the language tab's own rows from the current search text -- separate from refreshLanguageTabInPlace() (language-switch confirm), which must NOT re-apply the filter/reset scroll the way a real search edit should. */
@@ -929,7 +941,7 @@ class OptionsState extends MusicBeatState
 		// specific affordance rather than a universal one.
 		final searchVisible = #if mobile (pointerNavAllowed && tabs[curTab] == 'language') #else false #end;
 		languageSearchField.visible = languageSearchField.active = searchVisible;
-		languageSearchClear.visible = searchVisible && languageSearchField.hasFocus && languageSearchText.length > 0;
+		if (languageSearchClear != null) languageSearchClear.visible = searchVisible && languageSearchField.hasFocus && languageSearchText.length > 0;
 		if (!searchVisible) languageSearchField.endFocus();
 
 		// The navInputMode check only makes sense on mobile (Virtual Pad users
@@ -1027,7 +1039,7 @@ class OptionsState extends MusicBeatState
 			// Only the clear button needs handling here -- FlxInputText already
 			// manages its own click-to-focus and click-away-to-unfocus (see
 			// buildLanguageSearch()'s doc comment).
-			if (searchVisible && languageSearchClear.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSearchClear))
+			if (languageSearchClear != null && searchVisible && languageSearchClear.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSearchClear))
 			{
 				languageSearchField.text = '';
 				languageSearchText = '';
