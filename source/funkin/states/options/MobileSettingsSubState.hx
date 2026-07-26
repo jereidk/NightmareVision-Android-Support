@@ -924,6 +924,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
 			case 'storageMode': ClientPrefs.storageMode;
 			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible ? 'on' : 'off';
+			case 'roundPauseBtn': ClientPrefs.roundPauseButton ? 'on' : 'off';
 			default: '';
 		};
 
@@ -964,6 +965,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
 			case 'storageMode': ClientPrefs.storageMode = v;
 			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible = (v == 'on');
+			case 'roundPauseBtn': ClientPrefs.roundPauseButton = (v == 'on');
 		}
 
 	function _getFloat(id:String):Float
@@ -1016,6 +1018,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			choices: [Lang.str('choice_notelayout_normal', 'Normal'), Lang.str('choice_notelayout_vslice', 'VSlice')],
 			stored:  ['Normal', 'VSlice'],
 			defaultVal: 'Normal'
+		});
+
+		_opts.push({
+			id: 'roundPauseBtn', kind: 'string',
+			label: Lang.str('opt_roundpausebtn', 'Round Pause Button'),
+			desc:  Lang.str('opt_roundpausebtn_desc', 'Use a bigger, smoother, more transparent circular pause button during gameplay instead of the plain square one.'),
+			choices: [Lang.str('choice_roundpausebtn_off', 'Off'), Lang.str('choice_roundpausebtn_on', 'On')],
+			stored:  ['off', 'on'],
+			defaultVal: 'off'
 		});
 
 		// Visual skin for the on-screen pad buttons -- applies to BOTH the

@@ -246,6 +246,14 @@ class ClientPrefs
 	 */
 	@saveVar public static var virtualPadSkin:String = 'modern';
 
+	/**
+	 * Opt-in prettier look for the in-song mobile pause button: a bigger,
+	 * anti-aliased translucent circle (via FlxSpriteUtil.drawCircle) instead
+	 * of the plain flat-color square. Off by default so the existing look
+	 * doesn't change under anyone who hasn't asked for it.
+	 */
+	@saveVar public static var roundPauseButton:Bool = false;
+
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';
 	@saveVar public static var virtualPadLayout:String = 'LeftFull';

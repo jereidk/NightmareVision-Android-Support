@@ -16,6 +16,7 @@ import flixel.math.FlxPoint;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxColor;
 import flixel.util.FlxSort;
+import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
 import flixel.text.FlxText;
 import flixel.group.FlxSpriteGroup;
@@ -1174,15 +1175,28 @@ class PlayState extends MusicBeatState
 		if (virtualPad != null) virtualPad.visible = false;
 
 		mobilePauseBtn = new FlxSprite();
-		mobilePauseBtn.makeGraphic(55, 55, 0x88000000);
+
+		// Optional prettier style (ClientPrefs.roundPauseButton) -- a bigger,
+		// anti-aliased translucent circle instead of the plain flat square,
+		// off by default so it doesn't change anyone's look unasked.
+		final pauseBtnSize = ClientPrefs.roundPauseButton ? 68 : 55;
+		if (ClientPrefs.roundPauseButton)
+		{
+			mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, FlxColor.TRANSPARENT, true);
+			FlxSpriteUtil.drawCircle(mobilePauseBtn, -1, -1, -1, 0x66000000, {thickness: 2, color: 0x40FFFFFF});
+		}
+		else mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, 0x88000000);
+
 		mobilePauseBtn.x = FlxG.width - mobilePauseBtn.width - 5;
 		mobilePauseBtn.y = 5;
 		mobilePauseBtn.scrollFactor.set();
 		mobilePauseBtn.cameras = [camHUD];
 		add(mobilePauseBtn);
 
-		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + 9, Std.int(mobilePauseBtn.width), 'II', 26);
-		_pauseLabel.setFormat(null, 26, FlxColor.WHITE, FlxTextAlign.CENTER);
+		final pauseLabelSize = Std.int(26 * pauseBtnSize / 55);
+		final pauseLabelYOffset = Std.int(9 * pauseBtnSize / 55);
+		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + pauseLabelYOffset, Std.int(mobilePauseBtn.width), 'II', pauseLabelSize);
+		_pauseLabel.setFormat(null, pauseLabelSize, FlxColor.WHITE, FlxTextAlign.CENTER);
 		_pauseLabel.scrollFactor.set();
 		_pauseLabel.cameras = [camHUD];
 		add(_pauseLabel);

@@ -826,6 +826,11 @@
 		"choice_hitboxhints_off": "Off",
 		"choice_hitboxhints_on": "On",
 
+		"opt_roundpausebtn": "Round Pause Button",
+		"opt_roundpausebtn_desc": "Use a bigger, smoother, more transparent circular pause button during gameplay instead of the plain square one.",
+		"choice_roundpausebtn_off": "Off",
+		"choice_roundpausebtn_on": "On",
+
 		"opt_padopacity": "Pad Opacity",
 		"opt_padopacity_desc": "How visible the virtual pad buttons appear.",
 		"opt_vpadlayout": "Pad Layout",
