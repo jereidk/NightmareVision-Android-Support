@@ -918,6 +918,17 @@ class MainMenuState extends MusicBeatState
 		devCodeField.multiline = false;
 		devCodeField.maxChars = 10;
 		devCodeField.scrollFactor.set();
+		// Pin an explicit, always-valid camera instead of leaving this on
+		// FlxBasic's implicit fallback chain (cameras -> container.getCameras()
+		// -> FlxCamera._defaultCameras). FlxInputText scans FlxG.touches.list
+		// against getCameras() every single frame it exists (checkTouchInput()
+		// -> checkPointerOverlap()), unlike every other sprite here, which only
+		// ever gets checked against a camera from this state's own explicit,
+		// manually-written overlap calls -- a device crash log placed the
+		// SIGSEGV inside that exact per-frame native call chain
+		// (FlxObject::getScreenPosition, called with a null/invalid camera
+		// crashes outright in hxcpp, no null-check on that path upstream).
+		devCodeField.cameras = [FlxG.camera];
 		add(devCodeField);
 		_lastDevCodeText = '';
 
