@@ -11,6 +11,8 @@ import openfl.utils.Assets;
 #if sys
 import sys.FileSystem;
 import sys.io.File;
+import sys.thread.Thread;
+import sys.thread.Mutex;
 #end
 
 using StringTools;
@@ -107,9 +109,12 @@ class StorageSystem
 	 * -- no restart needed for the path itself. What this does NOT do:
 	 * migrate any files from the old folder to the new one, or reload
 	 * anything (mods/scripts/DLC state) already read into memory this
-	 * session from the old folder -- by design, same trade-off ShadowEngine's
-	 * own equivalent (useExternal.txt) makes. Callers should tell the player
-	 * a restart is needed for existing mods/DLC to actually reappear.
+	 * session from the old folder -- callers that want the old folder's
+	 * contents actually moved over should call migrateStorage() themselves
+	 * (see its own doc comment), typically with the directory this returned
+	 * BEFORE calling applyStorageMode() as `from` and AFTER as `to`. Callers
+	 * should tell the player a restart is needed for existing mods/DLC to
+	 * actually reappear either way.
 	 */
 	public static function applyStorageMode(mode:String):Void
 	{
@@ -134,6 +139,145 @@ class StorageSystem
 		catch (e:Dynamic) {}
 		#end
 	}
+
+	#if (android && sys)
+	static var _migrateMutex:Mutex = new Mutex();
+	static var _migratePending:Bool = false;
+	static var _migrateSuccess:Bool = false;
+	static var _migrateErrorCount:Int = 0;
+
+	/**
+	 * Actually moves everything from `fromDir` into `toDir`: recursively
+	 * copies every file over (preserving the relative folder structure),
+	 * then -- only if every single file copied without error -- deletes
+	 * `fromDir` entirely, so switching storage mode really does relocate
+	 * existing mods/DLC/saves instead of just changing where the game looks
+	 * from now on (applyStorageMode() alone never touched the old folder at
+	 * all, see its own doc comment). A partial failure leaves the old
+	 * folder in place (with whatever didn't copy still there) rather than
+	 * silently losing it.
+	 *
+	 * Runs entirely on a background Thread: mods/DLC/saves can add up to a
+	 * meaningful amount of data, and this is called from a UI screen's own
+	 * update()/input-handling code, which must never block on file I/O --
+	 * same reasoning LoadingState's startPreload()/prefetchSong() already
+	 * established for song-asset loading.
+	 *
+	 * Android's AlertDialog (and every other Interface.* JNI call PopUp.hx
+	 * wraps) can only ever be shown from the main/UI thread -- a callback
+	 * invoked directly from this background Thread would crash. Callers
+	 * must instead poll consumeMigrationResult() every frame from their own
+	 * update(), same mutex-guarded-static-flag pattern LoadingState already
+	 * uses for prefetchSong()'s own completion.
+	 */
+	public static function migrateStorage(fromDir:String, toDir:String):Void
+	{
+		_migrateMutex.acquire();
+		_migratePending = false;
+		_migrateMutex.release();
+
+		Thread.create(() ->
+		{
+			var errorCount = 0;
+
+			try
+			{
+				if (FileSystem.exists(fromDir) && Path.addTrailingSlash(fromDir) != Path.addTrailingSlash(toDir))
+				{
+					errorCount = _copyTree(fromDir, toDir);
+					if (errorCount == 0) _deleteTree(fromDir);
+				}
+			}
+			catch (e:Dynamic)
+			{
+				trace('StorageSystem: migration failed: $e');
+				errorCount++;
+			}
+
+			_migrateMutex.acquire();
+			_migratePending = true;
+			_migrateSuccess = (errorCount == 0);
+			_migrateErrorCount = errorCount;
+			_migrateMutex.release();
+		});
+	}
+
+	/**
+	 * Polled from a screen's own update() -- returns the result (and clears
+	 * the pending flag) exactly once per completed migrateStorage() call, or
+	 * null if no migration has finished since the last call.
+	 */
+	public static function consumeMigrationResult():Null<{success:Bool, errors:Int}>
+	{
+		_migrateMutex.acquire();
+		var result:Null<{success:Bool, errors:Int}> = null;
+		if (_migratePending)
+		{
+			_migratePending = false;
+			result = {success: _migrateSuccess, errors: _migrateErrorCount};
+		}
+		_migrateMutex.release();
+		return result;
+	}
+
+	/** Recursively copies every file under `from` into `to`, creating folders as needed. Returns the number of files that failed to copy. */
+	static function _copyTree(from:String, to:String):Int
+	{
+		var errors = 0;
+		try
+		{
+			if (!FileSystem.exists(to)) createDirectoryRecursive(to);
+
+			for (entry in FileSystem.readDirectory(from))
+			{
+				final fromPath = Path.join([from, entry]);
+				final toPath = Path.join([to, entry]);
+
+				if (FileSystem.isDirectory(fromPath))
+				{
+					errors += _copyTree(fromPath, toPath);
+				}
+				else
+				{
+					try
+					{
+						File.copy(fromPath, toPath);
+					}
+					catch (e:Dynamic)
+					{
+						trace('StorageSystem: failed to copy $fromPath -> $toPath: $e');
+						errors++;
+					}
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('StorageSystem: failed to read directory $from: $e');
+			errors++;
+		}
+		return errors;
+	}
+
+	/** Recursively deletes `path` and everything under it -- only ever called on `fromDir` once _copyTree() reports zero errors. */
+	static function _deleteTree(path:String):Void
+	{
+		try
+		{
+			for (entry in FileSystem.readDirectory(path))
+			{
+				final entryPath = Path.join([path, entry]);
+				if (FileSystem.isDirectory(entryPath)) _deleteTree(entryPath);
+				else FileSystem.deleteFile(entryPath);
+			}
+			FileSystem.deleteDirectory(path);
+		}
+		catch (e:Dynamic)
+		{
+			trace('StorageSystem: failed to clean up old folder $path: $e');
+		}
+	}
+	#end
 
 	/**
 	 * Returns the base storage directory path without forcing a trailing slash.

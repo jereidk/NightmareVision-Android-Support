@@ -177,6 +177,15 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	// this can't just call _refreshVirtualPadForNavMode() immediately.
 	var _pendingPadSkinRebuild:Bool = false;
 
+	// Set right after kicking off StorageSystem.migrateStorage() on its
+	// background Thread -- polled every frame in update() via
+	// consumeMigrationResult() until the copy actually finishes, since
+	// Android's AlertDialog can only ever be shown from this (the main/UI)
+	// thread, never from inside that background Thread itself.
+	#if android
+	var _storageMigratePending:Bool = false;
+	#end
+
 	// Animation state
 	var _enterAlpha:Float = 0.0;
 	var _enterComplete:Bool = false;
@@ -584,6 +593,27 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		}
 		#end
 
+		// See migrateStorage()'s own doc comment for why this has to be a
+		// poll instead of a callback straight out of its background Thread.
+		#if android
+		if (_storageMigratePending)
+		{
+			final result = mobile.backend.StorageSystem.consumeMigrationResult();
+			if (result != null)
+			{
+				_storageMigratePending = false;
+				mobile.backend.utils.PopUp.showConfirm(
+					result.success ? Lang.str('opt_storagemode_moved_title', 'Files Moved') : Lang.str('opt_storagemode_moveerr_title', 'Some Files Could Not Be Moved'),
+					result.success
+						? Lang.str('opt_storagemode_moved_msg', 'Everything was moved to the new location. Restart now to finish?')
+						: Lang.str('opt_storagemode_moveerr_msg', 'Some files could not be copied and were left in the old folder -- you may need to move them manually. Restart now anyway?'),
+					Lang.str('opt_storagemode_confirm_yes', 'Restart Now'),
+					Lang.str('opt_storagemode_confirm_no', 'Later'),
+					() -> mobile.backend.AndroidUtils.restartApp());
+			}
+		}
+		#end
+
 		// _scrollOffsetVisual/_selVisual above are lerped every single frame,
 		// but _updateRows() (the only place that reads them and repositions the
 		// rows) used to only run from inside _handleInput()/_handleTouch() on
@@ -884,18 +914,44 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if android
 		else if (opt.id == 'storageMode')
 		{
+			// Snapshot the OLD resolved directory BEFORE applyStorageMode()
+			// invalidates the cached getters below -- getDirectory() called
+			// again after that point resolves the NEW one instead, so this
+			// is the simplest way to get both without adding a second
+			// mode-to-directory resolver just for this one call site.
+			final oldDir = mobile.backend.StorageSystem.getDirectory();
 			mobile.backend.StorageSystem.applyStorageMode(ClientPrefs.storageMode);
-			mobile.backend.utils.PopUp.showConfirm(Lang.str('opt_storagemode_confirm_title', 'Storage Location Changed'),
-				Lang.str('opt_storagemode_confirm_msg',
-					'Mods/DLC already loaded this session will still be from the old location until the game restarts. Restart now?'),
-				Lang.str('opt_storagemode_confirm_yes', 'Restart Now'),
-				Lang.str('opt_storagemode_confirm_no', 'Later'),
-				() -> mobile.backend.AndroidUtils.restartApp());
+			final newDir = mobile.backend.StorageSystem.getDirectory();
+
+			mobile.backend.utils.PopUp.showConfirm(Lang.str('opt_storagemode_move_title', 'Move Existing Files?'),
+				Lang.str('opt_storagemode_move_msg',
+					'Move your mods, DLC and saves from the old location to the new one now? This can take a moment depending on how much you have installed.'),
+				Lang.str('opt_storagemode_move_yes', 'Move Now'),
+				Lang.str('opt_storagemode_move_no', 'Not Now'),
+				() -> {
+					mobile.backend.AndroidUtils.showToast(Lang.str('opt_storagemode_moving', 'Moving files, please wait...'));
+					mobile.backend.StorageSystem.migrateStorage(oldDir, newDir);
+					_storageMigratePending = true;
+				},
+				() -> _showStorageRestartPrompt());
 		}
 		#end
 
 		_updateRows();
 	}
+
+	#if android
+	/** The plain "restart to see your old mods/DLC again" prompt -- shown when the player declines to move files, or after a failed migration (nothing left to move automatically). */
+	function _showStorageRestartPrompt():Void
+	{
+		mobile.backend.utils.PopUp.showConfirm(Lang.str('opt_storagemode_confirm_title', 'Storage Location Changed'),
+			Lang.str('opt_storagemode_confirm_msg',
+				'Mods/DLC already loaded this session will still be from the old location until the game restarts. Restart now?'),
+			Lang.str('opt_storagemode_confirm_yes', 'Restart Now'),
+			Lang.str('opt_storagemode_confirm_no', 'Later'),
+			() -> mobile.backend.AndroidUtils.restartApp());
+	}
+	#end
 
 	/** Show/hide touch-mode back button and update help text to match current nav input mode. */
 	function _updateNavModeUI():Void
@@ -1146,7 +1202,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		_opts.push({
 			id: 'storageMode', kind: 'string',
 			label: Lang.str('opt_storagemode', 'Storage Location'),
-			desc:  Lang.str('opt_storagemode_desc', 'Where mods/DLC/saves are stored.\nShared: the classic folder, visible to any file manager, needs "All files access". App-Only: no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nExisting mods/DLC only reappear after switching back and restarting.'),
+			desc:  Lang.str('opt_storagemode_desc', 'Where mods/DLC/saves are stored.\nShared: the classic folder, visible to any file manager, needs "All files access". App-Only: no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nChanging this offers to move your existing files to the new location.'),
 			choices: [Lang.str('choice_storagemode_shared', 'Shared'), Lang.str('choice_storagemode_scoped', 'App-Only')],
 			stored:  ['Shared', 'Scoped'],
 			defaultVal: 'Shared'
