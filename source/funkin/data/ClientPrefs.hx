@@ -222,6 +222,14 @@ class ClientPrefs
 
 	@saveVar public static var hitboxAlpha:Float = 0.2;
 
+	/**
+	 * When true, hitbox tap zones stay faintly visible at all times (a
+	 * fraction of hitboxAlpha) instead of only flashing in on press -- a
+	 * "hint" mode for players who want to see the zone boundaries/shapes
+	 * before tapping, separate from the existing press-feedback opacity.
+	 */
+	@saveVar public static var hitboxHintsAlwaysVisible:Bool = false;
+
 	@saveVar public static var virtualPadAlpha:Float = 0.5;
 
 	/**

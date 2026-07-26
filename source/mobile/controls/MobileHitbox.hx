@@ -67,9 +67,17 @@ class MobileHitbox extends TouchInputManager
 	private final alphaTarget:Float;
 
 	/**
+	 * Idle (unpressed) opacity for hint shapes. When 'hint mode' is off this
+	 * is effectively invisible (0.00001); when on, it's a fraction of the
+	 * player's own hitboxAlpha so the always-visible outline scales with
+	 * their configured press-feedback opacity instead of being a fixed value.
+	 */
+	private final idleAlpha:Float;
+
+	/**
 	 * Showcase mode: light up the hint mapped to `id` as the bot hits that
 	 * column, exactly like a real press does (alpha to the player's
-	 * configured hitboxAlpha, then decay back to invisible). Cosmetic only.
+	 * configured hitboxAlpha, then decay back to idleAlpha). Cosmetic only.
 	 *
 	 * @param held Pass true for sustain pieces -- they retrigger every step,
 	 *             so a slower decay keeps the hint lit through the hold.
@@ -81,7 +89,7 @@ class MobileHitbox extends TouchInputManager
 			if (btn == null || btn.IDs == null || !btn.IDs.contains(id)) continue;
 			if (btn.flashTween != null) btn.flashTween.cancel();
 			btn.alpha = alphaTarget;
-			btn.flashTween = FlxTween.tween(btn, {alpha: 0.00001}, held ? 0.35 : 0.15, {ease: FlxEase.circInOut, startDelay: held ? 0.05 : 0.0});
+			btn.flashTween = FlxTween.tween(btn, {alpha: idleAlpha}, held ? 0.35 : 0.15, {ease: FlxEase.circInOut, startDelay: held ? 0.05 : 0.0});
 			break;
 		}
 	}
@@ -93,6 +101,7 @@ class MobileHitbox extends TouchInputManager
 	{
 		super();
 		alphaTarget = funkin.data.ClientPrefs.hitboxAlpha;
+		idleAlpha = funkin.data.ClientPrefs.hitboxHintsAlwaysVisible ? alphaTarget * 0.4 : 0.00001;
 
 		var safe = mobile.backend.ScreenUtil.safeArea();
 
@@ -451,8 +460,8 @@ class MobileHitbox extends TouchInputManager
 		hint.immovable = true;
 		hint.scrollFactor.set();
 
-		// Start invisible like other hitbox hints
-		hint.alpha = 0.00001;
+		// Idle opacity, same as every other hitbox hint shape
+		hint.alpha = idleAlpha;
 
 		// Animate on touch
 		var hintTween:FlxTween = null;
@@ -475,7 +484,7 @@ class MobileHitbox extends TouchInputManager
 		{
 			hint.animation.play('static');
 			if (hintTween != null) hintTween.cancel();
-			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+			hintTween = FlxTween.tween(hint, {alpha: idleAlpha}, 0.15, {
 				ease: FlxEase.circInOut,
 				onComplete: function(_) { hintTween = null; }
 			});
@@ -536,7 +545,7 @@ class MobileHitbox extends TouchInputManager
 		hint.solid = hint.moves = false;
 		hint.immovable = true;
 		hint.scrollFactor.set();
-		hint.alpha = 0.00001;
+		hint.alpha = idleAlpha;
 
 		// Adjust hitbox to be circular (FlxButton uses rectangular collision by default)
 		hint.width = diameter;
@@ -557,7 +566,7 @@ class MobileHitbox extends TouchInputManager
 		hint.onUp.callback = function()
 		{
 			if (hintTween != null) hintTween.cancel();
-			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+			hintTween = FlxTween.tween(hint, {alpha: idleAlpha}, 0.15, {
 				ease: FlxEase.circInOut,
 				onComplete: function(_) { hintTween = null; }
 			});
@@ -628,7 +637,7 @@ class MobileHitbox extends TouchInputManager
 		hint.solid = hint.moves = false;
 		hint.immovable = true;
 		hint.scrollFactor.set();
-		hint.alpha = 0.00001;
+		hint.alpha = idleAlpha;
 
 		var hintTween:FlxTween = null;
 
@@ -644,7 +653,7 @@ class MobileHitbox extends TouchInputManager
 		hint.onUp.callback = function()
 		{
 			if (hintTween != null) hintTween.cancel();
-			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+			hintTween = FlxTween.tween(hint, {alpha: idleAlpha}, 0.15, {
 				ease: FlxEase.circInOut,
 				onComplete: function(_) { hintTween = null; }
 			});
@@ -718,7 +727,7 @@ class MobileHitbox extends TouchInputManager
 		hint.solid = hint.moves = false;
 		hint.immovable = true;
 		hint.scrollFactor.set();
-		hint.alpha = 0.00001;
+		hint.alpha = idleAlpha;
 
 		var hintTween:FlxTween = null;
 
@@ -734,7 +743,7 @@ class MobileHitbox extends TouchInputManager
 		hint.onUp.callback = function()
 		{
 			if (hintTween != null) hintTween.cancel();
-			hintTween = FlxTween.tween(hint, {alpha: 0.00001}, 0.15, {
+			hintTween = FlxTween.tween(hint, {alpha: idleAlpha}, 0.15, {
 				ease: FlxEase.circInOut,
 				onComplete: function(_) { hintTween = null; }
 			});

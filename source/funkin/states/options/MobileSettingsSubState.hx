@@ -19,8 +19,8 @@ import funkin.objects.menu.NineSlice;
 /** One configurable row. Read/written straight through ClientPrefs by `id`. */
 typedef MobileOpt =
 {
-	// 'nav' | 'game' | 'noteLayout' | 'layout' | 'hitboxAlpha' | 'padAlpha' |
-	// 'vpadLayout' | 'vpadCustomize' | 'aspectRatio' | 'openDataFolder' --
+	// 'nav' | 'game' | 'noteLayout' | 'layout' | 'hitboxAlpha' | 'hitboxHints' |
+	// 'padAlpha' | 'vpadLayout' | 'vpadCustomize' | 'aspectRatio' | 'openDataFolder' --
 	// kept out of sync with _rebuildOptions() as rows were added over time,
 	// see _getStr()/_setStr()/_getFloat()/_setFloat() for the actual set.
 	id:String,
@@ -923,6 +923,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'noteLayout': ClientPrefs.noteLayout;
 			case 'aspectRatio': ClientPrefs.aspectRatioMode;
 			case 'storageMode': ClientPrefs.storageMode;
+			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible ? 'on' : 'off';
 			default: '';
 		};
 
@@ -962,6 +963,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				ClientPrefs.aspectRatioMode = v;
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
 			case 'storageMode': ClientPrefs.storageMode = v;
+			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible = (v == 'on');
 		}
 
 	function _getFloat(id:String):Float
@@ -1058,6 +1060,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				label: Lang.str('opt_hitboxalpha', 'Hitbox Opacity'),
 				desc:  Lang.str('opt_hitboxalpha_desc', 'How visible the hitbox zones appear when pressed.'),
 				defaultVal: 0.2
+			});
+			_opts.push({
+				id: 'hitboxHints', kind: 'string',
+				label: Lang.str('opt_hitboxhints', 'Hitbox Hints'),
+				desc:  Lang.str('opt_hitboxhints_desc', 'Keep the tap zones faintly visible at all times (scaled to your Hitbox Opacity) instead of only flashing in when pressed.'),
+				choices: [Lang.str('choice_hitboxhints_off', 'Off'), Lang.str('choice_hitboxhints_on', 'On')],
+				stored:  ['off', 'on'],
+				defaultVal: 'off'
 			});
 		}
 		else if (ClientPrefs.gameInputMode == 'Virtual Pad')

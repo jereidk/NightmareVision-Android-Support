@@ -820,6 +820,10 @@
 		"choice_hitboxlayout_triangle": "Triangle",
 		"opt_hitboxalpha": "Hitbox Opacity",
 		"opt_hitboxalpha_desc": "How visible the hitbox zones appear when pressed.",
+		"opt_hitboxhints": "Hitbox Hints",
+		"opt_hitboxhints_desc": "Keep the tap zones faintly visible at all times (scaled to your Hitbox Opacity) instead of only flashing in when pressed.",
+		"choice_hitboxhints_off": "Off",
+		"choice_hitboxhints_on": "On",
 
 		"opt_padopacity": "Pad Opacity",
 		"opt_padopacity_desc": "How visible the virtual pad buttons appear.",
