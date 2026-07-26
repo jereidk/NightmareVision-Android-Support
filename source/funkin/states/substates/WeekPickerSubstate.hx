@@ -82,6 +82,26 @@ class WeekPickerSubstate extends MusicBeatSubstate
 
 	override function create()
 	{
+		// Wired up FIRST, before any of the circle-grid building below --
+		// this substate had a real-world repro where the panel came up
+		// completely empty (no circles at all, just the 'Freeplay' label and
+		// bare panel/canvas) AND the Virtual Pad did nothing whatsoever. If
+		// anything below this point throws (a missing/bad section image, an
+		// out-of-sync weeks/mod state, etc.), create() aborts right there --
+		// which previously meant addVirtualPad()/controls.isInSubstate down
+		// at the bottom never ran either, leaving a pad that visibly
+		// animates on tap but is never actually wired to Controls at all.
+		// Setting this up first means a Virtual Pad user can always at least
+		// press B to back out, regardless of what happens to the grid.
+		#if mobile
+		controls.isInSubstate = true;
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, A_B);
+			addVirtualPadCamera();
+		}
+		#end
+
 		var iX = 0;
 		var iY = .05;
 
@@ -106,11 +126,25 @@ class WeekPickerSubstate extends MusicBeatSubstate
 			Mods.currentModDirectory = weeks[i].mod;
 
 			var w:String = weeks[i].section;
-			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * 78)).loadGraphic(Paths.image('menu/freeplay/sections/$w'));
+			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * 78));
+			// Section icons are a cosmetic nice-to-have, not something this
+			// screen's actual job (picking a section) should ever fail over --
+			// a bad/missing modded section image threw here and skipped
+			// EVERY remaining circle in the loop (not just this one), which
+			// looked exactly like "the whole grid is empty" even though
+			// weeks.length was never actually 0.
+			try circ.loadGraphic(Paths.image('menu/freeplay/sections/$w'))
+			catch (e:Dynamic) circ.makeGraphic(71, 71, 0xFF444444);
 			circ.setGraphicSize(-1, 71);
 			circ.updateHitbox();
 			circ.x = iX * 78; // Std.int(FlxMath.remapToRange(iX, 0, CIRC_WRAP - 1, 0, Math.min((CIRC_WRAP - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width);
 			circ.ID = i;
+			// Belt-and-suspenders on top of bubl.camera above (which already
+			// cascades to every member added to it) -- assigning this
+			// directly on each sprite matches the pattern CosmicubeSubState's
+			// own (working) camera-scoped panel already uses.
+			circ.cameras = [cubeCamera];
+			circ.visible = true;
 			bubl.add(circ);
 
 			iX += 1;
@@ -154,15 +188,6 @@ class WeekPickerSubstate extends MusicBeatSubstate
 		}
 
 		new FlxTimer().start(.35, function(_) lockMovement = false);
-
-		#if mobile
-		controls.isInSubstate = true;
-		if (ClientPrefs.navInputMode == 'Virtual Pad')
-		{
-			addVirtualPad(LEFT_FULL, A_B);
-			addVirtualPadCamera();
-		}
-		#end
 	}
 
 	function updateItems()
