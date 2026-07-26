@@ -700,7 +700,13 @@ class FreeplayState extends AmongUIState
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 				openSubState(new CosmeticsSubstate());
 			}
-			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (MobileNavUtil.allowPointerNav() && FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
+			// menuWeekSelect (top-right week-icon sprite) has no Virtual Pad button
+			// of its own -- unlike every other tap target on this screen, which
+			// only responds to touch under Touch nav mode because Virtual Pad
+			// already has a dedicated button for the same action. This one
+			// doesn't, so touch has to keep working here no matter which nav
+			// mode is active, or Virtual Pad users would have no way to open it.
+			if (FlxG.keys.justPressed.CONTROL || FlxG.gamepads.anyJustPressed(Y) || (FlxG.mouse.overlaps(menuWeekSelect) && FlxG.mouse.justPressed))
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
