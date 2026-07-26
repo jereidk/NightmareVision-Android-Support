@@ -183,15 +183,56 @@ class WeekPickerSubstate extends MusicBeatSubstate
 
 	function acceptWeek(sect:Int)
 	{
+		if (lockMovement) return;
+		lockMovement = true;
 		parent.goToSection(sect, true);
 		FlxG.sound.play(Paths.sound('panelAppear'), .5);
-		close();
+		closeTween();
 	}
 
 	function closeWeek()
 	{
+		if (lockMovement) return;
+		lockMovement = true;
 		FlxG.sound.play(Paths.sound('cancelMenu'), 1);
-		close();
+		closeTween();
+	}
+
+	/**
+	 * Fades this screen out, then closes it once the tween finishes -- calling
+	 * close() directly on the same frame BACK/ACCEPT is read left no gap
+	 * between Flixel's own request-then-destroy-next-frame close sequence and
+	 * the originating press still reading as fresh, the exact window that let
+	 * a substate's own B press also affect its parent state underneath it
+	 * (confirmed on GameplayChangersSubstate/LanguagePickerSubState this same
+	 * session). Ported from upstream with an immediate close() originally --
+	 * upstream never had a virtual pad here to race against, this fork does
+	 * now (see the constructor's addVirtualPad() call), so it gets the same
+	 * deferred-close pattern every other substate in this codebase already
+	 * uses. See MusicBeatSubstate.addVirtualPad()'s doc comment for the full
+	 * mechanism.
+	 */
+	function closeTween():Void
+	{
+		FlxTween.cancelTweensOf(bg);
+		FlxTween.tween(bg, {alpha: 0}, .25, {ease: FlxEase.circIn});
+
+		final closeObjs:Array<FlxSprite> = [bgThing, otherTitleText];
+		if (menuBackButton != null) closeObjs.push(menuBackButton);
+		for (obj in closeObjs)
+		{
+			FlxTween.cancelTweensOf(obj);
+			FlxTween.tween(obj, {alpha: 0}, .25, {ease: FlxEase.circIn});
+		}
+
+		for (obj in bubl.members)
+		{
+			if (obj == null) continue;
+			FlxTween.cancelTweensOf(obj);
+			FlxTween.tween(obj, {alpha: 0}, .25, {ease: FlxEase.circIn});
+		}
+
+		new FlxTimer().start(.25, function(_) close());
 	}
 
 	override function update(elapsed:Float)

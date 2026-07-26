@@ -74,6 +74,16 @@ class MusicBeatSubstate extends FlxSubState
 	 */
 	var _hidParentPad:Bool = false;
 
+	/**
+	 * The exact pad _hidParentPad hid -- either the immediately-enclosing
+	 * substate's or the base state's (see addVirtualPad() below). Restoring
+	 * through this direct reference instead of re-deriving _previousInstance/
+	 * MusicBeatState.instance in removeVirtualPad() means the restore always
+	 * targets the pad that was actually hidden, even if which one that was
+	 * changes between the two calls.
+	 */
+	var _hiddenParentPad:MobileVirtualPad;
+
 	public function addVirtualPad(DPad:MobileDPadMode, Action:MobileActionMode, forceShow:Bool = false, forGameplay:Bool = false)
 	{
 		if (!forceShow && funkin.data.ClientPrefs.navInputMode != 'Virtual Pad') return;
@@ -84,11 +94,34 @@ class MusicBeatSubstate extends FlxSubState
 		// already routed to this one (Controls.get_requested via
 		// isInSubstate), so leaving the parent's visible just stacks two
 		// overlapping pads where only one works.
-		final parent = funkin.backend.MusicBeatState.instance;
+		//
+		// The parent can be either another MusicBeatSubstate (this one opened
+		// on top of an existing substate, e.g. VirtualPadCustomizerSubState on
+		// top of MobileSettingsSubState) or the base MusicBeatState if this is
+		// the outermost substate -- check _previousInstance FIRST. This used
+		// to only ever check MusicBeatState.instance, which happened to work
+		// as long as every enclosing substate left persistentUpdate at its
+		// default false (so its own pad's update()/touch scan never ran while
+		// this one was open on top of it) -- but that made "no double-active
+		// pad" an unenforced convention rather than something this method
+		// actually guarantees, one persistentUpdate=true away from the exact
+		// two-pads-both-live bug this whole chain exists to prevent.
+		final parent:MusicBeatSubstate = _previousInstance;
 		if (parent != null && parent.virtualPad != null && parent.virtualPad.visible)
 		{
 			parent.virtualPad.visible = false;
 			_hidParentPad = true;
+			_hiddenParentPad = parent.virtualPad;
+		}
+		else
+		{
+			final parentState = funkin.backend.MusicBeatState.instance;
+			if (parentState != null && parentState.virtualPad != null && parentState.virtualPad.visible)
+			{
+				parentState.virtualPad.visible = false;
+				_hidParentPad = true;
+				_hiddenParentPad = parentState.virtualPad;
+			}
 		}
 	}
 
@@ -130,10 +163,15 @@ class MusicBeatSubstate extends FlxSubState
 		if (_hidParentPad)
 		{
 			_hidParentPad = false;
-			final parent = funkin.backend.MusicBeatState.instance;
-			if (parent != null && parent.virtualPad != null && parent.virtualPad.exists
+			// Restore through the exact pad reference addVirtualPad() hid --
+			// not by re-deriving _previousInstance/MusicBeatState.instance
+			// here, which could resolve to a different pad than the one that
+			// was actually hidden (e.g. this substate's immediate predecessor
+			// has since been destroyed too).
+			if (_hiddenParentPad != null && _hiddenParentPad.exists
 				&& funkin.data.ClientPrefs.navInputMode == 'Virtual Pad')
-				parent.virtualPad.visible = true;
+				_hiddenParentPad.visible = true;
+			_hiddenParentPad = null;
 		}
 		if (virtualPadCam != null)
 		{

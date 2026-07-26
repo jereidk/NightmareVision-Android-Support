@@ -3,7 +3,10 @@ package funkin.states.substates;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+import flixel.util.FlxTimer;
 
 import funkin.objects.menu.TouchOptionList;
 import funkin.states.options.Option;
@@ -38,6 +41,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	var list:TouchOptionList;
 	var closeButton:FlxSprite;
 	var scrollSpeedOption:Option;
+	var _closing:Bool = false;
 
 	/**
 	 * @param currentSongName Name of the song FreeplayState currently has
@@ -169,9 +173,47 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		}
 	}
 
+	/**
+	 * Fades this screen out, then closes it once the tween finishes -- calling
+	 * close() directly on the same frame BACK/the close button is read left no
+	 * gap between Flixel's own request-then-destroy-next-frame close sequence
+	 * and the originating press still reading as fresh, which is exactly the
+	 * window where FreeplayState's own BACK handling could see the same press
+	 * and react to it too (double B-press / dead pad on return). Every other
+	 * substate in this codebase (CosmeticsSubstate, ResetScoreSubState, etc.)
+	 * already defers close() the same way -- see
+	 * MusicBeatSubstate.addVirtualPad()'s doc comment for the full mechanism.
+	 */
+	function closeTween():Void
+	{
+		if (_closing) return;
+		_closing = true;
+
+		for (obj in members)
+		{
+			if (obj == null || !Std.isOfType(obj, FlxSprite)) continue;
+			var sprite:FlxSprite = cast obj;
+			FlxTween.cancelTweensOf(sprite);
+			FlxTween.tween(sprite, {alpha: 0}, 0.25, {ease: FlxEase.circIn});
+		}
+
+		// list is a FlxTypedGroup<FlxSprite>, not a FlxSprite itself, so the
+		// loop above never reaches its rows -- fade those directly too.
+		for (row in list.members)
+		{
+			if (row == null) continue;
+			FlxTween.cancelTweensOf(row);
+			FlxTween.tween(row, {alpha: 0}, 0.25, {ease: FlxEase.circIn});
+		}
+
+		new FlxTimer().start(0.25, (_) -> close());
+	}
+
 	override function update(elapsed:Float):Void
 	{
 		super.update(elapsed);
+
+		if (_closing) return;
 
 		list.keyboardEnabled = true;
 
@@ -182,14 +224,14 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		if (MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
-			close();
+			closeTween();
 			return;
 		}
 
 		if (controls.BACK)
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
-			close();
+			closeTween();
 		}
 	}
 
