@@ -113,6 +113,11 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	var isTextFieldFocused:Bool = false;
 
 	var prevPinchDist:Float = -1;
+	// The two fingers actually driving the current pinch, tracked by
+	// touchPointID -- see controlCamera()'s pinch-zoom block for why raw
+	// FlxG.touches.list[0]/[1] indexing isn't safe across frames.
+	var pinchTouchID1:Int = -1;
+	var pinchTouchID2:Int = -1;
 	var touchOffsetMode:Bool = false;
 	var padWasMovingStick:Bool = false;
 	var touchModeBtn:Null<FlxSprite> = null;
@@ -1260,8 +1265,26 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		final numTouches = FlxG.touches.list.length;
 		if (numTouches >= 2)
 		{
-			final t1 = FlxG.touches.list[0];
-			final t2 = FlxG.touches.list[1];
+			// Track the SAME two fingers for the whole gesture by
+			// touchPointID -- FlxG.touches.list's order isn't guaranteed to
+			// stay stable frame-to-frame while touches are added/removed
+			// (e.g. a third finger briefly touching down and lifting), so
+			// indexing list[0]/list[1] directly could measure the distance
+			// between a DIFFERENT pair of fingers than the previous frame,
+			// producing sudden erratic zoom jumps mid-pinch. Only re-pick
+			// the pair when one of the currently-tracked IDs isn't actually
+			// down any more.
+			final id1Valid = pinchTouchID1 != -1 && FlxG.touches.getByID(pinchTouchID1) != null;
+			final id2Valid = pinchTouchID2 != -1 && FlxG.touches.getByID(pinchTouchID2) != null;
+			if (!id1Valid || !id2Valid)
+			{
+				pinchTouchID1 = FlxG.touches.list[0].touchPointID;
+				pinchTouchID2 = FlxG.touches.list[1].touchPointID;
+				prevPinchDist = -1;
+			}
+
+			final t1 = FlxG.touches.getByID(pinchTouchID1);
+			final t2 = FlxG.touches.getByID(pinchTouchID2);
 			final dist = Math.sqrt(Math.pow(t2.viewX - t1.viewX, 2) + Math.pow(t2.viewY - t1.viewY, 2));
 			if (prevPinchDist > 0)
 			{
@@ -1273,6 +1296,8 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		else
 		{
 			prevPinchDist = -1;
+			pinchTouchID1 = -1;
+			pinchTouchID2 = -1;
 		}
 
 		if (FlxG.mouse.justReleasedMiddle) isCameraDragging = false;

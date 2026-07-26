@@ -419,7 +419,7 @@ class OptionsState extends MusicBeatState
 			// visible/functional regardless of focus, see the RESET keybind
 			// handling below -- always render on top of whichever content is
 			// currently showing on the panel.
-			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY\nAndroid Port');
+			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY\nANDROID PORT');
 			titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 36, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			titleText.borderSize = 2;
 			titleText.antialiasing = ClientPrefs.globalAntialiasing;
