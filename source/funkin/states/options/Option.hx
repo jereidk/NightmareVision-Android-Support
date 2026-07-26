@@ -48,6 +48,19 @@ class Option
 	public var callback:Void->Void = null; // Pressed enter (on button type)
 
 	/**
+	 * Optional storage override -- when set, getValue()/setValue() below call
+	 * these instead of Reflect'ing a same-named property directly off
+	 * ClientPrefs. Needed by any caller whose values don't live as flat
+	 * ClientPrefs static properties (e.g. GameplayChangersSubstate's rows,
+	 * which live in the ClientPrefs.gameplaySettings map instead). Must be
+	 * passed in through the constructor (see below), not assigned after --
+	 * the constructor's own null-check below already calls getValue()/
+	 * setValue() before any post-construction assignment would run.
+	 */
+	public var getter:Void->Dynamic = null;
+	public var setter:Dynamic->Void = null;
+
+	/**
 	 * Optional per-frame override for this row's value-column text/color,
 	 * read by TouchOptionList.refreshRows() only -- never affects `type`,
 	 * so click/nav dispatch (resolveRowTap/adjustValue/isAdjustable) is
@@ -60,7 +73,7 @@ class Option
 	public var badgeProvider:Void->Null<OptionBadge> = null;
 	
 	public function new(name:String, description:String = '', variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null,
-			?storedValues:Array<String> = null)
+			?storedValues:Array<String> = null, ?getter:Void->Dynamic, ?setter:Dynamic->Void)
 	{
 		this.name = name;
 		this.description = description;
@@ -69,7 +82,9 @@ class Option
 		this.defaultValue = defaultValue;
 		this.options = options;
 		this.storedValues = storedValues;
-		
+		this.getter = getter;
+		this.setter = setter;
+
 		if (defaultValue == 'null variable value')
 		{
 			switch (type)
@@ -140,12 +155,13 @@ class Option
 	
 	public function getValue():Dynamic
 	{
-		return Reflect.getProperty(ClientPrefs, variable);
+		return (getter != null) ? getter() : Reflect.getProperty(ClientPrefs, variable);
 	}
-	
+
 	public function setValue(value:Dynamic)
 	{
-		Reflect.setProperty(ClientPrefs, variable, value);
+		if (setter != null) setter(value);
+		else Reflect.setProperty(ClientPrefs, variable, value);
 	}
 	
 	public function setChild(child:FlxText)

@@ -721,7 +721,7 @@ class FreeplayState extends AmongUIState
 			{
 				lockMovement = true;
 				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
-				openSubState(new GameplayChangersSubstate());
+				openSubState(new GameplayChangersSubstate(week_songs.length > 0 ? week_songs[curSelect].songName : null));
 			}
 
 			if (controls.RESET #if mobile || virtualPad?.buttonR?.justPressed == true #end) resetScorePrompt();

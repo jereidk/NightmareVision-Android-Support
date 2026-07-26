@@ -1,76 +1,138 @@
 package funkin.states.substates;
 
-import funkin.objects.AttachedAlphabet;
-import funkin.objects.CheckboxThingie;
-import funkin.objects.Alphabet;
-
-import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.text.FlxText;
 import flixel.util.FlxColor;
 
-import funkin.backend.MusicBeatSubstate;
+import funkin.objects.menu.TouchOptionList;
+import funkin.states.options.Option;
+import mobile.utils.MobileNavUtil;
 
+/**
+ * Gameplay Options screen opened from FreeplayState (keyboard G / mobile
+ * button D) -- adjusts scroll type/speed, health gain/loss multipliers,
+ * instakill, practice mode and botplay before a song even starts, all
+ * stored in the same ClientPrefs.gameplaySettings map the pause menu's own
+ * equivalent screen reads/writes.
+ *
+ * Rewritten onto the same TouchOptionList/Option machinery every other
+ * options screen already uses (LanguagePickerSubState, OptionsState itself)
+ * instead of a bespoke hand-rolled Alphabet-based column. That old layout
+ * had no real touch handling of its own (D-pad/keyboard only, no tap
+ * targets) and always spawned its own virtual pad regardless of nav mode,
+ * while FreeplayState's own virtual pad stayed alive underneath it the
+ * whole time (parent pads are only ever *hidden*, not destroyed, while a
+ * substate's own pad is up -- see MusicBeatSubstate.addVirtualPad()'s
+ * _hidParentPad chain) -- a lingering touch on that still-active hidden
+ * pad's own button D could keep registering there and re-trigger this
+ * screen's opening sound/logic. TouchOptionList already gates its own
+ * touch handling on MobileNavUtil.allowPointerNav() and drives its D-pad
+ * nav off the shared Controls (never a raw per-screen virtualPad.buttonX
+ * poll), so there's no button-D-shaped hole here at all anymore.
+ */
 class GameplayChangersSubstate extends MusicBeatSubstate
 {
-	private var curOption:GameplayOption = null;
-	private var curSelected:Int = 0;
-	private var optionsArray:Array<Dynamic> = [];
+	static final LIST_X:Float = 360;
 
-	private var grpOptions:FlxTypedGroup<Alphabet>;
-	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
-	private var grpTexts:FlxTypedGroup<AttachedAlphabet>;
+	var list:TouchOptionList;
+	var closeButton:FlxSprite;
+	var scrollSpeedOption:Option;
 
-	var bg:FlxSprite;
-	var isClosing:Bool = false;
-	var lockMovement:Bool = true;
-	final uiTweenOffsetY:Float = 120;
-
-	function getOptions()
+	/**
+	 * @param currentSongName Name of the song FreeplayState currently has
+	 * selected. 'Defeat' already has its own built-in instakill mechanic
+	 * (see FreeplayState's own 'Defeat' case, which opens MissCounterSubstate
+	 * instead of loading it normally) -- the Instakill row is hidden there so
+	 * it doesn't read as a second, redundant copy of the same behavior.
+	 */
+	public function new(?currentSongName:String)
 	{
-		var goption:GameplayOption = new GameplayOption('Scroll Type', 'scrolltype', 'string', 'multiplicative', ["multiplicative", "constant"]);
-		optionsArray.push(goption);
-		
-		var option:GameplayOption = new GameplayOption('Scroll Speed', 'scrollspeed', 'float', 1);
-		option.scrollSpeed = 1.5;
-		option.minValue = 0.5;
-		option.changeValue = 0.1;
-		if (goption.getValue() != "constant")
+		super();
+
+		final cutout = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+
+		var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xE60A0A14);
+		add(dim);
+
+		var title = new FlxText(40 + cutout * 0.5, 20, 0, Lang.str('gc_title', 'Gameplay Changers'), 42);
+		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		title.borderSize = 2;
+		title.antialiasing = ClientPrefs.globalAntialiasing;
+		add(title);
+
+		closeButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
+		closeButton.antialiasing = ClientPrefs.globalAntialiasing;
+		add(closeButton);
+
+		final listW = (1160 + cutout) - LIST_X;
+		list = new TouchOptionList(LIST_X, 100, listW, 8);
+		add(list);
+
+		list.setOptions(buildOptions(currentSongName));
+
+		#if mobile
+		// Same convention as every other options screen (LanguagePickerSubState/
+		// OptionsState/etc.): only show the virtual pad when the player's own
+		// nav mode preference is 'Virtual Pad' -- the old version of this
+		// screen always spawned one regardless of nav mode.
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
 		{
-			option.displayFormat = '%vX';
-			option.maxValue = 3;
+			addVirtualPad(LEFT_FULL, A_B);
+			addVirtualPadCamera();
 		}
-		else
+		#end
+	}
+
+	function buildOptions(currentSongName:Null<String>):Array<Option>
+	{
+		final opts:Array<Option> = [];
+
+		final scrollTypeOpt = new Option(Lang.str('gc_scrolltype', 'Scroll Type'),
+			Lang.str('gc_scrolltype_desc', 'Multiplicative scales with the song\'s BPM; Constant is the same speed for every song.'), '', 'string',
+			'multiplicative', ['Multiplicative', 'Constant'], ['multiplicative', 'constant'], () -> ClientPrefs.gameplaySettings.get('scrolltype'),
+			v -> ClientPrefs.gameplaySettings.set('scrolltype', v));
+		opts.push(scrollTypeOpt);
+
+		scrollSpeedOption = new Option(Lang.str('gc_scrollspeed', 'Scroll Speed'), Lang.str('gc_scrollspeed_desc', 'How fast notes scroll down the highway.'),
+			'', 'float', 1.0, null, null, () -> ClientPrefs.gameplaySettings.get('scrollspeed'), v -> ClientPrefs.gameplaySettings.set('scrollspeed', v));
+		scrollSpeedOption.scrollSpeed = 1.5;
+		scrollSpeedOption.minValue = 0.5;
+		scrollSpeedOption.changeValue = 0.1;
+		_applyScrollTypeToSpeed(scrollTypeOpt.getValue());
+		opts.push(scrollSpeedOption);
+
+		// Scroll Speed's own max/display format depend on Scroll Type -- same
+		// interdependency the old GameplayOption-based version had. Mutating
+		// the row's fields directly is enough: TouchOptionList re-reads
+		// displayFormat/maxValue fresh every frame, no rebuild needed.
+		scrollTypeOpt.onChange = () -> _applyScrollTypeToSpeed(scrollTypeOpt.getValue());
+
+		final healthGainOpt = new Option(Lang.str('gc_healthgain', 'Health Gain Multiplier'),
+			Lang.str('gc_healthgain_desc', 'Multiplies how much health a hit note gives back.'), '', 'float', 1.0, null, null,
+			() -> ClientPrefs.gameplaySettings.get('healthgain'), v -> ClientPrefs.gameplaySettings.set('healthgain', v));
+		healthGainOpt.scrollSpeed = 2.5;
+		healthGainOpt.minValue = 0;
+		healthGainOpt.maxValue = 5;
+		healthGainOpt.changeValue = 0.1;
+		healthGainOpt.displayFormat = '%vX';
+		opts.push(healthGainOpt);
+
+		final healthLossOpt = new Option(Lang.str('gc_healthloss', 'Health Loss Multiplier'),
+			Lang.str('gc_healthloss_desc', 'Multiplies how much health a missed note takes away.'), '', 'float', 1.0, null, null,
+			() -> ClientPrefs.gameplaySettings.get('healthloss'), v -> ClientPrefs.gameplaySettings.set('healthloss', v));
+		healthLossOpt.scrollSpeed = 2.5;
+		healthLossOpt.minValue = 0.5;
+		healthLossOpt.maxValue = 5;
+		healthLossOpt.changeValue = 0.1;
+		healthLossOpt.displayFormat = '%vX';
+		opts.push(healthLossOpt);
+
+		if (currentSongName != 'Defeat')
 		{
-			option.displayFormat = "%v";
-			option.maxValue = 6;
+			opts.push(new Option(Lang.str('gc_instakill', 'Instakill on Miss'), Lang.str('gc_instakill_desc', 'Any missed note ends the song immediately.'),
+				'', 'bool', false, null, null, () -> ClientPrefs.gameplaySettings.get('instakill'), v -> ClientPrefs.gameplaySettings.set('instakill', v)));
 		}
-		optionsArray.push(option);
-		
-		/*var option:GameplayOption = new GameplayOption('Playback Rate', 'songspeed', 'float', 1);
-			option.scrollSpeed = 1;
-			option.minValue = 0.5;
-			option.maxValue = 2.5;
-			option.changeValue = 0.1;
-			option.displayFormat = '%vX';
-			optionsArray.push(option); */
-		
-		var option:GameplayOption = new GameplayOption('Health Gain Multiplier', 'healthgain', 'float', 1);
-		option.scrollSpeed = 2.5;
-		option.minValue = 0;
-		option.maxValue = 5;
-		option.changeValue = 0.1;
-		option.displayFormat = '%vX';
-		optionsArray.push(option);
-		
-		var option:GameplayOption = new GameplayOption('Health Loss Multiplier', 'healthloss', 'float', 1);
-		option.scrollSpeed = 2.5;
-		option.minValue = 0.5;
-		option.maxValue = 5;
-		option.changeValue = 0.1;
-		option.displayFormat = '%vX';
-		optionsArray.push(option);
-		
-		var option:GameplayOption = new GameplayOption('Instakill on Miss', 'instakill', 'bool', false);
-		optionsArray.push(option);
 
 		// Showcase (dev-only) forces botplay on and drives the HUD itself, so
 		// hide the Practice/Botplay toggles while it's enabled -- they'd only
@@ -78,519 +140,62 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		// PlayState) since this substate also opens from FreeplayState.
 		if (!(ClientPrefs.inDevMode && ClientPrefs.showcaseMode))
 		{
-			var option:GameplayOption = new GameplayOption('Practice Mode', 'practice', 'bool', false);
-			optionsArray.push(option);
+			opts.push(new Option(Lang.str('gc_practice', 'Practice Mode'), Lang.str('gc_practice_desc', 'Play without misses or losses counting against you.'),
+				'', 'bool', false, null, null, () -> ClientPrefs.gameplaySettings.get('practice'), v -> ClientPrefs.gameplaySettings.set('practice', v)));
 
-			var option:GameplayOption = new GameplayOption('Botplay', 'botplay', 'bool', false);
-			optionsArray.push(option);
+			opts.push(new Option(Lang.str('gc_botplay', 'Botplay'), Lang.str('gc_botplay_desc', 'Watch the song play itself.'), '', 'bool', false, null, null,
+				() -> ClientPrefs.gameplaySettings.get('botplay'), v -> ClientPrefs.gameplaySettings.set('botplay', v)));
 		}
-	}
-	
-	public function getOptionByName(name:String)
-	{
-		for (i in optionsArray)
-		{
-			var opt:GameplayOption = i;
-			if (opt.name == name) return opt;
-		}
-		return null;
-	}
-	
-	public function new()
-	{
-		super();
 
-		bg = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		bg.alpha = 0;
-		add(bg);
-		
-		// avoids lagspikes while scrolling through menus!
-		grpOptions = new FlxTypedGroup<Alphabet>();
-		add(grpOptions);
-		
-		grpTexts = new FlxTypedGroup<AttachedAlphabet>();
-		add(grpTexts);
-		
-		checkboxGroup = new FlxTypedGroup<CheckboxThingie>();
-		add(checkboxGroup);
-		
-		getOptions();
-		
-		for (i in 0...optionsArray.length)
-		{
-			var optionText:Alphabet = new Alphabet(0, 70 * i, optionsArray[i].name, true, false, 0.05, 0.8);
-			optionText.isMenuItem = true;
-			optionText.x += 300;
-			/*optionText.forceX = 300;
-				optionText.yMult = 90; */
-			optionText.xAdd = 120;
-			optionText.targetY = i;
-			grpOptions.add(optionText);
-			
-			if (optionsArray[i].type == 'bool')
-			{
-				var checkbox:CheckboxThingie = new CheckboxThingie(optionText.x - 105, optionText.y, optionsArray[i].getValue() == true);
-				checkbox.sprTracker = optionText;
-				checkbox.offsetY = -60;
-				checkbox.ID = i;
-				checkboxGroup.add(checkbox);
-				optionText.xAdd += 80;
-			}
-			else
-			{
-				var valueText:AttachedAlphabet = new AttachedAlphabet('' + optionsArray[i].getValue(), optionText.width + 80, true, 0.8);
-				valueText.sprTracker = optionText;
-				valueText.copyAlpha = true;
-				valueText.ID = i;
-				grpTexts.add(valueText);
-				optionsArray[i].setChild(valueText);
-			}
-			updateTextFrom(optionsArray[i]);
-		}
-		
-		changeSelection();
-		reloadCheckboxes();
+		final resetOpt = new Option(Lang.str('gc_reset', 'Reset to Default'), '', '', 'button');
+		resetOpt.callback = () -> list.resetAllToDefault();
+		opts.push(resetOpt);
 
-		#if mobile
-		controls.isInSubstate = true;
-		addVirtualPad(LEFT_FULL, A_B_C);
-		addVirtualPadCamera();
-		#end
-
-		FlxTween.tween(bg, {alpha: 0.6}, 0.25, {ease: FlxEase.circOut});
-
-		eachSprite(function(spr:FlxSprite) {
-			if (spr == bg) return;
-			final targetAlpha = spr.alpha;
-			spr.alpha = 0;
-			spr.y += uiTweenOffsetY;
-			FlxTween.tween(spr, {y: spr.y - uiTweenOffsetY, alpha: targetAlpha}, 0.25, {ease: FlxEase.circOut});
-		});
-
-		new FlxTimer().start(0.25, function(_) lockMovement = false);
+		return opts;
 	}
 
-	/**
-	 * Walks every FlxSprite reachable from this substate's members, recursing
-	 * into FlxTypedGroup containers (grpOptions/grpTexts/checkboxGroup are
-	 * groups, not sprites themselves -- their actual Alphabet/AttachedAlphabet/
-	 * CheckboxThingie children live one level down in `.members`) -- so the
-	 * entrance/exit fade below reaches every visible option row instead of
-	 * just `bg`, without needing to hand-enumerate the three groups.
-	 */
-	function eachSprite(cb:FlxSprite->Void):Void
+	function _applyScrollTypeToSpeed(scrollType:String):Void
 	{
-		function walk(list:Array<flixel.FlxBasic>):Void
+		if (scrollType == 'constant')
 		{
-			for (obj in list)
-			{
-				if (obj == null) continue;
-				if (Std.isOfType(obj, FlxTypedGroup)) walk((cast obj : FlxTypedGroup<FlxBasic>).members);
-				else if (Std.isOfType(obj, FlxSprite)) cb(cast obj);
-			}
+			scrollSpeedOption.displayFormat = '%v';
+			scrollSpeedOption.maxValue = 6;
 		}
-		walk(members);
+		else
+		{
+			scrollSpeedOption.displayFormat = '%vX';
+			scrollSpeedOption.maxValue = 3;
+			if ((scrollSpeedOption.getValue() : Float) > 3) scrollSpeedOption.setValue(3.0);
+		}
 	}
 
-	function closeTween():Void
+	override function update(elapsed:Float):Void
 	{
-		if (isClosing) return;
-		isClosing = true;
-		lockMovement = true;
-		ClientPrefs.flush();
+		super.update(elapsed);
 
-		FlxTween.cancelTweensOf(bg);
-		FlxTween.tween(bg, {alpha: 0}, 0.2, {ease: FlxEase.circIn});
+		list.keyboardEnabled = true;
 
-		eachSprite(function(spr:FlxSprite) {
-			if (spr == bg) return;
-			FlxTween.cancelTweensOf(spr);
-			FlxTween.tween(spr, {y: spr.y + uiTweenOffsetY, alpha: 0}, 0.2, {ease: FlxEase.circIn});
-		});
-
-		new FlxTimer().start(0.2, function(_) close());
-	}
-	
-	var nextAccept:Int = 5;
-	var holdTime:Float = 0;
-	var holdValue:Float = 0;
-	
-	override function update(elapsed:Float)
-	{
-		if (!lockMovement)
+		// Same nav-mode gate as LanguagePickerSubState's own close button --
+		// on a touchscreen device (where taps ARE mouse events), an accidental
+		// tap near it while using the Virtual Pad would otherwise still
+		// instantly close this screen.
+		if (MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
 		{
-		if (controls.UI_UP_P)
-		{
-			changeSelection(-1);
-		}
-		if (controls.UI_DOWN_P)
-		{
-			changeSelection(1);
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			close();
+			return;
 		}
 
 		if (controls.BACK)
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
-			closeTween();
+			close();
 		}
+	}
 
-		if (nextAccept <= 0)
-		{
-			var usesCheckbox = true;
-			if (curOption.type != 'bool')
-			{
-				usesCheckbox = false;
-			}
-			
-			if (usesCheckbox)
-			{
-				if (controls.ACCEPT)
-				{
-					FlxG.sound.play(Paths.sound('scrollMenu'));
-					curOption.setValue((curOption.getValue() == true) ? false : true);
-					curOption.change();
-					reloadCheckboxes();
-				}
-			}
-			else
-			{
-				if (controls.UI_LEFT || controls.UI_RIGHT)
-				{
-					var pressed = (controls.UI_LEFT_P || controls.UI_RIGHT_P);
-					if (holdTime > 0.5 || pressed)
-					{
-						if (pressed)
-						{
-							var add:Dynamic = null;
-							if (curOption.type != 'string')
-							{
-								add = controls.UI_LEFT ? -curOption.changeValue : curOption.changeValue;
-							}
-							
-							switch (curOption.type)
-							{
-								case 'int' | 'float' | 'percent':
-									holdValue = curOption.getValue() + add;
-									if (holdValue < curOption.minValue) holdValue = curOption.minValue;
-									else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
-									
-									switch (curOption.type)
-									{
-										case 'int':
-											holdValue = Math.round(holdValue);
-											curOption.setValue(holdValue);
-											
-										case 'float' | 'percent':
-											holdValue = FlxMath.roundDecimal(holdValue, curOption.decimals);
-											curOption.setValue(holdValue);
-									}
-									
-								case 'string':
-									var num:Int = curOption.curOption; // lol
-									if (controls.UI_LEFT_P) --num;
-									else num++;
-									
-									if (num < 0)
-									{
-										num = curOption.options.length - 1;
-									}
-									else if (num >= curOption.options.length)
-									{
-										num = 0;
-									}
-									
-									curOption.curOption = num;
-									curOption.setValue(curOption.options[num]); // lol
-									
-									if (curOption.name == "Scroll Type")
-									{
-										var oOption:GameplayOption = getOptionByName("Scroll Speed");
-										if (oOption != null)
-										{
-											if (curOption.getValue() == "constant")
-											{
-												oOption.displayFormat = "%v";
-												oOption.maxValue = 6;
-											}
-											else
-											{
-												oOption.displayFormat = "%vX";
-												oOption.maxValue = 3;
-												if (oOption.getValue() > 3) oOption.setValue(3);
-											}
-											updateTextFrom(oOption);
-										}
-									}
-									// trace(curOption.options[num]);
-							}
-							updateTextFrom(curOption);
-							curOption.change();
-							FlxG.sound.play(Paths.sound('scrollMenu'));
-						}
-						else if (curOption.type != 'string')
-						{
-							holdValue += curOption.scrollSpeed * elapsed * (controls.UI_LEFT ? -1 : 1);
-							if (holdValue < curOption.minValue) holdValue = curOption.minValue;
-							else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
-							
-							switch (curOption.type)
-							{
-								case 'int':
-									curOption.setValue(Math.round(holdValue));
-									
-								case 'float' | 'percent':
-									curOption.setValue(FlxMath.roundDecimal(holdValue, curOption.decimals));
-							}
-							updateTextFrom(curOption);
-							curOption.change();
-						}
-					}
-					
-					if (curOption.type != 'string')
-					{
-						holdTime += elapsed;
-					}
-				}
-				else if (controls.UI_LEFT_R || controls.UI_RIGHT_R)
-				{
-					clearHold();
-				}
-			}
-			
-			if (controls.RESET #if mobile || virtualPad.buttonC.justPressed #end)
-			{
-				for (i in 0...optionsArray.length)
-				{
-					var leOption:GameplayOption = optionsArray[i];
-					leOption.setValue(leOption.defaultValue);
-					if (leOption.type != 'bool')
-					{
-						if (leOption.type == 'string')
-						{
-							leOption.curOption = leOption.options.indexOf(leOption.getValue());
-						}
-						updateTextFrom(leOption);
-					}
-					
-					if (leOption.name == 'Scroll Speed')
-					{
-						leOption.displayFormat = "%vX";
-						leOption.maxValue = 3;
-						if (leOption.getValue() > 3)
-						{
-							leOption.setValue(3);
-						}
-						updateTextFrom(leOption);
-					}
-					leOption.change();
-				}
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				reloadCheckboxes();
-			}
-		}
-
-		if (nextAccept > 0)
-		{
-			nextAccept -= 1;
-		}
-		}
-		super.update(elapsed);
-	}
-	
-	function updateTextFrom(option:GameplayOption)
+	override function destroy():Void
 	{
-		var text:String = option.displayFormat;
-		var val:Dynamic = option.getValue();
-		if (option.type == 'percent') val *= 100;
-		var def:Dynamic = option.defaultValue;
-		option.text = text.replace('%v', val).replace('%d', def);
-	}
-	
-	function clearHold()
-	{
-		if (holdTime > 0.5)
-		{
-			FlxG.sound.play(Paths.sound('scrollMenu'));
-		}
-		holdTime = 0;
-	}
-	
-	function changeSelection(change:Int = 0)
-	{
-		curSelected += change;
-		if (curSelected < 0) curSelected = optionsArray.length - 1;
-		if (curSelected >= optionsArray.length) curSelected = 0;
-		
-		var bullShit:Int = 0;
-		
-		for (item in grpOptions.members)
-		{
-			item.targetY = bullShit - curSelected;
-			bullShit++;
-			
-			item.alpha = 0.6;
-			if (item.targetY == 0)
-			{
-				item.alpha = 1;
-			}
-		}
-		for (text in grpTexts)
-		{
-			text.alpha = 0.6;
-			if (text.ID == curSelected)
-			{
-				text.alpha = 1;
-			}
-		}
-		curOption = optionsArray[curSelected]; // shorter lol
-		FlxG.sound.play(Paths.sound('scrollMenu'));
-	}
-	
-	function reloadCheckboxes()
-	{
-		for (checkbox in checkboxGroup)
-		{
-			checkbox.daValue = (optionsArray[checkbox.ID].getValue() == true);
-		}
-	}
-}
-
-class GameplayOption
-{
-	private var child:Alphabet;
-	
-	public var text(get, set):String;
-	public var onChange:Void->Void = null; // Pressed enter (on Bool type options) or pressed/held left/right (on other types)
-	
-	public var type(get, default):String = 'bool'; // bool, int (or integer), float (or fl), percent, string (or str)
-	
-	// Bool will use checkboxes
-	// Everything else will use a text
-	public var showBoyfriend:Bool = false;
-	public var scrollSpeed:Float = 50; // Only works on int/float, defines how fast it scrolls per second while holding left/right
-	
-	private var variable:String = null; // Variable from ClientPrefs.hx's gameplaySettings
-	
-	public var defaultValue:Dynamic = null;
-	
-	public var curOption:Int = 0; // Don't change this
-	public var options:Array<String> = null; // Only used in string type
-	public var changeValue:Dynamic = 1; // Only used in int/float/percent type, how much is changed when you PRESS
-	public var minValue:Dynamic = null; // Only used in int/float/percent type
-	public var maxValue:Dynamic = null; // Only used in int/float/percent type
-	public var decimals:Int = 1; // Only used in float/percent type
-	
-	public var displayFormat:String = '%v'; // How String/Float/Percent/Int values are shown, %v = Current value, %d = Default value
-	public var name:String = 'Unknown';
-	
-	public function new(name:String, variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null)
-	{
-		this.name = name;
-		this.variable = variable;
-		this.type = type;
-		this.defaultValue = defaultValue;
-		this.options = options;
-		
-		if (defaultValue == 'null variable value')
-		{
-			switch (type)
-			{
-				case 'bool':
-					defaultValue = false;
-				case 'int' | 'float':
-					defaultValue = 0;
-				case 'percent':
-					defaultValue = 1;
-				case 'string':
-					defaultValue = '';
-					if (options.length > 0)
-					{
-						defaultValue = options[0];
-					}
-			}
-		}
-		
-		if (getValue() == null)
-		{
-			setValue(defaultValue);
-		}
-		
-		switch (type)
-		{
-			case 'string':
-				var num:Int = options.indexOf(getValue());
-				if (num > -1)
-				{
-					curOption = num;
-				}
-				
-			case 'percent':
-				displayFormat = '%v%';
-				changeValue = 0.01;
-				minValue = 0;
-				maxValue = 1;
-				scrollSpeed = 0.5;
-				decimals = 2;
-		}
-	}
-	
-	public function change()
-	{
-		// nothing lol
-		if (onChange != null)
-		{
-			onChange();
-		}
-	}
-	
-	public function getValue():Dynamic
-	{
-		return ClientPrefs.gameplaySettings.get(variable);
-	}
-	
-	public function setValue(value:Dynamic)
-	{
-		ClientPrefs.gameplaySettings.set(variable, value);
-	}
-	
-	public function setChild(child:Alphabet)
-	{
-		this.child = child;
-	}
-	
-	private function get_text()
-	{
-		if (child != null)
-		{
-			return child.text;
-		}
-		return null;
-	}
-	
-	private function set_text(newValue:String = '')
-	{
-		if (child != null)
-		{
-			child.changeText(newValue);
-		}
-		return null;
-	}
-	
-	private function get_type()
-	{
-		var newValue:String = 'bool';
-		switch (type.toLowerCase().trim())
-		{
-			case 'int' | 'float' | 'percent' | 'string':
-				newValue = type;
-			case 'integer':
-				newValue = 'int';
-			case 'str':
-				newValue = 'string';
-			case 'fl':
-				newValue = 'float';
-		}
-		type = newValue;
-		return type;
+		ClientPrefs.flush();
+		super.destroy();
 	}
 }
