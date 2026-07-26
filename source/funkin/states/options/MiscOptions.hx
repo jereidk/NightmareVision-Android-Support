@@ -22,13 +22,7 @@ class MiscOptions
 			Lang.str('opt_splashscreen_desc', "If unchecked, it will completely skip the splash screen upon the engine's boot up."), 'toggleSplashScreen', 'bool', true));
 
 		opts.push(new Option(Lang.str('opt_showcursor', 'Show Cursor'),
-			#if mobile
-			Lang.str('opt_showcursor_desc',
-				'Shows or hides the mouse cursor on screen.
-On mobile this also controls whether Touch navigation is available -- if the cursor is hidden, only Virtual Pad buttons respond.'),
-			#else
 			Lang.str('opt_showcursor_desc', 'Shows or hides the mouse cursor on screen.'),
-			#end
 			'showCursor', 'bool', true));
 		opts[opts.length - 1].onChange = () -> {
 			FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();

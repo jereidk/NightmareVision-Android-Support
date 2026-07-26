@@ -23,13 +23,16 @@ class MobileNavUtil
 
 	/**
 	 * Whether the mouse cursor should be visible.
+	 *
+	 * Purely a visual toggle -- whether the cursor actually interacts with
+	 * anything is allowPointerNav()'s job (gated on navInputMode alone), not
+	 * this one. This used to also force the cursor off whenever navInputMode
+	 * was 'Virtual Pad', which meant enabling Show Cursor did nothing at all
+	 * for the majority of players (Virtual Pad is this fork's default nav
+	 * mode) -- the option should mean what it says regardless of nav mode.
 	 */
 	public static inline function shouldShowMouse():Bool
 	{
-		#if mobile
-		return ClientPrefs.showCursor && ClientPrefs.navInputMode != 'Virtual Pad';
-		#else
 		return ClientPrefs.showCursor;
-		#end
 	}
 }
