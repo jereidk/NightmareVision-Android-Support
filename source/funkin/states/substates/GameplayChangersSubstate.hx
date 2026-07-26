@@ -55,18 +55,18 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xE60A0A14);
 		add(dim);
 
-		var title = new FlxText(40 + cutout * 0.5, 20, 0, Lang.str('gc_title', 'Gameplay Changers'), 42);
+		var title = new FlxText(40 + cutout * 0.5, 50, 0, Lang.str('gc_title', 'Gameplay Changers'), 42);
 		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		title.borderSize = 2;
 		title.antialiasing = ClientPrefs.globalAntialiasing;
 		add(title);
 
-		closeButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
+		closeButton = new FlxSprite(1100 + cutout, 50).loadGraphic(Paths.image('menu/common/menuBack'));
 		closeButton.antialiasing = ClientPrefs.globalAntialiasing;
 		add(closeButton);
 
 		final listW = (1160 + cutout) - LIST_X;
-		list = new TouchOptionList(LIST_X, 100, listW, 8);
+		list = new TouchOptionList(LIST_X, 130, listW, 8);
 		add(list);
 
 		list.setOptions(buildOptions(currentSongName));
