@@ -1140,26 +1140,30 @@ class OptionsState extends MusicBeatState
 				hoveredTab = i;
 				if (FlxG.mouse.justPressed)
 				{
+					// One-motion "commit straight into content" only makes sense
+					// for actual touch taps -- Virtual Pad already has its own
+					// dedicated way in (controls.UI_DOWN/ACCEPT below), and
+					// this whole block is unreachable there anyway since
+					// pointerNavAllowed is false under Virtual Pad. Desktop
+					// mouse users keep the original two-step (click selects the
+					// tab, a second click/DOWN+ACCEPT enters it) since there's
+					// no touch affordance being replaced for them.
+					final touchTap = #if mobile ClientPrefs.navInputMode == 'Touch' #else false #end;
+
 					if (i != curTab)
 					{
-						// A tap/click is one decisive action (unlike keyboard/
-						// gamepad, where UI_LEFT/RIGHT just browse tabs and a
-						// separate DOWN/ACCEPT commits into one) -- mouse and
-						// touch are the same input path on mobile (OpenFL
-						// simulates touch as FlxG.mouse events), so there's no
-						// touch-only case to add here, just this one shared tap
-						// handler. Picking a different tab this way commits
-						// straight into its content in the same motion, instead
-						// of stopping at the tab-picker hero art first.
 						changeTab(i);
-						if (tabs[curTab] == 'language')
+						if (touchTap)
 						{
-							focus = 'langSubtitles';
-							descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
+							if (tabs[curTab] == 'language')
+							{
+								focus = 'langSubtitles';
+								descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
+							}
+							else focus = 'list';
 						}
-						else focus = 'list';
 					}
-					else if (focus == 'tabs')
+					else if (touchTap && focus == 'tabs')
 					{
 						// Already on this tab but still on the picker hero art --
 						// tapping it again is the same "commit into content" motion
@@ -1173,12 +1177,14 @@ class OptionsState extends MusicBeatState
 						else focus = 'list';
 						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 					}
-					else
+					else if (focus != 'tabs')
 					{
-						// Tapping the already-active tab while already inside its
-						// content (e.g. focus == 'list'/'langSubtitles') toggles
-						// back OUT to the tab row, same as BACK already does from
-						// there.
+						// Clicking the tab that's already active (e.g. while
+						// focus is 'list') just returns focus to the tab row,
+						// same as BACK already does from 'list' -- doesn't call
+						// changeTab() since that resets the list's scroll/
+						// selection, which a same-tab click has no reason to
+						// discard.
 						focus = 'tabs';
 						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 					}
