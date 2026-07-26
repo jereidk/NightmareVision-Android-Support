@@ -145,11 +145,17 @@ class AwardsState extends AmongUIState
 		var localizedAwardsFont:String = Lang.getFont('vcr.ttf');
 		var isVcrFont:Bool = StringTools.startsWith((localizedAwardsFont ?? 'vcr.ttf').toLowerCase(), 'vcr');
 		
-		nameText = new FlxText(0, 540, 1280, 'name', 40);
-		infoText = new FlxText(0, isVcrFont ? 580 : 600, 1280, 'bio', 25);
+		// FlxG.width already reflects 'expand' mode's wider canvas by the time
+		// create() runs -- these three span/anchor to the full screen width
+		// (unlike completionText/playTimeText below, which stay left-anchored
+		// regardless), so a hardcoded 1280/1250 field width left them centered/
+		// right-aligned against only the original design width, sitting too far
+		// left of where the actual wider screen's center/right edge now is.
+		nameText = new FlxText(0, 540, FlxG.width, 'name', 40);
+		infoText = new FlxText(0, isVcrFont ? 580 : 600, FlxG.width, 'bio', 25);
 		completionText = new FlxText(10, 0, 0, '', 25);
 		playTimeText = new FlxText(10, 0, 0, '', 25);
-		var howManyText:FlxText = new FlxText(0, 700, 1250, 'ball', 25);
+		var howManyText:FlxText = new FlxText(0, 700, FlxG.width - 30, 'ball', 25);
 		howManyText.text = Lang.str('awards_counter').replace('@', '${unlockedAwards}/${achievements.length}');
 		for (txt in [nameText, infoText, completionText, playTimeText, howManyText])
 		{
@@ -305,35 +311,49 @@ class AwardsState extends AmongUIState
 	override function update(elapsed:Float)
 	{
 		refreshPlayTimeText();
-		
-		if (ClientPrefs.navInputMode == 'Touch')
-		{
-		if (FlxG.mouse.justMoved)
-		{
-			mouseControlActive = true;
-		}  // navInputMode == Touch
-		}
-		
-		if (controlUP.PRESSED || controlDOWN.PRESSED || controlLEFT.PRESSED || controlRIGHT.PRESSED || controls.BACK)
+
+		// TurboControl (controlUP/DOWN/LEFT/RIGHT) polls raw FlxG.keys/
+		// FlxG.gamepads directly -- it never went through Controls' own
+		// UI_UP/etc getters, which are the ones that check the mobile virtual
+		// pad (mobilePadPressed/mobilePadJustPressed). That's why the virtual
+		// pad did nothing here at all: pressing it never set any of these
+		// PRESSED flags. The _P (justPressed) getters below fill that gap --
+		// keyboard/gamepad keep TurboControl's own turbo-hold-repeat pacing
+		// unaffected (a fresh keypress already makes TurboControl.PRESSED true
+		// on that same first frame too, so this never double-moves), while the
+		// virtual pad gets one discrete move per tap, which is the right feel
+		// for a touchscreen button anyway.
+		if (controlUP.PRESSED || controlDOWN.PRESSED || controlLEFT.PRESSED || controlRIGHT.PRESSED
+			|| controls.UI_UP_P || controls.UI_DOWN_P || controls.UI_LEFT_P || controls.UI_RIGHT_P || controls.BACK)
 		{
 			mouseControlActive = false;
 		}
-		
-		if (mouseControlActive)
+
+		// Mouse/touch tap-to-select is only for Touch nav mode -- under Virtual
+		// Pad, the pad itself is what should move the selection (see above),
+		// same convention as every other AmongUIState screen this session.
+		if (MobileNavUtil.allowPointerNav())
 		{
-			theMouseShit();
+			if (FlxG.mouse.justMoved) mouseControlActive = true;
+
+			if (mouseControlActive) theMouseShit();
+			else if (hoveredMouseSel != -1)
+			{
+				hoveredMouseSel = -1;
+				refreshIconAlphas();
+			}
 		}
 		else if (hoveredMouseSel != -1)
 		{
 			hoveredMouseSel = -1;
 			refreshIconAlphas();
 		}
-		
-		if (controlUP.PRESSED) changeRow(-1);
-		if (controlDOWN.PRESSED) changeRow(1);
-		if (controlLEFT.PRESSED) changeColumn(-1);
-		if (controlRIGHT.PRESSED) changeColumn(1);
-		
+
+		if (controlUP.PRESSED || controls.UI_UP_P) changeRow(-1);
+		if (controlDOWN.PRESSED || controls.UI_DOWN_P) changeRow(1);
+		if (controlLEFT.PRESSED || controls.UI_LEFT_P) changeColumn(-1);
+		if (controlRIGHT.PRESSED || controls.UI_RIGHT_P) changeColumn(1);
+
 		super.update(elapsed);
 	}
 }
