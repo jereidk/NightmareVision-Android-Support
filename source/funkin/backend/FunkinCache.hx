@@ -263,6 +263,38 @@ class FunkinCache
 				if (currentTrackedGraphics.exists(key) || currentTrackedGraphics.permanentKeys.contains(key)) continue;
 				if (key.indexOf('flixel') >= 0) continue;
 
+				// Every MusicBeatState extends flixel-ui's FlxUIState (needed
+				// for the level editors, which genuinely use FlxUI widgets),
+				// whose own create() unconditionally builds a
+				// FlxUITooltipManager -- even on screens that never show a
+				// single tooltip (confirmed: nothing in this codebase reads
+				// state.tooltips). That manager's constructor eagerly builds
+				// a default FlxUITooltip(100, 50), which caches its
+				// background + arrow-background bitmaps under these two
+				// exact, deterministic key shapes (getStyleKey()/
+				// makeArrowBkg() in FlxUITooltip.hx -- not vendored in this
+				// repo, read from the installed haxelib to confirm). They're
+				// cached with a shared, reusable key on purpose (multiple
+				// tooltips are meant to reuse one), so treating them like any
+				// other orphaned per-state graphic just meant destroying and
+				// immediately rebuilding the same bitmap on every single
+				// state transition in the whole game, forever. Skipping them
+				// here (same idea as the .persist check below) lets the
+				// first one built stay cached and reused for the rest of the
+				// session -- deliberately NOT touching FlxUIState.tooltips
+				// itself to disable this at the source: its update() does
+				// `if (tooltips != null) tooltips.update(elapsed)`, and
+				// tooltips' own setter is private to FlxUIState, so a
+				// subclass can only call tooltips.destroy() without ever
+				// being able to null the field back -- destroy() nulls the
+				// manager's internal `list` Array, and its update() does
+				// `for (i in 0...list.length)` with no null guard, so that
+				// path is a guaranteed null-pointer crash on the very next
+				// frame of every single screen. Not worth it for a few KB of
+				// harmless, already-deduplicated cache.
+				if (key.indexOf('arrowBkg:') == 0) continue;
+				if (key.indexOf('100,50,') == 0) continue;
+
 				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
 				if (g == null) continue;
 
