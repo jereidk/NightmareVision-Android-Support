@@ -180,9 +180,7 @@ class MainMenuState extends MusicBeatState
 	// only needs to read as "the moment", not track the full decay tail).
 	static inline final DEV_UNLOCK_BURST_DURATION:Float = 0.5;
 
-	var ytRing:FlxSprite;
 	var ytIcon:FlxSprite;
-	var portCreditText:FlxText;
 
 	// Same leak fix as TitleState/FreeplayState/PlayState: without this, every
 	// dynamically-rendered bitmap this state creates (menu labels, the YouTube
@@ -539,38 +537,26 @@ class MainMenuState extends MusicBeatState
 	}
 	
 	/**
-	 * Small YouTube-styled icon + "Android Port By Jere" credit, centered at
-	 * the bottom of the menu (replaces the old left-aligned port/version text).
-	 * Tapping the icon opens the channel in the browser.
+	 * YouTube-styled icon credit -- just the image now (no ring, no "Android
+	 * Port By Jere" text), bigger and lower than the old corner-badge
+	 * version. Idle alpha is IDLE_ALPHA; held down at full opacity (see
+	 * update()). Tapping it opens the channel in the browser.
 	 */
+	static inline final YT_ICON_IDLE_ALPHA:Float = 0.7;
+
 	function buildPortCredit():Void
 	{
-		final iconSize:Int = 44;
+		final iconSize:Int = 68;
 		final iconX:Float  = 18;
-		final iconY:Float  = 16;
-		final ringColor:Int = 0xFF6CFF7A;
-
-		// Ring sits a touch larger than the avatar and behind it, like a
-		// colored profile-picture border.
-		ytRing = new FlxSprite(iconX - 3, iconY - 3).loadGraphic(_ringBitmap(iconSize + 6, ringColor, 3));
-		ytRing.scrollFactor.set();
-		add(ytRing);
+		final iconY:Float  = 90;
 
 		ytIcon = new FlxSprite(iconX, iconY).loadGraphic(_circleMask(Paths.image('menu/main/ytChannelIcon').bitmap, iconSize));
 		ytIcon.scrollFactor.set();
+		ytIcon.alpha = YT_ICON_IDLE_ALPHA;
 		add(ytIcon);
-
-		portCreditText = new FlxText(iconX + iconSize + 12, iconY + (iconSize - 22) * 0.5, 300, 'Android Port By Jere', 18);
-		portCreditText.alignment = 'left';
-		portCreditText.setFormat(Paths.font('vcr.ttf', false), 18, ringColor, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		portCreditText.borderSize = 1.5;
-		portCreditText.scrollFactor.set();
-		add(portCreditText);
 
 		// Gentle breathing pulse so the corner credit feels a little alive.
 		FlxTween.tween(ytIcon, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
-			{ease: FlxEase.quadInOut, type: PINGPONG});
-		FlxTween.tween(ytRing, {"scale.x": 1.08, "scale.y": 1.08}, 1.1,
 			{ease: FlxEase.quadInOut, type: PINGPONG});
 	}
 
@@ -600,27 +586,6 @@ class MainMenuState extends MusicBeatState
 		}
 
 		return scaled;
-	}
-
-	/** Thin colored ring (annulus), used as a border behind the circular avatar. */
-	function _ringBitmap(size:Int, color:Int, thickness:Float):BitmapData
-	{
-		var bmp = new BitmapData(size, size, true, 0x00000000);
-		final outerR:Float = size * 0.5;
-		final innerR:Float = outerR - thickness;
-		final cx:Float = outerR, cy:Float = outerR;
-
-		for (px in 0...size)
-		{
-			for (py in 0...size)
-			{
-				final dx = px - cx, dy = py - cy;
-				final dist = Math.sqrt(dx * dx + dy * dy);
-				if (dist <= outerR && dist >= innerR) bmp.setPixel32(px, py, color);
-			}
-		}
-
-		return bmp;
 	}
 
 	function updateMenuSelection()
@@ -713,10 +678,19 @@ class MainMenuState extends MusicBeatState
 		starBG.x -= 4.5 * elapsed;
 		starFG.x -= 9 * elapsed;
 
-		if (!devCodeBoxOpen && !devPanelOpen && ytIcon != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+		if (ytIcon != null)
 		{
-			FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
-			CoolUtil.browserLoad(YT_CHANNEL_URL);
+			// Full opacity while actually held down, otherwise the normal
+			// idle transparency -- a simple direct set (no tween) is enough
+			// since this only ever needs to track the current frame's press
+			// state, not animate between them.
+			ytIcon.alpha = (FlxG.mouse.pressed && FlxG.mouse.overlaps(ytIcon)) ? 1.0 : YT_ICON_IDLE_ALPHA;
+
+			if (!devCodeBoxOpen && !devPanelOpen && FlxG.mouse.justPressed && FlxG.mouse.overlaps(ytIcon))
+			{
+				FlxG.sound.play(Paths.sound('confirmMenu'), 0.5);
+				CoolUtil.browserLoad(YT_CHANNEL_URL);
+			}
 		}
 
 		if (!devCodeBoxOpen && !devPanelOpen && FlxG.keys.justPressed.SEVEN) FlxG.switchState(new MasterEditorMenu());
