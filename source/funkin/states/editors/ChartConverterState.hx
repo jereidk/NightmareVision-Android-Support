@@ -50,6 +50,15 @@ class ChartConverterState extends MusicBeatState
 		bg = new FlxSprite(Paths.image('menuDesat'));
 		bg.scrollFactor.set();
 		bg.color = 0xFF4D3551;
+		// Full 1280x720 background graphic -- same "leaves a gap on wide
+		// 'expand'-mode screens" issue as StoryMenuState's own border frame.
+		// Gated on gameCutoutSize.x (zero outside 'expand' mode) rather than
+		// comparing FlxG.width to the asset's own size.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		add(bg);
 		
 		var titleText = new Alphabet(0, 0, 'Chart Converter', true, false, 0, 0.6);
