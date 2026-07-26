@@ -63,7 +63,12 @@ class QuantNotesSubState extends MusicBeatSubstate
 	{
 		super();
 		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
+		// Was 'menus/menuDesat' -- doesn't exist under this fork's own legacy
+		// assets (only assets/game/images/menus/menuDesat.png, the upstream
+		// base-game copy), unlike NotesSubState's identical background which
+		// correctly uses the plain 'menuDesat' key (assets/legacy/images/
+		// menuDesat.png) -- this substate rendered with no background at all.
+		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = 0xFFea71fd;
 		// Same fixed 1286x730 background as CreditsState/NotesSubState —
 		// stretch first (gated on gameCutoutSize.x) so screenCenter() covers
