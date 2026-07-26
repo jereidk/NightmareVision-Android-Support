@@ -697,6 +697,7 @@
 		"opt_controls_keybinds_locked": "Conecte um teclado ou controle para usar Teclas",
 		"opt_language_current": "Atual",
 		"opt_language_downloaded": "Baixado",
+		"opt_language_credits_label": "Créditos de Localização: ",
 		"opt_language_noresults": "Nenhum idioma corresponde a:",
 		"opt_language_confirm_title": "Mudar idioma?",
 		"opt_language_confirm_msg": "Mudar para este idioma?",

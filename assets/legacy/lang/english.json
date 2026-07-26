@@ -708,6 +708,7 @@
 		"opt_language_desc": "Choose your language! Note: All languages besides English (United States) are community translated!",
 		"opt_language_current": "Current",
 		"opt_language_downloaded": "Downloaded",
+		"opt_language_credits_label": "Localization Credits: ",
 		"opt_language_noresults": "No languages match:",
 		"opt_language_confirm_title": "Change Language?",
 		"opt_language_confirm_msg": "Switch to this language?",

@@ -640,6 +640,7 @@
 		"opt_controls_keybinds_locked": "Liga um teclado ou comando para usar Teclas",
 		"opt_language_current": "Atual",
 		"opt_language_downloaded": "Transferido",
+		"opt_language_credits_label": "Créditos de Localização: ",
 		"opt_language_noresults": "Nenhum idioma corresponde a:",
 		"opt_language_confirm_title": "Mudar idioma?",
 		"opt_language_confirm_msg": "Mudar para este idioma?",

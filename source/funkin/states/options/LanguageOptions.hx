@@ -30,13 +30,24 @@ class LanguageOptions
 	public static var currentLanguageRowIndex(default, null):Int = -1;
 
 	/**
+	 * Current language's localization credits, formatted for display -- '' if
+	 * it has none. Used to live as a 'label' row scrolling along with the
+	 * rest of the A-Z list; now read directly by OptionsState.descriptionFor()
+	 * to show in the desc box below the list instead, which isn't part of the
+	 * list's own scroll (see that function's doc comment). Refreshed as a
+	 * side effect of every build() call, same as currentLanguageRowIndex
+	 * above -- in particular by refreshLanguageTabInPlace() right after a
+	 * language switch, so this never goes stale.
+	 */
+	public static var currentCreditsText(default, null):String = '';
+
+	/**
 	 * @param filter Case-insensitive substring match against each language's
 	 * display name. Empty/null shows the full alphabetized list, same as
-	 * before this param existed. While actively filtering, the Subtitles
-	 * toggle/credits row and the A/B/C... section headers are skipped --
-	 * they're just noise once the list is already narrowed down to a
-	 * handful of matches, and skipping them keeps the actual results in
-	 * view without scrolling past unrelated rows first.
+	 * before this param existed. While actively filtering, the A/B/C...
+	 * section headers are skipped -- they're just noise once the list is
+	 * already narrowed down to a handful of matches, and skipping them keeps
+	 * the actual results in view without scrolling past unrelated rows first.
 	 */
 	public static function build(?filter:String):Array<Option>
 	{
@@ -46,25 +57,8 @@ class LanguageOptions
 		final searching = filter != null && filter.length > 0;
 		final needle = searching ? filter.toLowerCase() : '';
 
-		// Subtitles + credits at the top -- with 30+ language rows now
-		// inline below, leaving them at the bottom (where the old 4-row
-		// list had them) would bury a frequently-toggled, unrelated setting
-		// behind a full scroll of the alphabet.
-		var refreshCredits:Void->Void = () -> {};
-		if (!searching)
-		{
-			opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'),
-				Lang.str('opt_subtitles_desc', "Show subtitles for songs that have them."), 'subtitles', 'bool', true));
-
-			final creditsOption = new Option('', '', '', 'label');
-			opts.push(creditsOption);
-
-			refreshCredits = () -> {
-				final tc:String = Lang.current?.translationCredits ?? '';
-				creditsOption.name = (tc.length > 0) ? 'Localization Credits: $tc' : '';
-			};
-			refreshCredits();
-		}
+		final tc:String = Lang.current?.translationCredits ?? '';
+		currentCreditsText = (tc.length > 0) ? Lang.str('opt_language_credits_label', 'Localization Credits: ') + tc : '';
 
 		final codes = Lang.getAvailableLanguages();
 		final displayNames = [for (code in codes) (Lang.loadLang(code)?.name ?? code)];
@@ -137,7 +131,10 @@ class LanguageOptions
 					Lang.str('yes', 'Yes'), Lang.str('no', 'No'), () -> {
 						ClientPrefs.language = entry.code;
 						Lang.reloadLangFile(); // also kicks LangFontPacks.ensureDownloaded() internally, unchanged
-						refreshCredits();
+						// refreshLanguageTabInPlace() calls build() again, which
+						// refreshes currentCreditsText as a side effect -- no
+						// separate refresh call needed (unlike the old in-place
+						// Option-mutation approach this replaced).
 						if (OptionsState.instance != null) OptionsState.instance.refreshLanguageTabInPlace();
 					}, null);
 			};
