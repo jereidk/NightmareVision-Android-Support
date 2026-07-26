@@ -34,6 +34,12 @@ On mobile this also controls whether Touch navigation is available -- if the cur
 			FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		};
 
+		#if mobile
+		opts.push(new Option(Lang.str('opt_hidepausebtn', 'Hide Pause Button'),
+			Lang.str('opt_hidepausebtn_desc', 'If checked, hides the floating pause button during songs. You can still pause with the Android back button.'),
+			'hidePauseButton', 'bool', false));
+		#end
+
 		opts.push(new Option(Lang.str('opt_category_companion', 'Companion').toUpperCase(), '', '', 'label'));
 
 		opts.push(new Option(Lang.str('opt_shimeji', 'Desktop Companion'),

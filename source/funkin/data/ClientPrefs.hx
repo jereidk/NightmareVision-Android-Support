@@ -247,12 +247,13 @@ class ClientPrefs
 	@saveVar public static var virtualPadSkin:String = 'modern';
 
 	/**
-	 * Opt-in prettier look for the in-song mobile pause button: a bigger,
-	 * anti-aliased translucent circle (via FlxSpriteUtil.drawCircle) instead
-	 * of the plain flat-color square. Off by default so the existing look
-	 * doesn't change under anyone who hasn't asked for it.
+	 * If true, hides the in-song floating mobile pause button entirely.
+	 * Off by default -- the button (a bigger, anti-aliased translucent
+	 * circle, see PlayState's mobilePauseBtn) is always shown unless this
+	 * is explicitly turned on; pausing is still reachable via the Android
+	 * BACK button or controls.PAUSE either way.
 	 */
-	@saveVar public static var roundPauseButton:Bool = false;
+	@saveVar public static var hidePauseButton:Bool = false;
 
 	/** Arrangement of hitbox tap zones. Values: 'Four Lanes', 'Two Thumb', 'DPad', 'Arrows', 'Triangle'. */
 	@saveVar public static var hitboxLayout:String = 'Four Lanes';

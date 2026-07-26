@@ -1176,21 +1176,19 @@ class PlayState extends MusicBeatState
 
 		mobilePauseBtn = new FlxSprite();
 
-		// Optional prettier style (ClientPrefs.roundPauseButton) -- a bigger,
-		// anti-aliased translucent circle instead of the plain flat square,
-		// off by default so it doesn't change anyone's look unasked.
-		final pauseBtnSize = ClientPrefs.roundPauseButton ? 68 : 55;
-		if (ClientPrefs.roundPauseButton)
-		{
-			mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, FlxColor.TRANSPARENT, true);
-			FlxSpriteUtil.drawCircle(mobilePauseBtn, -1, -1, -1, 0x66000000, {thickness: 2, color: 0x40FFFFFF});
-		}
-		else mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, 0x88000000);
+		// Bigger, anti-aliased translucent circle instead of the old plain
+		// flat-color square -- this is just the button's look, always on.
+		// ClientPrefs.hidePauseButton (Misc Options) controls whether the
+		// button shows up at all, separately, below.
+		final pauseBtnSize = 68;
+		mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, FlxColor.TRANSPARENT, true);
+		FlxSpriteUtil.drawCircle(mobilePauseBtn, -1, -1, -1, 0x66000000, {thickness: 2, color: 0x40FFFFFF});
 
 		mobilePauseBtn.x = FlxG.width - mobilePauseBtn.width - 5;
 		mobilePauseBtn.y = 5;
 		mobilePauseBtn.scrollFactor.set();
 		mobilePauseBtn.cameras = [camHUD];
+		mobilePauseBtn.visible = !ClientPrefs.hidePauseButton;
 		add(mobilePauseBtn);
 
 		final pauseLabelSize = Std.int(26 * pauseBtnSize / 55);
@@ -1199,6 +1197,7 @@ class PlayState extends MusicBeatState
 		_pauseLabel.setFormat(null, pauseLabelSize, FlxColor.WHITE, FlxTextAlign.CENTER);
 		_pauseLabel.scrollFactor.set();
 		_pauseLabel.cameras = [camHUD];
+		_pauseLabel.visible = !ClientPrefs.hidePauseButton;
 		add(_pauseLabel);
 		#end
 
@@ -2691,7 +2690,7 @@ class PlayState extends MusicBeatState
 				if (touch.justPressed)
 				{
 					var _tp = touch.getScreenPosition(camHUD);
-					if (mobilePauseBtn.overlapsPoint(_tp, true, camHUD))
+					if (mobilePauseBtn.visible && mobilePauseBtn.overlapsPoint(_tp, true, camHUD))
 					{
 						_tp.put();
 						if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
