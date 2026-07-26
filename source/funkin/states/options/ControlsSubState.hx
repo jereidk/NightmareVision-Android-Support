@@ -89,9 +89,54 @@ class ControlsSubState extends MusicBeatSubstate
 	
 	final topBound:Float = 150;
 	final bottomBound:Float = 630;
-	
+
 	var fadeCamera:FlxCamera; // erm .. awkward
-	
+
+	// Clips the left-side boyfriend/badge preview column so it can never
+	// visually bleed into the main panel below (see the constructor comment
+	// where it's built). Separate from `camera` (the scrolling options list)
+	// and `fadeCamera` -- destroy() removes all three.
+	var previewCamera:FlxCamera;
+
+	// ── Shared layout constants ─────────────────────────────────────────────
+	// Every pixel position ControlsGroup/ControlsOption use to lay out a row
+	// comes from these instead of scattered literals, so the panel width, row
+	// height and bind-column positions can only ever agree with each other.
+
+	/** Width of this substate's own scrolling panel/camera (see `camera` below). */
+	public static inline final PANEL_W:Float = 676;
+
+	/** Height of one bind option row (label + its key/button badges). */
+	public static inline final ROW_H:Float = 24;
+
+	/** Height reserved for a group's own title row (NOTES/UI/VOLUME/DEBUG). */
+	public static inline final GROUP_HEADER_H:Float = 24;
+
+	/** Left margin for a row's label text and a group's own header text. */
+	public static inline final LABEL_X:Float = 5;
+
+	/** Width of each individual key/button bind badge. */
+	public static inline final BIND_COL_W:Float = 200;
+
+	/** Horizontal gap between adjacent bind badge columns, and between the
+	 *  last one and the panel's right edge. */
+	public static inline final BIND_GAP:Float = 10;
+
+	/** Bind columns to always reserve room for -- matches the fixed array
+	 *  length every entry in ClientPrefs.keyBinds/gamepadBinds actually has
+	 *  (primary + alt bind), so layout can't silently drift out of sync with
+	 *  the data it's positioning. */
+	public static inline final MAX_BINDS:Int = 2;
+
+	/**
+	 * Absolute panel-X of bind column `i`, counting backwards from the
+	 * panel's right edge -- guarantees the last column always leaves a full
+	 * BIND_GAP of margin before that edge, however many columns there are,
+	 * instead of a hand-picked offset that happens to fit today's MAX_BINDS.
+	 */
+	public static inline function bindColX(i:Int):Float
+		return PANEL_W - (MAX_BINDS - i) * (BIND_COL_W + BIND_GAP);
+
 	public function new(device:Device)
 	{
 		super();
@@ -108,7 +153,7 @@ class ControlsSubState extends MusicBeatSubstate
 		add(dimBg);
 
 		var panelBg = new FlxSprite(panelX - 24, topBound - 50).loadGraphic(Paths.image('menu/options/artPanel'));
-		panelBg.setGraphicSize(676 + 48, Std.int((bottomBound + 10) - (topBound - 50)));
+		panelBg.setGraphicSize(Std.int(PANEL_W) + 48, Std.int((bottomBound + 10) - (topBound - 50)));
 		panelBg.updateHitbox();
 		panelBg.antialiasing = ClientPrefs.globalAntialiasing;
 		panelBg.camera = FlxG.camera;
@@ -133,13 +178,13 @@ class ControlsSubState extends MusicBeatSubstate
 		// own background so it stays legible over whatever list content is
 		// scrolled underneath, and uses FlxG.camera (not the scrolling `camera`
 		// built below) so it stays put regardless of scroll position.
-		rebindHintBg = new FlxSprite(panelX, topBound + 8).makeGraphic(676, 40, FlxColor.BLACK);
+		rebindHintBg = new FlxSprite(panelX, topBound + 8).makeGraphic(Std.int(PANEL_W), 40, FlxColor.BLACK);
 		rebindHintBg.alpha = 0.75;
 		rebindHintBg.camera = FlxG.camera;
 		rebindHintBg.visible = false;
 		add(rebindHintBg);
 
-		rebindHintText = new FlxText(panelX, topBound + 8, 676,
+		rebindHintText = new FlxText(panelX, topBound + 8, PANEL_W,
 			#if mobile Lang.str('opt_controls_rebind_hint_mobile', 'Connect a keyboard or gamepad to rebind')
 			#else Lang.str('opt_controls_rebind_hint', 'Press a key or button...') #end);
 		rebindHintText.setFormat(Paths.font('vcr.ttf'), 18, OptionsTheme.GOLD, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -150,23 +195,33 @@ class ControlsSubState extends MusicBeatSubstate
 		rebindHintText.visible = false;
 		add(rebindHintText);
 
-		// Left-side preview (see the field doc comments above). Both live on
-		// FlxG.camera, same as the rest of this constructor's non-scrolling
-		// chrome -- the empty space is to the LEFT of panelX, outside the
-		// scrolling `camera`'s own viewport entirely.
+		// Left-side preview (see the field doc comments above) -- the empty
+		// space to the LEFT of panelX, outside the scrolling `camera`'s own
+		// viewport entirely. Lives on its own dedicated camera, clipped to
+		// exactly that column (x: 0..panelX-24), instead of the shared
+		// FlxG.camera every other piece of chrome above uses: the boyfriend
+		// scale/offset below was never pixel-verified against a real render,
+		// and FNF sing-direction frames commonly have different bounds per
+		// direction (a taller/wider "singUP"/"singRIGHT" pose than idle) --
+		// a hard camera-viewport clip keeps the preview column from ever
+		// visually bleeding into the actual Keybinds panel to the right,
+		// regardless of what any given frame's real bounds turn out to be,
+		// instead of just hoping the scale math never runs wide.
+		previewCamera = new FlxCamera(0, 0, Std.int(panelX - 24), FlxG.height);
+		previewCamera.bgColor = 0;
+		FlxG.cameras.add(previewCamera, false);
+
 		final previewCenterX = (panelX - 24) * 0.5;
 
 		boyfriend = new Character(0, 0, ClientPrefs.bfSkin != 'default' ? ClientPrefs.bfSkin : 'bf', true);
 		// Native character art runs much bigger than this panel's ~450px-wide
 		// column -- scaled down to fit, feet anchored near the badge below.
-		// Not pixel-verified on a real device yet (no local renderer here);
-		// may need a follow-up calibration pass once this is actually seen.
 		boyfriend.scale.set(0.55, 0.55);
 		boyfriend.updateHitbox();
 		boyfriend.x = previewCenterX - boyfriend.width * 0.5;
 		boyfriend.y = 500 - boyfriend.height;
 		boyfriend.scrollFactor.set();
-		boyfriend.camera = FlxG.camera;
+		boyfriend.camera = previewCamera;
 		add(boyfriend);
 
 		previewCaption = new FlxText(previewCenterX - 150, 512, 300, '');
@@ -174,12 +229,12 @@ class ControlsSubState extends MusicBeatSubstate
 		previewCaption.borderSize = 1.5;
 		previewCaption.antialiasing = ClientPrefs.globalAntialiasing;
 		previewCaption.scrollFactor.set();
-		previewCaption.camera = FlxG.camera;
+		previewCaption.camera = previewCamera;
 		add(previewCaption);
 
 		keyBadgeBg = new FlxSprite(previewCenterX - 100, 546).makeGraphic(200, 74, 0xFF1C2626);
 		keyBadgeBg.scrollFactor.set();
-		keyBadgeBg.camera = FlxG.camera;
+		keyBadgeBg.camera = previewCamera;
 		add(keyBadgeBg);
 
 		keyBadgeText = new FlxText(keyBadgeBg.x, keyBadgeBg.y, 200, '');
@@ -188,10 +243,10 @@ class ControlsSubState extends MusicBeatSubstate
 		keyBadgeText.y += Math.round((keyBadgeBg.height - keyBadgeText.height) * .5);
 		keyBadgeText.antialiasing = ClientPrefs.globalAntialiasing;
 		keyBadgeText.scrollFactor.set();
-		keyBadgeText.camera = FlxG.camera;
+		keyBadgeText.camera = previewCamera;
 		add(keyBadgeText);
 
-		(camera = new FlxCamera(panelX, topBound, 676, Std.int(bottomBound - topBound))).bgColor = 0;
+		(camera = new FlxCamera(panelX, topBound, Std.int(PANEL_W), Std.int(bottomBound - topBound))).bgColor = 0;
 		FlxG.cameras.add(camera, false);
 		
 		FlxG.cameras.add(fadeCamera = new FlxCamera(), false);
@@ -704,6 +759,7 @@ class ControlsSubState extends MusicBeatSubstate
 		// check before to prevent a annoying warning
 		if (FlxG.cameras.list.indexOf(fadeCamera) != -1 && fadeCamera != null) FlxG.cameras.remove(fadeCamera);
 		if (FlxG.cameras.list.indexOf(camera) != -1 && camera != null) FlxG.cameras.remove(camera);
+		if (FlxG.cameras.list.indexOf(previewCamera) != -1 && previewCamera != null) FlxG.cameras.remove(previewCamera);
 		super.destroy();
 	}
 }
@@ -718,47 +774,48 @@ class ControlsGroup extends FlxSpriteContainer
 	public var hitbox:FlxSprite;
 	
 	public var groupLastIndex:Int;
-	
+
 	public var type:ControlsOptionType;
-	
-	var lineHeight:Float = 24;
-	
+
 	public function new(label:String = '', options:Array<{label:String, ?action:Action, ?fun:ControlsOption->Void}>, ?type:ControlsOptionType = AnyOption)
 	{
 		super();
-		
+
 		this.type = type;
 		this.label = new FlxText(0, 0, 200, label);
 		this.label.setFormat(Paths.font('vcr'), 20, FlxColor.WHITE /*0xFF62E0CF*/, LEFT, OUTLINE, FlxColor.BLACK);
 		this.label.borderSize = 1;
-		
+
 		if (label.length > 0) add(this.label);
-		
-		var startY:Float = (label.length > 0 ? lineHeight : 0);
-		
+
+		var startY:Float = (label.length > 0 ? ControlsSubState.GROUP_HEADER_H : 0);
+
+		// bg and hitbox both reserve the exact same row count -- options.length,
+		// including any blank/null rows used as in-group spacers -- unlike
+		// before, where hitbox counted every row but bg only counted up
+		// through the last REAL option. That mismatch left the last spacer
+		// row's worth of space at the bottom of every group undimmed: a
+		// visible seam of plain panel art showing through where the
+		// semi-transparent black tint should still have covered it.
+		final rowCount = options.length;
+
 		hitbox = new FlxSprite(0, startY);
-		hitbox.setSize(1, options.length * lineHeight + 10);
+		hitbox.setSize(1, rowCount * ControlsSubState.ROW_H + 10);
 		hitbox.visible = false;
 		add(hitbox);
-		
+
 		bg = new FlxSprite(0, startY).makeGraphic(1, 1, FlxColor.BLACK);
 		bg.alpha = .5;
+		bg.setGraphicSize(Std.int(ControlsSubState.PANEL_W), Std.int(rowCount * ControlsSubState.ROW_H + 10));
+		bg.updateHitbox();
 		add(bg);
-		
-		var maxBgIndex:Int = 0;
+
 		for (i => option in options)
 		{
 			if (option != null)
-			{
-				this.options.add(new ControlsOption(5, startY + lineHeight * i + 5, option.label, option.action, option.fun));
-				
-				maxBgIndex = (i + 1);
-			}
+				this.options.add(new ControlsOption(ControlsSubState.LABEL_X, startY + ControlsSubState.ROW_H * i + 5, option.label, option.action, option.fun));
 		}
-		
-		bg.setGraphicSize(FlxG.width, maxBgIndex * lineHeight + 10);
-		bg.updateHitbox();
-		
+
 		add(this.options);
 	}
 	
@@ -790,39 +847,63 @@ class ControlsOption extends FlxSpriteContainer
 	public function new(x = .0, y = .0, label:String, ?action:Action, ?fun:ControlsOption->Void)
 	{
 		super(x, y);
-		this.label = new FlxText(0, 0, 500, label);
+
+		// Rows with real key/gamepad binds must keep their label short enough
+		// to end before the first bind column (ControlsSubState.bindColX(0))
+		// -- rows that are only a button with no `action` at all (e.g. "Reset
+		// to Default Keys") never show any bind columns, so they're free to
+		// use the full row width instead. The old flat 500px width was more
+		// than double the ~240px actually free before a bind column on any
+		// row that HAD binds -- harmless for the short English labels here,
+		// but nothing stopped a longer one (a translation, a future action)
+		// from wrapping to a 2nd line and bleeding into the row below it,
+		// since every row's Y is a fixed multiple of ROW_H regardless.
+		final labelW = (action != null)
+			? ControlsSubState.bindColX(0) - ControlsSubState.LABEL_X - 10
+			: ControlsSubState.PANEL_W - ControlsSubState.LABEL_X - 16;
+
+		this.label = new FlxText(0, 0, labelW, label);
 		this.label.setFormat(Paths.font('vcr'), 18, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 		this.label.borderSize = 1;
+		// Never wrap to a 2nd line -- worst case a too-long label just runs
+		// past its column on one line instead of silently overlapping the
+		// row below it.
+		this.label.wordWrap = false;
 		add(this.label);
-		
+
 		binds = new FlxTypedSpriteContainer<FlxText>(0, 0);
 		add(binds);
-		
+
 		this.action = action;
 		this.fun = fun;
-		
+
 		index = 0;
 		index = ControlsSubState.NONE;
 	}
-	
+
 	public function refreshAll(device:Null<Device>)
 	{
 		final binds:Array<Int> = (getBinds(device) ?? [] /* whatever bro*/);
-		
+
 		for (i => _ in binds)
 		{
 			if (this.binds.members[i] == null)
 			{
-				var text:FlxText = new FlxText(250 + 200 * i, 0, 200);
+				// bindColX(i) is panel-absolute; this ControlsOption's own x
+				// (LABEL_X) gets added back on top when `binds.add()` below
+				// runs preAdd(), so it's subtracted here first to land on the
+				// intended absolute column.
+				var text:FlxText = new FlxText(ControlsSubState.bindColX(i) - ControlsSubState.LABEL_X, 0, ControlsSubState.BIND_COL_W);
 				text.setFormat(Paths.font('vcr'), 18, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 				text.borderSize = 1;
-				
+				text.wordWrap = false;
+
 				this.binds.add(text);
 			}
-			
+
 			refreshBind(device, i);
 		}
-		
+
 		if (binds.length < this.binds.length)
 		{
 			for (i in binds.length...this.binds.length)
