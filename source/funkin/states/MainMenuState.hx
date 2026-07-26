@@ -546,9 +546,9 @@ class MainMenuState extends MusicBeatState
 
 	function buildPortCredit():Void
 	{
-		final iconSize:Int = 68;
-		final iconX:Float  = 18;
-		final iconY:Float  = 90;
+		final iconSize:Int = 88;
+		final iconX:Float  = 42;
+		final iconY:Float  = 112;
 
 		ytIcon = new FlxSprite(iconX, iconY).loadGraphic(_circleMask(Paths.image('menu/main/ytChannelIcon').bitmap, iconSize));
 		ytIcon.scrollFactor.set();
@@ -853,26 +853,29 @@ class MainMenuState extends MusicBeatState
 		// reopen the code box while the panel is already up.
 		if (devPanelOpen) return;
 
-		// Only the trigger toggles the box -- deliberately no "tap elsewhere
-		// closes it" check, since the field itself would count as "elsewhere".
-		if (!devCodeBoxOpen)
+		// The trigger toggles the box in BOTH directions now -- tapping it
+		// again while the box is open closes it, same as controls.BACK below
+		// (this whole check used to only run while the box was closed, so a
+		// second tap on the icon did nothing at all). Still no "tap elsewhere
+		// closes it" check beyond this, since the field itself would count as
+		// "elsewhere" -- harmless, since the field sits below the icon's own
+		// bounds and never overlaps them.
+		var touches = FlxG.touches.list;
+		if (touches != null)
 		{
-			var touches = FlxG.touches.list;
-			if (touches != null)
+			for (touch in touches)
 			{
-				for (touch in touches)
-				{
-					if (!touch.justReleased) continue;
-					final x0 = FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN - 6;
-					final x1 = FlxG.width - CODE_TRIGGER_MARGIN + 6;
-					final y0 = CODE_TRIGGER_MARGIN - 6;
-					final y1 = CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 6;
-					if (touch.x >= x0 && touch.x <= x1 && touch.y >= y0 && touch.y <= y1) toggleDevCodeBox();
-					break;
-				}
+				if (!touch.justReleased) continue;
+				final x0 = FlxG.width - CODE_TRIGGER_SIZE - CODE_TRIGGER_MARGIN - 6;
+				final x1 = FlxG.width - CODE_TRIGGER_MARGIN + 6;
+				final y0 = CODE_TRIGGER_MARGIN - 6;
+				final y1 = CODE_TRIGGER_MARGIN + CODE_TRIGGER_SIZE + 6;
+				if (touch.x >= x0 && touch.x <= x1 && touch.y >= y0 && touch.y <= y1) toggleDevCodeBox();
+				break;
 			}
-			return;
 		}
+
+		if (!devCodeBoxOpen) return;
 
 		// Auto-submit the moment the typed text matches either code -- no need to press Enter.
 		if (devCodeField != null)
@@ -919,6 +922,24 @@ class MainMenuState extends MusicBeatState
 		_lastDevCodeText = '';
 
 		devCodeField.onEnter.add(_ -> submitDevCode());
+
+		// Dismissing the on-screen keyboard yourself (system back gesture,
+		// tapping the keyboard's own dismiss control) drops this field's
+		// native focus without ever routing through controls.BACK -- left the
+		// box sitting open with a keyboard that no longer existed, and no way
+		// to bring it back (FlxInputText.startFocus() is a no-op once
+		// hasFocus is already true, so a fresh tap on the field couldn't
+		// re-raise it either). onFocusChange(false) is this widget's own
+		// signal for exactly that, so just treat it the same as BACK: close
+		// the box. Guarded on devCodeBoxOpen since closeDevCodeBox() below
+		// destroys this field, which dispatches this same event on its way
+		// out (see FlxInputText.destroy() -> endFocus()) -- closeDevCodeBox()
+		// sets devCodeBoxOpen = false as its very first line, so that second,
+		// re-entrant call is skipped instead of double-destroying the field.
+		devCodeField.onFocusChange.add((focused) -> {
+			if (!focused && devCodeBoxOpen) closeDevCodeBox();
+		});
+
 		devCodeField.startFocus();
 	}
 
