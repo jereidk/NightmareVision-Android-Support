@@ -149,6 +149,17 @@ class Main extends Sprite
 		haxe.ui.Toolkit.init();
 		haxe.ui.Toolkit.theme = 'dark';
 		haxe.ui.Toolkit.autoScale = false;
+		#if mobile
+		// The dev-tool editors (Character/Chart/Noteskin Editor) are built
+		// with desktop-sized HaxeUI layouts -- fine with a mouse, but small
+		// and cramped for touch on an actual phone/tablet screen. scaleX/
+		// scaleY is HaxeUI's own built-in global scale knob (already read
+		// internally by components like Slider for their own touch/drag
+		// coordinate math), so this scales every haxeui-based editor
+		// uniformly instead of hand-tuning sizes across each one's XML
+		// layout separately.
+		haxe.ui.Toolkit.scaleX = haxe.ui.Toolkit.scaleY = 1.4;
+		#end
 		haxe.ui.focus.FocusManager.instance.autoFocus = false;
 		haxe.ui.tooltips.ToolTipManager.defaultDelay = 200;
 		#end
