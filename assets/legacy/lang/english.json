@@ -713,6 +713,8 @@
 		"opt_language_confirm_title": "Change Language?",
 		"opt_language_confirm_msg": "Switch to this language?",
 		"opt_language_search_placeholder": "Search languages...",
+		"opt_choose_language": "Choose your language",
+		"opt_choose_language_desc": "Pick the app's display language from the full list.",
 		"opt_subtitles": "Subtitles",
 		"opt_subtitles_desc": "Subtitles will be shown on screen during cutscenes and song animations.",
 		"opt_unlockedFramerate": "Unlocked Framerate",

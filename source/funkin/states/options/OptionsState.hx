@@ -2,7 +2,6 @@ package funkin.states.options;
 
 import flixel.addons.display.FlxBackdrop;
 import flixel.text.FlxText;
-import flixel.text.FlxInputText;
 import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -38,7 +37,7 @@ class OptionsState extends MusicBeatState
 	public static var onPlayState:Bool = false;
 
 	static final TAB_BUILDERS:Map<String, Void->Array<Option>> = [
-		'language' => () -> LanguageOptions.build(),
+		'language' => LanguageOptions.buildTab,
 		'gameplay' => GameplayOptions.build,
 		'graphics' => () -> GraphicsOptions.build(refreshSceneAntialiasing),
 		'visualsui' => VisualsUIOptions.build,
@@ -87,28 +86,6 @@ class OptionsState extends MusicBeatState
 	var descText:FlxText;
 	var descBg:FlxSprite;
 
-	// Only actually shown/usable on the 'language' tab (see update()) -- Touch
-	// nav mode only, since there's no D-pad-driven way to type. FlxInputText
-	// (same widget MainMenuState's dev-code entry already uses) owns its own
-	// background/border/caret/click-to-focus/click-away-to-unfocus and drives
-	// the OS on-screen keyboard through FlxInputTextManager -- see that
-	// class's own history comment for why a hand-rolled TextField/manual
-	// Lime-window-listener approach was tried and dropped there.
-	var languageSearchField:FlxInputText;
-	var languageSearchClear:FlxText;
-	var languageSearchText:String = '';
-
-	// Subtitles' own fixed row, directly below the search bar -- see
-	// SUBTITLES_H/buildLanguageSubtitles(). Keyboard/gamepad/Virtual-Pad
-	// navigable (focus == 'langSubtitles', see update()) same as touch, and
-	// -- like the search bar above it and the credits footer below the
-	// list -- only actually shown once the language tab's content has been
-	// entered (focus == 'langSubtitles' or 'list'), not just while it's
-	// highlighted at the tab-bar level.
-	var languageSubtitlesBg:FlxSprite;
-	var languageSubtitlesLabel:FlxText;
-	var languageSubtitlesCheckbox:FlxSprite;
-
 	var resetIcon:FlxSprite;
 	var resetLabel:FlxText;
 
@@ -151,24 +128,7 @@ class OptionsState extends MusicBeatState
 	static final TAB_H:Float = 60;
 	static final TAB_Y:Float = HEADER_Y + BTN_H + SECTION_GAP;
 
-	// Reserved on every tab (not just Language) so the list's own y0/
-	// maxVisible stay one single derived value shared by all 5 tabs instead
-	// of needing a different layout per tab -- costs one fewer visible row
-	// everywhere else, in exchange for never having to resize/reposition the
-	// shared TouchOptionList instance when switching to/from Language.
-	// Content only actually appears here on the Language tab (see
-	// buildLanguageSearch()/refreshVisuals()).
-	static final SEARCH_H:Float = 44;
-
-	// Same idea as SEARCH_H right above (reserved everywhere, only ever drawn
-	// on the Language tab) -- Subtitles used to be the scrollable list's own
-	// first row, scrolling away with the rest of the alphabet. Giving it a
-	// fixed row here (see buildLanguageSubtitles()) means it, the search bar,
-	// and the credits label (shown in the desc box below the list -- see
-	// onOptionSelected()/descriptionFor()) are now all independent of the
-	// language list's scroll, each with their own fixed space.
-	static final SUBTITLES_H:Float = 44;
-	static final LIST_Y:Float = TAB_Y + TAB_H + SECTION_GAP + SEARCH_H + SECTION_GAP + SUBTITLES_H + SECTION_GAP;
+	static final LIST_Y:Float = TAB_Y + TAB_H + SECTION_GAP;
 
 	// Gap between the last visible option row and the description box below
 	// it, and that box's own fixed height -- named here so LIST_MAX_VISIBLE's
@@ -267,6 +227,8 @@ class OptionsState extends MusicBeatState
 			#end
 			case 'credits':
 				openSubState(new funkin.states.substates.CreditsRollSubState(true, resumeMenuMusic, resumeMenuMusic));
+			case 'language':
+				openSubState(new funkin.states.options.LanguagePickerSubState());
 		}
 		__openedOption = label;
 	}
@@ -382,17 +344,6 @@ class OptionsState extends MusicBeatState
 
 			buildTabs(tabsAreaStart, tabsAreaEnd);
 
-			buildLanguageSearch(tabsAreaStart, tabsAreaEnd);
-			// LIST_X/CONTENT_RIGHT_EDGE (the list/desc panel's own bounds),
-			// NOT tabsAreaStart/tabsAreaEnd (the wider tabs-row bounds the
-			// search bar above uses) -- this row sits directly above the
-			// scrollable list, so it needs to match ITS width, not the tabs
-			// row's. Using tabsAreaStart here left it starting far to the
-			// left of the list/desc panel below (visibly disjointed, worse
-			// in Virtual Pad nav mode where tabsAreaStart is the full
-			// optionsHeader.x rather than clipped to menuBackButton).
-			buildLanguageSubtitles(LIST_X, CONTENT_RIGHT_EDGE + cutout);
-
 			final listW = (CONTENT_RIGHT_EDGE + cutout) - LIST_X;
 
 			// Shared backdrop for the whole options column below the tabs --
@@ -416,7 +367,7 @@ class OptionsState extends MusicBeatState
 			optionList = new TouchOptionList(LIST_X, LIST_Y, listW, LIST_MAX_VISIBLE);
 			add(optionList);
 			optionList.onSelect = onOptionSelected;
-			optionList.onDatasetChanged = (opt) -> descText.text = descriptionFor(opt);
+			optionList.onDatasetChanged = (opt) -> descText.text = opt.description;
 			optionList.onChange = () -> scriptGroup.call('onOptionChanged', []);
 
 			descBg = new FlxSprite(LIST_X - 6, LIST_Y + LIST_MAX_VISIBLE * TouchOptionList.ROW_H + DESC_GAP);
@@ -644,123 +595,6 @@ class OptionsState extends MusicBeatState
 		}
 	}
 
-	/**
-	 * The Language tab's search bar -- built once here like every other
-	 * tab's chrome, its own .visible/.active toggled in update() (Touch nav
-	 * mode + the language tab only -- Virtual Pad users have no way to type,
-	 * same reasoning as the tap-to-reset icon being Touch-only).
-	 *
-	 * FlxInputText (same widget MainMenuState's dev-code entry already
-	 * uses) instead of a hand-rolled solution: that class's own history
-	 * comment explains why a raw openfl.text.TextField didn't work (its
-	 * __enableInput() only wires up typed input from a FOCUS_IN callback
-	 * that needs stage.focus == the field already true, which never held at
-	 * any point this could trigger it from), and driving lime.ui.Window's
-	 * onTextInput/textInputEnabled by hand runs into the same class of
-	 * focus-timing risk without FlxInputTextManager's already-solved
-	 * click-to-focus/click-away-to-unfocus/keyboard-rect handling.
-	 */
-	function buildLanguageSearch(areaStart:Float, areaEnd:Float):Void
-	{
-		final y = TAB_Y + TAB_H + SECTION_GAP;
-		final w = areaEnd - areaStart;
-
-		languageSearchField = new FlxInputText(areaStart, y, Std.int(w - 56), '', 20, OptionsTheme.TEXT_HOVER, 0xFF2A2A3A);
-		languageSearchField.font = Paths.font('vcr.ttf');
-		languageSearchField.fieldBorderThickness = 2;
-		languageSearchField.fieldBorderColor = OptionsTheme.PINK_DIM;
-		languageSearchField.fieldHeight = SEARCH_H - 8;
-		languageSearchField.multiline = false;
-		languageSearchField.maxChars = 40;
-		languageSearchField.scrollFactor.set();
-		add(languageSearchField);
-
-		languageSearchField.onTextChange.add((text, _) -> {
-			languageSearchText = text;
-			refreshLanguageResults();
-		});
-
-		// Tap to clear -- plain text glyph instead of a new icon asset, same
-		// low-risk approach MobileSettingsSubState's '<  BACK' button uses.
-		// Not part of FlxInputText itself, so this stays a separate sprite.
-		//
-		// Touch-only: its tap test is gated to Touch nav mode (searchVisible
-		// below requires pointerNavAllowed), and Virtual Pad has no
-		// keyboard-driven way to reach this field either -- skip creating it
-		// entirely there, same convention as the other Touch-only 'X'
-		// buttons elsewhere this session. The visibility-update/tap-check
-		// sites below null-guard it accordingly.
-		#if mobile
-		if (ClientPrefs.navInputMode != 'Virtual Pad')
-		#end
-		{
-			languageSearchClear = new FlxText(areaEnd - 46, y, 40, 'X');
-			languageSearchClear.setFormat(Paths.font('vcr.ttf'), 20, OptionsTheme.PINK, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			languageSearchClear.borderSize = 1.5;
-			languageSearchClear.y += Math.round((SEARCH_H - languageSearchClear.height) * .5);
-			languageSearchClear.antialiasing = ClientPrefs.globalAntialiasing;
-			languageSearchClear.visible = false;
-			add(languageSearchClear);
-		}
-	}
-
-	/**
-	 * Subtitles' own fixed row, directly below the search bar -- see
-	 * SUBTITLES_H. Used to be the language list's own first (scrollable) row;
-	 * pulling it out means it always has "its own space" regardless of how
-	 * far the A-Z list below is scrolled, and (per the D-pad requirement
-	 * this needed) it's reachable from 'tabs' via DOWN/ACCEPT and from
-	 * 'list' is unreachable directly by design -- BACK (already the
-	 * established way out of 'list') returns to 'tabs', which can DOWN back
-	 * into this row same as a first visit. See update()'s 'langSubtitles'
-	 * focus case for the actual input handling.
-	 */
-	function buildLanguageSubtitles(areaStart:Float, areaEnd:Float):Void
-	{
-		final y = TAB_Y + TAB_H + SECTION_GAP + SEARCH_H + SECTION_GAP;
-		final w = areaEnd - areaStart;
-
-		languageSubtitlesBg = new FlxSprite(areaStart, y).loadGraphic(NineSlice.build('menu/freeplay/card', CARD_MARGIN, w, SUBTITLES_H), false, 0, 0, true);
-		languageSubtitlesBg.updateHitbox();
-		languageSubtitlesBg.antialiasing = ClientPrefs.globalAntialiasing;
-		languageSubtitlesBg.color = 0xFF2A2A3A;
-		add(languageSubtitlesBg);
-
-		languageSubtitlesLabel = new FlxText(areaStart + 16, y, Std.int(w - 275), Lang.str('opt_subtitles', 'Subtitles'));
-		languageSubtitlesLabel.setFormat(Paths.font('vcr.ttf'), 22, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		languageSubtitlesLabel.borderSize = 1.5;
-		languageSubtitlesLabel.y += Math.round((SUBTITLES_H - languageSubtitlesLabel.height) * .5);
-		languageSubtitlesLabel.antialiasing = ClientPrefs.globalAntialiasing;
-		add(languageSubtitlesLabel);
-
-		// Same checkbox asset/animation as TouchOptionList's own 'bool' rows
-		// (and MobileSettingsSubState's) -- looks and behaves identically to
-		// every other on/off toggle in the game.
-		languageSubtitlesCheckbox = new FlxSprite();
-		languageSubtitlesCheckbox.loadGraphic(Paths.image('menu/options/impastacheckbox'), true, 30, 30);
-		languageSubtitlesCheckbox.animation.add('unchecked', [0], 24, false);
-		languageSubtitlesCheckbox.animation.add('checked', [1], 24, false);
-		languageSubtitlesCheckbox.antialiasing = ClientPrefs.globalAntialiasing;
-		languageSubtitlesCheckbox.setGraphicSize(0, Std.int(SUBTITLES_H - 16));
-		languageSubtitlesCheckbox.updateHitbox();
-		languageSubtitlesCheckbox.x = areaEnd - 16 - languageSubtitlesCheckbox.width;
-		languageSubtitlesCheckbox.y = y + (SUBTITLES_H - languageSubtitlesCheckbox.height) * .5;
-		add(languageSubtitlesCheckbox);
-	}
-
-	/** Flips ClientPrefs.subtitles and refreshes this row's checkbox -- shared by the touch tap and the 'langSubtitles' focus case in update(). */
-	function toggleLanguageSubtitles():Void
-	{
-		ClientPrefs.subtitles = !ClientPrefs.subtitles;
-		FlxG.sound.play(Paths.sound('scrollMenu'));
-	}
-
-	/** Rebuilds the language tab's own rows from the current search text -- separate from refreshLanguageTabInPlace() (language-switch confirm), which must NOT re-apply the filter/reset scroll the way a real search edit should. */
-	function refreshLanguageResults():Void
-	{
-		optionList.setOptions(LanguageOptions.build(languageSearchText));
-	}
-
 	function refreshTabText():Void
 	{
 		for (lbl in tabLabels)
@@ -824,25 +658,7 @@ class OptionsState extends MusicBeatState
 	function onOptionSelected(opt:Option):Void
 	{
 		focus = 'list';
-		descText.text = descriptionFor(opt);
-	}
-
-	/**
-	 * Same as `opt.description`, except on the Language tab: every row there
-	 * is a plain language button with an intentionally empty description
-	 * (see LanguageOptions.build()), so the desc box below the list -- which
-	 * isn't part of the list's own scroll -- would otherwise just sit empty
-	 * the entire time you're browsing languages. Falling back to the current
-	 * language's credits there instead means credits are always visible,
-	 * independent of scroll position, without needing a second fixed label
-	 * (and thus without costing any more screen space) the way the Subtitles
-	 * row above the list did.
-	 */
-	function descriptionFor(opt:Option):String
-	{
-		if (opt.description != null && opt.description.length > 0) return opt.description;
-		if (tabs[curTab] == 'language') return LanguageOptions.currentCreditsText;
-		return '';
+		descText.text = opt.description;
 	}
 
 	static function refreshSceneAntialiasing():Void
@@ -907,11 +723,6 @@ class OptionsState extends MusicBeatState
 	{
 		ClientPrefs.flush();
 		ClientPrefs.reloadControls();
-		// languageSearchField needs no manual cleanup here -- FlxInputText's
-		// own destroy() (called via super.destroy() below, since it was
-		// add()ed like everything else on this screen) already calls
-		// endFocus() (closing the OS keyboard if it was still open) and
-		// unregisters itself from FlxInputTextManager.
 		super.destroy();
 
 		if (instance == this) instance = null;
@@ -946,10 +757,7 @@ class OptionsState extends MusicBeatState
 		// their scroll position for no reason related to what actually changed.
 		// setOptions()'s initialIndex param already exists for exactly this
 		// "keep the thing you already have" case (see its own doc comment).
-		// Same reasoning for the Language tab's own search text below --
-		// closing e.g. Credits and coming straight back to a filtered list
-		// shouldn't silently drop the filter the search box is still showing.
-		final rebuiltOpts = (tabs[curTab] == 'language') ? LanguageOptions.build(languageSearchText) : TAB_BUILDERS.get(tabs[curTab])();
+		final rebuiltOpts = TAB_BUILDERS.get(tabs[curTab])();
 		optionList.setOptions(rebuiltOpts, optionList.curSelected);
 	}
 
@@ -1012,11 +820,7 @@ class OptionsState extends MusicBeatState
 		// backdrop for both the list and the art (same as tabsPanelBg is for
 		// the tab row), so it stays visible either way -- only its CONTENT
 		// (list rows vs. hero art) swaps on top of it.
-		// 'langSubtitles' is still "inside" the language tab's content (just
-		// with keyboard focus parked on the fixed Subtitles row above the
-		// list instead of the list itself) -- same panel/list/desc visibility
-		// as 'list', not the tab-picker hero art.
-		final showList = (focus == 'list' || focus == 'langSubtitles');
+		final showList = (focus == 'list');
 		optionList.visible = optionList.active = showList;
 		descBg.visible = descText.visible = showList;
 		artImage.visible = titleText.visible = versionText.visible = !showList;
@@ -1035,59 +839,6 @@ class OptionsState extends MusicBeatState
 		// mode resets via the pad's own C button instead, see below) -- hide it
 		// rather than leave a dead, untappable icon sitting in the corner.
 		resetIcon.visible = resetLabel.visible = pointerNavAllowed;
-
-		// Search bar, Subtitles row, and the credits footer (see below) are
-		// all one cohesive "Language booth" -- shown only once you've
-		// actually entered the language tab's content (focus parked on
-		// 'langSubtitles' or 'list'), not just while it's highlighted at the
-		// tab-bar level ('tabs' focus, still showing the hero art). Search
-		// used to be Touch-mode-only (no D-pad way to type), but it's a
-		// real touchscreen either way -- a Virtual Pad/keyboard user can
-		// still reach over and tap it directly, so it's shown (and
-		// tappable) in every nav mode now, same as Subtitles already was.
-		final langEntered = (tabs[curTab] == 'language') && (focus == 'langSubtitles' || focus == 'list');
-
-		final searchVisible = #if mobile langEntered #else false #end;
-		languageSearchField.visible = languageSearchField.active = searchVisible;
-		if (languageSearchClear != null) languageSearchClear.visible = searchVisible && languageSearchField.hasFocus && languageSearchText.length > 0;
-		if (!searchVisible) languageSearchField.endFocus();
-
-		languageSubtitlesBg.visible = langEntered;
-		languageSubtitlesLabel.visible = langEntered;
-		languageSubtitlesCheckbox.visible = langEntered;
-		if (langEntered)
-		{
-			final wantAnim = ClientPrefs.subtitles ? 'checked' : 'unchecked';
-			if (languageSubtitlesCheckbox.animation.name != wantAnim) languageSubtitlesCheckbox.animation.play(wantAnim, true);
-
-			final subtitlesFocused = (focus == 'langSubtitles');
-			languageSubtitlesBg.color = subtitlesFocused ? 0xFF4A4020 : 0xFF2A2A3A;
-			languageSubtitlesLabel.color = subtitlesFocused ? OptionsTheme.GOLD : FlxColor.WHITE;
-			languageSubtitlesCheckbox.alpha = subtitlesFocused ? 1 : 0.85;
-
-			if (mouseControlActive && !blockAllInput && !blockInput
-				&& FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSubtitlesBg))
-			{
-				focus = 'langSubtitles';
-				descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
-				toggleLanguageSubtitles();
-			}
-
-			// Credits are a constant footer for the whole language booth --
-			// NOT tied to whichever row happens to be selected the way every
-			// other tab's desc box is. Previously this only ever got set at
-			// the moment focus changed (entering 'list', or an onSelect/
-			// onDatasetChanged firing from an actual tap/confirm), so it sat
-			// showing Subtitles' own description (or nothing) the whole time
-			// you were just scrolling through languages, only catching up
-			// once you tapped/selected one. Forcing it every frame here
-			// instead means it's always correct regardless of what's
-			// currently highlighted -- except while Subtitles itself is
-			// focused, where its own description still applies, same as any
-			// other option.
-			if (!subtitlesFocused && descText.text != LanguageOptions.currentCreditsText)
-				descText.text = LanguageOptions.currentCreditsText;
-		}
 
 		// The navInputMode check only makes sense on mobile (Virtual Pad users
 		// shouldn't have a stray touch re-enable mouse hover) -- on desktop
@@ -1163,15 +914,7 @@ class OptionsState extends MusicBeatState
 					if (i != curTab)
 					{
 						changeTab(i);
-						if (touchTap)
-						{
-							if (tabs[curTab] == 'language')
-							{
-								focus = 'langSubtitles';
-								descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
-							}
-							else focus = 'list';
-						}
+						if (touchTap) focus = 'list';
 					}
 					else if (touchTap && focus == 'tabs')
 					{
@@ -1179,12 +922,7 @@ class OptionsState extends MusicBeatState
 						// tapping it again is the same "commit into content" motion
 						// as above, just without changeTab()'s scroll/selection
 						// reset since we're not actually switching categories.
-						if (tabs[curTab] == 'language')
-						{
-							focus = 'langSubtitles';
-							descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
-						}
-						else focus = 'list';
+						focus = 'list';
 						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 					}
 					else if (focus != 'tabs')
@@ -1228,22 +966,6 @@ class OptionsState extends MusicBeatState
 			}
 		}
 
-		// Only the clear button needs handling here -- FlxInputText already
-		// manages its own click-to-focus and click-away-to-unfocus (see
-		// buildLanguageSearch()'s doc comment). Deliberately NOT inside the
-		// pointerNavAllowed-gated block above -- the search bar itself is now
-		// available in every nav mode (see searchVisible/langEntered), so its
-		// own clear button has to be reachable the same way, not just under
-		// Touch nav.
-		if (mouseControlActive && !blockAllInput && !blockInput
-			&& languageSearchClear != null && searchVisible && languageSearchClear.visible
-			&& FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSearchClear))
-		{
-			languageSearchField.text = '';
-			languageSearchText = '';
-			refreshLanguageResults();
-		}
-
 		// Virtual Pad nav mode has no mouse/touch overlap to tap resetIcon with
 		// (see MobileNavUtil.allowPointerNav()) -- its own dedicated C button is
 		// the equivalent affordance instead, same convention CosmeticsSubstate
@@ -1272,50 +994,12 @@ class OptionsState extends MusicBeatState
 					if (controls.UI_LEFT_P) changeTab(curTab <= 0 ? tabs.length - 1 : curTab - 1);
 					if (controls.UI_RIGHT_P) changeTab(curTab >= tabs.length - 1 ? 0 : curTab + 1);
 					if (controls.UI_UP_P) focus = 'buttons';
-					// Language tab's fixed Subtitles row (see buildLanguageSubtitles())
-					// sits above its scrollable list -- DOWN/ACCEPT from the tab row
-					// lands there first, same as 'list' does for every other tab.
-					if (controls.ACCEPT || controls.UI_DOWN_P)
-					{
-						if (tabs[curTab] == 'language')
-						{
-							focus = 'langSubtitles';
-							// Subtitles isn't a real Option any more (see
-							// buildLanguageSubtitles()'s doc comment), so nothing
-							// else shows its description the way onOptionSelected()/
-							// onDatasetChanged() do for every other row -- set it
-							// here explicitly.
-							descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
-						}
-						else focus = 'list';
-					}
+					if (controls.ACCEPT || controls.UI_DOWN_P) focus = 'list';
 
 					if (controls.BACK)
 					{
 						FlxG.sound.play(Paths.sound('cancelMenu'));
 						exitToParent();
-					}
-				}
-			case 'langSubtitles':
-				if (!blockInput && !blockAllInput)
-				{
-					if (controls.UI_UP_P) focus = 'tabs';
-					if (controls.UI_DOWN_P)
-					{
-						focus = 'list';
-						// Leaving Subtitles' own description behind for whatever the
-						// scrollable list's current selection actually shows (every
-						// language row's is empty, so this is really the credits
-						// fallback -- see descriptionFor()).
-						final sel = optionList.optionsArray[optionList.curSelected];
-						descText.text = (sel != null) ? descriptionFor(sel) : '';
-					}
-					if (controls.ACCEPT || controls.UI_LEFT_P || controls.UI_RIGHT_P) toggleLanguageSubtitles();
-
-					if (controls.BACK)
-					{
-						FlxG.sound.play(Paths.sound('cancelMenu'));
-						focus = 'tabs';
 					}
 				}
 			case 'buttons':
@@ -1370,39 +1054,31 @@ class OptionsState extends MusicBeatState
 		curTab = index;
 		focus = 'tabs';
 
-		// Fresh search every visit to (or away from) the Language tab --
-		// also dismisses the keyboard if it was still open from before.
-		languageSearchField.endFocus();
-		languageSearchField.text = '';
-		languageSearchText = '';
-
 		refreshVisuals();
-		// A genuine tab switch starts fresh (top of the list) for every tab
-		// except 'language' -- that one opens pre-scrolled to your current
-		// language, same as the old LanguagePickerSubState used to.
+		// A genuine tab switch starts fresh (top of the list) for every tab --
 		// refreshOptionFonts() below deliberately does NOT do this (see its
 		// own comment) -- only a real category change should jump here.
-		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])(), tabs[curTab] == 'language' ? LanguageOptions.currentLanguageRowIndex : null);
+		optionList.setOptions(TAB_BUILDERS.get(tabs[curTab])());
 
 		FlxG.sound.play(Paths.sound('hover'), 0.5);
 		_pulseTab(curTab);
 	}
 
 	/**
-	 * Rebuilds the 'language' tab's rows in place (fresh badges/credits
-	 * right after a language switch) while preserving scroll position, same
-	 * idea as refreshOptionFonts() but scoped to just this one tab instead
-	 * of running the full substate-close refresh. Guarded to the language
-	 * tab specifically: PopUp.showConfirm's callback is async (fires later,
-	 * not blocking), so the user could navigate to a different tab before
-	 * confirming a language switch -- without this guard, a delayed
-	 * callback landing after that would silently overwrite whatever tab is
-	 * actually on screen by then.
+	 * Refreshes whatever's showing the current language right after a
+	 * switch: the open LanguagePickerSubState's own list in place (if
+	 * that's actually what's open right now -- PopUp.showConfirm's callback
+	 * is async, so the player could have already backed out of it before
+	 * this fires), and this tab's own "Choose your language" badge so it
+	 * shows the new language immediately without waiting for
+	 * closeSubState()'s full refresh.
 	 */
 	public function refreshLanguageTabInPlace():Void
 	{
-		if (tabs[curTab] != 'language') return;
-		optionList.setOptions(TAB_BUILDERS.get('language')(), optionList.curSelected);
+		if (Std.isOfType(subState, funkin.states.options.LanguagePickerSubState))
+			cast(subState, funkin.states.options.LanguagePickerSubState).refreshInPlace();
+
+		if (tabs[curTab] == 'language') optionList.setOptions(TAB_BUILDERS.get('language')(), optionList.curSelected);
 	}
 
 	/**

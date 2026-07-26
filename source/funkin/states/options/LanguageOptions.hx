@@ -6,26 +6,23 @@ import mobile.backend.DLCManager;
 import mobile.backend.DLCManager.DLCTaskState;
 
 /**
- * Builds the "Language" category's option list -- and, since this tab
- * already has its own dedicated screen area in OptionsState, IS the
- * language browser itself (no separate substate/window). Absorbs what used
- * to be LanguagePickerSubState's alphabetized, tap-to-pick, A-Z-sectioned
- * list directly into this tab's own Array<Option>, plus per-row awareness
- * of LangFontPacks (Korean/Japanese/Chinese need a separate font-pack
- * download -- see that file's own doc comment) via Option.badgeProvider,
- * so a downloadable-but-not-installed language shows its size/download
- * progress right on its own row instead of silently downloading with zero
- * UI feedback.
+ * Builds the "Language" category's option rows. buildTab() is the plain
+ * 2-row list OptionsState's own Language tab shows (a "Choose your
+ * language" button plus the Subtitles toggle); build() is the actual
+ * alphabetized, tap-to-pick, A-Z-sectioned list of every installed
+ * language, shown inside LanguagePickerSubState (opened by that button),
+ * with per-row awareness of LangFontPacks (Korean/Japanese/Chinese need a
+ * separate font-pack download -- see that file's own doc comment) via
+ * Option.badgeProvider, so a downloadable-but-not-installed language shows
+ * its size/download progress right on its own row instead of silently
+ * downloading with zero UI feedback.
  */
 class LanguageOptions
 {
 	/**
 	 * Index of the current-language row within the array `build()` just
-	 * returned, so OptionsState.changeTab() can reproduce the old picker's
-	 * "opens pre-scrolled to your current language" behaviour on a genuine
-	 * tab switch. NOT used by OptionsState.refreshOptionFonts() (that one
-	 * must keep using optionList.curSelected) -- see that function's own
-	 * comment for why.
+	 * returned, so LanguagePickerSubState can open pre-scrolled to your
+	 * current language, same as it always has.
 	 */
 	public static var currentLanguageRowIndex(default, null):Int = -1;
 
@@ -40,6 +37,36 @@ class LanguageOptions
 	 * language switch, so this never goes stale.
 	 */
 	public static var currentCreditsText(default, null):String = '';
+
+	/**
+	 * The Language tab's own rows in OptionsState -- just two, same as
+	 * every other tab's plain option list: a button that opens
+	 * LanguagePickerSubState (the actual alphabetized picker, its own
+	 * window/substate rather than crammed into this tab's own space), and
+	 * the Subtitles toggle, back to being a normal row like it always was
+	 * outside of the language tab's brief, since-reverted "booth" layout.
+	 */
+	public static function buildTab():Array<Option>
+	{
+		final opts:Array<Option> = [];
+
+		final chooseOpt = new Option(Lang.str('opt_choose_language', 'Choose your language'),
+			Lang.str('opt_choose_language_desc', 'Pick the app\'s display language from the full list.'), '', 'button');
+		chooseOpt.callback = () -> {
+			if (OptionsState.instance != null) OptionsState.instance.openSelectedSubstate('language');
+		};
+		// Live badge showing the currently active language, same mechanism
+		// the per-language rows in build() below already use for download
+		// status -- re-read every frame, so it self-corrects the instant a
+		// switch is confirmed without this tab needing a rebuild.
+		chooseOpt.badgeProvider = () -> ({text: Lang.current?.name ?? ClientPrefs.language, color: 0xFF22C55E} : OptionBadge);
+		opts.push(chooseOpt);
+
+		opts.push(new Option(Lang.str('opt_subtitles', 'Subtitles'), Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.'),
+			'subtitles', 'bool', true));
+
+		return opts;
+	}
 
 	/**
 	 * @param filter Case-insensitive substring match against each language's
