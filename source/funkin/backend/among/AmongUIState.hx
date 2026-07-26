@@ -5,6 +5,7 @@ import flixel.addons.display.FlxBackdrop;
 
 import funkin.data.CosmicubeData;
 import funkin.backend.Logger;
+import mobile.utils.MobileNavUtil;
 
 class AmongUIState extends MusicBeatState
 {
@@ -81,11 +82,29 @@ class AmongUIState extends MusicBeatState
 		
 		localCurrency = CosmicubeData.currentCurrency;
 	}
-	
+
+	/**
+	 * Every AmongUIState screen (StoryMenu, Freeplay, CosmicubeSelect, Awards) adds the
+	 * shared back/"X" sprite at its own chosen position -- call this instead of the old
+	 * `backButton.setPosition(x, y); add(backButton).revive();` pair. Under Virtual Pad
+	 * nav mode this only adds it (kept from create()'s own .kill()), never revives it: BACK
+	 * already exits via controls.BACK in update() above, so the sprite has no Virtual Pad
+	 * purpose, and since it's an FlxG.mouse.overlaps() tap target, leaving it live would
+	 * make it eat an accidental touch near it while using the pad -- same class of fix
+	 * already applied to every other "X"/close sprite this session (LanguagePickerSubState,
+	 * ControlsSubState, etc.).
+	 */
+	function addBackButton(x:Float, y:Float):Void
+	{
+		backButton.setPosition(x, y);
+		add(backButton);
+		if (MobileNavUtil.allowPointerNav()) backButton.revive();
+	}
+
 	public override function update(elapsed:Float):Void
 	{
-		if (!lockMovement && (controls.BACK || (backButton.alive && FlxG.mouse.justPressed && FlxG.mouse.overlaps(backButton, camUpper)))) exit();
-		
+		if (!lockMovement && (controls.BACK || (MobileNavUtil.allowPointerNav() && backButton.alive && FlxG.mouse.justPressed && FlxG.mouse.overlaps(backButton, camUpper)))) exit();
+
 		super.update(elapsed);
 	}
 	

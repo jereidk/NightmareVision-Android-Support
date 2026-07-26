@@ -81,8 +81,7 @@ class StoryMenuState extends AmongUIState
 		}
 		add(frame);
 		
-		backButton.setPosition(85, 65);
-		add(backButton).revive();
+		addBackButton(85, 65);
 		
 		weekInfoGroup = new FlxSpriteGroup();
 		weekInfoGroup.zIndex = 1;

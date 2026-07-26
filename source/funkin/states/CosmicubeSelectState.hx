@@ -45,7 +45,7 @@ class CosmicubeSelectState extends AmongUIState
 		initStateScript();
 		
 		add(upperBar);
-		add(backButton).revive();
+		addBackButton(12, 8);
 		
 		add(cards);
 		// Cards had ~40px margins on both sides of the 1280 base canvas

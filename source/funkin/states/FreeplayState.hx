@@ -232,7 +232,7 @@ class FreeplayState extends AmongUIState
 		initStateScript(); // unnecessary
 		
 		add(upperBar);
-		add(backButton).revive();
+		addBackButton(12, 8);
 		add(beanIcon);
 		add(beanText);
 		

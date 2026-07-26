@@ -103,8 +103,7 @@ class AwardsState extends AmongUIState
 		
 		FlxG.mouse.visible = MobileNavUtil.shouldShowMouse();
 		
-		backButton.setPosition(15, 15);
-		add(backButton).revive();
+		addBackButton(15, 15);
 		
 		loadAchievements();
 		
