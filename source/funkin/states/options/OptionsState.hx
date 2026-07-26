@@ -1140,15 +1140,45 @@ class OptionsState extends MusicBeatState
 				hoveredTab = i;
 				if (FlxG.mouse.justPressed)
 				{
-					if (i != curTab) changeTab(i);
-					else if (focus != 'tabs')
+					if (i != curTab)
 					{
-						// Clicking the tab that's already active (e.g. while
-						// focus is 'list') just returns focus to the tab row,
-						// same as BACK already does from 'list' -- doesn't call
-						// changeTab() since that resets the list's scroll/
-						// selection, which a same-tab click has no reason to
-						// discard.
+						// A tap/click is one decisive action (unlike keyboard/
+						// gamepad, where UI_LEFT/RIGHT just browse tabs and a
+						// separate DOWN/ACCEPT commits into one) -- mouse and
+						// touch are the same input path on mobile (OpenFL
+						// simulates touch as FlxG.mouse events), so there's no
+						// touch-only case to add here, just this one shared tap
+						// handler. Picking a different tab this way commits
+						// straight into its content in the same motion, instead
+						// of stopping at the tab-picker hero art first.
+						changeTab(i);
+						if (tabs[curTab] == 'language')
+						{
+							focus = 'langSubtitles';
+							descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
+						}
+						else focus = 'list';
+					}
+					else if (focus == 'tabs')
+					{
+						// Already on this tab but still on the picker hero art --
+						// tapping it again is the same "commit into content" motion
+						// as above, just without changeTab()'s scroll/selection
+						// reset since we're not actually switching categories.
+						if (tabs[curTab] == 'language')
+						{
+							focus = 'langSubtitles';
+							descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
+						}
+						else focus = 'list';
+						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+					}
+					else
+					{
+						// Tapping the already-active tab while already inside its
+						// content (e.g. focus == 'list'/'langSubtitles') toggles
+						// back OUT to the tab row, same as BACK already does from
+						// there.
 						focus = 'tabs';
 						FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 					}
@@ -1173,24 +1203,6 @@ class OptionsState extends MusicBeatState
 					openSelectedSubstate(actionButtons[i]);
 				}
 				break;
-			}
-
-			// Touch users need an explicit way to drill from the tab-picker's
-			// hero art into a tab's actual content -- DOWN/ACCEPT already does
-			// this for keyboard/gamepad (see the 'tabs' focus case below), but
-			// touch has no equivalent tap target otherwise: optionList (and,
-			// on the language tab, the search/Subtitles/credits booth) are
-			// all inactive/hidden while focus == 'tabs' showing this same
-			// hero art, so nothing on screen would ever hand focus onward.
-			if (focus == 'tabs' && FlxG.mouse.justPressed && FlxG.mouse.overlaps(artPanelBg) && !FlxG.mouse.overlaps(resetIcon))
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
-				if (tabs[curTab] == 'language')
-				{
-					focus = 'langSubtitles';
-					descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
-				}
-				else focus = 'list';
 			}
 
 			if (FlxG.mouse.overlaps(resetIcon))
