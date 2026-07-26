@@ -402,31 +402,38 @@ class OptionsState extends MusicBeatState
 			// visible/functional regardless of focus, see the RESET keybind
 			// handling below -- always render on top of whichever content is
 			// currently showing on the panel.
-			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY\nANDROID PORT');
-			titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 36, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			// Single line now (was 'VS IMPOSTOR: LEGACY\nANDROID PORT', forced
+			// onto two via an explicit \n) -- freeing up the second line's
+			// worth of vertical space in the panel is what lets the art image
+			// below grow to actually fill it instead of leaving big empty
+			// margins on both sides (see artImage's own comment).
+			titleText = new FlxText(panelX, panelY + 16, listW + 12, 'VS IMPOSTOR: LEGACY ANDROID PORT');
+			titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			titleText.borderSize = 2;
 			titleText.antialiasing = ClientPrefs.globalAntialiasing;
 			add(titleText);
 
+			versionText = new FlxText(panelX, 0, listW + 12, Main.LEGACY_VERSION);
+			versionText.setFormat(Paths.font('vcr.ttf'), 32, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			versionText.borderSize = 1.5;
+			versionText.antialiasing = ClientPrefs.globalAntialiasing;
+
 			artImage = new FlxSprite().loadGraphic(Paths.image('menu/options/art'));
-			// Capped at 560 (not just "however wide the panel is minus a margin")
-			// -- title/gap/art/gap/version all have to fit within panelH, and a
-			// width scaled straight off the panel's own (quite generous) width
-			// left the art tall enough to push version past the panel's bottom.
-			// 520 (the old cap) actually left ~44px of unused vertical slack in
-			// panelH once title+art+version were stacked -- 560 (art.png's own
-			// 627:353 aspect ratio) plus the larger version font below spends
-			// that slack down to a ~14px margin instead of leaving it empty.
-			artImage.setGraphicSize(Std.int(Math.min(listW + 12 - 80, 560)));
+			// Derived from whatever's ACTUALLY left after title/gaps/version
+			// within panelH, instead of the old fixed 560 cap (tuned for the
+			// two-line title above) -- grows to fill the wider/taller panel
+			// this now has room for instead of leaving it mostly empty on
+			// every side.
+			final artAvailW = listW + 12 - 80;
+			final artAvailH = panelH - (titleText.y - panelY) - titleText.height - 16 - 12 - versionText.height - 14;
+			final artScale = Math.min(artAvailW / 627, artAvailH / 353);
+			artImage.setGraphicSize(Std.int(627 * artScale));
 			artImage.updateHitbox();
 			artImage.antialiasing = ClientPrefs.globalAntialiasing;
 			artImage.setPosition(panelX + (listW + 12 - artImage.width) * 0.5, titleText.y + titleText.height + 16);
 			add(artImage);
 
-			versionText = new FlxText(panelX, artImage.y + artImage.height + 12, listW + 12, Main.LEGACY_VERSION);
-			versionText.setFormat(Paths.font('vcr.ttf'), 28, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			versionText.borderSize = 1.5;
-			versionText.antialiasing = ClientPrefs.globalAntialiasing;
+			versionText.y = artImage.y + artImage.height + 12;
 			add(versionText);
 
 			buildResetButton();
