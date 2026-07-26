@@ -381,7 +381,15 @@ class OptionsState extends MusicBeatState
 			buildTabs(tabsAreaStart, tabsAreaEnd);
 
 			buildLanguageSearch(tabsAreaStart, tabsAreaEnd);
-			buildLanguageSubtitles(tabsAreaStart, tabsAreaEnd);
+			// LIST_X/CONTENT_RIGHT_EDGE (the list/desc panel's own bounds),
+			// NOT tabsAreaStart/tabsAreaEnd (the wider tabs-row bounds the
+			// search bar above uses) -- this row sits directly above the
+			// scrollable list, so it needs to match ITS width, not the tabs
+			// row's. Using tabsAreaStart here left it starting far to the
+			// left of the list/desc panel below (visibly disjointed, worse
+			// in Virtual Pad nav mode where tabsAreaStart is the full
+			// optionsHeader.x rather than clipped to menuBackButton).
+			buildLanguageSubtitles(LIST_X, CONTENT_RIGHT_EDGE + cutout);
 
 			final listW = (CONTENT_RIGHT_EDGE + cutout) - LIST_X;
 
