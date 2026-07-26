@@ -1123,9 +1123,19 @@ class OptionsState extends MusicBeatState
 		// ObjectPtr<FlxBasic> copy constructor, reproduced by switching to
 		// Touch nav mode inside Mobile Settings and tapping anywhere on
 		// screen. Reordering so the guards short-circuit BEFORE overlaps()
-		// ever runs stops that call (and the crash) from happening at all
-		// while a substate has input blocked.
-		if (!blockAllInput && !blockInput && pointerNavAllowed && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton))
+		// ever runs only stopped that call while blockInput/blockAllInput
+		// were still true (i.e. the substate still open) -- it did NOT cover
+		// the same repro finished one step further (switch to Touch, then
+		// CLOSE Mobile Settings, then tap in OptionsState): menuBackButton is
+		// only ever constructed once, in create(), if navInputMode !=
+		// 'Virtual Pad' AT THAT TIME (see the block right above buildTabs()
+		// below) -- a session that opened this screen in the Virtual Pad
+		// default and only switched to Touch afterward, from inside Mobile
+		// Settings, never (re)creates it, so it stays null for that
+		// instance's whole lifetime while pointerNavAllowed correctly flips
+		// true the moment navInputMode changes. The explicit menuBackButton
+		// != null check below is what actually closes that gap.
+		if (!blockAllInput && !blockInput && pointerNavAllowed && menuBackButton != null && FlxG.mouse.justPressed && FlxG.mouse.overlaps(menuBackButton))
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			exitToParent();
