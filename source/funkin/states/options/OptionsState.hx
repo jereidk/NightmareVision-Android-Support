@@ -99,10 +99,12 @@ class OptionsState extends MusicBeatState
 	var languageSearchText:String = '';
 
 	// Subtitles' own fixed row, directly below the search bar -- see
-	// SUBTITLES_H/buildLanguageSubtitles(). Unlike the search field (Touch-
-	// only, no D-pad way to type), this IS keyboard/gamepad/Virtual-Pad
-	// navigable (focus == 'langSubtitles', see update()), so it's built and
-	// shown the same on every nav mode.
+	// SUBTITLES_H/buildLanguageSubtitles(). Keyboard/gamepad/Virtual-Pad
+	// navigable (focus == 'langSubtitles', see update()) same as touch, and
+	// -- like the search bar above it and the credits footer below the
+	// list -- only actually shown once the language tab's content has been
+	// entered (focus == 'langSubtitles' or 'list'), not just while it's
+	// highlighted at the tab-bar level.
 	var languageSubtitlesBg:FlxSprite;
 	var languageSubtitlesLabel:FlxText;
 	var languageSubtitlesCheckbox:FlxSprite;
@@ -1034,24 +1036,26 @@ class OptionsState extends MusicBeatState
 		// rather than leave a dead, untappable icon sitting in the corner.
 		resetIcon.visible = resetLabel.visible = pointerNavAllowed;
 
-		// Mobile-only (see buildLanguageSearch()'s own doc comment for why) --
-		// desktop already has a real physical keyboard driving Controls'
-		// normal navigation, and typing search text there risks colliding
-		// with whatever's bound to those same keys, so this stays a touch-
-		// specific affordance rather than a universal one.
-		final searchVisible = #if mobile (pointerNavAllowed && tabs[curTab] == 'language') #else false #end;
+		// Search bar, Subtitles row, and the credits footer (see below) are
+		// all one cohesive "Language booth" -- shown only once you've
+		// actually entered the language tab's content (focus parked on
+		// 'langSubtitles' or 'list'), not just while it's highlighted at the
+		// tab-bar level ('tabs' focus, still showing the hero art). Search
+		// used to be Touch-mode-only (no D-pad way to type), but it's a
+		// real touchscreen either way -- a Virtual Pad/keyboard user can
+		// still reach over and tap it directly, so it's shown (and
+		// tappable) in every nav mode now, same as Subtitles already was.
+		final langEntered = (tabs[curTab] == 'language') && (focus == 'langSubtitles' || focus == 'list');
+
+		final searchVisible = #if mobile langEntered #else false #end;
 		languageSearchField.visible = languageSearchField.active = searchVisible;
 		if (languageSearchClear != null) languageSearchClear.visible = searchVisible && languageSearchField.hasFocus && languageSearchText.length > 0;
 		if (!searchVisible) languageSearchField.endFocus();
 
-		// Unlike the search field above, Subtitles is D-pad/gamepad navigable
-		// (focus == 'langSubtitles'), not Touch-only -- shown on every nav
-		// mode as long as the language tab is actually on screen.
-		final subtitlesRowVisible = (tabs[curTab] == 'language');
-		languageSubtitlesBg.visible = subtitlesRowVisible;
-		languageSubtitlesLabel.visible = subtitlesRowVisible;
-		languageSubtitlesCheckbox.visible = subtitlesRowVisible;
-		if (subtitlesRowVisible)
+		languageSubtitlesBg.visible = langEntered;
+		languageSubtitlesLabel.visible = langEntered;
+		languageSubtitlesCheckbox.visible = langEntered;
+		if (langEntered)
 		{
 			final wantAnim = ClientPrefs.subtitles ? 'checked' : 'unchecked';
 			if (languageSubtitlesCheckbox.animation.name != wantAnim) languageSubtitlesCheckbox.animation.play(wantAnim, true);
@@ -1061,13 +1065,28 @@ class OptionsState extends MusicBeatState
 			languageSubtitlesLabel.color = subtitlesFocused ? OptionsTheme.GOLD : FlxColor.WHITE;
 			languageSubtitlesCheckbox.alpha = subtitlesFocused ? 1 : 0.85;
 
-			if (mouseControlActive && pointerNavAllowed && !blockAllInput && !blockInput
+			if (mouseControlActive && !blockAllInput && !blockInput
 				&& FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSubtitlesBg))
 			{
 				focus = 'langSubtitles';
 				descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
 				toggleLanguageSubtitles();
 			}
+
+			// Credits are a constant footer for the whole language booth --
+			// NOT tied to whichever row happens to be selected the way every
+			// other tab's desc box is. Previously this only ever got set at
+			// the moment focus changed (entering 'list', or an onSelect/
+			// onDatasetChanged firing from an actual tap/confirm), so it sat
+			// showing Subtitles' own description (or nothing) the whole time
+			// you were just scrolling through languages, only catching up
+			// once you tapped/selected one. Forcing it every frame here
+			// instead means it's always correct regardless of what's
+			// currently highlighted -- except while Subtitles itself is
+			// focused, where its own description still applies, same as any
+			// other option.
+			if (!subtitlesFocused && descText.text != LanguageOptions.currentCreditsText)
+				descText.text = LanguageOptions.currentCreditsText;
 		}
 
 		// The navInputMode check only makes sense on mobile (Virtual Pad users
@@ -1156,21 +1175,45 @@ class OptionsState extends MusicBeatState
 				break;
 			}
 
+			// Touch users need an explicit way to drill from the tab-picker's
+			// hero art into a tab's actual content -- DOWN/ACCEPT already does
+			// this for keyboard/gamepad (see the 'tabs' focus case below), but
+			// touch has no equivalent tap target otherwise: optionList (and,
+			// on the language tab, the search/Subtitles/credits booth) are
+			// all inactive/hidden while focus == 'tabs' showing this same
+			// hero art, so nothing on screen would ever hand focus onward.
+			if (focus == 'tabs' && FlxG.mouse.justPressed && FlxG.mouse.overlaps(artPanelBg) && !FlxG.mouse.overlaps(resetIcon))
+			{
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+				if (tabs[curTab] == 'language')
+				{
+					focus = 'langSubtitles';
+					descText.text = Lang.str('opt_subtitles_desc', 'Show subtitles for songs that have them.');
+				}
+				else focus = 'list';
+			}
+
 			if (FlxG.mouse.overlaps(resetIcon))
 			{
 				hoveredReset = true;
 				if (FlxG.mouse.justPressed) optionList.resetAllToDefault();
 			}
+		}
 
-			// Only the clear button needs handling here -- FlxInputText already
-			// manages its own click-to-focus and click-away-to-unfocus (see
-			// buildLanguageSearch()'s doc comment).
-			if (languageSearchClear != null && searchVisible && languageSearchClear.visible && FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSearchClear))
-			{
-				languageSearchField.text = '';
-				languageSearchText = '';
-				refreshLanguageResults();
-			}
+		// Only the clear button needs handling here -- FlxInputText already
+		// manages its own click-to-focus and click-away-to-unfocus (see
+		// buildLanguageSearch()'s doc comment). Deliberately NOT inside the
+		// pointerNavAllowed-gated block above -- the search bar itself is now
+		// available in every nav mode (see searchVisible/langEntered), so its
+		// own clear button has to be reachable the same way, not just under
+		// Touch nav.
+		if (mouseControlActive && !blockAllInput && !blockInput
+			&& languageSearchClear != null && searchVisible && languageSearchClear.visible
+			&& FlxG.mouse.justPressed && FlxG.mouse.overlaps(languageSearchClear))
+		{
+			languageSearchField.text = '';
+			languageSearchText = '';
+			refreshLanguageResults();
 		}
 
 		// Virtual Pad nav mode has no mouse/touch overlap to tap resetIcon with
