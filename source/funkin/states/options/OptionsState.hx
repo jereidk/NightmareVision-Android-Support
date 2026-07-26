@@ -36,6 +36,13 @@ class OptionsState extends MusicBeatState
 {
 	public static var onPlayState:Bool = false;
 
+	// Set by MobileSettingsSubState right before it calls FlxG.resetState()
+	// (changing Screen Fit needs a full state recreation to actually apply --
+	// see that file's own comment) -- consumed once in create() below so the
+	// freshly recreated instance reopens that same substate instead of just
+	// leaving the player at the tab picker with no substate open at all.
+	public static var _reopenMobileSettingsAfterReset:Bool = false;
+
 	static final TAB_BUILDERS:Map<String, Void->Array<Option>> = [
 		'language' => LanguageOptions.buildTab,
 		'gameplay' => GameplayOptions.build,
@@ -462,6 +469,19 @@ class OptionsState extends MusicBeatState
 		// same convention CosmeticsSubstate already uses for its own reset button.
 		addVirtualPad(LEFT_FULL, A_B_C);
 		addVirtualPadCamera();
+		#end
+
+		#if mobile
+		// See MobileSettingsSubState's own 'aspectRatio' case -- changing
+		// Screen Fit there needs a full state recreation to actually take
+		// effect, which would otherwise just dump the player back at this
+		// screen's tab picker with no substate open. Reopens it right back up
+		// on the freshly recreated instance instead.
+		if (_reopenMobileSettingsAfterReset)
+		{
+			_reopenMobileSettingsAfterReset = false;
+			openSelectedSubstate('mobile');
+		}
 		#end
 	}
 

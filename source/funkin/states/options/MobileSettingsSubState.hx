@@ -1051,9 +1051,14 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				// (using the OLD cutout) until the next full state switch,
 				// which recomputes it from scratch. FlxG.resetState()
 				// recreates the current top-level state right now instead of
-				// waiting for the player to navigate there themselves --
-				// this substate (and any other currently open) goes down
-				// with it, same as any other full state switch.
+				// waiting for the player to navigate there themselves.
+				//
+				// This substate (and any other currently open) goes down
+				// with it, same as any other full state switch -- flagged so
+				// the freshly recreated OptionsState reopens this same
+				// screen right back up instead of just dumping the player at
+				// the tab picker (see OptionsState.create()'s own check).
+				OptionsState._reopenMobileSettingsAfterReset = true;
 				FlxG.resetState();
 			case 'storageMode': ClientPrefs.storageMode = v;
 			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible = (v == 'on');
