@@ -46,7 +46,19 @@ class CosmicubeSelectState extends AmongUIState
 		
 		add(upperBar);
 		addBackButton(12, 8);
-		
+
+		// The shared upperBar (topBar.png) has no text of its own baked in --
+		// every other AmongUIState screen fills that rectangular bar with its
+		// own content-specific info (week name, song name, award name), but
+		// this one never labeled it with anything at all. Same font as
+		// OptionsState's own "Options" header.
+		var stateLabel:FlxText = new FlxText(0, 18, FlxG.width, Lang.str('cosmi', 'Cosmicube'), 42);
+		stateLabel.setFormat(Paths.font('AmaticSC-Bold.ttf'), 42, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		stateLabel.borderSize = 2;
+		stateLabel.antialiasing = ClientPrefs.globalAntialiasing;
+		stateLabel.camera = camUpper;
+		add(stateLabel);
+
 		add(cards);
 		// Cards had ~40px margins on both sides of the 1280 base canvas
 		// (roughly centered, not hugging an edge) — shift by half the
