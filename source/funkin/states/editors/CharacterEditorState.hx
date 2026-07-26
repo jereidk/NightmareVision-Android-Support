@@ -5,6 +5,7 @@ import haxe.io.Path;
 import flixel.group.FlxSpriteContainer;
 import flixel.text.FlxText;
 import flixel.input.gamepad.FlxGamepad;
+import flixel.input.touch.FlxTouch;
 
 import haxe.ui.components.Stepper;
 import haxe.Json;
@@ -123,6 +124,16 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	var touchModeBtn:Null<FlxSprite> = null;
 	var touchModeBtnText:Null<FlxText> = null;
 
+	// Touch equivalents for the keyboard-only Z/X (frame step) and C
+	// (replay current anim) shortcuts -- everything else in this editor
+	// already has a touch/gamepad equivalent (pinch zoom, drag-to-pan,
+	// drag-to-offset, the undo/redo toolbar buttons, tapping the
+	// animation list to play it), but these two had no touch-accessible
+	// trigger at all.
+	var frameBackBtn:Null<FlxSprite> = null;
+	var frameFwdBtn:Null<FlxSprite> = null;
+	var replayBtn:Null<FlxSprite> = null;
+
 	var goToPlayState:Bool = false;
 	
 	public function new(?char:String, goToPlayState:Bool = false)
@@ -211,6 +222,29 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		touchModeBtnText.scrollFactor.set(0, 0);
 		touchModeBtnText.cameras = [camHUD];
 		add(touchModeBtnText);
+
+		inline function buildSmallTouchButton(x:Float, width:Int, label:String):FlxSprite
+		{
+			var btn = new FlxSprite(x, FlxG.height - 70).makeGraphic(width, 50, 0xAA111133);
+			btn.scrollFactor.set(0, 0);
+			btn.cameras = [camHUD];
+			add(btn);
+
+			var text = new FlxText(x, FlxG.height - 62, width, label);
+			text.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, CENTER);
+			text.scrollFactor.set(0, 0);
+			text.cameras = [camHUD];
+			add(text);
+
+			return btn;
+		}
+
+		// '<'/'>' instead of arrow glyphs -- vcr.ttf has no glyph for those
+		// (same reason MobileSettingsSubState/OptionsState use plain ASCII
+		// arrows elsewhere this session).
+		frameBackBtn = buildSmallTouchButton(190, 90, '< FRAME');
+		frameFwdBtn = buildSmallTouchButton(290, 90, 'FRAME >');
+		replayBtn = buildSmallTouchButton(390, 110, 'REPLAY');
 		#end
 	}
 	
@@ -848,16 +882,31 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	{
 		if (touchModeBtn != null)
 		{
+			inline function touchOverBtn(btn:FlxSprite, touch:FlxTouch):Bool
+				return touch.viewX >= btn.x && touch.viewX <= btn.x + btn.width && touch.viewY >= btn.y && touch.viewY <= btn.y + btn.height;
+
 			for (touch in FlxG.touches.list)
 			{
-				if (touch.justPressed
-					&& touch.viewX >= touchModeBtn.x && touch.viewX <= touchModeBtn.x + touchModeBtn.width
-					&& touch.viewY >= touchModeBtn.y && touch.viewY <= touchModeBtn.y + touchModeBtn.height)
+				if (!touch.justPressed) continue;
+
+				if (touchOverBtn(touchModeBtn, touch))
 				{
 					touchOffsetMode = !touchOffsetMode;
 					if (touchModeBtnText != null)
 						touchModeBtnText.text = 'Touch: ' + (touchOffsetMode ? 'OFFSET' : 'PAN');
 					FlxG.sound.play(Paths.sound('ui/mouseClick'));
+				}
+				else if (frameBackBtn != null && touchOverBtn(frameBackBtn, touch))
+				{
+					stepFrame(-1);
+				}
+				else if (frameFwdBtn != null && touchOverBtn(frameFwdBtn, touch))
+				{
+					stepFrame(1);
+				}
+				else if (replayBtn != null && touchOverBtn(replayBtn, touch))
+				{
+					replayCurrentAnim();
 				}
 			}
 		}
@@ -1203,17 +1252,29 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		}
 
 		if (character.isAnimNull()) return;
-		
-		if ((FlxG.keys.justPressed.Z || FlxG.keys.justPressed.X))
-		{
-			character.pauseAnim();
-			character.animCurFrame = FlxMath.wrap(character.animCurFrame + (FlxG.keys.justPressed.Z ? -1 : 1), 0, character.getAnimNumFrames() - 1);
-		}
-		
-		if (FlxG.keys.justPressed.C)
-		{
-			character.playAnim(character.getAnimName(), true);
-		}
+
+		if (FlxG.keys.justPressed.Z) stepFrame(-1);
+		if (FlxG.keys.justPressed.X) stepFrame(1);
+
+		if (FlxG.keys.justPressed.C) replayCurrentAnim();
+	}
+
+	/** Steps the current animation's frame by `dir` (-1/+1), pausing it if
+	 *  playing. Shared by the keyboard Z/X shortcut and the mobile
+	 *  frameBackBtn/frameFwdBtn touch buttons. */
+	function stepFrame(dir:Int):Void
+	{
+		if (character == null || character.isAnimNull()) return;
+		character.pauseAnim();
+		character.animCurFrame = FlxMath.wrap(character.animCurFrame + dir, 0, character.getAnimNumFrames() - 1);
+	}
+
+	/** Replays the current animation from frame 0. Shared by the keyboard C
+	 *  shortcut and the mobile replayBtn touch button. */
+	function replayCurrentAnim():Void
+	{
+		if (character == null || character.isAnimNull()) return;
+		character.playAnim(character.getAnimName(), true);
 	}
 	
 	function controlCamera(elapsed:Float)
