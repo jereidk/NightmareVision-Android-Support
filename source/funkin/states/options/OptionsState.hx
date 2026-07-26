@@ -713,7 +713,10 @@ class OptionsState extends MusicBeatState
 		}
 
 		__openedOption = null;
-		blockInput = false;
+		// blockInput itself is cleared in update() instead of here -- same
+		// one-frame-stale race the openSubState() override above documents,
+		// mirrored on the closing side (subState only actually goes null one
+		// frame later, in FlxState.tryUpdate()'s deferred resetSubState()).
 		refreshOptionFonts();
 
 		super.closeSubState();
@@ -810,6 +813,21 @@ class OptionsState extends MusicBeatState
 		super.update(elapsed);
 
 		if (!isHardcodedState()) return;
+
+		// Only actually clear blockInput once subState is CONFIRMED null --
+		// FlxState.tryUpdate() calls update() BEFORE it processes a pending
+		// closeSubState() (resetSubState(), which is what actually nulls
+		// subState, is deferred to later in that same call), so clearing this
+		// synchronously inside closeSubState() left a substate's B/BACK press
+		// on the frame right after close() still reading as controls.BACK ==
+		// true here too -- Controls.requested still routed to that dying
+		// substate's own (stale, un-updated since the press) virtual pad for
+		// that one frame -- with blockInput already false, letting this
+		// state's own BACK handling fire on the SAME press and exit the whole
+		// screen (e.g. LanguagePickerSubState's B button also closing
+		// OptionsState). Mirrors the fix openSubState() below already applies
+		// on the opening side.
+		if (blockInput && subState == null) blockInput = false;
 
 		optionList.keyboardEnabled = (focus == 'list') && !blockInput && !blockAllInput;
 

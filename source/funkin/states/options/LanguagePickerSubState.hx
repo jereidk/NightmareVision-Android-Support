@@ -41,9 +41,18 @@ class LanguagePickerSubState extends MusicBeatSubstate
 		title.antialiasing = ClientPrefs.globalAntialiasing;
 		add(title);
 
-		closeButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
-		closeButton.antialiasing = ClientPrefs.globalAntialiasing;
-		add(closeButton);
+		// Touch-only close 'X' -- its tap check below is already gated to
+		// non-Virtual-Pad nav (B already closes this screen there), so skip
+		// creating it entirely under Virtual Pad, same convention as every
+		// other AmongUIState-style back button this session.
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			closeButton = new FlxSprite(1100 + cutout, 20).loadGraphic(Paths.image('menu/common/menuBack'));
+			closeButton.antialiasing = ClientPrefs.globalAntialiasing;
+			add(closeButton);
+		}
 
 		final listW = (1160 + cutout) - LIST_X;
 		list = new TouchOptionList(LIST_X, 100, listW, 9);
@@ -86,7 +95,7 @@ class LanguagePickerSubState extends MusicBeatSubstate
 		// -- gate this the same way, since on a touchscreen device (where
 		// taps ARE mouse events) an accidental tap near it while using the
 		// pad would otherwise still instantly close this screen.
-		if (MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
+		if (closeButton != null && MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed && FlxG.mouse.overlaps(closeButton))
 		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			close();
