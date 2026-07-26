@@ -24,7 +24,7 @@ typedef MobileOpt =
 	// kept out of sync with _rebuildOptions() as rows were added over time,
 	// see _getStr()/_setStr()/_getFloat()/_setFloat() for the actual set.
 	id:String,
-	kind:String,      // 'string' | 'percent' | 'button' | 'customize'
+	kind:String,      // 'string' | 'percent' | 'button' | 'customize' | 'bool'
 	label:String,
 	desc:String,
 	?choices:Array<String>, // display strings (string kind)
@@ -132,6 +132,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _rowValue:Array<FlxText>   = [];
 	var _rowLeft:Array<FlxText>    = [];
 	var _rowRight:Array<FlxText>   = [];
+	// 'bool' kind rows (checkbox-style on/off options) show this instead of
+	// _rowValue/_rowLeft/_rowRight -- same sprite/animation OptionsState's own
+	// TouchOptionList already uses for its bool Options, so a checkbox looks
+	// and behaves identically everywhere it appears in the game.
+	var _rowCheckbox:Array<FlxSprite> = [];
 	var _descText:FlxText;
 	var _descBg:FlxSprite;
 	var _scrollBar:FlxSprite;
@@ -314,12 +319,27 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_rowRight.push(rA);
 			add(rA);
 
+			// Checkbox for 'bool' kind rows -- same asset/animation TouchOptionList
+			// uses for its own bool Options. Centered in the same value+arrows
+			// zone those two sprites occupy above (OPT_X+OPT_W-248 .. -4), since
+			// exactly one of the two groups is ever visible on a given row.
+			var chk = new FlxSprite(OPT_X + OPT_W - 142, rowY + 11);
+			chk.loadGraphic(Paths.image('menu/options/impastacheckbox'), true, 30, 30);
+			chk.animation.add('unchecked', [0], 24, false);
+			chk.animation.add('checked', [1], 24, false);
+			chk.antialiasing = ClientPrefs.globalAntialiasing;
+			chk.setGraphicSize(32, 32);
+			chk.updateHitbox();
+			chk.visible = false;
+			_rowCheckbox.push(chk);
+			add(chk);
+
 			// Staggered cascade entrance: each row slides in from the right,
 			// one after another, instead of the whole screen just popping in
 			// at once (that's still handled separately by the _enterAlpha
 			// fade in update()). Purely a position tween -- doesn't touch
 			// alpha, so it can't fight with that fade.
-			for (row_spr in [lbl, v, lA, rA])
+			for (row_spr in [lbl, v, lA, rA, chk])
 			{
 				final targetX = row_spr.x;
 				row_spr.x = targetX + 80;
@@ -437,7 +457,7 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			if (opt.defaultVal == null) continue;
 			switch (opt.kind)
 			{
-				case 'string': _setStr(opt.id, cast opt.defaultVal);
+				case 'string' | 'bool': _setStr(opt.id, cast opt.defaultVal);
 				case 'percent': _setFloat(opt.id, cast opt.defaultVal);
 			}
 		}
@@ -634,10 +654,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			// (via _resolveRowTap()), so keyboard/gamepad ACCEPT and a touch tap
 			// were two separately-written copies of the same action. Routing
 			// 'customize' through _changeSelected() too (like 'button' already
-			// does) removes that duplicate. No row here is ever kind == 'bool'
-			// (see _rebuildOptions() -- every row is 'string'/'percent'/'button'/
-			// 'customize') so that case never actually applied; not included.
-			if (opt != null && (opt.kind == 'button' || opt.kind == 'customize')) _changeSelected(1);
+			// does) removes that duplicate. 'bool' rows (checkbox-style on/off
+			// options) toggle here too, same as this class doc comment's own
+			// "ACCEPT -- toggle (bool options)" always promised -- _changeSelected()'s
+			// direction argument is ignored for 'bool', so passing 1 just toggles.
+			if (opt != null && (opt.kind == 'button' || opt.kind == 'customize' || opt.kind == 'bool')) _changeSelected(1);
 		}
 
 		if (controls.RESET) _resetToDefault();
@@ -811,6 +832,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				v = FlxMath.bound(v, 0, 1);
 				v = Math.round(v * 100) / 100;
 				_setFloat(opt.id, v);
+
+			case 'bool':
+				// Direction doesn't matter for a checkbox -- LEFT, RIGHT, ACCEPT,
+				// and a touch tap on either half of the row all just flip it.
+				_setStr(opt.id, _getStr(opt.id) == 'on' ? 'off' : 'on');
 
 			case 'button' | 'customize':
 				// Buttons and customize options are triggered on selection, not on direction change
@@ -1021,11 +1047,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		});
 
 		_opts.push({
-			id: 'roundPauseBtn', kind: 'string',
+			id: 'roundPauseBtn', kind: 'bool',
 			label: Lang.str('opt_roundpausebtn', 'Round Pause Button'),
 			desc:  Lang.str('opt_roundpausebtn_desc', 'Use a bigger, smoother, more transparent circular pause button during gameplay instead of the plain square one.'),
-			choices: [Lang.str('choice_roundpausebtn_off', 'Off'), Lang.str('choice_roundpausebtn_on', 'On')],
-			stored:  ['off', 'on'],
 			defaultVal: 'off'
 		});
 
@@ -1073,11 +1097,9 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				defaultVal: 0.2
 			});
 			_opts.push({
-				id: 'hitboxHints', kind: 'string',
+				id: 'hitboxHints', kind: 'bool',
 				label: Lang.str('opt_hitboxhints', 'Hitbox Hints'),
 				desc:  Lang.str('opt_hitboxhints_desc', 'Keep the tap zones faintly visible at all times (scaled to your Hitbox Opacity) instead of only flashing in when pressed.'),
-				choices: [Lang.str('choice_hitboxhints_off', 'Off'), Lang.str('choice_hitboxhints_on', 'On')],
-				stored:  ['off', 'on'],
 				defaultVal: 'off'
 			});
 		}
@@ -1177,6 +1199,8 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'button':
 				// Was '[  ▶  ]' -- confirmed missing from vcr.ttf.
 				'[ TAP ]';
+			// 'bool' shows no text at all -- the checkbox sprite (_rowCheckbox)
+			// is the whole value display for these rows, see _updateRows().
 			default: '';
 		};
 	}
@@ -1244,16 +1268,33 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			final show = (opt != null);
 			final selected = show && (optIndex == _sel);
 
+			final isBool = show && opt.kind == 'bool';
+
 			_rowHi[i].visible    = selected;
 			_rowLabel[i].visible = show;
-			_rowValue[i].visible = show;
-			_rowLeft[i].visible  = show;
-			_rowRight[i].visible = show;
+			// 'bool' rows show the checkbox in place of the value text + arrows
+			// (which would otherwise just read "< Off >"/"< On >").
+			_rowValue[i].visible = show && !isBool;
+			_rowLeft[i].visible  = show && !isBool;
+			_rowRight[i].visible = show && !isBool;
+			_rowCheckbox[i].visible = isBool;
 
 			if (!show) continue;
 
 			_rowLabel[i].text = opt.label;
 			_rowLabel[i].color = selected ? COLOR_HIGHLIGHT : COLOR_TEXT;
+
+			if (isBool)
+			{
+				// Matches TouchOptionList's own bool-row checkbox exactly:
+				// alpha for the selected/unselected feedback, not a color tint,
+				// so the sprite's actual checked/unchecked art stays legible.
+				final wantAnim = _getStr(opt.id) == 'on' ? 'checked' : 'unchecked';
+				if (_rowCheckbox[i].animation.name != wantAnim) _rowCheckbox[i].animation.play(wantAnim, true);
+				_rowCheckbox[i].alpha = selected ? 1 : 0.85;
+				continue;
+			}
+
 			_rowValue[i].text = _displayValue(opt);
 			_rowValue[i].color = selected ? COLOR_HIGHLIGHT : 0xFFCCCCCC;
 
