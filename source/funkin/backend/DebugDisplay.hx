@@ -344,7 +344,15 @@ class DebugDisplay extends Sprite
 			#if android
 			final total = deviceTotalMemory;
 			final free = deviceFreeMemory;
-			final devPct = total > 0 ? (total - free) / total : 0.0;
+			// free == 0 with a nonzero total almost never reflects reality (a
+			// real device is never down to literally zero available bytes) --
+			// it's what getSystemAvailableMemory() returns when /proc/meminfo
+			// parsing fails (e.g. no MemAvailable line on some kernels), which
+			// would otherwise compute as devPct == 1.0 and paint this red
+			// permanently regardless of actual memory pressure. Falls back to
+			// "unknown" (shown as normal/white) instead of a false critical
+			// reading.
+			final devPct = (total > 0 && free > 0) ? (total - free) / total : 0.0;
 			textField.textColor = devPct > 0.85 ? 0xFFFF4444 :   // red: critical
 				devPct > 0.70 ? 0xFFFFAA00 :   // orange: warning
 				0xFFFFFFFF;                     // white: normal
