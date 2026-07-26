@@ -12,6 +12,7 @@ import flixel.util.FlxColor;
 
 import funkin.data.*;
 import funkin.objects.*;
+import mobile.utils.MobileNavUtil;
 
 class MasterEditorMenu extends MusicBeatState
 {
@@ -138,40 +139,54 @@ class MasterEditorMenu extends MusicBeatState
 		}
 
 		#if mobile
-		for (touch in FlxG.touches.list)
+		// Gated to Touch nav mode only -- these grpTexts items span the FULL
+		// screen width (new FlxText(0, ..., FlxG.width, ...)), so with no
+		// gate here, EVERY touch anywhere on screen (including pressing the
+		// Virtual Pad's own D-pad buttons, wherever LEFT_FULL happens to
+		// place them) always overlapped SOME item's Y-band and got read as
+		// "tap on menu item N" -- immediately overwriting curSelected right
+		// alongside the correct controls.UI_UP_P/UI_DOWN_P-driven change from
+		// that same D-pad press. That's exactly the reported bug: pressing
+		// up from the 2nd item didn't move to the 1st, it snapped to
+		// whichever item's band the pad's fixed on-screen position always
+		// overlaps (the 3rd, on the layouts/screens this was seen on).
+		if (MobileNavUtil.allowPointerNav())
 		{
-			if (touch.justPressed)
+			for (touch in FlxG.touches.list)
 			{
-				var members = grpTexts.members;
-				for (i in 0...members.length)
+				if (touch.justPressed)
 				{
-					var item = members[i];
-					if (touch.viewY >= item.y && touch.viewY < item.y + item.height)
+					var members = grpTexts.members;
+					for (i in 0...members.length)
 					{
-						mobileTouchItemIdx = i;
-						break;
-					}
-				}
-			}
-			if (touch.justReleased && mobileTouchItemIdx >= 0)
-			{
-				var members = grpTexts.members;
-				for (i in 0...members.length)
-				{
-					var item = members[i];
-					if (touch.viewY >= item.y && touch.viewY < item.y + item.height && i == mobileTouchItemIdx)
-					{
-						if (i == curSelected)
-							acceptCurrentOption();
-						else
+						var item = members[i];
+						if (touch.viewY >= item.y && touch.viewY < item.y + item.height)
 						{
-							curSelected = i;
-							changeSelection(0);
+							mobileTouchItemIdx = i;
+							break;
 						}
-						break;
 					}
 				}
-				mobileTouchItemIdx = -1;
+				if (touch.justReleased && mobileTouchItemIdx >= 0)
+				{
+					var members = grpTexts.members;
+					for (i in 0...members.length)
+					{
+						var item = members[i];
+						if (touch.viewY >= item.y && touch.viewY < item.y + item.height && i == mobileTouchItemIdx)
+						{
+							if (i == curSelected)
+								acceptCurrentOption();
+							else
+							{
+								curSelected = i;
+								changeSelection(0);
+							}
+							break;
+						}
+					}
+					mobileTouchItemIdx = -1;
+				}
 			}
 		}
 
