@@ -467,6 +467,18 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		PlayState.instance.paused = true;
 		if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
 
+		// FlxG.resetState() re-runs PlayState.create() directly -- it never
+		// goes through LoadingState, so NotePoolPlan.computeAndStore() (only
+		// ever called from LoadingState's own preload paths) never reruns for
+		// a retry. Without this, PlayState.prewarmNotePool() finds nothing to
+		// consume and silently prewarms 0 buckets, so every note in the
+		// retried song pays a cold reloadNote() during real gameplay again --
+		// confirmed via sysmon.log showing "prewarmNotePool: START (0
+		// bucket(s))" on a same-session retry that had 8 buckets/38 notes on
+		// its first, LoadingState-routed play. Cheap enough (pure chart-array
+		// sweep, no asset I/O) to just call synchronously here instead.
+		funkin.objects.note.NotePoolPlan.computeAndStore(PlayState.SONG);
+
 		if (noTrans)
 		{
 			FlxG.resetState();

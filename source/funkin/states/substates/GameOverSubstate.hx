@@ -294,6 +294,15 @@ class GameOverSubstate extends MusicBeatSubstate
 		FlxG.sound.music.stop();
 		#if mobile controls.isInSubstate = false; #end
 		if (endSoundName != null) FlxG.sound.play(Paths.music(endSoundName));
+
+		// Same NotePoolPlan gap as PauseSubState.restartSong() -- FlxG.resetState()
+		// bypasses LoadingState entirely, so without this the retried song
+		// silently prewarms 0 note buckets instead of reusing the sweep
+		// LoadingState already computed on the first play. See that
+		// function's own comment for the full reasoning (confirmed via
+		// sysmon.log).
+		funkin.objects.note.NotePoolPlan.computeAndStore(PlayState.SONG);
+
 		new FlxTimer().start(0.7, function(tmr:FlxTimer) {
 			FlxG.camera.fade(FlxColor.BLACK, 2, false, function() {
 				FlxG.resetState();
