@@ -287,16 +287,28 @@ class StoryMenuState extends AmongUIState
 		if (week == null) return;
 		
 		var playlist:Array<String> = [for (song in week.songs) song[0]];
-		
+
 		PlayState.storyMeta.curWeek = WeekData.weeksList.indexOf(week.fileName);
 		PlayState.storyMeta.currency = week.currency;
 		PlayState.storyMeta.playlist = playlist;
 		PlayState.storyMeta.misses = 0;
 		PlayState.storyMeta.score = 0;
-		
+
 		PlayState.SONG = Chart.fromSong(PlayState.storyMeta.playlist[0], PlayState.storyMeta.difficulty);
 
-		LoadingState.loadAndSwitchState(PlayState.new);
+		// Preload every song in the week (not just this first one) in one
+		// pass -- weekSongs[0] reuses the exact same Song instance just
+		// built above (not a second Chart.fromSong() call) so
+		// NotePoolPlan.computeAndStore() inside startWeekPreload() ends up
+		// keyed to the identical songId PlayState.prewarmNotePool() will
+		// look it up under. See LoadingState.loadWeekAndSwitchState()'s own
+		// doc comment for why this means the rest of the week never shows
+		// LoadingState again.
+		var weekSongs:Array<Song> = [PlayState.SONG];
+		for (i in 1...playlist.length)
+			weekSongs.push(Chart.fromSong(playlist[i], PlayState.storyMeta.difficulty));
+
+		LoadingState.loadWeekAndSwitchState(weekSongs, week.storyName, PlayState.new);
 	}
 	
 	var wasPressingCruiser:Bool = false;

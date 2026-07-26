@@ -87,6 +87,15 @@ class LoadingState extends MusicBeatState
 	var shownTime:Float = 0;
 	var switching:Bool = false;
 
+	// Set only by loadWeekAndSwitchState() -- when non-null, create()/
+	// startWeekPreload() preload EVERY song in `weekSongs` (not just
+	// PlayState.SONG) in this one pass, and the title shows `weekLabel`
+	// instead of a single song's name. See startWeekPreload()'s own doc
+	// comment for why this is a separate function from startPreload()
+	// rather than a shared refactor of it.
+	var weekSongs:Null<Array<funkin.data.Song>> = null;
+	var weekLabel:Null<String> = null;
+
 	// ── Background preload shared state ────────────────────────────────────
 
 	#if (sys && cpp)
@@ -165,6 +174,18 @@ class LoadingState extends MusicBeatState
 	static var _prefetchDone:Int = 0;
 
 	/**
+	 * Every song id startWeekPreload() finished decoding+finalizing during a
+	 * whole-week preload pass -- unlike _prefetchForSongId (one song at a
+	 * time, overwritten as the reactive one-ahead prefetch moves on),
+	 * every song here stays marked for the rest of the week, so
+	 * isPrefetchedFor() reports true for ALL of them, not just whichever one
+	 * was decoded most recently. Cleared at the start of every fresh
+	 * loadWeekAndSwitchState() call so a stale entry from a previous week can
+	 * never falsely match a same-named song in a different one.
+	 */
+	static var _weekPrefetchedIds:Map<String, Bool> = new Map();
+
+	/**
 	 * True only when a prefetch for THIS EXACT songId already finished --
 	 * checking _prefetchComplete alone isn't enough, since it stays true
 	 * (stale) after a completed prefetch until the NEXT prefetchSong() call
@@ -172,17 +193,22 @@ class LoadingState extends MusicBeatState
 	 * trigger one. Picking a different song faster than that (the common
 	 * Freeplay case) would otherwise read a leftover true from a previous,
 	 * unrelated song and skip LoadingState for a song that was never
-	 * actually prefetched.
+	 * actually prefetched. _weekPrefetchedIds (set by startWeekPreload(),
+	 * once per whole Story Mode week) is checked in addition -- every song
+	 * in that week stays "prefetched" for its entire duration, not just the
+	 * one song _prefetchForSongId happens to currently point at.
 	 */
 	public static function isPrefetchedFor(songId:String):Bool
 	{
 		var done = false;
 		var forId = '';
+		var inWeek = false;
 		_mutex.acquire();
 		done = _prefetchComplete;
 		forId = _prefetchForSongId;
+		inWeek = _weekPrefetchedIds.exists(songId);
 		_mutex.release();
-		return done && forId == songId;
+		return (done && forId == songId) || inWeek;
 	}
 	static var _prefetchComplete:Bool = false;
 	#end
@@ -190,6 +216,27 @@ class LoadingState extends MusicBeatState
 	public static function loadAndSwitchState(nextState:NextState):Void
 	{
 		FlxG.switchState(() -> new LoadingState(nextState));
+	}
+
+	/**
+	 * Story Mode week entry point: preloads EVERY song in `weekSongs` (not
+	 * just the first one) in this single pass, showing `weekLabel` (the
+	 * week's own display name) instead of one song's title. Once this
+	 * finishes and switches to `nextState` (song[0]'s PlayState), every song
+	 * in the week is marked prefetched (see _weekPrefetchedIds) -- so
+	 * PlayState's own end-of-song hybrid check (isPrefetchedFor()) skips
+	 * LoadingState entirely for every remaining song transition in the week,
+	 * same fast direct-switchState path it already used for a single
+	 * reactively-prefetched song, just extended to the whole week at once.
+	 */
+	public static function loadWeekAndSwitchState(weekSongs:Array<funkin.data.Song>, weekLabel:String, nextState:NextState):Void
+	{
+		#if (sys && cpp)
+		_mutex.acquire();
+		_weekPrefetchedIds = new Map();
+		_mutex.release();
+		#end
+		FlxG.switchState(() -> new LoadingState(nextState, weekSongs, weekLabel));
 	}
 
 	/**
@@ -708,10 +755,12 @@ class LoadingState extends MusicBeatState
 	public static function isPrefetchedFor(songId:String):Bool return true;
 	#end
 
-	public function new(nextState:NextState)
+	public function new(nextState:NextState, ?weekSongs:Array<funkin.data.Song>, ?weekLabel:String)
 	{
 		super();
 		this.nextState = nextState;
+		this.weekSongs = weekSongs;
+		this.weekLabel = weekLabel;
 	}
 
 	// ── UI ─────────────────────────────────────────────────────────────────
@@ -775,7 +824,12 @@ class LoadingState extends MusicBeatState
 		loadingLabel.scrollFactor.set();
 		add(loadingLabel);
 
-		var titleText = new FlxText(0, loadingLabel.y + 80, FlxG.width, songName, 150);
+		// Story Mode week preload: show the week's own name instead of just
+		// the first song's -- this one screen is standing in for every song
+		// in the week, not just song[0]. See loadWeekAndSwitchState().
+		var displayTitle = (weekSongs != null && weekLabel != null && weekLabel.length > 0) ? weekLabel : songName;
+
+		var titleText = new FlxText(0, loadingLabel.y + 80, FlxG.width, displayTitle, 150);
 		titleText.setFormat(Paths.font('AmaticSC-Bold.ttf'), 150, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		titleText.borderSize = 5;
 		titleText.scrollFactor.set();
@@ -825,7 +879,8 @@ class LoadingState extends MusicBeatState
 		Logger.log('[LoadingState] ── create: song="$songName" — starting preload. Carrying prefetched pending assets: bmp=$_pb audio=$_pa astc=$_pt', NOTICE, true);
 		#end
 
-		startPreload();
+		if (weekSongs != null) startWeekPreload(weekSongs);
+		else startPreload();
 	}
 
 	// ── Update ─────────────────────────────────────────────────────────────
@@ -870,11 +925,20 @@ class LoadingState extends MusicBeatState
 
 		// ── Phase C: switch when ready ──────────────────────────────────
 		shownTime += elapsed;
-		final timedOut = shownTime >= MAX_WAIT_TIME;
+		// A week-wide preload (see startWeekPreload()) is doing several
+		// songs' worth of work in this one pass -- the fixed single-song cap
+		// would fire early on a slower device partway through a longer week,
+		// silently losing the "rest of the week never shows LoadingState
+		// again" benefit for whichever songs hadn't finished yet (see
+		// finalizePendingAssets()'s week-marking, which only ever runs once
+		// _allFilesOpened actually goes true). Scale it by song count so the
+		// budget matches the actual amount of work being waited on.
+		final effectiveMaxWait = MAX_WAIT_TIME * ((weekSongs != null) ? weekSongs.length : 1);
+		final timedOut = shownTime >= effectiveMaxWait;
 		if (!switching && ((shownTime >= MIN_SHOW_TIME && done) || timedOut))
 		{
 			if (timedOut && !done)
-				Logger.log('LoadingState: preload did not finish after ${MAX_WAIT_TIME}s (progress ${Std.int(p * 100)}%) — switching anyway, PlayState will load the rest synchronously', WARN);
+				Logger.log('LoadingState: preload did not finish after ${effectiveMaxWait}s (progress ${Std.int(p * 100)}%) — switching anyway, PlayState will load the rest synchronously', WARN);
 
 			// Compact the decode garbage the finalize phase just produced (the
 			// CPU-side BitmapData/AudioBuffer copies left over after each
@@ -1040,6 +1104,22 @@ class LoadingState extends MusicBeatState
 			_mutex.release();
 			if (!_wasFinalized)
 				Logger.log('[LoadingState] finalize: all assets ready ("Ready!") — decoded=$_dec finalized=$_fin of $_tot task(s)', NOTICE, true);
+
+			// Story Mode week preload: every song's art/audio just finished
+			// decoding AND finalizing (GPU upload / mixer registration) right
+			// here, on this exact instance's watch -- mark every one of them
+			// prefetched now (not from inside startWeekPreload()'s background
+			// Thread, which only ever finishes the DECODE half; finalizing
+			// only ever happens here in finalizePendingAssets(), driven by
+			// THIS instance's own update()). PlayState's per-song hybrid
+			// check (isPrefetchedFor()) then skips LoadingState entirely for
+			// every remaining song transition in the week.
+			if (!_wasFinalized && weekSongs != null)
+			{
+				_mutex.acquire();
+				for (s in weekSongs) if (s != null && s.song != null) _weekPrefetchedIds.set(s.song, true);
+				_mutex.release();
+			}
 		}
 	}
 
@@ -1521,7 +1601,345 @@ class LoadingState extends MusicBeatState
 				Logger.log('[LoadingState] preload thread: background decode finished ($_dec/$_tot) — main thread will finalize (GPU upload / audio register)', NOTICE, true);
 		});
 	}
+
+	/**
+	 * Story Mode week entry point's actual worker -- same per-song asset
+	 * collection startPreload() does above, just looped across every song
+	 * in `weekSongs` into ONE shared task list, decoded as a single pass
+	 * (see finalizePendingAssets()'s own week-marking addition for how
+	 * "decoded" here becomes "actually usable" once finalized).
+	 *
+	 * Deliberately NOT a shared refactor of startPreload() itself: that
+	 * function is delicate (many historical fixes, generation-check abort
+	 * points scattered throughout) and is what every OTHER load path
+	 * (Freeplay, the reactive one-song-ahead prefetchSong(), any non-Story
+	 * PlayState entry) still depends on -- this stays fully separate so
+	 * nothing here can regress it.
+	 */
+	function startWeekPreload(weekSongs:Array<funkin.data.Song>):Void
+	{
+		if (weekSongs == null || weekSongs.length == 0) return;
+
+		// Same escape hatch as startPreload() -- see its own comment.
+		if (!funkin.data.ClientPrefs.threadedPreload)
+		{
+			++_threadGeneration;
+			_mutex.acquire();
+			_totalTasks = 0;
+			_completedDecodes = 0;
+			_completedFinalizes = 0;
+			_allFilesOpened = true;
+			_allFinalized = true;
+			_progress = 1.0;
+			_label = 'Preparing…';
+			_mutex.release();
+			Logger.log('[LoadingState] threadedPreload disabled -- skipping week-wide background decode, PlayState will load synchronously', NOTICE, true);
+			return;
+		}
+
+		_mutex.acquire();
+		_totalTasks = 0;
+		_completedDecodes = 0;
+		_completedFinalizes = 0;
+		_allFilesOpened = false;
+		_allFinalized = false;
+		_progress = 0.0;
+		_label = 'Preparing…';
+		_mutex.release();
+
+		final myGen = ++_threadGeneration;
+
+		Thread.create(() ->
+		{
+			if (_threadGeneration != myGen) return;
+
+			final tasks:Array<PreloadTask> = [];
+
+			function addAtlas(assetKey:String, label:String):Void
+				for (t in resolveAssetTasks(assetKey, label)) tasks.push(t);
+
+			function addSound(basePath:String, label:String):Void
+			{
+				for (ext in ['ogg', 'wav'])
+				{
+					final p = '$basePath.$ext';
+					if (FunkinAssets.exists(p))
+					{
+						final resolved = resolveLoadPath(p);
+						tasks.push({realPath: resolved, cacheKey: resolved, label: label});
+						return;
+					}
+				}
+			}
+
+			for (song in weekSongs)
+			{
+				if (_threadGeneration != myGen) return;
+				if (song == null) continue;
+
+				// Stage
+				final stageFile = funkin.data.StageData.getStageFile(song.stage);
+				if (stageFile != null && stageFile.stageObjects != null)
+				{
+					for (obj in stageFile.stageObjects)
+					{
+						if (obj.asset == null) continue;
+						for (asset in obj.asset.split(','))
+						{
+							final t = StringTools.trim(asset);
+							if (t.length > 0) addAtlas(t, 'stage:$t');
+						}
+					}
+				}
+
+				// Stage — script-built art AND sound (see startPreload()'s own
+				// comment on resolveStageScriptAssets() for why this exists).
+				final stageAssets = resolveStageScriptAssets(song.stage);
+				for (key in stageAssets.images)
+				{
+					if (_threadGeneration != myGen) return;
+					addAtlas(key, 'stage:$key');
+				}
+				for (basePath in stageAssets.sounds)
+				{
+					if (_threadGeneration != myGen) return;
+					addSound(basePath, 'stagesfx');
+				}
+
+				_mutex.acquire();
+				for (name in resolveStageScriptShaders(song.stage))
+					_pendingShaderWarm.push(name);
+				_mutex.release();
+
+				// Characters
+				final chars:Array<String> = [song.player1, song.player2];
+				if (song.gfVersion != null && song.gfVersion.length > 0)
+					chars.push(song.gfVersion);
+				for (charName in chars)
+				{
+					final info = CharacterParser.fetchInfoUnsafe(charName);
+					if (info == null || info.image == null) continue;
+					for (img in info.image.split(','))
+					{
+						final t = StringTools.trim(img);
+						if (t.length > 0) addAtlas(t, '$charName:$t');
+					}
+				}
+
+				// Dialogue -- same reasoning as startPreload()'s own comment.
+				if (!PlayState.seenCutscene)
+				{
+					final dialogueTxt = Paths.getPath('songs/${Paths.sanitize(song.song)}/dialogue.txt', null, PathsTestMode.NORMAL);
+					final dialogueLines = CoolUtil.coolTextFile(dialogueTxt);
+					if (dialogueLines.length > 0)
+					{
+						addAtlas('ui/dialogue/dialogueBox', 'dialogue');
+						addAtlas('ui/dialogue/bubble', 'dialogue');
+
+						final seenChars:Map<String, Bool> = new Map();
+						for (line in dialogueLines)
+						{
+							if (_threadGeneration != myGen) return;
+
+							final splitName = line.split(':');
+							if (splitName.length < 2) continue;
+
+							final charKey = splitName[1];
+							if (charKey.length == 0 || seenChars.exists(charKey)) continue;
+							seenChars.set(charKey, true);
+
+							final charPath = Paths.getPath('data/dialogue/$charKey.json', null, PathsTestMode.NORMAL);
+							if (!FunkinAssets.exists(charPath, TEXT)) continue;
+
+							final dialogueChar:Dynamic = FunkinAssets.parseJson5(FunkinAssets.getContent(charPath));
+							final asset:String = (dialogueChar != null) ? dialogueChar.asset : null;
+							if (asset != null && asset.length > 0) addAtlas('ui/dialogue/characters/$asset', 'dialogue:$asset');
+						}
+					}
+				}
+
+				// Audio
+				final songName = Paths.sanitize(song.song);
+				final audioBase = FunkinAssets.isDirectory(Paths.getPath('songs/$songName/audio', null, LOOSE))
+					? '$songName/audio' : '$songName';
+
+				if (song.trackSwap == true)
+				{
+					addSound(Paths.getPath('songs/$audioBase/Track-main', null, LOOSE), 'Track');
+					addSound(Paths.getPath('songs/$audioBase/Track-miss', null, LOOSE), 'Track-miss');
+				}
+				else
+				{
+					addSound(Paths.getPath('songs/$audioBase/Inst', null, LOOSE), 'Inst');
+					if (song.needsVoices)
+					{
+						addSound(Paths.getPath('songs/$audioBase/Voices', null, LOOSE), 'Voices');
+						addSound(Paths.getPath('songs/$audioBase/Voices-player', null, LOOSE), 'Voices-player');
+						addSound(Paths.getPath('songs/$audioBase/Voices-opp', null, LOOSE), 'Voices-opp');
+					}
+				}
+			}
+
+			if (_threadGeneration != myGen) return;
+
+			// Shared across the whole week, not per-song -- notes/noteskin
+			// art is the same regardless of which song is playing.
+			addAtlas('NOTE_assets', 'notes');
+			addAtlas('noteskins/default', 'noteskin');
+
+			// NotePoolPlan only ever tracks ONE song at a time (consume()
+			// keys off exactly one songId) -- computed here just for
+			// weekSongs[0], the song this LoadingState is actually about to
+			// switch into. Songs 2+ simply fall back to on-demand note
+			// reloads, the same graceful degradation this already has on
+			// desktop / with threadedPreload disabled (see NotePoolPlan's
+			// own consume() doc comment).
+			NotePoolPlan.computeAndStore(weekSongs[0]);
+
+			for (award in funkin.data.GameFlags.getAwards())
+				addAtlas('awards/${award.icon}', 'award:${award.icon}');
+			addAtlas('awards/blank', 'award:blank'); // AwardPopup's own missing-icon fallback
+
+			final currency = funkin.data.CosmicubeData.currentCurrency;
+			addAtlas('currency/${(currency != null && currency.length > 0) ? currency : "beans"}', 'currency');
+
+			if (_threadGeneration != myGen) return;
+
+			if (tasks.length == 0)
+			{
+				_mutex.acquire();
+				_allFilesOpened = true;
+				_allFinalized = true;
+				_progress = 1.0;
+				_label = 'Nothing to preload';
+				_mutex.release();
+				Logger.log('[LoadingState] week preload thread: nothing to preload (0 tasks) — ready immediately', NOTICE, true);
+				return;
+			}
+
+			_mutex.acquire();
+			_totalTasks = tasks.length;
+			_completedDecodes = 0;
+			_mutex.release();
+
+			Logger.log('[LoadingState] week preload thread: collected ${tasks.length} asset task(s) across ${weekSongs.length} song(s) — decoding on background thread', NOTICE, true);
+
+			for (i in 0...tasks.length)
+			{
+				if (_threadGeneration != myGen) return;
+
+				final task = tasks[i];
+				final path = task.realPath;
+				final lower = path.toLowerCase();
+
+				_mutex.acquire();
+				_label = 'Loading ${task.label}… (${i + 1}/${tasks.length})';
+				_mutex.release();
+
+				// Skip if already decoded (e.g. by a reactive prefetchSong() call).
+				var alreadyDecoded = false;
+				_mutex.acquire();
+				for (entry in _pendingBitmaps)
+				{
+					if (entry.key == task.cacheKey) { alreadyDecoded = true; break; }
+				}
+				if (!alreadyDecoded)
+				{
+					for (entry in _pendingAudioBuffers)
+					{
+						if (entry.key == task.cacheKey) { alreadyDecoded = true; break; }
+					}
+				}
+				if (!alreadyDecoded)
+				{
+					for (entry in _pendingAstcTextures)
+					{
+						if (entry.cacheKey == task.cacheKey) { alreadyDecoded = true; break; }
+					}
+				}
+				_mutex.release();
+
+				if (alreadyDecoded)
+				{
+					_mutex.acquire();
+					_completedDecodes++;
+					_mutex.release();
+					continue;
+				}
+
+				try
+				{
+					if (StringTools.endsWith(lower, '.png') || StringTools.endsWith(lower, '.jpg'))
+					{
+						var bmd:Null<BitmapData> = null;
+						if (sys.FileSystem.exists(path))
+							bmd = BitmapData.fromFile(path);
+						else if (openfl.Assets.exists(path, IMAGE))
+							bmd = openfl.Assets.getBitmapData(path, false);
+
+						if (bmd != null)
+						{
+							_mutex.acquire();
+							_pendingBitmaps.push({key: task.cacheKey, bmd: bmd});
+							_completedDecodes++;
+							_mutex.release();
+						}
+					}
+					else if (StringTools.endsWith(lower, '.astc'))
+					{
+						var bytes:Null<haxe.io.Bytes> = null;
+						if (sys.FileSystem.exists(path))
+							bytes = sys.io.File.getBytes(path);
+						else if (openfl.Assets.exists(path, BINARY))
+							bytes = openfl.Assets.getBytes(path);
+
+						if (bytes != null)
+						{
+							_mutex.acquire();
+							_pendingAstcTextures.push({cacheKey: task.cacheKey, astcPath: path, bytes: bytes});
+							_completedDecodes++;
+							_mutex.release();
+						}
+					}
+					else if (StringTools.endsWith(lower, '.ogg'))
+					{
+						final vf = VorbisFile.fromFile(path);
+						if (vf != null)
+						{
+							final buffer = AudioBuffer.fromVorbisFile(vf);
+							if (buffer != null)
+							{
+								_mutex.acquire();
+								_pendingAudioBuffers.push({key: task.cacheKey, buffer: buffer});
+								_completedDecodes++;
+								_mutex.release();
+							}
+						}
+					}
+				}
+				catch (e:Dynamic)
+				{
+					#if android
+					Logger.log('LoadingState week preload: failed $path — $e', WARN);
+					#end
+					_mutex.acquire();
+					_completedDecodes++;
+					_mutex.release();
+				}
+			}
+
+			_mutex.acquire();
+			final _stillCurrent = (_threadGeneration == myGen);
+			if (_stillCurrent) _allFilesOpened = true;
+			final _dec = _completedDecodes;
+			final _tot = _totalTasks;
+			_mutex.release();
+			if (_stillCurrent)
+				Logger.log('[LoadingState] week preload thread: background decode finished ($_dec/$_tot) — main thread will finalize (GPU upload / audio register)', NOTICE, true);
+		});
+	}
 	#else
 	function startPreload():Void {}
+	function startWeekPreload(weekSongs:Array<funkin.data.Song>):Void {}
 	#end
 }
