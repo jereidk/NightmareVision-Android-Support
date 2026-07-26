@@ -89,7 +89,12 @@ class StoryMenuState extends AmongUIState
 		
 		frame.camera = weekInfoGroup.camera = camUpper;
 		
-		weekScore = new FlxText(80, 200, 640, 'HIGH SCORE: N/A');
+		// Shifted right by half the 'expand'-mode cutout, same convention as
+		// every other off-center element on this screen (frame border/cards) --
+		// frame's border graphic thickens proportionally when stretched to
+		// cover the wider screen (see frame.setGraphicSize() above), so this
+		// text needs to clear that thicker border in 'expand' mode.
+		weekScore = new FlxText(80 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 200, 640, 'HIGH SCORE: N/A');
 		weekScore.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 		weekScore.borderSize = 2;
 		
