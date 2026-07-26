@@ -32,7 +32,11 @@ class LanguagePickerSubState extends MusicBeatSubstate
 	static final SEARCH_Y:Float = 76;
 	static final SEARCH_H:Float = 44;
 	static final LIST_Y:Float = SEARCH_Y + SEARCH_H + 10;
-	static final LIST_MAX_VISIBLE:Int = 7;
+	// Was 7 -- with the credits footer sitting right below it (see
+	// creditsText below), that only used about half of the vertical space
+	// actually available under the search bar on a 720-tall screen, leaving
+	// the whole list feeling cramped for a 30+ entry alphabetical list.
+	static final LIST_MAX_VISIBLE:Int = 9;
 
 	var list:TouchOptionList;
 	var closeButton:FlxSprite;
