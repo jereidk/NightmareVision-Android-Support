@@ -155,6 +155,23 @@ class FunkinRatioScaleMode extends RatioScaleMode
 				gameSize.y = Height;
 				gameSize.x = Math.floor(gameSize.y * ratio);
 			}
+
+			// Stretch: fill both dimensions exactly, ignoring `ratio` entirely --
+			// a deliberate non-uniform stretch (sprites can distort), not
+			// another aspect-preserving fit variant. The scaleY branches above
+			// (shared with plain 'fit') always kept gameSize's OTHER axis at
+			// design_size * ratio, which on a screen wider (or taller) than
+			// 16:9 made gameSize bigger than the real device size in that other
+			// axis -- the base RatioScaleMode then scaled that oversized render
+			// target down uniformly to actually fit the screen, which visually
+			// *cropped/zoomed in* instead of stretching to fill, despite this
+			// mode's own description already promising "fills screen (may
+			// distort)". Overwrite whatever the branches above computed.
+			if (doStretch)
+			{
+				gameSize.x = Width;
+				gameSize.y = Height;
+			}
 		}
 
 		@:privateAccess {

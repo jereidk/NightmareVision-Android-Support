@@ -196,6 +196,21 @@ class MobileSettingsSubState extends MusicBeatSubstate
 	var _closing:Bool = false;
 	var _closeAlpha:Float = 1.0;
 
+	// Ignores BACK/D-pad/touch input for a brief window right after this
+	// screen appears. Matters most for the one case where this substate gets
+	// recreated out from under an in-progress touch: changing 'aspectRatio'
+	// (Screen Fit) calls FlxG.resetState() to rebuild the whole state, and
+	// OptionsState.create() reopens this same screen right back up on the
+	// fresh instance (see _reopenMobileSettingsAfterReset) -- but a physical
+	// touch/press can still be down on the OLD pad's button at that exact
+	// moment. The brand new virtualPad/rows have no memory of it already
+	// being held, so their own justPressed check reads it as a fresh press on
+	// frame one: doubling whatever sound that input plays, and if it happened
+	// to land on B, closing this substate again immediately. Long enough for
+	// a real tap/release to finish, short enough nobody opening this normally
+	// would ever notice the delay.
+	var _inputGraceTimer:Float = 0.2;
+
 	// ── Lifecycle ──────────────────────────────────────────────────────────────
 
 	public function new()
@@ -420,6 +435,31 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#end
 
 		_rebuildOptions();
+
+		// Land back on whatever row triggered the Screen Fit reset (see
+		// OptionsState._reopenMobileSettingsSelectedId's own comment), instead
+		// of the default _sel = 0 a brand new instance would otherwise start on.
+		if (OptionsState._reopenMobileSettingsSelectedId != null)
+		{
+			final wantId = OptionsState._reopenMobileSettingsSelectedId;
+			OptionsState._reopenMobileSettingsSelectedId = null;
+			for (i in 0..._opts.length)
+			{
+				if (_opts[i].id == wantId)
+				{
+					_sel = i;
+					_updateScrollOffset();
+					// Snap the visual (lerped) position straight to the target
+					// instead of letting it animate up from the top -- this is
+					// a reopen, not a fresh navigation, so it should look like
+					// this row was always the one showing.
+					_selVisual = _sel;
+					_scrollOffsetVisual = _scrollOffset;
+					break;
+				}
+			}
+		}
+
 		_rebuildPreview();
 		_updateRows();
 	}
@@ -561,6 +601,12 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			_scrollOffsetVisual = FlxMath.lerp(_scrollOffsetVisual, _scrollOffset, elapsed * 10);
 
 		_updatePreview(elapsed);
+
+		if (_inputGraceTimer > 0)
+		{
+			_inputGraceTimer -= elapsed;
+			return;
+		}
 
 		if (controls.BACK)
 		{
@@ -1059,6 +1105,11 @@ class MobileSettingsSubState extends MusicBeatSubstate
 				// screen right back up instead of just dumping the player at
 				// the tab picker (see OptionsState.create()'s own check).
 				OptionsState._reopenMobileSettingsAfterReset = true;
+				// Also remember which row was selected -- 'aspectRatio' itself,
+				// the one the player is looking at right now -- so the freshly
+				// reopened screen (see create() below) lands back on it instead
+				// of snapping to the top of the list.
+				OptionsState._reopenMobileSettingsSelectedId = id;
 				FlxG.resetState();
 			case 'storageMode': ClientPrefs.storageMode = v;
 			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible = (v == 'on');
@@ -1198,29 +1249,58 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		#if mobile
 		_opts.push({
 			id: 'aspectRatio', kind: 'string',
-			label: Lang.str('opt_aspectratio', 'Screen Fit'),
-			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nFit: keeps 16:9 with black bars. Stretch: fills screen (may distort). Expand: shows more of the background on wide screens, no distortion.'),
-                        choices: [Lang.str('choice_aspect_fit', 'Fit (16:9)'), Lang.str('choice_aspect_stretch', 'Stretch'), Lang.str('choice_aspect_expand', 'Expand')],
-                        stored:  ['fit', 'stretch', 'expand'],
+			label: Lang.str('opt_aspectratio', 'Screen Mode'),
+			desc:  Lang.str('opt_aspectratio_desc', 'How the game fills the screen.\nNormal: keeps 16:9 with black bars. Wide: shows more of the background on wide screens, no distortion. Stretch: fills the screen exactly (may distort).'),
+			// Display order matches how these actually compare (least to most
+			// aggressive about filling the screen) -- 'Screen Fit'/'Fit (16:9)'
+			// read as jargon with no hint of what the other two options
+			// actually trade off against it.
+			choices: [Lang.str('choice_aspect_fit', 'Normal'), Lang.str('choice_aspect_expand', 'Wide'), Lang.str('choice_aspect_stretch', 'Stretch')],
+			stored:  ['fit', 'expand', 'stretch'],
 			defaultVal: 'fit'
 		});
 
 		#if android
 		_opts.push({
 			id: 'storageMode', kind: 'string',
-			label: Lang.str('opt_storagemode', 'Storage Location'),
-			desc:  Lang.str('opt_storagemode_desc', 'Where mods/DLC/saves are stored.\nShared: the classic folder, visible to any file manager, needs "All files access". App-Only: no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nChanging this offers to move your existing files to the new location.'),
-			choices: [Lang.str('choice_storagemode_shared', 'Shared'), Lang.str('choice_storagemode_scoped', 'App-Only')],
+			label: Lang.str('opt_storagemode', 'Storage Type'),
+			desc:  Lang.str('opt_storagemode_desc',
+				'Where mods/DLC/saves are stored.\nEXTERNAL: the classic /.ImpostorLegacy/ folder, visible to any file manager, needs "All files access". DATA: the app-private /com.motorfrog.impostor/ folder, no special permission needed, but only reachable from this app, and gets deleted if you uninstall.\nChanging this offers to move your existing files to the new location.'),
+			// Display strings only -- the values actually written to
+			// ClientPrefs/read by StorageSystem stay 'Shared'/'Scoped' (see
+			// `stored` below), so existing installs' saved preference and
+			// StorageSystem's own mode checks don't need to change at all.
+			// 'Shared'/'App-Only' read as vague jargon with no hint of what
+			// they actually mean -- EXTERNAL/DATA plus the folder paths above
+			// says outright where your files actually go.
+			choices: [Lang.str('choice_storagemode_shared', 'EXTERNAL'), Lang.str('choice_storagemode_scoped', 'DATA')],
 			stored:  ['Shared', 'Scoped'],
 			defaultVal: 'Shared'
 		});
 		#end
 
+		#if android
+		// Label/description follow whichever Storage Type is actually active
+		// right now, instead of a generic "Data Folder" that doesn't say
+		// which of the two very different folders (EXTERNAL vs DATA) this is
+		// about to open.
+		final openFolderIsExternal = ClientPrefs.storageMode != 'Scoped';
+		_opts.push({
+			id: 'openDataFolder', kind: 'button',
+			label: openFolderIsExternal
+				? Lang.str('opt_openexternalfolder', 'Open External Folder')
+				: Lang.str('opt_opendatafolder', 'Open Data Folder'),
+			desc: openFolderIsExternal
+				? Lang.str('opt_openexternalfolder_desc', 'Opens /.ImpostorLegacy/ in your file manager.\nUse this to install mods or access save files.')
+				: Lang.str('opt_opendatafolder_desc', 'Opens the app-private /com.motorfrog.impostor/ folder in your file manager.\nUse this to install mods or access save files.')
+		});
+		#else
 		_opts.push({
 			id: 'openDataFolder', kind: 'button',
 			label: Lang.str('opt_opendatafolder', 'Open Data Folder'),
 			desc:  Lang.str('opt_opendatafolder_desc', 'Opens the game data folder in your file manager.\nUse this to install mods or access save files.')
 		});
+		#end
 		#end
 
 		if (_sel >= _opts.length) _sel = _opts.length - 1;
@@ -1234,24 +1314,13 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		return switch (opt.kind)
 		{
 			case 'percent':
-				var pct = Std.int(Math.round(_getFloat(opt.id) * 100));
-				// 5 segments, not 10 -- a 10-segment bar ('[----------] 100%',
-				// 17 chars) is wider than this row's fixed 134px value box at
-				// size 22 ever renders cleanly, so FlxText's word-wrap folded
-				// it across lines (only one breakable space, right before the
-				// '%'), scattering the '#'/'-' fill across rows instead of one
-				// tidy line. 5 segments tops out at 12 chars ('[-----] 100%'),
-				// the same ballpark as the longest 'string' choice text that
-				// already fits this exact box (e.g. 'Virtual Pad').
-				var filled = Std.int(pct / 20);
-				var bar = '[';
-				// '#'/'-' instead of '█'/'░' -- both block-shade glyphs are missing
-				// from vcr.ttf (confirmed via fonttools cmap), same invisible-glyph
-				// issue fixed elsewhere this session.
-				for (i in 0...filled) bar += '#';
-				for (i in filled...5) bar += '-';
-				bar += '] ' + pct + '%';
-				bar;
+				// Just the number -- both 'percent' rows (Hitbox Opacity,
+				// Virtual Pad Opacity) already have a live preview on the left
+				// showing that exact opacity in real time (see _currentOpacity()/
+				// _idleAlpha()/_pressAlpha()), so a second, abstracted '[#--] %'
+				// bar next to the number was redundant with what the player can
+				// already see directly.
+				Std.int(Math.round(_getFloat(opt.id) * 100)) + '%';
 			case 'string':
 				if (opt.stored != null && opt.choices != null)
 				{

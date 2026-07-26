@@ -37,11 +37,18 @@ class OptionsState extends MusicBeatState
 	public static var onPlayState:Bool = false;
 
 	// Set by MobileSettingsSubState right before it calls FlxG.resetState()
-	// (changing Screen Fit needs a full state recreation to actually apply --
+	// (changing Screen Mode needs a full state recreation to actually apply --
 	// see that file's own comment) -- consumed once in create() below so the
 	// freshly recreated instance reopens that same substate instead of just
 	// leaving the player at the tab picker with no substate open at all.
 	public static var _reopenMobileSettingsAfterReset:Bool = false;
+
+	// Set alongside _reopenMobileSettingsAfterReset -- the id of the row that
+	// was selected right before the reset (e.g. 'aspectRatio'), so the freshly
+	// reopened substate can land back on the same row instead of snapping to
+	// the top of the list. Consumed the same place, by MobileSettingsSubState
+	// itself once its own option list exists.
+	public static var _reopenMobileSettingsSelectedId:String;
 
 	static final TAB_BUILDERS:Map<String, Void->Array<Option>> = [
 		'language' => LanguageOptions.buildTab,
@@ -473,7 +480,7 @@ class OptionsState extends MusicBeatState
 
 		#if mobile
 		// See MobileSettingsSubState's own 'aspectRatio' case -- changing
-		// Screen Fit there needs a full state recreation to actually take
+		// Screen Mode there needs a full state recreation to actually take
 		// effect, which would otherwise just dump the player back at this
 		// screen's tab picker with no substate open. Reopens it right back up
 		// on the freshly recreated instance instead.
