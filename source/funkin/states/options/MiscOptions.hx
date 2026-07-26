@@ -46,6 +46,32 @@ On mobile this also controls whether Touch navigation is available -- if the cur
 			Lang.str('opt_shimeji_desc',
 				"If checked, your currently equipped pet wanders around the screen and reacts when tapped, everywhere except during an actual song.\nEquip a pet first from the Locker -- this has nothing to show without one."),
 			'shimejiEnabled', 'bool', false));
+		// addShimeji()/removeShimeji() are only ever called from create()/
+		// destroy() -- without this, toggling the option had no visible effect
+		// until the next state/substate change. Re-syncing the CURRENT layer
+		// (whichever of MusicBeatSubstate.instance/MusicBeatState.instance is
+		// actually on top) here makes it apply immediately either way:
+		// removeShimeji() is always safe to call (no-op if there isn't one),
+		// and addShimeji() re-checks ClientPrefs.shimejiEnabled itself, so
+		// this correctly no-ops right back out when the option was just
+		// turned off.
+		opts[opts.length - 1].onChange = () -> {
+			final sub = funkin.backend.MusicBeatSubstate.instance;
+			if (sub != null && sub.exists)
+			{
+				sub.removeShimeji();
+				sub.addShimeji();
+			}
+			else
+			{
+				final st = funkin.backend.MusicBeatState.instance;
+				if (st != null)
+				{
+					st.removeShimeji();
+					st.addShimeji();
+				}
+			}
+		};
 
 		opts.push(new Option(Lang.str('opt_category_developer', 'Developer').toUpperCase(), '', '', 'label'));
 
