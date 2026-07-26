@@ -97,6 +97,18 @@ class MainMenuState extends MusicBeatState
 	var devCodeTriggerBg:FlxSprite = null;
 	var devCodeField:FlxInputText = null;
 	var devCodeBoxOpen:Bool = false;
+	// Set by devCodeField.onFocusChange (see openDevCodeBox()) instead of
+	// calling closeDevCodeBox() directly from inside that signal -- that
+	// signal can fire from deep inside devCodeField's OWN update() (any touch
+	// landing elsewhere on screen while the field doesn't have it makes
+	// FlxInputText drop its own focus, dispatching this same event), so
+	// destroying/removing the field synchronously from there would mean
+	// mutating it (and this state's member list) while its own update() call
+	// is still executing further down that same stack. Acted on at the very
+	// top of update(), before super.update() runs the frame's own group
+	// update cascade, so the actual close always happens on a clean frame
+	// boundary instead.
+	var _pendingDevCodeClose:Bool = false;
 	// Tracks devCodeField.text so a real per-character change (typed OR
 	// backspaced) can be told apart from this state's own programmatic
 	// resets (fresh field on open, cleared on a wrong guess) -- matches
@@ -669,6 +681,12 @@ class MainMenuState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		if (_pendingDevCodeClose)
+		{
+			_pendingDevCodeClose = false;
+			closeDevCodeBox();
+		}
+
 		if (FlxG.sound.music != null)
 		{
 			if (FlxG.sound.music.volume < 0.8) FlxG.sound.music.volume += 0.5 * elapsed;
@@ -941,14 +959,19 @@ class MainMenuState extends MusicBeatState
 		// to bring it back (FlxInputText.startFocus() is a no-op once
 		// hasFocus is already true, so a fresh tap on the field couldn't
 		// re-raise it either). onFocusChange(false) is this widget's own
-		// signal for exactly that, so just treat it the same as BACK: close
-		// the box. Guarded on devCodeBoxOpen since closeDevCodeBox() below
-		// destroys this field, which dispatches this same event on its way
-		// out (see FlxInputText.destroy() -> endFocus()) -- closeDevCodeBox()
-		// sets devCodeBoxOpen = false as its very first line, so that second,
-		// re-entrant call is skipped instead of double-destroying the field.
+		// signal for exactly that, so treat it the same as BACK: close the
+		// box. Only sets a flag here, NOT calling closeDevCodeBox() directly --
+		// this signal also fires from plain FlxInputText.checkTouchInput()
+		// logic (a touch landing anywhere else on screen while the field
+		// isn't the one being pressed makes it drop its own focus the same
+		// way), which runs from deep inside this same field's own update()
+		// call. Destroying/removing it synchronously from there would mean
+		// mutating the field -- and this state's own member list -- while its
+		// update() is still executing further down that same call stack.
+		// _pendingDevCodeClose is only ever acted on at the very top of
+		// update(), on a clean frame boundary, before any of that runs again.
 		devCodeField.onFocusChange.add((focused) -> {
-			if (!focused && devCodeBoxOpen) closeDevCodeBox();
+			if (!focused && devCodeBoxOpen) _pendingDevCodeClose = true;
 		});
 
 		devCodeField.startFocus();
