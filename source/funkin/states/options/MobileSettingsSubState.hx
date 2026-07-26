@@ -1044,6 +1044,17 @@ class MobileSettingsSubState extends MusicBeatSubstate
 			case 'aspectRatio':
 				ClientPrefs.aspectRatioMode = v;
 				funkin.backend.FunkinRatioScaleMode.resetScaleMode();
+				// resetScaleMode() only resizes the game canvas/cameras --
+				// every screen's own UI (positions/sizes derived from
+				// gameCutoutSize) is laid out once in its own create() and
+				// never re-checked afterward, so it stayed visually wrong
+				// (using the OLD cutout) until the next full state switch,
+				// which recomputes it from scratch. FlxG.resetState()
+				// recreates the current top-level state right now instead of
+				// waiting for the player to navigate there themselves --
+				// this substate (and any other currently open) goes down
+				// with it, same as any other full state switch.
+				FlxG.resetState();
 			case 'storageMode': ClientPrefs.storageMode = v;
 			case 'hitboxHints': ClientPrefs.hitboxHintsAlwaysVisible = (v == 'on');
 		}
