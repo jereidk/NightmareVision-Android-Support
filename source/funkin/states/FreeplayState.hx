@@ -686,8 +686,8 @@ class FreeplayState extends AmongUIState
 	override function closeSubState()
 	{
 		super.closeSubState();
-		
-		lockMovement = false;
+
+		deferUnlockMovement();
 	}
 	
 	override function update(elapsed:Float)

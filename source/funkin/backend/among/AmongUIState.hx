@@ -21,7 +21,12 @@ class AmongUIState extends MusicBeatState
 	public var localBeans(default, set):Int;
 	public var localCurrency(default, set):Null<String>;
 	public var lockMovement:Bool = false;
-	
+
+	// Set by deferUnlockMovement() (called from a subclass's closeSubState()
+	// override instead of setting lockMovement = false directly) -- see
+	// update()'s own check for why the clear itself has to wait a frame.
+	var _pendingSubstateUnlock:Bool = false;
+
 	public var returnState:Class<flixel.FlxState> = MainMenuState;
 
 	// Shared leak fix for every AmongUIState screen (Freeplay, StoryMenu,
@@ -101,13 +106,41 @@ class AmongUIState extends MusicBeatState
 		if (MobileNavUtil.allowPointerNav()) backButton.revive();
 	}
 
+	/**
+	 * Call from a subclass's closeSubState() override instead of setting
+	 * lockMovement = false directly. FlxState.tryUpdate() calls update()
+	 * BEFORE it processes a pending closeSubState() (resetSubState(), which
+	 * is what actually nulls subState, is deferred to later in that same
+	 * call) -- clearing lockMovement synchronously the instant a substate's
+	 * close() ran left it false for one whole frame before that substate is
+	 * actually destroyed. On that frame, Controls.requested still routed to
+	 * the dying substate's own (stale, un-updated since the closing press)
+	 * virtual pad, so this state's own BACK check below could read that same
+	 * press and fire exit() (or worse, some other input path could open yet
+	 * another substate while the old one technically hadn't finished closing
+	 * -- the "A replaced by B" corpse-pad bug MusicBeatSubstate.destroy()'s
+	 * own comment describes, leaving the pad animating but never triggering
+	 * anything afterward). Deferred until subState is actually confirmed
+	 * null instead, matching OptionsState's own analogous fix for blockInput.
+	 */
+	function deferUnlockMovement():Void
+	{
+		_pendingSubstateUnlock = true;
+	}
+
 	public override function update(elapsed:Float):Void
 	{
+		if (_pendingSubstateUnlock && subState == null)
+		{
+			_pendingSubstateUnlock = false;
+			lockMovement = false;
+		}
+
 		if (!lockMovement && (controls.BACK || (MobileNavUtil.allowPointerNav() && backButton.alive && FlxG.mouse.justPressed && FlxG.mouse.overlaps(backButton, camUpper)))) exit();
 
 		super.update(elapsed);
 	}
-	
+
 	public function exit():Void
 	{
 		if (lockMovement) return;

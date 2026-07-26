@@ -94,9 +94,9 @@ class CosmicubeSelectState extends AmongUIState
 	override function closeSubState():Void
 	{
 		super.closeSubState();
-		
-		lockMovement = false;
-		
+
+		deferUnlockMovement();
+
 		for (card in cards) card.refresh();
 	}
 	

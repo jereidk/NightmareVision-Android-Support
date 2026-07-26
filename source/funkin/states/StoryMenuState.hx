@@ -374,7 +374,7 @@ class StoryMenuState extends AmongUIState
 	{
 		super.closeSubState();
 
-		lockMovement = false;
+		deferUnlockMovement();
 		wasPressingCruiser = false;
 	}
 	
