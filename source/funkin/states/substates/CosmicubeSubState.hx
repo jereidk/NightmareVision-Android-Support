@@ -85,17 +85,25 @@ class CosmicubeSubState extends MusicBeatSubstate
 		Mods.currentModDirectory = (meta.mod.length == 0 ? null : meta.mod);
 		
 		(overlayCamera = new FlxCamera()).bgColor = 0;
+		overlayCamera.antialiasing = ClientPrefs.globalAntialiasing;
 		FlxG.cameras.add(overlayCamera, false);
-		
+
 		// Created before bg exists (below), so it can't reference bg.x directly —
 		// but bg.x's own centering formula (Math.round(FlxG.width-1245)*.5) shifts
 		// by half of whatever extra width 'expand' mode reveals, so applying that
 		// same half-cutout offset here keeps this viewport aligned with the panel
 		// once it's created.
 		(cubeCamera = new FlxCamera(50 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5, 110, 860, 560)).bgColor = FlxColor.BLACK;
+		// Panning/zooming this camera (mouse wheel, and the lerp-to-1 zoom that
+		// runs every frame while a node is selected below) left it rendering
+		// nearest-neighbor without this -- fine at zoom 1, but every other
+		// zoom level (0.2..1.75) showed visibly blocky/aliased nodes, worst at
+		// the low end where the most content gets packed into the same buffer.
+		cubeCamera.antialiasing = ClientPrefs.globalAntialiasing;
 		FlxG.cameras.add(cubeCamera, false);
-		
+
 		(awardCamera = new FlxCamera()).bgColor = 0;
+		awardCamera.antialiasing = ClientPrefs.globalAntialiasing;
 		FlxG.cameras.add(awardCamera, false);
 		
 		add(black = new flixel.system.FlxBGSprite());
@@ -107,12 +115,24 @@ class CosmicubeSubState extends MusicBeatSubstate
 		starsBG.camera = cubeCamera;
 		starsBG.scrollFactor.set();
 		starsBG.velocity.x = -4.5;
+		// FlxBackdrop's drawBlit mode (its default) pre-renders every visible
+		// tile into one intermediary bitmap sized for the CURRENT camera zoom,
+		// and regenerates it whenever that zoom changes -- its own doc comment
+		// recommends drawBlit = false when camera zoom "changes often", which
+		// is exactly what cubeCamera does here (mouse-wheel zoom, plus the
+		// lerp-to-1 zoom running every single frame while a node is selected).
+		// Regenerating a full-viewport bitmap every frame during that lerp
+		// showed up as exactly what it sounds like: gaps where a stale/
+		// mid-regen tile grid didn't fully cover the panel, worst while
+		// zoomed out (more tiles needed per regen).
+		starsBG.drawBlit = false;
 		add(starsBG);
-		
+
 		starsFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
 		starsFG.camera = cubeCamera;
 		starsFG.scrollFactor.set();
 		starsFG.velocity.x = -9;
+		starsFG.drawBlit = false;
 		add(starsFG);
 		
 		maze = new CosmicubeNode('root');
