@@ -1,0 +1,72 @@
+IDEA: Dejar de heredar de FlxUIState en las pantallas que no usan FlxUI
+=========================================================================
+
+CONTEXTO
+--------
+Toda MusicBeatState (Title, MainMenu, Options, Freeplay, Loading, PlayState,
+etc.) extiende flixel.addons.ui.FlxUIState (fuente: MusicBeatState.hx:25).
+Esto es necesario para los editores (ChartEditorState, MenuCharacterEditorState,
+WeekEditorState), que sí usan FlxUI de verdad (FlxUIDropDownMenuEx,
+FlxUIInputTextEx, etc.).
+
+El problema: FlxUIState.create() arma incondicionalmente un
+FlxUITooltipManager por cada estado -- incluso en pantallas que nunca
+muestran un tooltip. Confirmado: NADA en este repo lee `state.tooltips`
+fuera de los editores, y ni siquiera ellos lo usan (ChartEditorState arma
+sus propios FlxText a mano en addNoteTooltip(), no pasa por el manager
+heredado).
+
+Ese FlxUITooltipManager, con solo existir, construye un FlxUITooltip(100, 50)
+por defecto en su propio constructor -- 2 bitmaps (fondo + fondo de flecha)
+más 2 FlxText (título/cuerpo) -- en CADA pantalla, para tirarlos
+inmediatamente al destruirse. Ya se mitigó parcialmente (ver commit
+24b73f53): los 2 bitmaps ahora se cachean y reusan en vez de reconstruirse
+cada vez, pero los 2 FlxText siguen siendo desperdicio real en cada
+transición de estado, sin forma segura de evitarlo desde afuera:
+
+- El campo `tooltips` es `(default, null)` -- ni una subclase puede
+  ponerlo en null.
+- Llamarle `.destroy()` deja la referencia viva pero con su lista interna
+  en null, y el propio `FlxUIState.update()` corre
+  `tooltips.update(elapsed)` cada frame sin chequear si ya fue destruido
+  -- update() hace `for (i in 0...list.length)` sobre ese array null =
+  crash garantizado en el próximo frame, en TODAS las pantallas.
+
+SOLUCIÓN PROPUESTA
+-------------------
+Separar la jerarquía en dos:
+
+1. MusicBeatState deja de extender FlxUIState directamente. Pasa a
+   extender la clase base normal de Flixel (FlxState) más lo que ya
+   provee MusicBeatState hoy (Conductor, scripts, virtual pad, etc.).
+
+2. Se crea una nueva clase intermedia, p.ej. FlxUIMusicBeatState
+   (extends MusicBeatState, implements/extends FlxUIState o compone un
+   FlxUI adentro), SOLO para los 3 editores que de verdad usan FlxUI
+   (ChartEditorState, MenuCharacterEditorState, WeekEditorState).
+
+3. Todo el resto (Title, MainMenu, Options, Freeplay, Loading, PlayState,
+   y los ~40 states/substates restantes) sigue extendiendo el
+   MusicBeatState "liviano", sin FlxUIState, sin FlxUITooltipManager,
+   cero costo de por vida.
+
+POR QUÉ NO SE HIZO DE UNA
+---------------------------
+- Blast radius enorme: toca la clase base que TODOS los estados del juego
+  extienden -- CUALQUIER cosa que dependa (aunque sea implícitamente) de
+  algún método/campo que FlxUIState provee por herencia dejaría de
+  compilar o cambiaría de comportamiento sutilmente en 40+ archivos.
+- No hay compilador local disponible en este entorno de trabajo (revisión
+  manual de balance de llaves/paréntesis es el único método de
+  verificación usado en esta sesión) -- un refactor de esta escala es
+  demasiado arriesgado de hacer a ciegas.
+- Ganancia real pero chica: 2 FlxText por transición de estado, ya
+  limpiados solos por la red de seguridad (disposeNewSince) sin fugar
+  memoria. No es un bug visible, es desperdicio de CPU/GC menor.
+
+VEREDICTO
+---------
+Vale la pena hacerlo el día que se toque MusicBeatState.hx por otra razón
+grande (y haya forma de probar en un dispositivo real antes de mergear),
+no como cambio aislado. Hasta entonces, el fix chico ya aplicado (cachear
+los 2 bitmaps compartidos) cubre la parte más pesada del desperdicio.
