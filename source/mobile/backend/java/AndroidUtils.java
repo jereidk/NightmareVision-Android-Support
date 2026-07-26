@@ -6,6 +6,7 @@ import android.app.GameState;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
@@ -438,6 +439,42 @@ public class AndroidUtils extends Extension {
                     android.util.Log.e("AndroidUtils", "requestHighRefreshRate failed: " + e);
                     JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "requestHighRefreshRate failed: " + e);
                 }
+            }
+        });
+    }
+
+    /**
+     * Whether the OS currently reports a hardware keyboard attached
+     * (USB/Bluetooth) -- Configuration.keyboard is NOKEYS on a touch-only
+     * device with nothing plugged in, QWERTY/12KEY once one is connected.
+     * The on-screen soft keyboard and the game's own virtual pad don't
+     * affect this value at all, which is exactly what's needed here: neither
+     * can generate the physical FlxG.keys press that finishes a REBIND.
+     */
+    public static boolean hasPhysicalKeyboard() {
+        final Activity activity = mainActivity;
+        if (activity == null) return false;
+        try {
+            return activity.getResources().getConfiguration().keyboard != Configuration.KEYBOARD_NOKEYS;
+        } catch (Exception e) {
+            android.util.Log.e("AndroidUtils", "hasPhysicalKeyboard failed: " + e);
+            JavaCrashHandler.appendToGameLog("AndroidUtils", "ERROR", "hasPhysicalKeyboard failed: " + e);
+            return false;
+        }
+    }
+
+    /**
+     * Shows a native Android Toast. Used for brief feedback on actions that
+     * don't open any new screen (e.g. a blocked menu entry), where there's
+     * nowhere in the Flixel UI itself to put a message.
+     */
+    public static void showToast(final String message) {
+        final Activity activity = mainActivity;
+        if (activity == null || message == null) return;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
             }
         });
     }

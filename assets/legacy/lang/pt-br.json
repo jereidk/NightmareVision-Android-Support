@@ -694,6 +694,7 @@
 		"video_skip_android": "◄ (Botão voltar) para pular",
 		"opt_controls_rebind_hint": "Pressione uma tecla ou botão...",
 		"opt_controls_rebind_hint_mobile": "Conecte um teclado ou controle para remapear",
+		"opt_controls_keybinds_locked": "Conecte um teclado ou controle para usar Teclas",
 		"opt_language_current": "Atual",
 		"opt_language_downloaded": "Baixado",
 		"opt_language_noresults": "Nenhum idioma corresponde a:",

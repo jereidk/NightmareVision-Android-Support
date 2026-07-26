@@ -13,6 +13,8 @@ class AndroidUtils
 	static var _setGameplayState = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "setGameplayState", "(Z)V");
 	static var _getMaxRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "getMaxRefreshRate", "()F");
 	static var _requestHighRefreshRate = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "requestHighRefreshRate", "()V");
+	static var _hasPhysicalKeyboard = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "hasPhysicalKeyboard", "()Z");
+	static var _showToast = JNI.createStaticMethod("mobile/backend/java/AndroidUtils", "showToast", "(Ljava/lang/String;)V");
 
 	// JNI.createStaticMethod() defaults useArray to false, which returns the
 	// method wrapped via Reflect.makeVarArgs -- meant to be called with plain
@@ -152,6 +154,29 @@ class AndroidUtils
 	public static function requestHighRefreshRate():Void
 	{
 		try { _requestHighRefreshRate(); }
+		catch (e:Dynamic) {}
+	}
+
+	/**
+	 * Whether Android reports a hardware keyboard currently attached
+	 * (USB/Bluetooth) -- doesn't count the on-screen soft keyboard or the
+	 * game's own virtual pad. Used to block physical-key rebinding on a
+	 * touch-only device, where a REBIND prompt would otherwise just sit
+	 * there for its full timeout with no way to complete it.
+	 */
+	public static function hasPhysicalKeyboard():Bool
+	{
+		try { return _hasPhysicalKeyboard(); }
+		catch (e:Dynamic) { return false; }
+	}
+
+	/**
+	 * Shows a native Android Toast -- brief feedback for actions that don't
+	 * open any new screen (e.g. a blocked menu entry).
+	 */
+	public static function showToast(message:String):Void
+	{
+		try { _showToast(message); }
 		catch (e:Dynamic) {}
 	}
 }

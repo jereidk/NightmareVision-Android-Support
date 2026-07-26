@@ -694,6 +694,7 @@
 		"video_skip_android": "◄ (Botón atrás) para saltar",
 		"opt_controls_rebind_hint": "Pulsa una tecla o botón...",
 		"opt_controls_rebind_hint_mobile": "Conecta un teclado o mando para reasignar",
+		"opt_controls_keybinds_locked": "Conecta un teclado o mando para usar Teclas",
 		"opt_language_current": "Actual",
 		"opt_language_downloaded": "Descargado",
 		"opt_language_noresults": "Ningún idioma coincide con:",

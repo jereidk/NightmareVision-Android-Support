@@ -219,6 +219,24 @@ class OptionsState extends MusicBeatState
 		{
 			case 'controls':
 				final gamepad = FlxG.gamepads.getFirstActiveGamepad();
+				// A gamepad works fine here (its buttons complete a REBIND on
+				// their own), but with no gamepad this would default to the
+				// Keys device -- and a touch-only Android device with no
+				// physical keyboard attached can never generate the real
+				// FlxG.keys press REBIND needs, so every single bind would
+				// just sit there for the full timeout doing nothing (see
+				// rebindHintText in ControlsSubState.hx, which explains this
+				// once you're already stuck inside). Block entry outright
+				// instead of letting the player walk into that dead end.
+				#if android
+				if (gamepad == null && !mobile.backend.AndroidUtils.hasPhysicalKeyboard())
+				{
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					mobile.backend.AndroidUtils.showToast(Lang.str('opt_controls_keybinds_locked', 'Connect a keyboard or gamepad to use Keybinds'));
+					blockInput = false;
+					return;
+				}
+				#end
 				openSubState(new funkin.states.options.ControlsSubState(gamepad != null ? Gamepad(gamepad.id) : Keys));
 			#if mobile
 			case 'mobile':

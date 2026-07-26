@@ -637,6 +637,7 @@
 		"video_skip_android": "◄ (Botão voltar) para saltar",
 		"opt_controls_rebind_hint": "Prima uma tecla ou botão...",
 		"opt_controls_rebind_hint_mobile": "Liga um teclado ou comando para remapear",
+		"opt_controls_keybinds_locked": "Liga um teclado ou comando para usar Teclas",
 		"opt_language_current": "Atual",
 		"opt_language_downloaded": "Transferido",
 		"opt_language_noresults": "Nenhum idioma corresponde a:",

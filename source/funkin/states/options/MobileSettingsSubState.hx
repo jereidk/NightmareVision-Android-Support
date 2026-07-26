@@ -1139,13 +1139,21 @@ class MobileSettingsSubState extends MusicBeatSubstate
 		{
 			case 'percent':
 				var pct = Std.int(Math.round(_getFloat(opt.id) * 100));
-				var filled = Std.int(pct / 10);
+				// 5 segments, not 10 -- a 10-segment bar ('[----------] 100%',
+				// 17 chars) is wider than this row's fixed 134px value box at
+				// size 22 ever renders cleanly, so FlxText's word-wrap folded
+				// it across lines (only one breakable space, right before the
+				// '%'), scattering the '#'/'-' fill across rows instead of one
+				// tidy line. 5 segments tops out at 12 chars ('[-----] 100%'),
+				// the same ballpark as the longest 'string' choice text that
+				// already fits this exact box (e.g. 'Virtual Pad').
+				var filled = Std.int(pct / 20);
 				var bar = '[';
 				// '#'/'-' instead of '█'/'░' -- both block-shade glyphs are missing
 				// from vcr.ttf (confirmed via fonttools cmap), same invisible-glyph
 				// issue fixed elsewhere this session.
 				for (i in 0...filled) bar += '#';
-				for (i in filled...10) bar += '-';
+				for (i in filled...5) bar += '-';
 				bar += '] ' + pct + '%';
 				bar;
 			case 'string':

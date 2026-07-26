@@ -607,6 +607,7 @@
 		"opt_category_controls": "Keybinds",
 		"opt_controls_rebind_hint": "Press a key or button...",
 		"opt_controls_rebind_hint_mobile": "Connect a keyboard or gamepad to rebind",
+		"opt_controls_keybinds_locked": "Connect a keyboard or gamepad to use Keybinds",
 		"opt_category_gameplay": "Gameplay",
 		"opt_category_graphics": "Graphics",
 		"opt_category_visualsui": "Visuals and UI",
