@@ -136,9 +136,12 @@ class OptionsState extends MusicBeatState
 	// stay readable instead of scattering the same two magic numbers around.
 	static final DESC_GAP:Float = 6;
 	// Taller description box so multi-line option descriptions get room to
-	// breathe. panelH trades this against LIST_MAX_VISIBLE below, so the panel's
-	// bottom edge stays put -- only ~half an option row is given up for it.
-	static final DESC_H:Float = 96;
+	// breathe -- 96 still clipped the longer descriptions in this codebase
+	// (e.g. Gameplay Changers' Scroll Type) to ~3 visible lines. panelH
+	// trades this against LIST_MAX_VISIBLE below, so the panel's bottom edge
+	// stays put -- one fewer option row fits, in exchange for descriptions
+	// actually being readable.
+	static final DESC_H:Float = 140;
 
 	// menu/freeplay/card.png's own corner radius measures ~16-17px (scanned
 	// its alpha channel) -- 20 gives NineSlice.build() a couple px of buffer
