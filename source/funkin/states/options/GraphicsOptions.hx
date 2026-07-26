@@ -103,7 +103,7 @@ class GraphicsOptions
 		// preset switch could silently turn on.
 		opts.push(new Option(Lang.str('opt_nostages', 'No Stages'),
 			Lang.str('opt_nostages_desc',
-				'[EXPERIMENTAL]\nIf checked, stage backgrounds are never created at all -- biggest RAM/loading win, but a handful of stages use scripted background effects (flickers, spotlights) that will silently do nothing.\nCharacters and the HUD are unaffected.'),
+				'[EXPERIMENTAL]\nIf checked, stage backgrounds -- including scripted effects like flickers and spotlights -- are never created at all, for the biggest RAM/loading win.\nCharacters and the HUD are unaffected.'),
 			'noStages', 'bool', false));
 
 		final shadersOption = new Option(Lang.str('opt_shaders', 'Shaders'), Lang.str('opt_shaders_desc', 'If checked, shaders will be enabled across the mod'), 'shaders', 'bool', true);

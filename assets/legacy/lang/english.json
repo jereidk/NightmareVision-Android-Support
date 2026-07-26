@@ -660,7 +660,7 @@
 		"opt_lowquality": "Low Quality",
 		"opt_lowquality_desc": "Disables some background details,\ndecreases loading times and improves performance.",
 		"opt_nostages": "No Stages",
-		"opt_nostages_desc": "[EXPERIMENTAL] Stage backgrounds are never created at all -- biggest RAM/loading win, but a handful of stages use scripted background effects (flickers, spotlights) that will silently do nothing.\nCharacters and the HUD are unaffected.",
+		"opt_nostages_desc": "[EXPERIMENTAL] Stage backgrounds -- including scripted effects like flickers and spotlights -- are never created at all, for the biggest RAM/loading win.\nCharacters and the HUD are unaffected.",
 		"opt_shaders": "Shaders",
 		"opt_shaders_desc": "Enables shaders across the mod.",
 		"opt_antialiasing": "Anti-Aliasing",

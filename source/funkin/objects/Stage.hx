@@ -22,7 +22,27 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 	 * Attached script to the stage
 	 */
 	public var script:Null<FunkinScript> = null;
-	
+
+	/**
+	 * "No Stages" optimization (GraphicsOptions.hx) support flag.
+	 *
+	 * `buildStage()`'s own `ClientPrefs.noStages` early-return only ever
+	 * covered `stageData.stageObjects` (the JSON-declared props) -- but most
+	 * modern stages (ejected, airship, turbulence, etc.) build their actual
+	 * background art from their own hscript's `onLoad()`/`onCreatePost()`/
+	 * per-beat hooks instead, via the bare `add(...)` local (bound to this
+	 * same instance's `add()` below) or `stage.add(...)`/`stage.insert(...)`
+	 * directly -- none of which were ever gated, so "No Stages" did nothing
+	 * for the vast majority of stages.
+	 *
+	 * PlayState toggles this true for the stage's entire lifetime once
+	 * `noStages` is on, EXCEPT for the brief moment it adds the character
+	 * groups (`gfGroup`/`dadGroup`/`boyfriendGroup`/`pet`) via `stage.add()`
+	 * -- those must never be blocked, matching this class's own doc comment
+	 * that characters/HUD are unaffected by this setting.
+	 */
+	public var blockAdds:Bool = false;
+
 	/**
 	 * The name of the current stage
 	 */
@@ -92,6 +112,24 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 		#if android SystemMonitor.profEnd(); #end
 	}
 
+	// See blockAdds's doc comment -- these are the actual "No Stages" gate.
+	// Scripts reach this same overridden method whether they call the bare
+	// `add(...)` local (bound to `this.add` in runScript(), so it resolves
+	// to this override, not the raw FlxTypedGroup one), `stage.add(...)`, or
+	// `stage.insert(...)` (turbulence.hx uses this to depth-sort props
+	// against the character groups).
+	override function add(basic:FlxBasic):FlxBasic
+	{
+		if (blockAdds) return basic;
+		return super.add(basic);
+	}
+
+	override function insert(position:Int, object:FlxBasic):FlxBasic
+	{
+		if (blockAdds) return object;
+		return super.insert(position, object);
+	}
+
 	/**
 	 *
 	 * instantiates any stage objects and attempts to load a script for the stage
@@ -99,9 +137,14 @@ class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 	public function buildStage()
 	{
 		// "No Stages" optimization (GraphicsOptions.hx) -- skip creating any
-		// of this stage's background art entirely. Characters/HUD are added
-		// elsewhere by PlayState, never through stageObjects, so they're
-		// unaffected; runScript() below still runs normally.
+		// of the JSON-declared stageObjects entirely (saves loading their
+		// graphics at all, not just skipping the add). Script-driven stage
+		// art (the majority of stages -- ejected, airship, turbulence, etc.
+		// build their background from their own hscript instead of
+		// stageObjects) is covered separately by blockAdds, which PlayState
+		// keeps true for this stage's whole lifetime; runScript() below
+		// still runs normally either way, since scripts also set up camera
+		// zoom/shaders/cutscenes that must keep working.
 		if (ClientPrefs.noStages) return;
 
 		if (stageData.stageObjects != null)

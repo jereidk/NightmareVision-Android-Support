@@ -956,6 +956,11 @@ class PlayState extends MusicBeatState
 		
 		trace('[PlayState] Creating stage (${SONG.stage})...');
 		stage = new Stage(SONG.stage);
+		// See Stage.blockAdds's doc comment -- kept true for this stage's
+		// entire lifetime except the character-group adds just below, so
+		// script-driven background art (most stages) is suppressed the same
+		// as buildStage()'s stageObjects, without ever touching characters.
+		stage.blockAdds = ClientPrefs.noStages;
 		trace('[PlayState] Stage created, applying data...');
 		applyStageData(stage.stageData);
 
@@ -982,10 +987,16 @@ class PlayState extends MusicBeatState
 		if (!ScriptConstants.stopping(scripts.call("onAddSpriteGroups")))
 		{
 			add(stage);
+			// Characters/pet must never be blocked by "No Stages" -- briefly
+			// lift the gate for these specific adds, then restore it so any
+			// later script hooks (onCreatePost, per-beat effects, etc.) stay
+			// suppressed for the rest of the song.
+			stage.blockAdds = false;
 			stage.add(gfGroup);
 			stage.add(dadGroup);
 			stage.add(boyfriendGroup);
 			stage.add(pet);
+			stage.blockAdds = ClientPrefs.noStages;
 		}
 		
 		inline function addSongScripts(directory)

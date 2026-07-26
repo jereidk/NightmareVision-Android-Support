@@ -841,7 +841,7 @@
 		"opt_threadedpreload": "Pré-carregamento de Música em Segundo Plano",
 		"opt_threadedpreload_desc": "O ecrã de carregamento descodifica os recursos da música seguinte numa thread em segundo plano enquanto a barra anima. Se desativado, apenas espera, e o PlayState carrega tudo sozinho da forma simples, um de cada vez.",
 		"opt_nostages": "Sem Cenários",
-		"opt_nostages_desc": "[EXPERIMENTAL] Os fundos dos cenários nunca são criados -- o maior ganho de RAM/tempo de carregamento, mas alguns cenários usam efeitos de fundo com script (cintilações, holofotes) que simplesmente não farão nada.\nAs personagens e o HUD não são afetados.",
+		"opt_nostages_desc": "[EXPERIMENTAL] Os fundos dos cenários -- incluindo efeitos com script como cintilações e holofotes -- nunca são criados, para o maior ganho de RAM/tempo de carregamento.\nAs personagens e o HUD não são afetados.",
 		"opt_debugdisplaysize": "Tamanho do Painel de Depuração",
 		"opt_debugdisplaysize_desc": "Ajusta a escala do painel de FPS/depuração no canto superior esquerdo."
 	}

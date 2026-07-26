@@ -829,7 +829,7 @@
 		"opt_threadedpreload": "Precarga de Canción en Segundo Plano",
 		"opt_threadedpreload_desc": "La pantalla de carga decodifica los recursos de la siguiente canción en un hilo en segundo plano mientras la barra se anima. Si está desactivado, simplemente espera, y PlayState carga todo por sí mismo de la forma tradicional, uno por uno.",
 		"opt_nostages": "Sin Escenarios",
-		"opt_nostages_desc": "[EXPERIMENTAL] Los fondos de escenario nunca se crean -- el mayor ahorro de RAM y tiempo de carga, pero algunos escenarios usan efectos con script en el fondo (parpadeos, focos) que simplemente no harán nada.\nLos personajes y el HUD no se ven afectados.",
+		"opt_nostages_desc": "[EXPERIMENTAL] Los fondos de escenario -- incluyendo efectos con script como parpadeos y focos -- nunca se crean, logrando el mayor ahorro de RAM y tiempo de carga.\nLos personajes y el HUD no se ven afectados.",
 		"opt_debugdisplaysize": "Tamaño del Panel de Depuración",
 		"opt_debugdisplaysize_desc": "Escala el panel de FPS/depuración de la esquina superior izquierda."
 	}
