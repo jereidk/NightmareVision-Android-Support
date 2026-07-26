@@ -558,9 +558,9 @@ class MainMenuState extends MusicBeatState
 
 	function buildPortCredit():Void
 	{
-		final iconSize:Int = 88;
-		final iconX:Float  = 42;
-		final iconY:Float  = 112;
+		final iconSize:Int = 108;
+		final iconX:Float  = 70;
+		final iconY:Float  = 100;
 
 		ytIcon = new FlxSprite(iconX, iconY).loadGraphic(_circleMask(Paths.image('menu/main/ytChannelIcon').bitmap, iconSize));
 		ytIcon.scrollFactor.set();
