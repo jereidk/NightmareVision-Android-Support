@@ -216,7 +216,38 @@ function speakerAnims(char:String = 'bf')
 	}
 	
 	boxChar = Lang.str(dialogueChar.name, dialogueChar.name);
+
+	recenterGfPortrait();
+
 	return who;
+}
+
+/**
+ * Keeps port1 (gf, the middle portrait) centered between port0 (bf side)
+ * and port2 (opponent side) instead of just screenCenter()'ing on the
+ * whole canvas -- a wide side portrait can otherwise overlap/collide with
+ * gf since her position never accounted for their actual width. Uses the
+ * fixed target x's from v4SpeakerShit()'s entrance tween (not the live
+ * .x) so this is correct even mid-tween, and re-runs on every dialogue
+ * line (called from speakerAnims(), which every refreshDialogue() call
+ * goes through) so it stays right if a later line switches to a
+ * differently-sized portrait.
+**/
+function recenterGfPortrait()
+{
+	if (portrait.length < 3) return;
+
+	var gf:FunkinSprite = portrait[1];
+	var bfSide:FunkinSprite = portrait[0];
+	var dadSide:FunkinSprite = portrait[2];
+
+	final leftTargetX = 247 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+	final rightTargetX = 865 + FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
+
+	var leftEdge = bfSide.visible ? (leftTargetX + bfSide.width) : leftTargetX;
+	var rightEdge = dadSide.visible ? rightTargetX : (rightTargetX + dadSide.width);
+
+	gf.x = (leftEdge + rightEdge) * 0.5 - gf.width * 0.5;
 }
 
 /**
