@@ -1,0 +1,49 @@
+name: Export haxelib/Lime cache (for Indie-Cross-Public)
+
+# One-off utility, not part of the normal release pipeline: packages the
+# already-warm haxelib + Lime caches (same FunkinCrew fork commits pinned in
+# Indie-Cross-Public's .hxpkg) as a downloadable artifact so that repo's CI
+# can import them instead of compiling lime/hxcpp/flixel/openfl from source
+# on every cold cache. Safe to delete once Indie-Cross-Public no longer
+# needs it.
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+
+      # Read-only restores against the exact same keys devBuilds.yml already
+      # populated -- fails loudly (fail-on-cache-miss) instead of silently
+      # exporting an empty/partial cache if these ever go stale.
+      - name: Restore Haxe libraries cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+          fail-on-cache-miss: true
+
+      - name: Restore Lime cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          fail-on-cache-miss: true
+
+      - name: Package for export
+        run: |
+          mkdir -p /tmp/export
+          tar -C "$HOME" -czf /tmp/export/haxelib-root.tar.gz haxelib
+          tar -czf /tmp/export/haxelib-project.tar.gz .haxelib
+
+      - name: Upload export artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: haxelib-cache-export
+          path: /tmp/export/*.tar.gz
+          retention-days: 3
