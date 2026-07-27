@@ -258,6 +258,25 @@ class MusicBeatSubstate extends FlxSubState
 	public var shimejiCam:FlxCamera;
 	var _hidPreviousShimeji:Bool = false;
 
+	// Separate from _hidPreviousShimeji/_previousInstance above on purpose:
+	// that chain assumes _previousInstance (a static field, MusicBeatSubstate.
+	// instance captured at construction) always correctly reflects whichever
+	// substate is actually enclosing this one, which depends on every prior
+	// substate in this session having cleanly restored that static on its own
+	// destroy() -- a single stale/rebuilt link anywhere in that chain (e.g.
+	// this isn't the very first substate opened during the current state's
+	// lifetime) silently skips hiding entirely, since the code only ever
+	// checked ONE candidate (either _previousInstance's or the base state's,
+	// never both). Confirmed on-device: opening LanguagePickerSubState left
+	// OptionsState's own companion visible underneath it, then popped back
+	// in on close/reopen. Unconditionally also checking the base
+	// MusicBeatState's companion here, regardless of what the
+	// _previousInstance branch above did, closes that gap -- idempotent in
+	// the well-behaved case (the base's is already hidden by whichever
+	// substate is directly enclosing this one, so there's nothing left to
+	// hide), a real fix when that chain silently missed it.
+	var _hidBaseShimeji:Bool = false;
+
 	public function addShimeji():Void
 	{
 		if (!ClientPrefs.shimejiEnabled) return;
@@ -280,22 +299,17 @@ class MusicBeatSubstate extends FlxSubState
 		shimeji.cameras = [shimejiCam];
 		add(shimeji);
 
-		if (_previousInstance != null)
+		if (_previousInstance != null && _previousInstance.shimeji != null && _previousInstance.shimeji.visible)
 		{
-			if (_previousInstance.shimeji != null && _previousInstance.shimeji.visible)
-			{
-				_previousInstance.shimeji.visible = false;
-				_hidPreviousShimeji = true;
-			}
+			_previousInstance.shimeji.visible = false;
+			_hidPreviousShimeji = true;
 		}
-		else
+
+		final base = funkin.backend.MusicBeatState.instance;
+		if (base != null && base.shimeji != null && base.shimeji.visible)
 		{
-			final parent = funkin.backend.MusicBeatState.instance;
-			if (parent != null && parent.shimeji != null && parent.shimeji.visible)
-			{
-				parent.shimeji.visible = false;
-				_hidPreviousShimeji = true;
-			}
+			base.shimeji.visible = false;
+			_hidBaseShimeji = true;
 		}
 	}
 
@@ -317,16 +331,14 @@ class MusicBeatSubstate extends FlxSubState
 		if (_hidPreviousShimeji)
 		{
 			_hidPreviousShimeji = false;
+			if (_previousInstance != null && _previousInstance.exists && _previousInstance.shimeji != null) _previousInstance.shimeji.visible = true;
+		}
 
-			if (_previousInstance != null)
-			{
-				if (_previousInstance.exists && _previousInstance.shimeji != null) _previousInstance.shimeji.visible = true;
-			}
-			else
-			{
-				final parent = funkin.backend.MusicBeatState.instance;
-				if (parent != null && parent.shimeji != null && parent.shimeji.exists) parent.shimeji.visible = true;
-			}
+		if (_hidBaseShimeji)
+		{
+			_hidBaseShimeji = false;
+			final base = funkin.backend.MusicBeatState.instance;
+			if (base != null && base.shimeji != null) base.shimeji.visible = true;
 		}
 	}
 
