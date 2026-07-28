@@ -396,11 +396,14 @@ class MusicBeatState extends FlxUIState
 		{
 			for (step in oldStep...curStep)
 			{
-				curStep = step + 1;
+				curBeat = Math.floor((curStep = (step + 1)) / 4);
 
-				updateBeat();
+				if (curStep >= 0)
+				{
+					stepHit();
 
-				if (curStep >= 0) stepHit();
+					if (curStep % 4 == 0) beatHit();
+				}
 
 				updateSection();
 			}
@@ -468,7 +471,7 @@ class MusicBeatState extends FlxUIState
 		nextSectionStep = Math.round(Conductor.getStep(Conductor.sectionToSeconds(curSection + 1)));
 	}
 
-	inline function updateBeat():Void curBeat = Math.floor(curDecBeat = curDecStep / 4);
+	inline function updateBeat():Void curBeat = Math.floor(curDecBeat = (curDecStep / 4));
 
 	inline function updateCurStep():Void curStep = Math.floor(curDecStep = Conductor.getStep(Conductor.songPosition - ClientPrefs.noteOffset));
 
@@ -492,7 +495,6 @@ class MusicBeatState extends FlxUIState
 		scriptGroup.call('onStepHit', _stepArgs);
 		PluginsManager.callOnScripts('onStepHit');
 
-		if (curStep % 4 == 0) beatHit();
 	}
 
 	public function beatHit():Void

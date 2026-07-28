@@ -4,7 +4,7 @@
 		{
 			"loop": false,
 			"offsets": [
-				-5,
+				-15,
 				0
 			],
 			"anim": "idle",
@@ -38,7 +38,7 @@
 			"loop": false,
 			"flipY": false,
 			"offsets": [
-				-2,
+				0,
 				65
 			],
 			"anim": "hey",
@@ -127,10 +127,10 @@
 		}
 	],
 	"no_antialiasing": false,
-	"image": "characters/bf/bfairshipcalm",
+	"image": "characters/bf/bffork",
 	"position": [
 		-12,
-		338
+		342
 	],
 	"dance_every": 2,
 	"gameover_intial_sound": null,
@@ -139,7 +139,7 @@
 	"gameover_confirm_sound": null,
 	"healthicon": "bf",
 	"afterimages": true,
-	"gameover_character": "bfairship-dead",
+	"gameover_character": "bf-dead",
 	"vslice_sustains": false,
 	"flip_x": true,
 	"healthbar_colour": -13520687,

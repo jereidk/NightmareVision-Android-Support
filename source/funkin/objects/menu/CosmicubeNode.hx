@@ -67,6 +67,7 @@ class CosmicubeNode extends BaseNode
 		}
 	}
 	
+	@:access(funkin.objects.HealthIcon)
 	public function setup():Void
 	{
 		if (meta != null)
@@ -207,8 +208,6 @@ class CosmicubeNode extends BaseNode
 			if (Paths.fileExists('data/characters/$id.json')) info = CharacterParser.fetchInfo(id);
 			
 			var color:Dynamic = (meta.color ?? info?.healthbar_colour);
-			color ??= info?.healthbar_colors;
-			var nodeIcon:Dynamic = (meta.icon ?? info?.healthicon);
 			
 			if (color != null)
 			{
@@ -222,10 +221,17 @@ class CosmicubeNode extends BaseNode
 				}
 			}
 			
-			if (icon != null)
+			var nodeIcon:Null<String> = (Reflect.hasField(meta, 'icon') ? meta.icon : info?.healthicon);
+			
+			if (nodeIcon != null)
 			{
-				icon = new HealthIcon(nodeIcon);
-				icon.setPosition(-60, -60);
+				icon ??= new HealthIcon();
+				icon.changeIcon(nodeIcon);
+				icon.updateOffset = false;
+				
+				icon.setPosition(-70, -70);
+				icon.scale.set(.75, .75);
+				icon.updateHitbox();
 			}
 			
 			overlay.color = bg.color;

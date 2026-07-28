@@ -227,7 +227,7 @@ function onLoad():Void
 {
 	// This will probably be reworked to have custom modded credits in the future.
 	// Nigga typing like serious Samuel im crying. But yea
-	if (Paths.fileExists('securitydlc/meta.json', null, true))
+	if (Paths.fileExists('securitydlc/meta.json', null, PathsTestMode.LOOSE))
 	{
 		hasDLC = true;
 		
@@ -417,11 +417,13 @@ function onLoad():Void
 	
 	if (hasDLC)
 	{
+		final oldMod:Null<String> = Mods.currentModDirectory;
+		
 		Mods.currentModDirectory = 'securitydlc'; // its geniuse
 		
 		queueRollImage(496, 'dlc');
 		
-		Mods.currentModDirectory = null;
+		Mods.currentModDirectory = oldMod;
 	}
 		
 	modManager.queueFuncOnce(528 * 4, function(_) {
@@ -508,16 +510,16 @@ function victory():Void
 	victory.screenCenter(FlxAxes.X);
 	victory.scrollFactor.set();
 	add(victory);
-
+	
 	var thanks:FlxText = new FlxText(0, 600, 900, 'Thank you for playing!');
-	thanks.setFormat(Paths.font('vcr.ttf'), 66, 0xff80ffff, 'center');
+	thanks.setFormat(Paths.font('vcr.ttf'), 56, 0xff80ffff, 'center');
 	insert(0, thanks);
 	thanks.text = Lang.str('credits_thanks');
 	thanks.screenCenter(FlxAxes.X);
 	thanks.scrollFactor.set();
 	thanks.alpha = 0;
 	add(thanks);
-
+	
 	FlxTween.tween(shadow.scale, {x: r}, 3, {ease: FlxEase.quadInOut, startDelay: .5});
 	FlxTween.tween(shadowBlockLeft, {x: -640}, 3, {ease: FlxEase.quadInOut, startDelay: .5});
 	FlxTween.tween(shadowBlockRight, {x: FlxG.width * .5 + 640}, 3, {ease: FlxEase.quadInOut, startDelay: .5});
@@ -532,20 +534,9 @@ function loadCredits():Void
 {
 	for (sprite in creditsGroup)
 		sprite.destroy();
-
+		
 	creditsGroup.clear();
-
-	// outline2.frag has no per-instance uniforms (only bitmap/
-	// openfl_TextureCoordv, which OpenFL rebinds per sprite automatically at
-	// draw time) -- one shared instance is enough for every icon below.
-	// newShader() creates a brand new FunkinRuntimeShader (reads the source
-	// off disk and compiles it) EVERY call; with 120+ credited people having
-	// an icon, doing that per-icon instead of once was most of this
-	// function's cost -- confirmed via CreditsRollSubState::onLoad taking
-	// 6.3s in a device log, ~3s of which was a separate FlxAnimate atlas
-	// load, leaving the rest unaccounted for until this loop.
-	var iconOutlineShader = newShader('outline2');
-
+	
 	var y:Float = 0;
 	for (credit in credits)
 	{
@@ -585,11 +576,11 @@ function loadCredits():Void
 			var iconPath:String = 'credits/icons/' + credit.icon;
 			if (isFlagIcon) iconPath = 'credits/icons/flags/' + credit.icon.substr(6);
 			
-			final iconExists:Bool = Paths.fileExists('images/' + iconPath + '.png', null, PathsTestMode.LOOSE);
+			final iconExists:Bool = Paths.fileExists('images/$iconPath.png', null, PathsTestMode.LOOSE);
 			var icon:FlxSprite = new FlxSprite(0, 0, Paths.image(iconExists ? iconPath : 'credits/icons/unknown', null, null, PathsTestMode.LOOSE));
 			
 			icon.visible = iconExists;
-			icon.shader = iconOutlineShader;
+			icon.shader = newShader('outline2');
 			icon.scale.set(isFlagIcon ? .5 : .5, isFlagIcon ? .5 : .5);
 			icon.updateHitbox();
 			
@@ -666,23 +657,6 @@ function onUpdate(elapsed:Float):Void
 		else if (FlxG.keys.justPressed.LEFT)
 		{
 			music.time = Math.max(Conductor.beatToSeconds(Math.ceil(curDecBeat / 16 - 1.25) * 16), 0);
-		}
-
-		// Mobile: 2-finger tap — left half = back, right half = forward
-		var _touches = FlxG.touches.list;
-		if (_touches != null)
-		{
-			var _justPressed = [for (t in _touches) if (t.justPressed) t];
-			if (_justPressed.length >= 2)
-			{
-				var _avgX:Float = 0;
-				for (t in _justPressed) _avgX += t.x;
-				_avgX /= _justPressed.length;
-				if (_avgX > FlxG.width / 2)
-					music.time = Conductor.beatToSeconds(Math.floor(curDecBeat / 16 + 1) * 16);
-				else
-					music.time = Math.max(Conductor.beatToSeconds(Math.ceil(curDecBeat / 16 - 1.25) * 16), 0);
-			}
 		}
 	}
 	

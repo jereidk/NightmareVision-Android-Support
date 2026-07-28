@@ -128,7 +128,6 @@ function onCreatePost()
 
 	if (gf.getFlag('dangerSkateboard'))
 	{
-		gfBoard.visible = false;
 		gfBoard.animation.addByPrefix('bop', 'skateboard', 24, true);
 		gfBoard.x += 110;
 		gfBoard.y -= 50;
