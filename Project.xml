@@ -179,7 +179,7 @@
 		
 	<!-- Mobile Shit -->
     <section if="android">
-	    <set name="android.minimum-sdk-version" value="26" />
+	    <set name="android.minimum-sdk-version" value="21" />
 	    <config:android permission="android.permission.MANAGE_MEDIA"/> 
 		<config:android permission="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 		<config:android permission="android.permission.WRITE_EXTERNAL_STORAGE" />
