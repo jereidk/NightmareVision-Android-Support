@@ -79,7 +79,7 @@
     <haxeflag name="--macro" value="include('funkin')" />
     <haxeflag name="--macro" value="include('flixel', true, ['flixel.addons.nape.*','flixel.addons.editors.*','flixel.addons.tile.FlxRayCastTilemap','flixel.system.macros'])" />
     
-    <haxeflag name="-dce no" />
+    <haxeflag name="-dce std" />
 
     <!-- HAXEDEFS -->
 

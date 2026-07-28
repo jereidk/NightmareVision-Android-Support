@@ -183,6 +183,12 @@ class SymbolResolver
 			final mapped = mapAbi(abi);
 			if (mapped == null) return false;
 
+			// Try external storage first (user-placed .sym, no APK bloat).
+			// Fall back to APK assets for builds that still embed it.
+			final symName = 'symbols-$mapped.sym';
+			_content = readFromExternal(symName);
+			if (_content != null) return true;
+
 			// Read via JavaCrashHandler's AssetManager-backed reader, not
 			// funkin.FunkinAssets/openfl.Assets -- this file is written into
 			// src/main/assets/ by the CI's Gradle-side extractNativeSymbols
@@ -190,8 +196,7 @@ class SymbolResolver
 			// finalized, so OpenFL's Assets.exists()/getContent() never see
 			// it even though it's genuinely inside the APK (see
 			// JavaCrashHandler.java's readRawTextAsset() doc comment).
-			final path = 'data/symbols-$mapped.sym';
-			final content = mobile.backend.JavaCrashHandler.readRawTextAsset(path);
+			final content = mobile.backend.JavaCrashHandler.readRawTextAsset('data/$symName');
 			if (content == null || content.length == 0) return false;
 
 			_content = content;
@@ -279,6 +284,28 @@ class SymbolResolver
 		if (abi.indexOf('arm64') == 0) return 'arm64';
 		if (abi.indexOf('armeabi') == 0) return 'armv7';
 		return null;
+	}
+
+	/**
+	 * Tries to read the .sym file from external storage
+	 * (StorageSystem.getDirectory() + 'data/symbols-{abi}.sym').
+	 * Returns null if not found or unreadable.
+	 */
+	static function readFromExternal(symName:String):Null<String>
+	{
+		#if (android && sys)
+		try
+		{
+			final dir = mobile.backend.StorageSystem.getDirectory();
+			if (dir == null || dir.length == 0) return null;
+			final extPath = haxe.io.Path.join([dir, 'data', symName]);
+			if (!sys.FileSystem.exists(extPath)) return null;
+			return sys.io.File.getContent(extPath);
+		}
+		catch (e:Dynamic) return null;
+		#else
+		return null;
+		#end
 	}
 	#end
 }
