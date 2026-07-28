@@ -155,7 +155,7 @@
 
 	<section if="CRASH_HANDLER">
    		<haxedef name="openfl-enable-handle-error"/>
-    	<haxedef name="HXCPP_CHECK_POINTER"/>
+    	<haxedef name="HXCPP_CHECK_POINTER" if="debug"/>
     	<haxedef name="HXCPP_STACK_LINE"/>
     	<haxedef name="HXCPP_STACK_TRACE"/>
 	</section>
