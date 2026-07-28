@@ -11,6 +11,7 @@ var bluemira:FlxSprite;
 var pot:FlxSprite;
 var vines:FlxSprite;
 var pretenderDark:FlxSprite;
+var rhmmira:FlxSprite;
 var heartEmitter:FlxEmitter;
 var heartsImage:FlxSprite;
 var pinkVignette:FlxSprite;
