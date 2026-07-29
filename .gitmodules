@@ -1,4 +1,0 @@
-[submodule "content/NMV-Base-Game"]
-	path = content/NMV-Base-Game
-	url = https://github.com/jereidk/base-game-for-android
-	branch = claude/impostor-legacy-asset-optimization-50v73p
