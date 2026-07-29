@@ -38,15 +38,16 @@ class PermissionBlockerState extends FlxUIState
     var _titleText:FlxText;
     var _descText:FlxText;
     var _grantButton:FlxButton;
+    var _skipButton:FlxButton;
     var _statusText:FlxText;
     var _checkingText:FlxText;
     var _permissionDialogOpened:Bool = false;
     var _timerActive:Bool = false;
+    var _pendingTimer:FlxTimer = null;  // Store reference to cancel on destroy
 
     override public function create():Void
     {
         // Si ya tenemos permiso (raro, pero por si acaso), continuar
-        // IMPORTANTE: no retornar aqui — super.create() debe llamarse siempre
         #if android
         final alreadyGranted = hasAllFilesAccess();
         #else
@@ -56,8 +57,6 @@ class PermissionBlockerState extends FlxUIState
         if (alreadyGranted)
         {
             trace('[PermissionBlocker] Permiso ya concedido - continuando');
-            // No llamamos goToInit() aqui — diferimos al proximo frame
-            // para que super.create() complete primero
         }
 
         // Siempre crear UI
@@ -100,36 +99,47 @@ class PermissionBlockerState extends FlxUIState
 
         _grantButton = new FlxButton(0, 0, 'OTORGAR PERMISO', onGrantPermission);
         _grantButton.x = (FlxG.width - _grantButton.width) / 2;
-        _grantButton.y = FlxG.height * 0.72;
+        _grantButton.y = FlxG.height * 0.70;
         _grantButton.setGraphicSize(240, 60);
         _grantButton.updateHitbox();
         _grantButton.label.setFormat('assets/fonts/aller.ttf', 18, FlxColor.BLACK, CENTER);
         _grantButton.labelBold = true;
         add(_grantButton);
 
-        _statusText = new FlxText(40, FlxG.height * 0.84, FlxG.width - 80,
+        // Boton de escape: si el usuario deniega o no quiere dar permiso,
+        // puede continuar en modo Scoped (almacenamiento interno)
+        _skipButton = new FlxButton(0, 0, 'USAR ALMACENAMIENTO INTERNO', onSkipPermission);
+        _skipButton.x = (FlxG.width - _skipButton.width) / 2;
+        _skipButton.y = FlxG.height * 0.82;
+        _skipButton.setGraphicSize(240, 50);
+        _skipButton.updateHitbox();
+        _skipButton.label.setFormat('assets/fonts/aller.ttf', 14, FlxColor.GRAY, CENTER);
+        add(_skipButton);
+
+        _statusText = new FlxText(40, FlxG.height * 0.90, FlxG.width - 80,
             'Pulsa el botón para abrir los ajustes.\n' +
             'Busca "VS Impostor Legacy" → Permisos\n→ Archivos y medios → Permitir.', 14);
         _statusText.setFormat('assets/fonts/aller.ttf', 14, FlxColor.GRAY, CENTER);
         add(_statusText);
 
-        _checkingText = new FlxText(0, FlxG.height * 0.91, FlxG.width, '', 16);
+        _checkingText = new FlxText(0, FlxG.height * 0.94, FlxG.width, '', 16);
         _checkingText.setFormat('assets/fonts/aller.ttf', 16, FlxColor.YELLOW, CENTER);
         _checkingText.visible = false;
         add(_checkingText);
 
         _permissionDialogOpened = false;
 
-        // Registrar callback para cuando la app vuelve al foreground
+        // Registrar callback para cuando la app vuelve al foreground (focus gained).
+        // IMPORTANTE: FlxG.signals.stateSwitched NO EXISTE en HaxeFlixel.
+        // Usamos focusGained que SÍ existe (tambien es usado en MusicBeatState).
         #if android
-        FlxG.signals.stateSwitched.add(onStateSwitched);
+        FlxG.signals.focusGained.add(onFocusGained);
         #end
 
         // SIEMPRE llamar super.create() primero
         super.create();
 
-        // Des pues de super.create(), verificar si ya tenemos permiso
-        // y diferir la transicion si es el caso
+        // Despues de super.create(), verificar si ya tenemos permiso
         if (alreadyGranted)
         {
             deferredGoToInit();
@@ -146,8 +156,8 @@ class PermissionBlockerState extends FlxUIState
     function hasAllFilesAccess():Bool { return true; }
     #end
 
-    // Callback para cuando el estado se reanuda (vuelve al foreground)
-    inline function onStateSwitched():Void
+    // Callback para cuando la app recupera el focus (vuelve al foreground)
+    inline function onFocusGained():Void
     {
         #if android
         // Verificar si se nos fue concedido el permiso mientras estabamos
@@ -155,7 +165,7 @@ class PermissionBlockerState extends FlxUIState
         if (!_initialized && hasAllFilesAccess())
         {
             trace('[PermissionBlocker] Permiso concedido tras resume - continuando');
-            FlxG.signals.stateSwitched.remove(onStateSwitched);
+            FlxG.signals.focusGained.remove(onFocusGained);
             deferredGoToInit();
         }
         #end
@@ -164,6 +174,7 @@ class PermissionBlockerState extends FlxUIState
     function onGrantPermission():Void
     {
         _grantButton.visible = false;
+        _skipButton.visible = false;
         _permissionDialogOpened = true;
 
         _statusText.text = 'Abriendo ajustes del sistema...\n' +
@@ -176,15 +187,45 @@ class PermissionBlockerState extends FlxUIState
         try
         {
             Interface.requestSetting('MANAGE_APP_ALL_FILES_ACCESS_PERMISSION');
-            trace('[PermissionBlocker] Diálogo de permiso abierto');
+            trace('[PermissionBlocker] Dialogo de permiso abierto');
         }
         catch (e:Dynamic)
         {
-            trace('[PermissionBlocker] Error al abrir diálogo: $e');
+            trace('[PermissionBlocker] Error al abrir dialogo: $e');
             _statusText.text = 'Error al abrir ajustes.\nCierra el juego y otorga el permiso manualmente.';
             _checkingText.visible = false;
         }
         #end
+    }
+
+    // Escape hatch: el usuario no quiere dar permiso, usar modo Scoped
+    function onSkipPermission():Void
+    {
+        _grantButton.visible = false;
+        _skipButton.visible = false;
+        _permissionDialogOpened = true;
+
+        _statusText.text = 'Cambiando a almacenamiento interno...\n' +
+            'Los mods externos no estaran disponibles.';
+
+        _checkingText.text = '';
+        _checkingText.visible = true;
+
+        #if android
+        try
+        {
+            // Cambiar a modo Scoped para que el juego pueda bootear
+            // sin necesidad de MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+            StorageSystem.applyStorageMode('Scoped');
+            trace('[PermissionBlocker] Modo cambiado a Scoped');
+        }
+        catch (e:Dynamic)
+        {
+            trace('[PermissionBlocker] Error al cambiar modo: $e');
+        }
+        #end
+
+        deferredGoToInit();
     }
 
     override public function update(elapsed:Float):Void
@@ -194,11 +235,10 @@ class PermissionBlockerState extends FlxUIState
         #if android
         // SIEMPRE verificar permiso, no solo si el boton fue pulsado.
         // El permiso puede otorgarse desde otra fuente (shell, otra app, etc.)
-        // incluso antes de que el usuario haga click.
         if (!_initialized && hasAllFilesAccess())
         {
             trace('[PermissionBlocker] Permiso concedido - continuando');
-            FlxG.signals.stateSwitched.remove(onStateSwitched);
+            FlxG.signals.focusGained.remove(onFocusGained);
             deferredGoToInit();
             return;
         }
@@ -216,16 +256,20 @@ class PermissionBlockerState extends FlxUIState
 
     // DIFERIDO: no puede llamarse sincronamente desde create()
     // FlxG.switchState() desde dentro de create() causa nested switchState
-    // y corrupcion de estado. Por eso usamos un timer de 1ms.
+    // y corrupcion de estado. Por eso usamos un timer de 1 frame (16ms).
     function deferredGoToInit():Void
     {
         if (_initialized || _timerActive) return;
         _timerActive = true;
         _initialized = true;
 
-        new FlxTimer().start(0.001, (_) -> {
+        // Usar 0.016s (1 frame) en vez de 0.001s para asegurar que
+        // el timer dispara en el proximo frame, no en el mismo
+        _pendingTimer = new FlxTimer();
+        _pendingTimer.start(0.016, (_) -> {
             _timerActive = false;
-            FlxG.signals.stateSwitched.remove(onStateSwitched);
+            _pendingTimer = null;
+            FlxG.signals.focusGained.remove(onFocusGained);
 
             #if android
             try
@@ -248,7 +292,7 @@ class PermissionBlockerState extends FlxUIState
         });
     }
 
-    // Mantener goToInit() por compatibilidad si alguien lo llama directamente
+    // Mantener goToInit() por compatibilidad
     function goToInit():Void
     {
         deferredGoToInit();
@@ -256,8 +300,16 @@ class PermissionBlockerState extends FlxUIState
 
     override public function destroy():Void
     {
+        // IMPORTANTE: cancelar el timer pendiente antes de destruir
+        // para evitar que dispare en un estado ya destruido
+        if (_pendingTimer != null)
+        {
+            _pendingTimer.cancel();
+            _pendingTimer = null;
+        }
+
         #if android
-        FlxG.signals.stateSwitched.remove(onStateSwitched);
+        FlxG.signals.focusGained.remove(onFocusGained);
         #end
         super.destroy();
     }
