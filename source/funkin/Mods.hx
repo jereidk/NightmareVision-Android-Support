@@ -262,8 +262,23 @@ class Mods
 		all.resize(0);
 		
 		var write:Bool = false;
-		
-		for (mod in CoolUtil.coolTextFile('modsList.txt'))
+
+		// Same permission-timing race as ensureModsListExists() above -- on a
+		// fresh install, exists() can pass (the path stat's fine) while the
+		// actual read still fails because "All files access" hasn't landed
+		// yet, throwing hxcpp's raw file_contents native error. Never fatal:
+		// mods just stay unavailable until the next launch.
+		var modListLines:Array<String> = [];
+		try
+		{
+			modListLines = CoolUtil.coolTextFile('modsList.txt');
+		}
+		catch (e:Dynamic)
+		{
+			trace('Warn: failed to read modsList.txt (permission not granted yet?): $e');
+		}
+
+		for (mod in modListLines)
 		{
 			final dat:Array<String> = mod.split('|');
 			final folder:String = dat[0], modEnabled:Bool = (dat[1] == '1');
