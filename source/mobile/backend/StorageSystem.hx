@@ -79,6 +79,15 @@ class StorageSystem
 		return 'Shared';
 	}
 
+	/**
+	 * Public wrapper for _readBootstrapMode() — lets external callers
+	 * (e.g. Main.hx) check the storage mode without needing ClientPrefs.
+	 */
+	public static function readBootstrapMode():String
+	{
+		return _readBootstrapMode();
+	}
+
 	/** 'Shared': classic .<folderName> folder on shared external storage. 'Scoped': app-private Android/data/<package>/files/ folder. */
 	static function _androidRoot():String
 	{
