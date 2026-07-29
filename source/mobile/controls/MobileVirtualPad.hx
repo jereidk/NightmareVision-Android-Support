@@ -149,29 +149,29 @@ class MobileVirtualPad extends TouchInputManager
 		switch (Action)
 		{
 			case A:
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case B:
-				buttonB = add(createButton(actionX - 132, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonB = add(createButton(actionX - 132, baseY - 135, 'b', 0xFFCB00, [B]));
 			case X:
-				buttonX = add(createButton(actionX - 132, screenH - 135, 'x', 0x99062D, [X]));
+				buttonX = add(createButton(actionX - 132, baseY - 135, 'x', 0x99062D, [X]));
 			case A_B:
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case A_B_C:
-				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonC = add(createButton(actionX - 384, baseY - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case STORYMENU:
-			    buttonR = add(createButton(actionX - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
-				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+			    buttonR = add(createButton(actionX - 510, baseY - 135, 'r', 0x00D0FF, [NONE]));
+				buttonC = add(createButton(actionX - 384, baseY - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case FREEPLAY:
-			    buttonD = add(createButton(actionX - 636, screenH - 135, 'd', 0x0078FF, [NONE]));
-			    buttonR = add(createButton(actionX - 510, screenH - 135, 'r', 0x00D0FF, [NONE]));
-				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+			    buttonD = add(createButton(actionX - 636, baseY - 135, 'd', 0x0078FF, [NONE]));
+			    buttonR = add(createButton(actionX - 510, baseY - 135, 'r', 0x00D0FF, [NONE]));
+				buttonC = add(createButton(actionX - 384, baseY - 135, 'c', 0x44FF00, [C]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case CHART_EDITOR:
 				buttonV = add(createButton(actionX - 258, baseY - 495, 'v', 0x49A9B2, [V]));
 				buttonS = add(createButton(actionX - 132, baseY - 615, 's', 0xFDD6AB, [NONE]));
@@ -180,26 +180,26 @@ class MobileVirtualPad extends TouchInputManager
 				buttonC = add(createButton(actionX - 132, baseY - 375, 'c', 0x44FF00, [C]));
 				buttonY = add(createButton(actionX - 258, baseY - 375, 'y', 0x4A35B9, [Y]));
 				buttonZ = add(createButton(actionX - 132, baseY - 255, 'z', 0xCCB98E, [Z]));
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case CHARACTER_EDITOR:
 				buttonUp2 = add(createButton(dPad2_X + 105, dPad2_Y, 'up', 0x00FF00, [UP, noteUP]));
 				buttonLeft2 = add(createButton(dPad2_X, dPad2_Y + 105, 'left', 0xFF00FF, [LEFT, noteLEFT]));
 				buttonRight2 = add(createButton(dPad2_X + 210, dPad2_Y + 105, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
 				buttonDown2 = add(createButton(dPad2_X + 105, dPad2_Y + 210, 'down', 0x00FFFF, [DOWN, noteDOWN]));
 				buttonV = add(createButton(actionX - 510, baseY - 255, 'v', 0x49A9B2, [V]));
-				buttonD = add(createButton(actionX - 510, screenH - 135, 'd', 0x0078FF, [D]));
+				buttonD = add(createButton(actionX - 510, baseY - 135, 'd', 0x0078FF, [D]));
 				buttonX = add(createButton(actionX - 384, baseY - 255, 'x', 0x99062D, [X]));
-				buttonC = add(createButton(actionX - 384, screenH - 135, 'c', 0x44FF00, [C]));
+				buttonC = add(createButton(actionX - 384, baseY - 135, 'c', 0x44FF00, [C]));
 				buttonY = add(createButton(actionX - 258, baseY - 255, 'y', 0x4A35B9, [Y]));
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
 				buttonZ = add(createButton(actionX - 132, baseY - 255, 'z', 0xCCB98E, [Z]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 			case NONE:
 				// lmao
 			default:
-				buttonB = add(createButton(actionX - 258, screenH - 135, 'b', 0xFFCB00, [B]));
-				buttonA = add(createButton(actionX - 132, screenH - 135, 'a', 0xFF0000, [A]));
+				buttonB = add(createButton(actionX - 258, baseY - 135, 'b', 0xFFCB00, [B]));
+				buttonA = add(createButton(actionX - 132, baseY - 135, 'a', 0xFF0000, [A]));
 		}
 		
 		scrollFactor.set();
@@ -315,10 +315,15 @@ class MobileVirtualPad extends TouchInputManager
 		var safeRight = Std.int(safe.right);
 		var baseY = FlxG.height - Std.int(safe.bottom);
 		
-		buttonUp = add(createButton(screenW - safeRight - 260, baseY - 300, 'up', 0x00FF00, [UP, noteUP]));
-		buttonLeft = add(createButton(screenW - safeRight - 20, baseY - 220, 'left', 0xFF00FF, [LEFT, noteLEFT]));
-		buttonRight = add(createButton(screenW - safeRight - 140, baseY - 220, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
-		buttonDown = add(createButton(screenW - safeRight - 140, baseY - 140, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+		// Mirror of LEFT_FULL layout anchored from the right safe area edge.
+		// LEFT_FULL horizontal offsets from left edge: Left=0, Center(Up/Down)=105, Right=207
+		// Mirrored: Right=0 from right edge, Center=105, Left=207
+		// Y positions identical to LEFT_FULL.
+		var rightEdge = screenW - safeRight;
+		buttonRight = add(createButton(rightEdge, baseY - 243, 'right', 0xFF0000, [RIGHT, noteRIGHT]));
+		buttonDown  = add(createButton(rightEdge - 105, baseY - 135, 'down', 0x00FFFF, [DOWN, noteDOWN]));
+		buttonUp    = add(createButton(rightEdge - 105, baseY - 345, 'up', 0x00FF00, [UP, noteUP]));
+		buttonLeft  = add(createButton(rightEdge - 207, baseY - 243, 'left', 0xFF00FF, [LEFT, noteLEFT]));
 	}
 	
 	
