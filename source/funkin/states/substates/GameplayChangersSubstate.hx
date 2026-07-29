@@ -36,7 +36,8 @@ import mobile.utils.MobileNavUtil;
  */
 class GameplayChangersSubstate extends MusicBeatSubstate
 {
-	static final LIST_X:Float = 360;
+	/** Width of the option list. */
+	static final LIST_W:Float = 720;
 
 	var list:TouchOptionList;
 	var closeButton:FlxSprite;
@@ -55,22 +56,22 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		super();
 
 		final cutout = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+		final listX = Std.int((FlxG.width - LIST_W) / 2);
 
 		var dim = new FlxSprite().makeGraphic(Std.int(FlxG.width), Std.int(FlxG.height), 0xE60A0A14);
 		add(dim);
 
-		var title = new FlxText(40 + cutout * 0.5, 50, 0, Lang.str('gc_title', 'Gameplay Changers'), 42);
+		var title = new FlxText(listX + 10, 50, 0, Lang.str('gc_title', 'Gameplay Changers'), 42);
 		title.setFormat(Paths.font('AmaticSC-Bold.ttf'), 40, FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		title.borderSize = 2;
 		title.antialiasing = ClientPrefs.globalAntialiasing;
 		add(title);
 
-		closeButton = new FlxSprite(1100 + cutout, 50).loadGraphic(Paths.image('menu/common/menuBack'));
+		closeButton = new FlxSprite(listX + LIST_W - 48, 50).loadGraphic(Paths.image('menu/common/menuBack'));
 		closeButton.antialiasing = ClientPrefs.globalAntialiasing;
 		add(closeButton);
 
-		final listW = (1160 + cutout) - LIST_X;
-		list = new TouchOptionList(LIST_X, 130, listW, 8);
+		list = new TouchOptionList(listX, 130, LIST_W, 8);
 		add(list);
 
 		list.setOptions(buildOptions(currentSongName));
