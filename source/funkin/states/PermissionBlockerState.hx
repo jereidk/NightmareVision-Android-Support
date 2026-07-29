@@ -6,6 +6,7 @@ import flixel.addons.ui.FlxUIState;
 import flixel.text.FlxText;
 import flixel.ui.FlxButton;
 import flixel.util.FlxColor;
+import flixel.util.FlxTimer;
 
 #if android
 import androidmanager.content.Interface;
@@ -23,11 +24,16 @@ import mobile.backend.StorageSystem;
  * 3. onGrantPermission() abre los ajustes del sistema (no-bloqueante)
  * 4. El usuario otorga el permiso y vuelve al juego
  * 5. update() detecta que el permiso fue concedido (polling)
- * 6. goToInit() establece CWD y va a Init.hx
+ * 6. deferredGoToInit() con timer diferido → CWD + Init
+ *
+ * IMPORTANTE: FlxG.switchState() NO puede llamarse sincronamente desde
+ * create() — eso causaria doble-nested switchState y corrupcion de estado.
+ * Por eso usamos FlxTimer para diferir la transicion al siguiente frame.
  */
 class PermissionBlockerState extends FlxUIState
 {
-    static var _initialized:Bool = false;
+    // Instance flag (no static — each state instance is independent)
+    var _initialized:Bool = false;
 
     var _titleText:FlxText;
     var _descText:FlxText;
@@ -35,9 +41,26 @@ class PermissionBlockerState extends FlxUIState
     var _statusText:FlxText;
     var _checkingText:FlxText;
     var _permissionDialogOpened:Bool = false;
+    var _timerActive:Bool = false;
 
     override public function create():Void
     {
+        // Si ya tenemos permiso (raro, pero por si acaso), continuar
+        // IMPORTANTE: no retornar aqui — super.create() debe llamarse siempre
+        #if android
+        final alreadyGranted = hasAllFilesAccess();
+        #else
+        final alreadyGranted = true;
+        #end
+
+        if (alreadyGranted)
+        {
+            trace('[PermissionBlocker] Permiso ya concedido - continuando');
+            // No llamamos goToInit() aqui — diferimos al proximo frame
+            // para que super.create() complete primero
+        }
+
+        // Siempre crear UI
         var bg = new FlxSprite(0, 0);
         bg.makeGraphic(FlxG.width, FlxG.height, FlxColor.fromRGB(15, 15, 25));
         add(bg);
@@ -98,22 +121,19 @@ class PermissionBlockerState extends FlxUIState
         _permissionDialogOpened = false;
 
         // Registrar callback para cuando la app vuelve al foreground
-        // (el usuario regresa de los ajustes del sistema)
         #if android
         FlxG.signals.stateSwitched.add(onStateSwitched);
         #end
 
-        // Si ya tenemos permiso (raro, pero por si acaso), continuar
-        #if android
-        if (hasAllFilesAccess())
-        {
-            trace('[PermissionBlocker] Permiso ya concedido - continuando');
-            goToInit();
-            return;
-        }
-        #end
-
+        // SIEMPRE llamar super.create() primero
         super.create();
+
+        // Des pues de super.create(), verificar si ya tenemos permiso
+        // y diferir la transicion si es el caso
+        if (alreadyGranted)
+        {
+            deferredGoToInit();
+        }
     }
 
     #if android
@@ -122,17 +142,21 @@ class PermissionBlockerState extends FlxUIState
         try { return Environment.isExternalStorageManager(); }
         catch (e:Dynamic) { return false; }
     }
+    #else
+    function hasAllFilesAccess():Bool { return true; }
     #end
 
+    // Callback para cuando el estado se reanuda (vuelve al foreground)
     inline function onStateSwitched():Void
     {
-        // Cada vez que volvemos a este estado (foreground resume), verificar permiso
         #if android
-        if (hasAllFilesAccess())
+        // Verificar si se nos fue concedido el permiso mientras estabamos
+        // en segundo plano (el usuario lo otorgo desde ajustes y比我们回来)
+        if (!_initialized && hasAllFilesAccess())
         {
             trace('[PermissionBlocker] Permiso concedido tras resume - continuando');
             FlxG.signals.stateSwitched.remove(onStateSwitched);
-            goToInit();
+            deferredGoToInit();
         }
         #end
     }
@@ -168,16 +192,20 @@ class PermissionBlockerState extends FlxUIState
         super.update(elapsed);
 
         #if android
+        // SIEMPRE verificar permiso, no solo si el boton fue pulsado.
+        // El permiso puede otorgarse desde otra fuente (shell, otra app, etc.)
+        // incluso antes de que el usuario haga click.
+        if (!_initialized && hasAllFilesAccess())
+        {
+            trace('[PermissionBlocker] Permiso concedido - continuando');
+            FlxG.signals.stateSwitched.remove(onStateSwitched);
+            deferredGoToInit();
+            return;
+        }
+
         if (_permissionDialogOpened)
         {
-            if (hasAllFilesAccess())
-            {
-                trace('[PermissionBlocker] Permiso concedido - continuando');
-                FlxG.signals.stateSwitched.remove(onStateSwitched);
-                goToInit();
-                return;
-            }
-
+            // Animacion de puntos de espera
             var t = haxe.Timer.stamp();
             var dots = ['.   ', '..  ', '... ', '....'];
             var n = Std.int((t * 1.5)) % 4;
@@ -186,28 +214,51 @@ class PermissionBlockerState extends FlxUIState
         #end
     }
 
-    function goToInit():Void
+    // DIFERIDO: no puede llamarse sincronamente desde create()
+    // FlxG.switchState() desde dentro de create() causa nested switchState
+    // y corrupcion de estado. Por eso usamos un timer de 1ms.
+    function deferredGoToInit():Void
     {
-        if (_initialized) return;
+        if (_initialized || _timerActive) return;
+        _timerActive = true;
         _initialized = true;
 
-        #if android
-        try
-        {
-            var dir = StorageSystem.getDirectory();
-            #if sys
-            if (!sys.FileSystem.exists(dir))
-                sys.FileSystem.createDirectory(dir);
-            Sys.setCwd(StorageSystem.getStorageDirectory());
-            trace('[PermissionBlocker] CWD: ' + Sys.getCwd());
-            #end
-        }
-        catch (e:Dynamic)
-        {
-            trace('[PermissionBlocker] Error al crear directorio: $e');
-        }
-        #end
+        new FlxTimer().start(0.001, (_) -> {
+            _timerActive = false;
+            FlxG.signals.stateSwitched.remove(onStateSwitched);
 
-        FlxG.switchState(funkin.states.Init);
+            #if android
+            try
+            {
+                var dir = StorageSystem.getDirectory();
+                #if sys
+                if (!sys.FileSystem.exists(dir))
+                    sys.FileSystem.createDirectory(dir);
+                Sys.setCwd(StorageSystem.getStorageDirectory());
+                trace('[PermissionBlocker] CWD: ' + Sys.getCwd());
+                #end
+            }
+            catch (e:Dynamic)
+            {
+                trace('[PermissionBlocker] Error al crear directorio: $e');
+            }
+            #end
+
+            FlxG.switchState(funkin.states.Init);
+        });
+    }
+
+    // Mantener goToInit() por compatibilidad si alguien lo llama directamente
+    function goToInit():Void
+    {
+        deferredGoToInit();
+    }
+
+    override public function destroy():Void
+    {
+        #if android
+        FlxG.signals.stateSwitched.remove(onStateSwitched);
+        #end
+        super.destroy();
     }
 }
