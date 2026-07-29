@@ -147,8 +147,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			opts.push(new Option(Lang.str('gc_practice', 'Practice Mode'), Lang.str('gc_practice_desc', 'Play without misses or losses counting against you.'),
 				'', 'bool', false, null, null, () -> ClientPrefs.gameplaySettings.get('practice'), v -> ClientPrefs.gameplaySettings.set('practice', v)));
 
-			opts.push(new Option(Lang.str('gc_botplay', 'Botplay'), Lang.str('gc_botplay_desc', 'Watch the song play itself.'), '', 'bool', false, null, null,
-				() -> ClientPrefs.gameplaySettings.get('botplay'), v -> ClientPrefs.gameplaySettings.set('botplay', v)));
+			if (!PlayState.isStoryMode)
+				opts.push(new Option(Lang.str('gc_botplay', 'Botplay'), Lang.str('gc_botplay_desc', 'Watch the song play itself.'), '', 'bool', false, null, null,
+					() -> ClientPrefs.gameplaySettings.get('botplay'), v -> ClientPrefs.gameplaySettings.set('botplay', v)));
 		}
 
 		final resetOpt = new Option(Lang.str('gc_reset', 'Reset to Default'), '', '', 'button');

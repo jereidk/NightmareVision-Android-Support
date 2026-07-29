@@ -152,7 +152,8 @@ class PauseSubState extends funkin.backend.MusicBeatSubstate
 		{
 			final gameplayTogglesIndex = options.indexOf('options');
 			options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('practice', false) ? 'practice_off' : 'practice_on');
-			options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
+			if (!PlayState.isStoryMode)
+				options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
 		}
 
 		var scale:Float = Math.min(300 / (options.length * 60), 1);

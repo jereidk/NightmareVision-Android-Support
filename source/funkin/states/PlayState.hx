@@ -790,7 +790,7 @@ class PlayState extends MusicBeatState
 		// Showcase (dev-only) rides botplay's autoplay but keeps the HUD live
 		// and the mobile controls visible/animated -- see ClientPrefs.showcaseMode.
 		showcaseActive = ClientPrefs.inDevMode && ClientPrefs.showcaseMode;
-		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false) || showcaseActive;
+		cpuControlled = (!isStoryMode && ClientPrefs.getGameplaySetting('botplay', false)) || showcaseActive;
 		// Repaint the score line so toggling botplay from the pause menu's
 		// gameplay options swaps the BOTPLAY label / live score immediately on
 		// resume, instead of only after the next scored note. Guarded because
@@ -3158,7 +3158,7 @@ class PlayState extends MusicBeatState
 					clearNotesBefore(Conductor.songPosition);
 				}
 			}
-			if (FlxG.keys.justPressed.SIX)
+			if (!isStoryMode && FlxG.keys.justPressed.SIX)
 			{
 				cpuControlled = !cpuControlled;
 				// Repaint the score line so the BOTPLAY label appears/clears
