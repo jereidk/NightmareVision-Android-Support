@@ -846,11 +846,6 @@ class PlayState extends MusicBeatState
 	override public function create():Void
 	{
 		trace('[PlayState] ===== CREATE START =====');
-		
-		// Crash recovery: catch any exception during song initialization
-		// to skip broken songs in story mode instead of crashing.
-		try
-		{
 
 		// Real device logs showed LoadingState -> PlayState taking upwards of
 		// 50 SECONDS for dense songs, entirely inside this one synchronous
@@ -1309,23 +1304,6 @@ class PlayState extends MusicBeatState
 
 		refreshZ(stage);
 		trace('[PlayState] ===== CREATE END (success) =====');
-		}
-		catch (e:Dynamic)
-		{
-			var errMsg:String = Std.string(e);
-			Logger.log('[CrashRecovery] PlayState.create() failed: ' + errMsg, ERROR);
-			#if android
-			mobile.backend.JavaCrashHandler.appendToGameLog('CrashRecovery', 'ERROR', 'PlayState.create() failed: ' + errMsg);
-			mobile.backend.utils.PopUp.showAlert('Song Error', 'The song "' + (SONG?.song ?? 'unknown') + '" had an error.\n\n' + errMsg + '\n\nReturning to menu...', 'OK');
-			#end
-			FlxG.sound.playMusic(Paths.music('freakyMenu'));
-			CoolUtil.cancelMusicFadeTween();
-			if (isStoryMode)
-				FlxG.switchState(StoryMenuState.new);
-			else
-				FlxG.switchState(MainMenuState.new);
-			return;
-		}
 	}
 	
 	function set_songSpeed(value:Float):Float
@@ -4216,52 +4194,7 @@ class PlayState extends MusicBeatState
 					
 					trace('LOADING: ' + Paths.sanitize(storyMeta.playlist[0]) + difficulty);
 					
-					try
-					{
-						PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
-					}
-					catch (e:Dynamic)
-					{
-						// Song failed to load -- skip it in story mode
-						var errMsg:String = Std.string(e);
-						Logger.log('[CrashRecovery] Failed to load next song "' + songLowercase + '": ' + errMsg, ERROR);
-						#if android
-						mobile.backend.JavaCrashHandler.appendToGameLog('CrashRecovery', 'ERROR', 'Song "' + songLowercase + '" load failed: ' + errMsg);
-						#end
-						
-						// Remove broken song and try next in the week
-						storyMeta.playlist.remove(storyMeta.playlist[0]);
-						if (storyMeta.playlist.length <= 0)
-						{
-							// No more songs -- finish the week
-							_isLastSongOfWeek = true;
-							if (WeekData.weeksList[storyMeta.curWeek] != null)
-							{
-								if (!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false))
-								{
-									StoryMenuState.weekCompleted.set(WeekData.weeksList[storyMeta.curWeek], true);
-									FlxG.save.data.weekCompleted = StoryMenuState.weekCompleted;
-									Highscore.saveWeekScore(WeekData.getWeekFileName(), storyMeta.score, storyMeta.difficulty);
-								}
-							}
-							changedDifficulty = false;
-							#if mobile mobile.backend.utils.PopUp.showAlert('Song Skipped', 'The song "' + songLowercase + '" had an error and was skipped.\n\nError: ' + errMsg + '\n\nReturning to menu...', 'OK'); #end
-							if (!ScriptConstants.stopping(scripts.call('postEndSong')))
-							{
-								FlxG.sound.playMusic(Paths.music('freakyMenu'));
-								CoolUtil.cancelMusicFadeTween();
-								FlxG.switchState(StoryMenuState.new);
-							}
-							return;
-						}
-						
-						// Show popup, then continue to next song
-						#if mobile mobile.backend.utils.PopUp.showAlert('Song Skipped', 'The song "' + songLowercase + '" had an error and will be skipped.\n\nError: ' + errMsg + '\n\nContinuing to next song...', 'OK'); #end
-						
-						// Restart transition with the next song in playlist
-						endSong();
-						return;
-					}
+					PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
 					
 					// Prefetch next song's assets in background while the player
 					// watches the score popup.  LoadingState will pick up the
