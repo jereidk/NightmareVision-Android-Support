@@ -9,6 +9,7 @@ import flixel.util.FlxDestroyUtil;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxObject;
+import flixel.FlxState;
 import flixel.FlxSubState;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -53,6 +54,7 @@ import funkin.audio.SyncedFlxSoundGroup;
 #if VIDEOS_ALLOWED
 import funkin.video.FunkinVideoSprite;
 #end
+import funkin.backend.FallbackState;
 
 // Shared by every deferred tail segment queued from the same head note (see
 // PlayState._pendingTails). `headQueueNote` lets a deferred entry detect
@@ -846,6 +848,10 @@ class PlayState extends MusicBeatState
 	override public function create():Void
 	{
 		trace('[PlayState] ===== CREATE START =====');
+		
+		// Crash-safe error screen for song init failures.
+		try
+		{
 
 		// Real device logs showed LoadingState -> PlayState taking upwards of
 		// 50 SECONDS for dense songs, entirely inside this one synchronous
@@ -1304,6 +1310,25 @@ class PlayState extends MusicBeatState
 
 		refreshZ(stage);
 		trace('[PlayState] ===== CREATE END (success) =====');
+		}
+		catch (e:Dynamic)
+		{
+			var errMsg:String = Std.string(e);
+			Logger.log('[CrashRecovery] PlayState.create() failed: ' + errMsg, ERROR);
+			#if android
+			mobile.backend.JavaCrashHandler.appendToGameLog('CrashRecovery', 'ERROR', 'PlayState.create() failed: ' + errMsg);
+			#end
+			var nextState:FlxState;
+			if (isStoryMode)
+				nextState = StoryMenuState.new;
+			else
+				nextState = MainMenuState.new;
+			FlxG.switchState(() -> new funkin.backend.FallbackState(
+				'The song "' + (SONG?.song ?? 'unknown') + '" had an error and could not be loaded.\n\n' + errMsg,
+				() -> FlxG.switchState(nextState)
+			));
+			return;
+		}
 	}
 	
 	function set_songSpeed(value:Float):Float
@@ -4194,8 +4219,68 @@ class PlayState extends MusicBeatState
 					
 					trace('LOADING: ' + Paths.sanitize(storyMeta.playlist[0]) + difficulty);
 					
-					PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
-					
+					try
+					{
+						PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
+					}
+					catch (e:Dynamic)
+					{
+						var errMsg:String = Std.string(e);
+						Logger.log('[CrashRecovery] Failed to load next song "' + songLowercase + '": ' + errMsg, ERROR);
+						#if android
+						mobile.backend.JavaCrashHandler.appendToGameLog('CrashRecovery', 'ERROR', 'Song "' + songLowercase + '" load failed: ' + errMsg);
+						#end
+						
+						// Keep trying songs in the week until one loads or we run out
+						while (storyMeta.playlist.length > 0)
+						{
+							var nextSong = storyMeta.playlist[0];
+							try
+							{
+								PlayState.SONG = Chart.fromSong(Paths.sanitize(nextSong.toLowerCase()), PlayState.storyMeta.difficulty);
+								break; // loaded OK
+							}
+							catch (e2:Dynamic)
+							{
+								Logger.log('[CrashRecovery] Also failed: "' + nextSong + '": ' + Std.string(e2), ERROR);
+								storyMeta.playlist.shift(); // remove broken song
+							}
+						}
+						
+						if (storyMeta.playlist.length <= 0)
+						{
+							// No working songs remain -- finish the week
+							_isLastSongOfWeek = true;
+							if (WeekData.weeksList[storyMeta.curWeek] != null)
+							{
+								if (!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false))
+								{
+									StoryMenuState.weekCompleted.set(WeekData.weeksList[storyMeta.curWeek], true);
+									FlxG.save.data.weekCompleted = StoryMenuState.weekCompleted;
+									Highscore.saveWeekScore(WeekData.getWeekFileName(), storyMeta.score, storyMeta.difficulty);
+								}
+							}
+							changedDifficulty = false;
+							if (!ScriptConstants.stopping(scripts.call('postEndSong')))
+							{
+								FlxG.sound.playMusic(Paths.music('freakyMenu'));
+								CoolUtil.cancelMusicFadeTween();
+								FlxG.switchState(() -> new funkin.backend.FallbackState(
+									'The song "' + songLowercase + '" had an error.\n\n' + errMsg + '\n\nNo more playable songs in this week.',
+									() -> FlxG.switchState(StoryMenuState.new)
+								));
+							}
+							return;
+						}
+						
+						// Next song loaded OK -- show message then play
+						FlxG.switchState(() -> new funkin.backend.FallbackState(
+							'The song "' + songLowercase + '" had an error and was skipped.\n\n' + errMsg,
+							() -> FlxG.switchState(PlayState.new)
+						));
+						return;
+					}
+										
 					// Prefetch next song's assets in background while the player
 					// watches the score popup.  LoadingState will pick up the
 					// work on the next switch and show real progress.
