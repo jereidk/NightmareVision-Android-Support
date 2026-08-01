@@ -157,15 +157,29 @@ class Mods
 		var list:Array<String> = [];
 		#if MODS_ALLOWED
 		var modsFolder:String = Paths.mods();
-		if (FileSystem.exists(modsFolder))
+		// Same permission-timing race documented on the modsList.txt read in
+		// updateModList() -- exists() can pass while readDirectory() still
+		// throws hxcpp's raw native error if "All files access" hasn't
+		// landed yet (older Android versions never route through
+		// PermissionBlockerState at all, so this can still be hit there
+		// regardless of that state's guarantees). Never fatal: just an
+		// empty mod list for that call.
+		try
 		{
-			for (folder in FileSystem.readDirectory(modsFolder))
+			if (FileSystem.exists(modsFolder))
 			{
-				var path = haxe.io.Path.join([modsFolder, folder]);
-				if (FileSystem.isDirectory(path)
-					&& !ignoreModFolders.contains(folder.toLowerCase())
-					&& !list.contains(folder)) list.push(folder);
+				for (folder in FileSystem.readDirectory(modsFolder))
+				{
+					var path = haxe.io.Path.join([modsFolder, folder]);
+					if (FileSystem.isDirectory(path)
+						&& !ignoreModFolders.contains(folder.toLowerCase())
+						&& !list.contains(folder)) list.push(folder);
+				}
 			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('Warn: failed to read mods directory (permission not granted yet?): $e');
 		}
 		#end
 		return list;
