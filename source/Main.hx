@@ -13,13 +13,6 @@ import flixel.input.keyboard.FlxKey;
 import funkin.backend.DebugDisplay;
 import funkin.scripts.GlobalScriptManager;
 
-#if mobile
-import mobile.backend.StorageSystem;
-import androidmanager.os.Build.VERSION;
-import androidmanager.os.Build.VERSION_CODES;
-import androidmanager.os.Environment;
-#end
-
 @:nullSafety(Strict)
 class Main extends Sprite
 {
@@ -58,51 +51,12 @@ class Main extends Sprite
 		// see Logger.initMainThread()'s own doc comment for why this matters.
 		funkin.backend.Logger.initMainThread();
 
-			#if mobile
-		// ═══════════════════════════════════════════════════════════════════════
-		// VERIFICACIÓN DE PERMISOS ANTES DEL BOOTEO
-		// ═══════════════════════════════════════════════════════════════════════
-		// Primero pedimos los permisos básicos (READ_MEDIA_* / READ_EXTERNAL_STORAGE).
-		// Esto es asíncrono pero necesario.
-		StorageSystem.getPermissions();
-
-		// Si estamos en modo Shared en Android 11+ y NO tenemos
-		// MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, el juego NO puede bootear.
-		// Mostramos PermissionBlockerState que bloquea TODO hasta que el permiso
-		// sea concedido. Esto evita que Init.hx intente leer archivos externos
-		// sin permiso (causaba crashes).
-		//
-		// Flujo:
-		// - Sin permiso → PermissionBlockerState (pide permiso, polling, espera)
-		// - Con permiso → Init normal (Sys.setCwd se llama aquí abajo)
-		var needsPermissionBlocker = false;
-		#if (android && sys)
-		try
-		{
-			var mode = mobile.backend.StorageSystem.readBootstrapMode();
-			if (mode == 'Shared' && VERSION.SDK_INT >= VERSION_CODES.R && !Environment.isExternalStorageManager())
-				needsPermissionBlocker = true;
-		}
-		catch (e:Dynamic) {}
+		#if mobile
+		if (StorageSystem.getPermissions()) return;
+		Sys.setCwd(StorageSystem.getStorageDirectory());
 		#end
 
-		if (needsPermissionBlocker)
-		{
-			// PermissionBlockerState maneja: Sys.setCwd + FlxG.switchState(Init)
-			addChild(new funkin.backend.FunkinGame(startMeta.width, startMeta.height,
-				funkin.states.PermissionBlockerState,
-				startMeta.fps, startMeta.fps, true, startMeta.startFullScreen));
-		}
-		else
-		{
-			// Permiso ya concedido o modo Scoped → booteo normal
-			Sys.setCwd(StorageSystem.getStorageDirectory());
-			addChild(new funkin.backend.FunkinGame(startMeta.width, startMeta.height,
-				funkin.states.Init,
-				startMeta.fps, startMeta.fps, true, startMeta.startFullScreen));
-		}
-		#end
-
+		
 		#if (CRASH_HANDLER && !debug)
 		funkin.backend.CrashHandler.init();
 		#end
@@ -116,6 +70,8 @@ class Main extends Sprite
 		// load save data before creating FlxGame
 		ClientPrefs.loadDefaultKeys();
 		ClientPrefs.tryBindingSave('funkin');
+		
+		addChild(new funkin.backend.FunkinGame(startMeta.width, startMeta.height, Init, startMeta.fps, startMeta.fps, true, startMeta.startFullScreen));
 		
 		// prevent accept button when alt+enter is pressed
 		FlxG.stage.addEventListener(openfl.events.KeyboardEvent.KEY_DOWN, (e) -> {
