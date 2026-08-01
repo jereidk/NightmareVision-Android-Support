@@ -109,15 +109,20 @@ class Mods
 	 */
 	static function ensureModsListExists()
 	{
+		// On a fresh install, this can run before the "All files access"
+		// permission (requested by StorageSystem.getPermissions()) is
+		// actually granted -- that request launches a separate settings
+		// Activity and boot continues underneath it without waiting.
+		// hasFullAccess() answers that synchronously, so skip the write
+		// entirely instead of attempting it and catching the failure; mods
+		// just stay unavailable until the next launch, once the permission
+		// has landed.
+		#if android
+		if (!mobile.backend.StorageSystem.hasFullAccess()) return;
+		#end
+
 		if (!FunkinAssets.exists('modsList.txt'))
 		{
-			// On a fresh install, this can run before the "All files access"
-			// permission (requested by StorageSystem.getPermissions()) is
-			// actually granted -- that request launches a separate settings
-			// Activity and boot continues underneath it without waiting, so
-			// this write can hit a real permission error here. Never fatal:
-			// mods just stay unavailable until the next launch, once the
-			// permission has landed.
 			try
 			{
 				File.saveContent('modsList.txt', '');
@@ -156,14 +161,14 @@ class Mods
 	{
 		var list:Array<String> = [];
 		#if MODS_ALLOWED
+		#if android
+		if (!mobile.backend.StorageSystem.hasFullAccess()) return list;
+		#end
 		var modsFolder:String = Paths.mods();
-		// Same permission-timing race documented on the modsList.txt read in
-		// updateModList() -- exists() can pass while readDirectory() still
-		// throws hxcpp's raw native error if "All files access" hasn't
-		// landed yet (older Android versions never route through
-		// PermissionBlockerState at all, so this can still be hit there
-		// regardless of that state's guarantees). Never fatal: just an
-		// empty mod list for that call.
+		// Belt-and-suspenders: exists() can pass while readDirectory() still
+		// throws hxcpp's raw native error if permission is somehow revoked/
+		// stale between the hasFullAccess() check above and here. Never
+		// fatal: just an empty mod list for that call.
 		try
 		{
 			if (FileSystem.exists(modsFolder))
@@ -244,6 +249,9 @@ class Mods
 	public static function getPack(?folder:String):ModMeta
 	{
 		#if MODS_ALLOWED
+		#if android
+		if (!mobile.backend.StorageSystem.hasFullAccess()) return null;
+		#end
 		if (folder == null) folder = Mods.currentModDirectory;
 		
 		var path = Paths.mods(folder + '/meta.json');
@@ -277,19 +285,26 @@ class Mods
 		
 		var write:Bool = false;
 
-		// Same permission-timing race as ensureModsListExists() above -- on a
-		// fresh install, exists() can pass (the path stat's fine) while the
-		// actual read still fails because "All files access" hasn't landed
-		// yet, throwing hxcpp's raw file_contents native error. Never fatal:
-		// mods just stay unavailable until the next launch.
+		// hasFullAccess() answers up front whether external storage is safe
+		// to touch at all -- skip the read entirely when it's not, rather
+		// than attempting it and relying on the try/catch below to survive
+		// hxcpp's raw file_contents native error (kept anyway as a fallback
+		// for anything hasFullAccess() doesn't cover, e.g. permission
+		// revoked mid-session). Never fatal either way: mods just stay
+		// unavailable until the next launch/permission grant.
 		var modListLines:Array<String> = [];
-		try
+		#if android
+		if (mobile.backend.StorageSystem.hasFullAccess())
+		#end
 		{
-			modListLines = CoolUtil.coolTextFile('modsList.txt');
-		}
-		catch (e:Dynamic)
-		{
-			trace('Warn: failed to read modsList.txt (permission not granted yet?): $e');
+			try
+			{
+				modListLines = CoolUtil.coolTextFile('modsList.txt');
+			}
+			catch (e:Dynamic)
+			{
+				trace('Warn: failed to read modsList.txt (permission not granted yet?): $e');
+			}
 		}
 
 		for (mod in modListLines)
@@ -340,6 +355,10 @@ class Mods
 	
 	public static function writeModList():Void
 	{
+		#if android
+		if (!mobile.backend.StorageSystem.hasFullAccess()) return;
+		#end
+
 		// Now save file
 		var fileStr:String = '';
 		for (mod in all)

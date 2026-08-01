@@ -373,7 +373,32 @@ class StorageSystem
 
 		return false;
 	}
-	
+
+	/**
+	 * Whether external storage is actually safe to touch right now -- doesn't
+	 * halt boot, doesn't prompt anything, just answers the question so a
+	 * caller can skip the access entirely instead of attempting it and
+	 * catching the failure.
+	 *
+	 * True in Scoped mode (its app-private directory needs no special
+	 * permission at all), on API < 30 (legacy READ/WRITE_EXTERNAL_STORAGE,
+	 * requested by getPermissions() -- no synchronous way to check those were
+	 * actually granted, so this assumes they were, matching every call site's
+	 * prior behavior before this existed), and on API 30+ once
+	 * MANAGE_EXTERNAL_STORAGE ("All files access") is actually granted --
+	 * getPermissions() only ever *requests* that one, via a separate Settings
+	 * Activity that boot doesn't wait for, so it can still be missing well
+	 * after getPermissions() has returned.
+	 */
+	public static function hasFullAccess():Bool
+	{
+		#if android
+		return _readBootstrapMode() == 'Scoped' || VERSION.SDK_INT < VERSION_CODES.R || Environment.isExternalStorageManager();
+		#else
+		return true;
+		#end
+	}
+
 	/**
 	 * Recursively copies folders from the APK to external directory.
 	 * @return Int The number of files successfully copied.
