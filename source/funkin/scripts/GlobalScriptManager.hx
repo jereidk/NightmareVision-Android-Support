@@ -83,11 +83,16 @@ class GlobalScriptManager
 
 		// Check external storage first (mobile only) — 'scripts/' overrides APK versions
 		#if mobile
-		var extDir = Path.addTrailingSlash(StorageSystem.getDirectory()) + 'scripts/';
-		if (checkedDirs.get(extDir) == null)
+		#if android
+		if (StorageSystem.hasFullAccess())
+		#end
 		{
-			checkedDirs.set(extDir, true);
-			_loadScriptsFrom(extDir);
+			var extDir = Path.addTrailingSlash(StorageSystem.getDirectory()) + 'scripts/';
+			if (checkedDirs.get(extDir) == null)
+			{
+				checkedDirs.set(extDir, true);
+				_loadScriptsFrom(extDir);
+			}
 		}
 		#end
 
@@ -107,29 +112,41 @@ class GlobalScriptManager
 	#if sys
 	function _loadScriptsFrom(dirPath:String):Void
 	{
-		if (sys.FileSystem.exists(dirPath))
+		// Belt-and-suspenders: exists() can pass while readDirectory() still
+		// throws hxcpp's raw native error if permission is somehow revoked/
+		// stale between the hasFullAccess() check at the call site and here
+		// (or for the APK-bundled call site, which has no such check at all
+		// since it never needed one). Never fatal: just skips this directory.
+		try
 		{
-			var files = sys.FileSystem.readDirectory(dirPath);
-			var loaded = 0;
-			for (file in files)
+			if (sys.FileSystem.exists(dirPath))
 			{
-				if (!FunkinScript.isHxFile(file)) continue;
-
-				var fullPath = '$dirPath$file';
-				var scriptName = 'global_' + haxe.io.Path.withoutExtension(file);
-
-				if (scriptGroup.exists(scriptName)) continue;
-
-				var script = FunkinScript.fromFile(fullPath, scriptName, null, scriptGroup.scriptShareables);
-				if (script != null && !script.__garbage)
+				var files = sys.FileSystem.readDirectory(dirPath);
+				var loaded = 0;
+				for (file in files)
 				{
-					scriptGroup.parent = FlxG.state;
-					scriptGroup.addScript(script);
-					loaded++;
-					Logger.log('[GlobalScriptManager] Loaded: $file', NOTICE);
+					if (!FunkinScript.isHxFile(file)) continue;
+
+					var fullPath = '$dirPath$file';
+					var scriptName = 'global_' + haxe.io.Path.withoutExtension(file);
+
+					if (scriptGroup.exists(scriptName)) continue;
+
+					var script = FunkinScript.fromFile(fullPath, scriptName, null, scriptGroup.scriptShareables);
+					if (script != null && !script.__garbage)
+					{
+						scriptGroup.parent = FlxG.state;
+						scriptGroup.addScript(script);
+						loaded++;
+						Logger.log('[GlobalScriptManager] Loaded: $file', NOTICE);
+					}
 				}
+				Logger.log('[GlobalScriptManager] Loaded $loaded global scripts', NOTICE);
 			}
-			Logger.log('[GlobalScriptManager] Loaded $loaded global scripts', NOTICE);
+		}
+		catch (e:Dynamic)
+		{
+			Logger.log('[GlobalScriptManager] Failed to load scripts from $dirPath: $e', WARN);
 		}
 	}
 	#end
