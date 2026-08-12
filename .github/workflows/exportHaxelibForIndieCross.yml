@@ -41,9 +41,19 @@ jobs:
           tar -C "$HOME" -czf /tmp/export/haxelib-root.tar.gz haxelib
           tar -czf /tmp/export/haxelib-project.tar.gz .haxelib
 
+      # 90 days (GitHub's maximum), not the 3 this used to have.
+      # Indie-Cross-Public's CI resolves "latest successful run of this
+      # workflow" and downloads this artifact to warm a cold build. At 3 days
+      # it was always long gone by the time that repo needed it: the only run
+      # ever made (2026-07-27) expired 2026-07-30, confirmed via the API
+      # ("expired": true, 3.2GB). The effect stayed invisible for two weeks
+      # because that repo's own haxelibs cache kept hitting, so the import
+      # tier never ran -- once the cache went stale it fell through to
+      # compiling lime/hxcpp/flixel/openfl from source, which is exactly what
+      # this export exists to avoid.
       - name: Upload export artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: haxelib-cache-export
           path: /tmp/export/*.tar.gz
-          retention-days: 3
+          retention-days: 90
