@@ -125,17 +125,53 @@ jobs:
             gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$f"
           done
 
-          # Drop assets left over from a previous, larger export -- a stale
-          # extra .part.NNN would otherwise be swept up by the consumer's
-          # 'cat *.part.*' and corrupt the reassembled tarball.
-          KEEP=$(cd /tmp/export && ls)
+          # Drop assets left over from a previous, larger export. This has to
+          # be FATAL on failure, not best-effort: `sha256sum -c` on the
+          # consumer side only verifies the files the manifest lists, so an
+          # extra leftover .part.NNN passes the checksum gate untouched and is
+          # still swept into the consumer's 'cat *.part.*', silently
+          # corrupting the reassembled tarball. Swallowing a failed delete
+          # here and then publishing SHA256SUMS would bless exactly that.
+          #
+          # Read from a file rather than piping into the loop: a piped `while`
+          # runs in a subshell, where `exit 1` would only leave the subshell.
+          ( cd /tmp/export && ls ) > /tmp/export-keep.txt
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
-          | while read -r asset; do
-              if ! echo "$KEEP" | grep -qxF "$asset"; then
-                echo "Deleting stale asset $asset from a previous export."
-                gh release delete-asset "$TAG" "$asset" --repo "$GITHUB_REPOSITORY" --yes || true
+            > /tmp/release-assets.txt
+          while read -r asset; do
+            [ -z "$asset" ] && continue
+            grep -qxF "$asset" /tmp/export-keep.txt && continue
+            echo "Deleting stale asset $asset from a previous export."
+            deleted=0
+            for attempt in 1 2 3; do
+              if gh release delete-asset "$TAG" "$asset" --repo "$GITHUB_REPOSITORY" --yes; then
+                deleted=1
+                break
               fi
+              echo "  delete failed (attempt $attempt/3), retrying in 5s..."
+              sleep 5
             done
+            if [ "$deleted" -ne 1 ]; then
+              echo "ERROR: could not delete stale asset '$asset' after 3 attempts."
+              echo "Refusing to publish SHA256SUMS -- the consumer would concatenate it."
+              exit 1
+            fi
+          done < /tmp/release-assets.txt
+
+          # Assert the release now holds EXACTLY the parts just built, before
+          # publishing the manifest that blesses them. Catches any drift at
+          # all -- a silently failed upload, a delete that reported success
+          # without taking effect, an asset added out of band -- not just the
+          # prune path above.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+            | grep -vxF 'SHA256SUMS' | sort > /tmp/remote-parts.txt
+          ( cd /tmp/export && ls ./*.part.* | sed 's#^\./##' ) | sort > /tmp/local-parts.txt
+          if ! diff -u /tmp/local-parts.txt /tmp/remote-parts.txt; then
+            echo "ERROR: the release's asset set does not match the export just built."
+            echo "Refusing to publish SHA256SUMS over a mismatched set."
+            exit 1
+          fi
+          echo "Release asset set matches the freshly built export."
 
           echo "Uploading SHA256SUMS (last, so it only validates a complete set)..."
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber /tmp/export/SHA256SUMS
