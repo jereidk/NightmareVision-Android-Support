@@ -1,5 +1,6 @@
 package funkin.states.editors.ui;
 
+import haxe.ui.containers.dialogs.Dialogs.FileDialogTypes;
 import haxe.ui.containers.dialogs.SaveFileDialog;
 import haxe.ui.backend.SaveFileDialogBase;
 import haxe.ui.components.Label;
@@ -14,6 +15,7 @@ import haxe.ui.util.Variant;
 import haxe.ui.components.Image;
 import haxe.ui.core.ItemRenderer;
 import haxe.ui.components.CheckBox;
+
 import haxe.ui.containers.HBox;
 import haxe.ui.containers.Panel;
 import haxe.ui.containers.VBox;

@@ -8,6 +8,7 @@ import flixel.FlxBasic;
 
 import funkin.data.StageData;
 import funkin.scripts.FunkinScript;
+import funkin.backend.SystemMonitor;
 
 /**
  * Primary class holding all `FlxBasic`'s for the background of stage within `PlayState`
@@ -15,13 +16,33 @@ import funkin.scripts.FunkinScript;
  * Besides whatever else is added, it contains the characters as well.
  */
 @:nullSafety(Strict)
-class Stage extends FlxTypedContainer<FlxBasic>
+class Stage extends FlxTypedContainer<FlxBasic> implements IFlags
 {
 	/**
 	 * Attached script to the stage
 	 */
 	public var script:Null<FunkinScript> = null;
-	
+
+	/**
+	 * "No Stages" optimization (GraphicsOptions.hx) support flag.
+	 *
+	 * `buildStage()`'s own `ClientPrefs.noStages` early-return only ever
+	 * covered `stageData.stageObjects` (the JSON-declared props) -- but most
+	 * modern stages (ejected, airship, turbulence, etc.) build their actual
+	 * background art from their own hscript's `onLoad()`/`onCreatePost()`/
+	 * per-beat hooks instead, via the bare `add(...)` local (bound to this
+	 * same instance's `add()` below) or `stage.add(...)`/`stage.insert(...)`
+	 * directly -- none of which were ever gated, so "No Stages" did nothing
+	 * for the vast majority of stages.
+	 *
+	 * PlayState toggles this true for the stage's entire lifetime once
+	 * `noStages` is on, EXCEPT for the brief moment it adds the character
+	 * groups (`gfGroup`/`dadGroup`/`boyfriendGroup`/`pet`) via `stage.add()`
+	 * -- those must never be blocked, matching this class's own doc comment
+	 * that characters/HUD are unaffected by this setting.
+	 */
+	public var blockAdds:Bool = false;
+
 	/**
 	 * The name of the current stage
 	 */
@@ -31,6 +52,8 @@ class Stage extends FlxTypedContainer<FlxBasic>
 	 * The json info from the current stage
 	 */
 	public final stageData:StageFile;
+	
+	public var flags:haxe.DynamicAccess<Dynamic>;
 	
 	/**
 	 * Registered objects of the stage.
@@ -60,14 +83,70 @@ class Stage extends FlxTypedContainer<FlxBasic>
 		this.curStage = curStage;
 		
 		stageData = StageData.getStageFile(curStage) ?? funkin.data.StageData.getTemplateStageFile();
+		
+		flags = (stageData.flags ?? {});
 	}
-	
+
+	// This state's own tag until now -- Stage never overrode update(), so its
+	// whole cascade (background/parallax props, AND the character groups it
+	// contains -- see this class's own doc comment) was invisible, folded
+	// into whatever PlayState/MusicBeatState tag happens to wrap the member
+	// loop that reaches it ('flxMemberLoop'). The stage's own script (loaded
+	// via runScript() below) isn't part of this -- that's added to
+	// PlayState.scripts and already timed per-script by ScriptGroup.call().
+	// Character.update() tags itself separately as 'charUpdate', so
+	// "stageUpdate minus charUpdate" is roughly the background/props-only
+	// cost.
+	override function update(elapsed:Float):Void
+	{
+		#if android SystemMonitor.profBegin('stageUpdate'); #end
+		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	// Same reasoning as update() above, for PlayState's 'draw' tag instead.
+	override function draw():Void
+	{
+		#if android SystemMonitor.profBegin('stageDraw'); #end
+		super.draw();
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	// See blockAdds's doc comment -- these are the actual "No Stages" gate.
+	// Scripts reach this same overridden method whether they call the bare
+	// `add(...)` local (bound to `this.add` in runScript(), so it resolves
+	// to this override, not the raw FlxTypedGroup one), `stage.add(...)`, or
+	// `stage.insert(...)` (turbulence.hx uses this to depth-sort props
+	// against the character groups).
+	override function add(basic:FlxBasic):FlxBasic
+	{
+		if (blockAdds) return basic;
+		return super.add(basic);
+	}
+
+	override function insert(position:Int, object:FlxBasic):FlxBasic
+	{
+		if (blockAdds) return object;
+		return super.insert(position, object);
+	}
+
 	/**
-	 * 
+	 *
 	 * instantiates any stage objects and attempts to load a script for the stage
 	 */
 	public function buildStage()
 	{
+		// "No Stages" optimization (GraphicsOptions.hx) -- skip creating any
+		// of the JSON-declared stageObjects entirely (saves loading their
+		// graphics at all, not just skipping the add). Script-driven stage
+		// art (the majority of stages -- ejected, airship, turbulence, etc.
+		// build their background from their own hscript instead of
+		// stageObjects) is covered separately by blockAdds, which PlayState
+		// keeps true for this stage's whole lifetime; runScript() below
+		// still runs normally either way, since scripts also set up camera
+		// zoom/shaders/cutscenes that must keep working.
+		if (ClientPrefs.noStages) return;
+
 		if (stageData.stageObjects != null)
 		{
 			for (info in stageData.stageObjects)
@@ -86,7 +165,7 @@ class Stage extends FlxTypedContainer<FlxBasic>
 						{
 							(cast obj : Bopper).loadAtlas(info.asset);
 							
-							if (obj.frames == null) obj.loadGraphic(Paths.image(info.asset));
+							if (obj.frames == null && (cast obj : Bopper).animateAtlas == null) obj.loadGraphic(Paths.image(info.asset));
 						}
 					}
 					else
@@ -143,8 +222,7 @@ class Stage extends FlxTypedContainer<FlxBasic>
 				if (info.id != null)
 				{
 					final objId = info.id ?? ''; // we null checked already but to shut up null safety
-					final objToLower = objId.toLowerCase();
-					if (objects.exists(objId) || objToLower == 'gf' || objToLower == 'dad' || objToLower == 'boyfriend')
+					if (objects.exists(info.id))
 					{
 						Logger.log('Object cannot use id($objId) as it is in use.', WARN, true);
 					}
@@ -241,6 +319,165 @@ class Stage extends FlxTypedContainer<FlxBasic>
 	{
 		//
 	}
+
+	/**
+	 * 'expand' mode reveals extra width/height beyond the 1280x720 design
+	 * resolution, and most stage backgrounds were only ever drawn/positioned
+	 * to cover that base canvas — on a wider screen the camera can pan/zoom
+	 * past their edge, exposing the camera's flat clear color (black by
+	 * default) as an obvious cut/seam.
+	 *
+	 * Rather than resize every stage's own art (which would need per-stage
+	 * tuning and still might not survive every camera zoom/pan), just make
+	 * that clear color match the stage instead of leaving it black: sample
+	 * the dominant color off whichever of this stage's own sprites has the
+	 * largest area (almost always its main background layer, since that's
+	 * consistently the widest/tallest thing any stage adds) and use that as
+	 * the camera's background. It only ever shows at the fringes on unusually
+	 * wide screens, so it just needs to blend in, not be exact.
+	 *
+	 * No-op outside 'expand' mode (gameCutoutSize.x is hard-zeroed there), so
+	 * the always-black default is untouched anywhere this doesn't apply.
+	 */
+	public function fillExpandModeBackdrop(camera:FlxCamera):Void
+	{
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x <= 0) return;
+
+		var biggest:Null<FlxSprite> = null;
+		var biggestArea:Float = 0;
+
+		for (member in members)
+		{
+			if (!(member is FlxSprite)) continue;
+
+			final spr:FlxSprite = cast member;
+			if (spr.graphic == null) continue;
+
+			// frameWidth/frameHeight is the RAW, unscaled source texture size
+			// — width/height (post .scale, what updateHitbox() keeps in
+			// sync) is the actual on-screen footprint, which is what
+			// "biggest" is supposed to mean here. A backdrop stretched way
+			// up from a tiny source texture (danger's `sky`, a 10x366
+			// gradient strip blown up to 5000x2196 on screen) has a tiny
+			// frameWidth*frameHeight despite visually dominating the whole
+			// canvas, so the raw-texture metric was picking some unrelated,
+			// smaller-on-screen prop instead (e.g. the airship itself, whose
+			// source texture is comparatively huge) and sampling its color.
+			final area:Float = spr.width * spr.height;
+			if (area > biggestArea)
+			{
+				biggestArea = area;
+				biggest = spr;
+			}
+		}
+
+		if (biggest == null || biggest.graphic == null) return;
+
+		final key:String = biggest.graphic.key;
+		if (key == null || key.length == 0) return;
+
+		// Precomputed-color path (the only one that works for the ASTC-only
+		// stage backgrounds this game ships). The runtime pixel sampling below
+		// needs CPU-readable pixels, but stage backgrounds are converted to
+		// ASTC and their source PNGs are removed -- so getBitmapData(skipAstc)
+		// finds nothing to decode and returns null, leaving the fringe black.
+		// tools/gen_bgcolors precomputes the same dominant color offline (by
+		// decoding each stage .astc) into assets/data/expandBgColors.json,
+		// keyed by this exact graphic.key. See that file / the generator.
+		// -1 = "not in the manifest"; a real entry is a 0xRRGGBB value (stored
+		// without alpha so it stays inside Haxe's signed 32-bit Int range --
+		// a full 0xFFRRGGBB would overflow on parse). OR the opaque alpha back
+		// on here, in 32-bit int space, to get the ARGB the camera wants.
+		final precomputed:Int = _expandBgColorFor(key);
+		if (precomputed != -1)
+		{
+			camera.bgColor = 0xFF000000 | precomputed;
+			return;
+		}
+
+		// Fallback for anything still shipping a real PNG (desktop, or the
+		// handful of stage images not converted to ASTC): decode a separate,
+		// PNG-only, CPU-readable copy purely for sampling.
+		final bitmap:Null<openfl.display.BitmapData> = funkin.FunkinAssets.getBitmapData(key, false, true);
+		if (bitmap == null) return;
+
+		camera.bgColor = sampleDominantColor(bitmap);
+		bitmap.dispose();
+	}
+
+	// Lazily-loaded map of graphic.key -> ARGB color, built offline (see
+	// fillExpandModeBackdrop). Non-null (empty until loaded); a separate flag
+	// gates the one-time load so null-safety stays happy on set()/get().
+	static var _expandBgColors:Map<String, Int> = new Map<String, Int>();
+	static var _expandBgColorsLoaded:Bool = false;
+
+	static function _expandBgColorFor(key:String):Int
+	{
+		if (!_expandBgColorsLoaded)
+		{
+			_expandBgColorsLoaded = true;
+			try
+			{
+				final path = 'assets/data/expandBgColors.json';
+				if (funkin.FunkinAssets.exists(path))
+				{
+					final raw = funkin.FunkinAssets.getContent(path);
+					final parsed:Dynamic = haxe.Json.parse(raw);
+					for (field in Reflect.fields(parsed))
+						_expandBgColors.set(field, Std.int(Reflect.field(parsed, field)));
+				}
+			}
+			catch (e:Dynamic)
+			{
+				funkin.backend.Logger.log('[Stage] expandBgColors load failed: $e', WARN);
+			}
+		}
+		final c = _expandBgColors.get(key);
+		return c == null ? -1 : c;
+	}
+
+	// Same idea as CoolUtil.dominantColor (most-used opaque-ish color, ignoring
+	// near-transparent pixels and never picking pure black), but stepped
+	// across the image instead of visiting every pixel — stage backgrounds
+	// can be a lot bigger than the icons that utility was written for, and
+	// this only needs to be "close enough to blend in", not exact.
+	static function sampleDominantColor(bitmap:openfl.display.BitmapData):Int
+	{
+		final stepX:Int = Std.int(Math.max(1, bitmap.width / 100));
+		final stepY:Int = Std.int(Math.max(1, bitmap.height / 100));
+
+		var countByColor:Map<Int, Int> = [];
+		var x = 0;
+		while (x < bitmap.width)
+		{
+			var y = 0;
+			while (y < bitmap.height)
+			{
+				final pixelColor:FlxColor = bitmap.getPixel32(x, y);
+				if (pixelColor.alphaFloat > 0.05)
+				{
+					final opaqueColor:FlxColor = FlxColor.fromRGB(pixelColor.red, pixelColor.green, pixelColor.blue, 255);
+					countByColor.set(opaqueColor, (countByColor.get(opaqueColor) ?? 0) + 1);
+				}
+				y += stepY;
+			}
+			x += stepX;
+		}
+
+		var maxCount = 0;
+		var maxKey:Int = FlxColor.BLACK;
+		countByColor.set(FlxColor.BLACK, 0);
+		for (key => count in countByColor)
+		{
+			if (count >= maxCount)
+			{
+				maxCount = count;
+				maxKey = key;
+			}
+		}
+
+		return maxKey;
+	}
 	
 	inline function loadAnimationToSprite(spr:FlxSprite, anims:Null<Array<AnimationInfo>>)
 	{
@@ -322,5 +559,15 @@ class Stage extends FlxTypedContainer<FlxBasic>
 		}
 		
 		return new Bopper();
+	}
+	
+	public function hasFlag(flag:String):Bool
+	{
+		return flags.exists(flag);
+	}
+	
+	public function getFlag(flag:String):Dynamic
+	{
+		return flags.get(flag);
 	}
 }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="icon-blackFinale.png" width="1755" height="1229">
+	<SubTexture name="black icon calm0000" x="347" y="373" width="347" height="384" frameX="-41" frameY="-27" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0001" x="347" y="373" width="347" height="384" frameX="-41" frameY="-27" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0002" x="1041" y="373" width="357" height="400" frameX="-36" frameY="-20" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0003" x="1041" y="373" width="357" height="400" frameX="-36" frameY="-20" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0004" x="694" y="373" width="347" height="389" frameX="-41" frameY="-22" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0005" x="694" y="373" width="347" height="389" frameX="-41" frameY="-22" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0006" x="0" y="0" width="347" height="373" frameX="-41" frameY="-38" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0007" x="0" y="0" width="347" height="373" frameX="-41" frameY="-38" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0008" x="347" y="0" width="347" height="373" frameX="-41" frameY="-38" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon calm0009" x="347" y="0" width="347" height="373" frameX="-41" frameY="-38" frameWidth="435" frameHeight="452"/>
+	<SubTexture name="black icon mad0000" x="347" y="757" width="347" height="432" frameX="-41" frameY="-22" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0001" x="694" y="762" width="347" height="432" frameX="-41" frameY="-22" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0002" x="1041" y="773" width="357" height="449" frameX="-36" frameY="-14" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0003" x="1398" y="780" width="357" height="449" frameX="-36" frameY="-14" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0004" x="1398" y="373" width="347" height="407" frameX="-41" frameY="-47" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0005" x="0" y="746" width="347" height="407" frameX="-41" frameY="-47" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0006" x="694" y="0" width="347" height="373" frameX="-41" frameY="-81" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0007" x="1041" y="0" width="347" height="373" frameX="-41" frameY="-81" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0008" x="1388" y="0" width="347" height="373" frameX="-41" frameY="-81" frameWidth="435" frameHeight="495"/>
+	<SubTexture name="black icon mad0009" x="0" y="373" width="347" height="373" frameX="-41" frameY="-81" frameWidth="435" frameHeight="495"/>
+</TextureAtlas>

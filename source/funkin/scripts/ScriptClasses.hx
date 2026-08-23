@@ -24,6 +24,8 @@ class ScriptedFlxColor
 	
 	public static function fromHSB(h:Float, s:Float, b:Float, a:Float = 1):Int return cast FlxColor.fromHSB(h, s, b, a);
 	
+	public static function fromHSL(h:Float, s:Float, l:Float, a:Float = 1):Int return cast FlxColor.fromHSL(h, s, l, a);
+	
 	public static function fromInt(num:Int):Int return cast FlxColor.fromInt(num);
 	
 	public static function fromRGBFloat(r:Float, g:Float, b:Float, a:Float = 1):Int return cast FlxColor.fromRGBFloat(r, g, b, a);
@@ -44,6 +46,40 @@ class ScriptedFlxColor
 	
 	public static function getBlue(color:FlxColor):Int return cast color.blue;
 	
+	public static function getRedFloat(color:FlxColor):Float return cast color.redFloat;
+	
+	public static function getGreenFloat(color:FlxColor):Float return cast color.greenFloat;
+	
+	public static function getBlueFloat(color:FlxColor):Float return cast color.blueFloat;
+	
+	public static function getHue(color:FlxColor):Float return cast color.hue;
+	
+	public static function getSaturation(color:FlxColor):Float return cast color.saturation;
+	
+	public static function getBrightness(color:FlxColor):Float return cast color.brightness;
+	
+	public static function getLightness(color:FlxColor):Float return cast color.lightness;
+	
+	public static function getCyan(color:FlxColor):Float return cast color.cyan;
+	
+	public static function getMagenta(color:FlxColor):Float return cast color.magenta;
+	
+	public static function getYellow(color:FlxColor):Float return cast color.yellow;
+	
+	public static function getBlack(color:FlxColor):Float return cast color.black;
+	
+	public static function getLightened(color:FlxColor, factor:Float = .2):Int return cast color.getLightened(factor);
+	
+	public static function getDarkened(color:FlxColor, factor:Float = .2):Int return cast color.getDarkened(factor);
+	
+	public static function getInverted(color:FlxColor):Int return cast color.getInverted();
+	
+	public static function multiply(colorA:FlxColor, colorB:FlxColor):Int return cast (colorA * colorB);
+	
+	public static function subtract(colorA:FlxColor, colorB:FlxColor):Int return cast (colorA - colorB);
+	
+	public static function add(colorA:FlxColor, colorB:FlxColor):Int return cast (colorA + colorB);
+	
 	public static function toRGBA(color:FlxColor):Array<Int> return [color.red, color.green, color.blue, color.alpha];
 }
 
@@ -62,7 +98,7 @@ class ScriptedFlxRandom
 	}
 	
 	@:inheritDoc(flixel.math.FlxRandom.int)
-	public function int(min:Int = 0, max:Int = FlxMath.MAX_VALUE_INT, ?excludes:Array<Int>):Int
+	public static function int(min:Int = 0, max:Int = FlxMath.MAX_VALUE_INT, ?excludes:Array<Int>):Int
 	{
 		return FlxG.random.int(min, max, excludes);
 	}
@@ -74,7 +110,7 @@ class ScriptedFlxRandom
 	}
 	
 	@:inheritDoc(flixel.math.FlxRandom.floatNormal)
-	public function floatNormal(mean:Float = 0, stdDev:Float = 1):Float
+	public static function floatNormal(mean:Float = 0, stdDev:Float = 1):Float
 	{
 		return FlxG.random.floatNormal(mean, stdDev);
 	}

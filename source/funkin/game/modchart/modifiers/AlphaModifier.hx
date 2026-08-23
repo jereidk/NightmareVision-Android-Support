@@ -102,16 +102,16 @@ class AlphaModifier extends NoteModifier
 				player, note, ["reverse", "receptorScroll", "transformY"]); */
 		var speed = PlayState.instance.songSpeed * note.multSpeed;
 		var yPos:Float = modMgr.getVisPos(Conductor.songPosition, note.strumTime, speed) + 50;
-		
-		note.rgbGraphics.flash = 0;
+
+		note.rgbShader.flash = 0;
 		var alphaMod = (1 - getSubmodValue("alpha",
-			player)) * (1 - getSubmodValue('alpha${note.noteData}', player)) * (1 - getSubmodValue("noteAlpha", player)) * (1 - getSubmodValue('noteAlpha${note.noteData}', player));
+			player)) * (1 - getSubmodValue(catKey('alpha', note.noteData), player)) * (1 - getSubmodValue("noteAlpha", player)) * (1 - getSubmodValue(catKey('noteAlpha', note.noteData), player));
 		var alpha = getVisibility(yPos, player, note);
 		
 		if (getSubmodValue("dontUseStealthGlow", player) == 0)
 		{
 			note.alphaMod = getAlpha(alpha);
-			note.rgbGraphics.flash = getGlow(alpha);
+			note.rgbShader.flash = getGlow(alpha);
 		}
 		else note.alphaMod = alpha;
 		
@@ -120,29 +120,29 @@ class AlphaModifier extends NoteModifier
 	
 	override function updateReceptor(beat:Float, receptor:StrumNote, pos:Vector3, player:Int)
 	{
-		var alpha = (1 - getSubmodValue("alpha", player)) * (1 - getSubmodValue('alpha${receptor.noteData}', player));
-		if (getSubmodValue("dark", player) != 0 || getSubmodValue('dark${receptor.noteData}', player) != 0)
+		var alpha = (1 - getSubmodValue("alpha", player)) * (1 - getSubmodValue(catKey('alpha', receptor.noteData), player));
+		if (getSubmodValue("dark", player) != 0 || getSubmodValue(catKey('dark', receptor.noteData), player) != 0)
 		{
-			alpha = alpha * (1 - getSubmodValue("dark", player)) * (1 - getSubmodValue('dark${receptor.noteData}', player));
+			alpha = alpha * (1 - getSubmodValue("dark", player)) * (1 - getSubmodValue(catKey('dark', receptor.noteData), player));
 		}
 		// @:privateAccess
-		receptor.rgbGraphics.alpha = alpha;
+		receptor.rgbShader.alpha = alpha;
 	}
 	
 	override function updateNoteSplash(beat:Float, splash:NoteSplash, pos:Vector3, player:Int)
 	{
-		var alpha = (1 - getSubmodValue('alpha', player)) * (1 - getSubmodValue('alpha${splash.noteData}', player));
-		alpha *= (1 - getSubmodValue('noteSplashAlpha', player)) * (1 - getSubmodValue('noteSplash${splash.noteData}Alpha', player));
-		
-		splash.rgbGraphics.alpha = alpha;
+		var alpha = (1 - getSubmodValue('alpha', player)) * (1 - getSubmodValue(catKey('alpha', splash.noteData), player));
+		alpha *= (1 - getSubmodValue('noteSplashAlpha', player)) * (1 - getSubmodValue(catKey('noteSplash', splash.noteData, 'Alpha'), player));
+
+		splash.rgbShader.alpha = alpha;
 	}
-	
+
 	override function updateSustainSplash(beat:Float, splash:SustainSplash, pos:Vector3, player:Int)
 	{
-		var alpha = (1 - getSubmodValue('alpha', player)) * (1 - getSubmodValue('alpha${splash.noteData}', player));
-		alpha *= (1 - getSubmodValue('sustainSplashAlpha', player)) * (1 - getSubmodValue('sustainSplash${splash.noteData}Alpha', player));
+		var alpha = (1 - getSubmodValue('alpha', player)) * (1 - getSubmodValue(catKey('alpha', splash.noteData), player));
+		alpha *= (1 - getSubmodValue('sustainSplashAlpha', player)) * (1 - getSubmodValue(catKey('sustainSplash', splash.noteData, 'Alpha'), player));
 		
-		splash.rgbGraphics.alpha = alpha;
+		splash.rgbShader.alpha = alpha;
 	}
 	
 	override function getSubmods()

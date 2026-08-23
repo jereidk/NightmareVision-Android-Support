@@ -10,7 +10,13 @@ import funkin.data.NoteSkin.ColorList;
 class NoteSkin implements IFlxDestroyable
 {
 	public var data:NoteSkinData;
-	
+
+	// Native scale of the default note skin. Anything that re-tunes a skin's
+	// scale relative to "normal" (e.g. the VSlice layout) should measure against
+	// this so skins with a different native scale -- like pixel's 6 -- keep
+	// their proportions instead of being clobbered to an absolute value.
+	public static final DEFAULT_SCALE:Float = 0.7;
+
 	public var name:String = '';
 	// public var helper:NoteSkinHelper;
 	public var keys:Int = 4;
@@ -24,7 +30,7 @@ class NoteSkin implements IFlxDestroyable
 	// anims
 	public var noteAnims:Array<Array<Animation>> = [];
 	public var receptorAnims:Array<Array<Animation>> = [];
-	public var splashAnims:Array<Animation> = [];
+	public var splashAnims:Array<Array<Animation>> = [];
 	public var susSplashAnims:Array<Array<Animation>> = [];
 	
 	// offsets
@@ -44,17 +50,21 @@ class NoteSkin implements IFlxDestroyable
 	public var antialiasing:Bool = true;
 	
 	// alpha
-	// not functional yet cuz i wanna make hotswapping shit functional first
+    // not functional yet cuz i wanna make hotswapping shit functional first
 	public var receptorAlpha:Float = 1.0;
 	public var sustainAlpha:Float = 1.0;
 	public var splashAlpha:Float = 1.0;
 	public var susSplashAlpha:Float = 1.0;
 	
 	// scale
-	public var receptorScale:Float = 0.7;
-	public var noteScale:Float = 0.7;
+	public var receptorScale:Float = NoteSkin.DEFAULT_SCALE;
+	public var noteScale:Float = NoteSkin.DEFAULT_SCALE;
 	public var splashScale:Float = 1;
 	public var susSplashScale:Float = 1;
+	
+	// other
+	public var susSplashOrigin:Array<Float> = [];
+	public var noteSplashVariants:Int = 1;
 	
 	// coloring
 	public var inEngineColoring:Bool = true;
@@ -97,7 +107,6 @@ class NoteSkin implements IFlxDestroyable
 		splashTexture = data.splashTexture;
 		sustainSplashTexture = data.sustainSplashTexture;
 		
-		singAnimations = data.singAnimations;
 		splashesEnabled = data.splashesEnabled;
 		sustainSplashes = data.susSplashesEnabled;
 		antialiasing = data.antialiasing;
@@ -106,6 +115,9 @@ class NoteSkin implements IFlxDestroyable
 		noteScale = data.noteScale;
 		splashScale = data.splashScale;
 		susSplashScale = data.susSplashScale;
+		
+		susSplashOrigin = data.susSplashOrigin;
+		noteSplashVariants = data.noteSplashVariants;
 		
 		inEngineColoring = data.inGameColoring;
 		colors = data.arrowRGB;
@@ -134,7 +146,6 @@ class NoteSkin implements IFlxDestroyable
 		{
 			for (i in input)
 			{
-				i.offsets ??= [0, 0];
 				i.looping ??= false;
 				i.fps ??= 24;
 			}
@@ -152,12 +163,11 @@ class NoteSkin implements IFlxDestroyable
 		data.susSplashAnimations ??= NoteUtil.DEFAULT_SUSTAIN_SPLASH_ANIMATIONS;
 		
 		// correcting note animation data that might have missing fields
-		for (j in [data.noteAnimations, data.receptorAnimations, data.susSplashAnimations])
+		for (j in [data.noteAnimations, data.receptorAnimations, data.noteSplashAnimations, data.susSplashAnimations])
 		{
 			for (i in j)
 				correctAnims(i);
 		}
-		correctAnims(data.noteSplashAnimations);
 		
 		data.singAnimations ??= NoteUtil.defaultSingAnimations;
 		data.splashesEnabled ??= true;
@@ -168,8 +178,8 @@ class NoteSkin implements IFlxDestroyable
 		data.splashAlpha ??= 1.0;
 		data.susSplashAlpha ??= 1.0;
 		
-		data.receptorScale ??= 0.7;
-		data.noteScale ??= 0.7;
+		data.receptorScale ??= NoteSkin.DEFAULT_SCALE;
+		data.noteScale ??= NoteSkin.DEFAULT_SCALE;
 		data.splashScale ??= 1;
 		data.susSplashScale ??= 1;
 		
@@ -189,7 +199,7 @@ typedef NoteSkinData =
 	
 	?noteAnimations:Array<Array<Animation>>,
 	?receptorAnimations:Array<Array<Animation>>,
-	?noteSplashAnimations:Array<Animation>,
+	?noteSplashAnimations:Array<Array<Animation>>,
 	?susSplashAnimations:Array<Array<Animation>>,
 	
 	?splashesEnabled:Bool,
@@ -204,6 +214,9 @@ typedef NoteSkinData =
 	?noteScale:Float,
 	?splashScale:Float,
 	?susSplashScale:Float,
+	
+	?susSplashOrigin:Array<Float>,
+	?noteSplashVariants:Int,
 	
 	?inGameColoring:Bool,
 	?arrowRGB:Array<ColorList>

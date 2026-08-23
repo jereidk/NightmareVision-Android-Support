@@ -3,6 +3,9 @@ package funkin.states.editors;
 import haxe.io.Path;
 
 import flixel.group.FlxSpriteContainer;
+import flixel.text.FlxText;
+import flixel.input.gamepad.FlxGamepad;
+import flixel.input.touch.FlxTouch;
 
 import haxe.ui.components.Stepper;
 import haxe.Json;
@@ -11,6 +14,8 @@ import haxe.ui.components.CheckBox;
 import haxe.ui.components.Button;
 import haxe.ui.components.Slider;
 import haxe.ui.backend.flixel.UIState;
+
+import openfl.events.Event;
 
 import flixel.group.FlxContainer;
 import flixel.graphics.FlxGraphic;
@@ -107,7 +112,28 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	
 	var isCameraDragging:Bool = false;
 	var isTextFieldFocused:Bool = false;
-	
+
+	var prevPinchDist:Float = -1;
+	// The two fingers actually driving the current pinch, tracked by
+	// touchPointID -- see controlCamera()'s pinch-zoom block for why raw
+	// FlxG.touches.list[0]/[1] indexing isn't safe across frames.
+	var pinchTouchID1:Int = -1;
+	var pinchTouchID2:Int = -1;
+	var touchOffsetMode:Bool = false;
+	var padWasMovingStick:Bool = false;
+	var touchModeBtn:Null<FlxSprite> = null;
+	var touchModeBtnText:Null<FlxText> = null;
+
+	// Touch equivalents for the keyboard-only Z/X (frame step) and C
+	// (replay current anim) shortcuts -- everything else in this editor
+	// already has a touch/gamepad equivalent (pinch zoom, drag-to-pan,
+	// drag-to-offset, the undo/redo toolbar buttons, tapping the
+	// animation list to play it), but these two had no touch-accessible
+	// trigger at all.
+	var frameBackBtn:Null<FlxSprite> = null;
+	var frameFwdBtn:Null<FlxSprite> = null;
+	var replayBtn:Null<FlxSprite> = null;
+
 	var goToPlayState:Bool = false;
 	
 	public function new(?char:String, goToPlayState:Bool = false)
@@ -136,6 +162,8 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			var dad = new Character(dadPos.x, dadPos.y, 'dad', false);
 			var bf = new Character(bfPos.x, bfPos.y, 'bf', true);
+			dad.useRenderTexture = true;
+			bf.useRenderTexture = true;
 			dad.active = false;
 			bf.active = false;
 			dad.x += dad.positionArray[0];
@@ -184,40 +212,54 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		add(pointerBounds);
 		pointerBounds.alpha = 0;
 
-        #if mobile
-	    addVirtualPad(LEFT_FULL, CHARACTER_EDITOR);
-        addVirtualPadCamera();
+		#if mobile
+		touchModeBtn = new FlxSprite(10, FlxG.height - 70).makeGraphic(170, 50, 0xAA111133);
+		touchModeBtn.scrollFactor.set(0, 0);
+		touchModeBtn.cameras = [camHUD];
+		add(touchModeBtn);
+		touchModeBtnText = new FlxText(10, FlxG.height - 62, 170, 'Touch: PAN');
+		touchModeBtnText.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, CENTER);
+		touchModeBtnText.scrollFactor.set(0, 0);
+		touchModeBtnText.cameras = [camHUD];
+		add(touchModeBtnText);
+
+		inline function buildSmallTouchButton(x:Float, width:Int, label:String):FlxSprite
+		{
+			var btn = new FlxSprite(x, FlxG.height - 70).makeGraphic(width, 50, 0xAA111133);
+			btn.scrollFactor.set(0, 0);
+			btn.cameras = [camHUD];
+			add(btn);
+
+			var text = new FlxText(x, FlxG.height - 62, width, label);
+			text.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, CENTER);
+			text.scrollFactor.set(0, 0);
+			text.cameras = [camHUD];
+			add(text);
+
+			return btn;
+		}
+
+		// '<'/'>' instead of arrow glyphs -- vcr.ttf has no glyph for those
+		// (same reason MobileSettingsSubState/OptionsState use plain ASCII
+		// arrows elsewhere this session).
+		frameBackBtn = buildSmallTouchButton(190, 90, '< FRAME');
+		frameFwdBtn = buildSmallTouchButton(290, 90, 'FRAME >');
+		replayBtn = buildSmallTouchButton(390, 110, 'REPLAY');
 		#end
 	}
 	
 	function exitState()
 	{
-		#if mobile
-		virtualPad.visible = false;
-		#end
-
-		// i want this to only show up on unsaved changes but i think id ahve to do a bit of refactoring for that to work nice
-		ToolKitUtils.openPrompt('Are you sure you want to exit? There may be unsaved changes.', 'Exiting Menu', 'yesno', (button) -> {
-			if (button.toString().contains('yes'))
-			{
-				if (goToPlayState)
-				{
-					FlxG.switchState(PlayState.new);
-				}
-				else
-				{
-					FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
-					FunkinSound.playMusic(Paths.music('freakyMenu'));
-				}
-				FlxG.mouse.visible = false;
-			}
-			else
-			{
-				#if mobile
-				virtualPad.visible = true;
-				#end
-			}
-		});
+		if (goToPlayState)
+		{
+			FlxG.switchState(PlayState.new);
+		}
+		else
+		{
+			FlxG.switchState(funkin.states.editors.MasterEditorMenu.new);
+			FunkinSound.playMusic(Paths.music('freakyMenu'));
+		}
+		FlxG.mouse.visible = false;
 	}
 	
 	public function buildUI()
@@ -294,6 +336,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		uiElements.toolBar.isPlayerCheckBox.onChange = (ui) -> {
 			character.isPlayer = ui.value.toBool();
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 			
 			positionCharacter();
 		}
@@ -429,10 +472,15 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			if (character.originalFlipX == ui.value.toBool()) return;
 			character.originalFlipX = !character.originalFlipX;
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 		}
 		
 		uiElements.characterDialogBox.vSliceSusCheckbox.onChange = (ui) -> {
 			character.vSliceSustains = ui.value.toBool();
+		}
+		
+		uiElements.characterDialogBox.afterimagesCheckbox.onChange = (ui) -> {
+			character.ghostsEnabled = ui.value.toBool();
 		}
 		
 		uiElements.characterDialogBox.antialiasingCheckbox.onChange = (ui) -> {
@@ -532,10 +580,19 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			updateHealthIcon();
 		}
 		
+		uiElements.characterDialogBox.pauseMenuTextField.onChange = (ui) -> {
+			character.pausePortrait = uiElements.characterDialogBox.pauseMenuTextField.value;
+		}
+		
 		uiElements.characterDialogBox.getIconColourButton.onClick = (ui) -> {
 			final newColour = CoolUtil.dominantColor(healthIcon);
 			uiElements.characterDialogBox.healthColourPicker.value = newColour;
 			character.healthColour = newColour;
+		}
+		
+		uiElements.characterDialogBox.getPortraitButton.onClick = (ui) -> {
+			uiElements.characterDialogBox.pauseMenuTextField.value = characterId;
+			trace('ok $characterId');
 		}
 		
 		uiElements.characterDialogBox.reloadCharacterImageButton.onClick = (ui) -> {
@@ -823,8 +880,39 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	
 	override function update(elapsed:Float)
 	{
+		if (touchModeBtn != null)
+		{
+			inline function touchOverBtn(btn:FlxSprite, touch:FlxTouch):Bool
+				return touch.viewX >= btn.x && touch.viewX <= btn.x + btn.width && touch.viewY >= btn.y && touch.viewY <= btn.y + btn.height;
+
+			for (touch in FlxG.touches.list)
+			{
+				if (!touch.justPressed) continue;
+
+				if (touchOverBtn(touchModeBtn, touch))
+				{
+					touchOffsetMode = !touchOffsetMode;
+					if (touchModeBtnText != null)
+						touchModeBtnText.text = 'Touch: ' + (touchOffsetMode ? 'OFFSET' : 'PAN');
+					FlxG.sound.play(Paths.sound('ui/mouseClick'));
+				}
+				else if (frameBackBtn != null && touchOverBtn(frameBackBtn, touch))
+				{
+					stepFrame(-1);
+				}
+				else if (frameFwdBtn != null && touchOverBtn(frameFwdBtn, touch))
+				{
+					stepFrame(1);
+				}
+				else if (replayBtn != null && touchOverBtn(replayBtn, touch))
+				{
+					replayCurrentAnim();
+				}
+			}
+		}
+
 		updateBounds(elapsed);
-		
+
 		super.update(elapsed);
 		ToolKitUtils.update();
 		
@@ -901,14 +989,23 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			exitState();
 		}
+
+		#if android
+		if (FlxG.android.justReleased.BACK)
+		{
+			exitState();
+		}
+		#end
 	}
 	
 	var wasDraggingCursor:Bool = false;
-	
+	var wasTouchDraggingCursor:Bool = false;
+	var _lastOffsetText:Null<String> = null;
+
 	function updateBounds(elapsed:Float)
 	{
 		var pointerAlpha:Float = 0;
-		
+
 		if (pointerBounds.target != null
 			&& (wasDraggingCursor
 				|| (!ToolKitUtils.isHaxeUIHovered(camHUD)
@@ -921,26 +1018,60 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 				FlxG.sound.play(Paths.sound('ui/mouseClick'));
 				addUndoAction(DRAGGED, pointerBounds.target, [character.cameraPosition[0], character.cameraPosition[1]]);
 			}
-			
+
 			if (FlxG.mouse.pressed)
 			{
 				wasDraggingCursor = true;
-				
+
 				var x = FlxG.mouse.deltaViewX;
-				
+
 				if (character.isPlayer) x *= -1;
-				
+
 				character.cameraPosition[0] += x;
-				
+
 				character.cameraPosition[1] += FlxG.mouse.deltaViewY;
-				
+
 				uiElements.characterDialogBox.characterCamXStepper.value = character.cameraPosition[0];
 				uiElements.characterDialogBox.characterCamYStepper.value = character.cameraPosition[1];
 			}
-			
+
 			if (FlxG.mouse.justReleased) wasDraggingCursor = false;
 		}
-		
+
+		// Touch: drag camera pointer crosshair to adjust camera_position
+		if (pointerBounds.target != null && character != null && FlxG.touches.list.length == 1)
+		{
+			final touch = FlxG.touches.list[0];
+			final ptr = pointerBounds.target;
+			final touchOverPtr = touch.x >= ptr.x && touch.x < ptr.x + ptr.width
+				&& touch.y >= ptr.y && touch.y < ptr.y + ptr.height;
+
+			if (wasTouchDraggingCursor || (!ToolKitUtils.isHaxeUIHovered(camHUD) && touchOverPtr))
+			{
+				pointerAlpha = 1;
+				if (touch.justPressed)
+				{
+					FlxG.sound.play(Paths.sound('ui/mouseClick'));
+					addUndoAction(DRAGGED, ptr, [character.cameraPosition[0], character.cameraPosition[1]]);
+				}
+				if (touch.pressed)
+				{
+					wasTouchDraggingCursor = true;
+					var dx = touch.deltaViewX;
+					if (character.isPlayer) dx *= -1;
+					character.cameraPosition[0] += dx;
+					character.cameraPosition[1] += touch.deltaViewY;
+					uiElements.characterDialogBox.characterCamXStepper.value = character.cameraPosition[0];
+					uiElements.characterDialogBox.characterCamYStepper.value = character.cameraPosition[1];
+				}
+				if (touch.justReleased) wasTouchDraggingCursor = false;
+			}
+		}
+		else if (FlxG.touches.list.length == 0)
+		{
+			wasTouchDraggingCursor = false;
+		}
+
 		pointerBounds.alpha = FlxMath.lerp(pointerBounds.alpha, pointerAlpha, FlxMath.getElapsedLerp(0.4, elapsed));
 	}
 	
@@ -961,9 +1092,24 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		}
 		
 		final text = character.getAnimName() + ': $offsets';
-		
+
+		// This runs every frame while dragging (see the update() call site
+		// above), and the dataSource re-set below is what actually repaints
+		// the list row -- but it also queues a HaxeUI Toolkit.callLater()
+		// UI-event dispatch every single time it runs. Re-queuing that on
+		// every frame of a drag needlessly stacks up pending callbacks that
+		// fire a frame late; if the editor closes (disposing the list) in
+		// that window, one of them dispatches against an already-disposed
+		// component (crashes -- see patch-haxeui-listview-disposed-callback.py
+		// for the library-side guard). Skipping the refresh when the label
+		// text hasn't actually changed (offsets are Std.int()-rounded, so
+		// most frames of a slow drag don't change it at all) removes most of
+		// that unnecessary queuing at the source instead of just tolerating it.
+		if (text == _lastOffsetText) return;
+		_lastOffsetText = text;
+
 		uiElements.animationList.animationList.selectedItem.text = text;
-		
+
 		// call the freaking setter DIE
 		uiElements.animationList.animationList.dataSource = uiElements.animationList.animationList.dataSource;
 	}
@@ -978,35 +1124,74 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			}
 			character.animOffset.x -= FlxG.mouse.deltaViewX;
 			character.animOffset.y -= FlxG.mouse.deltaViewY;
-			
+
 			return true;
 		}
-		
+
 		if (isTextFieldFocused) return false;
-		
+
 		final moveDistance = FlxG.keys.pressed.SHIFT ? 10 : 1;
-		
-		if (FlxG.keys.justPressed.LEFT #if mobile || virtualPad.buttonLeft.justPressed #end)
+
+		if (FlxG.keys.justPressed.LEFT)
 		{
 			character.animOffset.x += moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.DOWN #if mobile || virtualPad.buttonDown.justPressed #end)
+		else if (FlxG.keys.justPressed.DOWN)
 		{
 			character.animOffset.y -= moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.UP #if mobile || virtualPad.buttonUp.justPressed #end)
+		else if (FlxG.keys.justPressed.UP)
 		{
 			character.animOffset.y += moveDistance;
 			return true;
 		}
-		else if (FlxG.keys.justPressed.RIGHT #if mobile || virtualPad.buttonRight.justPressed #end)
+		else if (FlxG.keys.justPressed.RIGHT)
 		{
 			character.animOffset.x -= moveDistance;
 			return true;
 		}
-		
+
+		// Gamepad: left stick adjusts animation offset
+		final pad:Null<FlxGamepad> = FlxG.gamepads.firstActive;
+		if (pad != null)
+		{
+			final lx = pad.analog.value.LEFT_STICK_X;
+			final ly = pad.analog.value.LEFT_STICK_Y;
+			final stickActive = Math.abs(lx) > 0.2 || Math.abs(ly) > 0.2;
+			if (stickActive)
+			{
+				if (!padWasMovingStick)
+					addUndoAction(DRAGGED, character, [character.animOffset.x, character.animOffset.y]);
+				character.animOffset.x -= lx * 150 * elapsed;
+				character.animOffset.y -= ly * 150 * elapsed;
+				padWasMovingStick = true;
+				return true;
+			}
+			else
+			{
+				padWasMovingStick = false;
+			}
+		}
+
+		// Touch: single-finger drag adjusts offset when in OFFSET mode
+		if (FlxG.touches.list.length == 1 && touchOffsetMode)
+		{
+			final touch = FlxG.touches.list[0];
+			if (!ToolKitUtils.isHaxeUIHovered(camHUD))
+			{
+				if (touch.justPressed)
+					addUndoAction(DRAGGED, character, [character.animOffset.x, character.animOffset.y]);
+				if (touch.pressed)
+				{
+					character.animOffset.x -= touch.deltaViewX;
+					character.animOffset.y -= touch.deltaViewY;
+					return true;
+				}
+			}
+		}
+
 		return false;
 	}
 	
@@ -1034,63 +1219,86 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 			uiElements.animationList.animationList.selectItemBy((item) -> return item.id == anim);
 		}
 		
-		if (FlxG.keys.justPressed.A #if mobile || virtualPad.buttonLeft2.justPressed #end)
+		if (FlxG.keys.justPressed.A)
 		{
 			playSing('singLEFT');
 		}
-		else if (FlxG.keys.justPressed.W #if mobile || virtualPad.buttonUp2.justPressed #end)
+		else if (FlxG.keys.justPressed.W)
 		{
 			playSing('singUP');
 		}
-		else if (FlxG.keys.justPressed.S #if mobile || virtualPad.buttonDown2.justPressed #end)
+		else if (FlxG.keys.justPressed.S)
 		{
 			playSing('singDOWN');
 		}
-		else if (FlxG.keys.justPressed.D #if mobile || virtualPad.buttonRight2.justPressed #end)
+		else if (FlxG.keys.justPressed.D)
 		{
 			playSing('singRIGHT');
 		}
-		else if (FlxG.keys.justPressed.SPACE #if mobile || virtualPad.buttonA.justPressed #end)
+		else if (FlxG.keys.justPressed.SPACE)
 		{
 			dance();
 		}
-		
+
+		// Gamepad: face buttons trigger sing animations, START → idle
+		final pad:Null<FlxGamepad> = FlxG.gamepads.firstActive;
+		if (pad != null)
+		{
+			if (pad.justPressed.X) playSing('singLEFT');
+			else if (pad.justPressed.Y) playSing('singUP');
+			else if (pad.justPressed.A) playSing('singDOWN');
+			else if (pad.justPressed.B) playSing('singRIGHT');
+			else if (pad.justPressed.START) dance();
+		}
+
 		if (character.isAnimNull()) return;
-		
-		if ((FlxG.keys.justPressed.Z || FlxG.keys.justPressed.X #if mobile || virtualPad.buttonC.justPressed #end))
-		{
-			character.pauseAnim();
-			character.animCurFrame = FlxMath.wrap(character.animCurFrame + (FlxG.keys.justPressed.Z ? -1 : 1), 0, character.getAnimNumFrames() - 1);
-		}
-		
-		if (FlxG.keys.justPressed.C #if mobile || virtualPad.buttonZ.justPressed #end)
-		{
-			character.playAnim(character.getAnimName(), true);
-		}
+
+		if (FlxG.keys.justPressed.Z) stepFrame(-1);
+		if (FlxG.keys.justPressed.X) stepFrame(1);
+
+		if (FlxG.keys.justPressed.C) replayCurrentAnim();
+	}
+
+	/** Steps the current animation's frame by `dir` (-1/+1), pausing it if
+	 *  playing. Shared by the keyboard Z/X shortcut and the mobile
+	 *  frameBackBtn/frameFwdBtn touch buttons. */
+	function stepFrame(dir:Int):Void
+	{
+		if (character == null || character.isAnimNull()) return;
+		character.pauseAnim();
+		character.animCurFrame = FlxMath.wrap(character.animCurFrame + dir, 0, character.getAnimNumFrames() - 1);
+	}
+
+	/** Replays the current animation from frame 0. Shared by the keyboard C
+	 *  shortcut and the mobile replayBtn touch button. */
+	function replayCurrentAnim():Void
+	{
+		if (character == null || character.isAnimNull()) return;
+		character.playAnim(character.getAnimName(), true);
 	}
 	
 	function controlCamera(elapsed:Float)
 	{
-		if (FlxG.keys.pressed.E #if mobile || virtualPad.buttonD.justPressed #end && FlxG.camera.zoom < 3)
+		if (FlxG.keys.pressed.E && FlxG.camera.zoom < 3)
 		{
 			FlxG.camera.zoom += elapsed * FlxG.camera.zoom;
 		}
-		if (FlxG.keys.pressed.Q #if mobile || virtualPad.buttonB.justPressed #end && FlxG.camera.zoom > 0.1)
+		if (FlxG.keys.pressed.Q && FlxG.camera.zoom > 0.1)
 		{
 			FlxG.camera.zoom -= elapsed * FlxG.camera.zoom;
 		}
 		
 		final speedMult = FlxG.keys.pressed.SHIFT ? 2 : 1;
-		
-		if (FlxG.keys.pressed.I #if mobile || virtualPad.buttonX.justPressed #end)
+
+		if (FlxG.keys.pressed.I)
 		{
 			FlxG.camera.scroll.y -= 200 * elapsed * speedMult;
 		}
-		else if (FlxG.keys.pressed.K #if mobile || virtualPad.buttonV.justPressed #end)
+		else if (FlxG.keys.pressed.K)
 		{
 			FlxG.camera.scroll.y += 200 * elapsed * speedMult;
 		}
-		
+
 		if (FlxG.keys.pressed.J)
 		{
 			FlxG.camera.scroll.x -= 200 * elapsed * speedMult;
@@ -1099,29 +1307,96 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			FlxG.camera.scroll.x += 200 * elapsed * speedMult;
 		}
-		
+
+		// Gamepad: right stick pans, LB/RB zooms (works even over UI, like keyboard shortcuts)
+		final pad:Null<FlxGamepad> = FlxG.gamepads.firstActive;
+		if (pad != null)
+		{
+			final rx = pad.analog.value.RIGHT_STICK_X;
+			final ry = pad.analog.value.RIGHT_STICK_Y;
+			if (Math.abs(rx) > 0.2) FlxG.camera.scroll.x += rx * 400 * elapsed * speedMult;
+			if (Math.abs(ry) > 0.2) FlxG.camera.scroll.y += ry * 400 * elapsed * speedMult;
+			if (pad.pressed.LEFT_SHOULDER && FlxG.camera.zoom > 0.1)
+				FlxG.camera.zoom -= elapsed * FlxG.camera.zoom;
+			if (pad.pressed.RIGHT_SHOULDER && FlxG.camera.zoom < 3)
+				FlxG.camera.zoom += elapsed * FlxG.camera.zoom;
+		}
+
+		// Pinch-to-zoom (two fingers; works over UI like keyboard E/Q)
+		final numTouches = FlxG.touches.list.length;
+		if (numTouches >= 2)
+		{
+			// Track the SAME two fingers for the whole gesture by
+			// touchPointID -- FlxG.touches.list's order isn't guaranteed to
+			// stay stable frame-to-frame while touches are added/removed
+			// (e.g. a third finger briefly touching down and lifting), so
+			// indexing list[0]/list[1] directly could measure the distance
+			// between a DIFFERENT pair of fingers than the previous frame,
+			// producing sudden erratic zoom jumps mid-pinch. Only re-pick
+			// the pair when one of the currently-tracked IDs isn't actually
+			// down any more.
+			final id1Valid = pinchTouchID1 != -1 && FlxG.touches.getByID(pinchTouchID1) != null;
+			final id2Valid = pinchTouchID2 != -1 && FlxG.touches.getByID(pinchTouchID2) != null;
+			if (!id1Valid || !id2Valid)
+			{
+				pinchTouchID1 = FlxG.touches.list[0].touchPointID;
+				pinchTouchID2 = FlxG.touches.list[1].touchPointID;
+				prevPinchDist = -1;
+			}
+
+			final t1 = FlxG.touches.getByID(pinchTouchID1);
+			final t2 = FlxG.touches.getByID(pinchTouchID2);
+			final dist = Math.sqrt(Math.pow(t2.viewX - t1.viewX, 2) + Math.pow(t2.viewY - t1.viewY, 2));
+			if (prevPinchDist > 0)
+			{
+				FlxG.camera.zoom += (dist - prevPinchDist) * 0.003 * FlxG.camera.zoom;
+				FlxG.camera.zoom = FlxMath.bound(FlxG.camera.zoom, 0.1, 6);
+			}
+			prevPinchDist = dist;
+		}
+		else
+		{
+			prevPinchDist = -1;
+			pinchTouchID1 = -1;
+			pinchTouchID2 = -1;
+		}
+
 		if (FlxG.mouse.justReleasedMiddle) isCameraDragging = false;
-		
+
 		if (ToolKitUtils.isHaxeUIHovered(camHUD) && !isCameraDragging) return;
-		
+
 		if (FlxG.mouse.justPressedMiddle)
 		{
 			isCameraDragging = true;
 			FlxG.sound.play(Paths.sound('ui/mouseMiddleClick'));
 		}
-		
+
 		if (FlxG.mouse.pressedMiddle && FlxG.mouse.justMoved)
 		{
 			FlxG.camera.scroll.x -= FlxG.mouse.deltaViewX * speedMult;
 			FlxG.camera.scroll.y -= FlxG.mouse.deltaViewY * speedMult;
 		}
-		
+
 		if (FlxG.mouse.wheel != 0)
 		{
 			FlxG.camera.zoom += FlxG.mouse.wheel * (0.1 * FlxG.camera.zoom);
 		}
-		
+
 		FlxG.camera.zoom = FlxMath.bound(FlxG.camera.zoom, 0.1, 6);
+
+		// Single-finger touch pan (PAN mode only, after UI hover check)
+		if (numTouches == 1 && !touchOffsetMode)
+		{
+			final touch = FlxG.touches.list[0];
+			final isBtnTouch = touchModeBtn != null
+				&& touch.viewX >= touchModeBtn.x && touch.viewX <= touchModeBtn.x + touchModeBtn.width
+				&& touch.viewY >= touchModeBtn.y && touch.viewY <= touchModeBtn.y + touchModeBtn.height;
+			if (!isBtnTouch && touch.pressed)
+			{
+				FlxG.camera.scroll.x -= touch.deltaViewX;
+				FlxG.camera.scroll.y -= touch.deltaViewY;
+			}
+		}
 	}
 	
 	function refreshCharDropDown() // rewrite this
@@ -1146,6 +1421,17 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterList = CoolUtil.coolTextFile(Paths.txt('characterList'));
 		#end
 		
+		inline function clearCopies<T>(input:Array<T>):Array<T>
+		{
+			var output:Array<T> = [];
+			for (obj in input)
+			{
+				if (!output.contains(obj)) output.push(obj);
+			}
+			return output;
+		}
+		characterList = clearCopies(characterList);
+		
 		uiElements.toolBar.characterDropdown.populateList([for (i in characterList) ToolKitUtils.makeSimpleDropDownItem(i)]);
 		uiElements.toolBar.characterDropdown.dataSource.sort(null, ASCENDING);
 	}
@@ -1154,8 +1440,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 	{
 		if (character == null) return;
 		
-		uiElements.characterDialogBox.flipXCheckbox.selected = character.originalFlipX;
-		uiElements.characterDialogBox.vSliceSusCheckbox.selected = character.vSliceSustains;
+		uiElements.characterDialogBox.flipXCheckbox.value = character.originalFlipX;
+		uiElements.characterDialogBox.vSliceSusCheckbox.value = character.vSliceSustains;
+		uiElements.characterDialogBox.afterimagesCheckbox.value = character.ghostsEnabled;
 		uiElements.characterDialogBox.antialiasingCheckbox.value = !character.noAntialiasing;
 		uiElements.characterDialogBox.scaledOffsetsCheckbox.value = character.scalableOffsets;
 		
@@ -1171,6 +1458,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		uiElements.characterDialogBox.imageFileTextField.value = character.imageFile;
 		uiElements.characterDialogBox.healthIconTextField.value = character.healthIcon;
+		uiElements.characterDialogBox.pauseMenuTextField.value = character.pausePortrait;
 		
 		uiElements.characterDialogBox.danceEveryStepper.value = character.danceEveryNumBeats;
 		
@@ -1191,7 +1479,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		uiElements.animationList.animationList.selectItemBy((item) -> return item.id == character.getAnimName());
 		
-		uiElements.toolBar.isPlayerCheckBox.selected = character.isPlayer;
+		uiElements.toolBar.isPlayerCheckBox.value = character.isPlayer;
 	}
 	
 	function fillAnimationFields(?animationName:String)
@@ -1269,7 +1557,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		
 		character.imageFile = uiElements.characterDialogBox.imageFileTextField.value;
 		
-		character.loadAtlas(character.imageFile);
+		character.loadAtlas(character.imageFile, LOOSE);
 		
 		for (anim in oldAnims)
 		{
@@ -1331,6 +1619,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		{
 			character.isPlayer = !character.isPlayer;
 			character.flipX = (character.originalFlipX != character.isPlayer);
+			character.baseFlipX = (character.isPlayer ? !character.originalFlipX : character.originalFlipX);
 			
 			uiElements.toolBar.isPlayerCheckBox.value = character.isPlayer;
 		}
@@ -1414,6 +1703,8 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterGhost.y = character.y;
 		
 		characterGhost.scale.copyFrom(character.scale);
+		characterGhost.updateHitbox();
+		characterGhost.offset.set();
 		
 		characterGhost.flipX = character.flipX;
 		
@@ -1422,7 +1713,7 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 		characterGhost.pauseAnim();
 		characterGhost.animCurFrame = character.animCurFrame;
 		
-		characterGhost.offset.copyFrom(character.offset);
+		characterGhost.animOffset.copyFrom(character.animOffset);
 		
 		characterGhost.alpha = uiElements.toolBar.ghostAlphaSlider.value;
 		updateGhostLayering();
@@ -1463,6 +1754,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 				"scalableOffsets": character.scalableOffsets,
 				"dance_every": character.danceEveryNumBeats,
 				"_editor_isPlayer": character.isPlayer,
+				"afterimages": character.ghostsEnabled,
+				"flags": character.flags,
+				"pausePortrait": character.pausePortrait,
 				
 				"gameover_character": character.gameoverCharacter,
 				"gameover_intial_sound": character.gameoverInitialDeathSound,
@@ -1480,10 +1774,9 @@ class CharacterEditorState extends UIState // MUST EXTEND UI STATE needed for ac
 				ToolKitUtils.makeNotification('Character File Saving', 'Character ($char) was successfully saved.', Success);
 				FlxG.sound.play(Paths.sound('ui/success'));
 			}
-			
 			function onFileCancel()
 			{
-				ToolKitUtils.makeNotification('Character File Saving', 'Character saving was canceled.', Info);
+				ToolKitUtils.makeNotification('Character File Saving', 'Character saving was canceled.', Warning);
 				FlxG.sound.play(Paths.sound('ui/warn'));
 			}
 			

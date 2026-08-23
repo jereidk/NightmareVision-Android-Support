@@ -1,21 +1,23 @@
 package funkin.states.options;
 
+import flixel.text.FlxText;
+
 import funkin.objects.*;
 
-enum abstract OptionType(String) to String from String
+/**
+ * Optional per-row override for TouchOptionList's value-column text/color
+ * (see Option.badgeProvider). Kept as a plain typedef, same convention as
+ * DLCManager.hx's DLCEntry/DLCRegistry.
+ */
+typedef OptionBadge =
 {
-	var BOOL = 'bool';
-	var STRING = 'string';
-	var PERCENT = 'percent';
-	var INT = 'int';
-	var FLOAT = 'float';
-	var BUTTON = 'button';
-	var LABEL = 'label';
+	var text:String;
+	var color:Int;
 }
 
 class Option
 {
-	private var child:Alphabet;
+	private var child:FlxText;
 	
 	public var text(get, set):String;
 	public var onChange:Void->Void = null; // Pressed enter (on Bool type options) or pressed/held left/right (on other types)
@@ -33,6 +35,7 @@ class Option
 	
 	public var curOption:Int = 0; // Don't change this
 	public var options:Array<String> = null; // Only used in string type
+	public var storedValues:Array<String> = null; // The Values stored in ClientPrefs corresponding to each value, language independent. For string type
 	public var changeValue:Dynamic = 1; // Only used in int/float/percent type, how much is changed when you PRESS
 	public var minValue:Dynamic = null; // Only used in int/float/percent type
 	public var maxValue:Dynamic = null; // Only used in int/float/percent type
@@ -43,8 +46,34 @@ class Option
 	public var name:String = 'Unknown';
 	
 	public var callback:Void->Void = null; // Pressed enter (on button type)
+
+	/**
+	 * Optional storage override -- when set, getValue()/setValue() below call
+	 * these instead of Reflect'ing a same-named property directly off
+	 * ClientPrefs. Needed by any caller whose values don't live as flat
+	 * ClientPrefs static properties (e.g. GameplayChangersSubstate's rows,
+	 * which live in the ClientPrefs.gameplaySettings map instead). Must be
+	 * passed in through the constructor (see below), not assigned after --
+	 * the constructor's own null-check below already calls getValue()/
+	 * setValue() before any post-construction assignment would run.
+	 */
+	public var getter:Void->Dynamic = null;
+	public var setter:Dynamic->Void = null;
+
+	/**
+	 * Optional per-frame override for this row's value-column text/color,
+	 * read by TouchOptionList.refreshRows() only -- never affects `type`,
+	 * so click/nav dispatch (resolveRowTap/adjustValue/isAdjustable) is
+	 * completely untouched by this. Return null to fall back to the normal
+	 * type-based display (e.g. '[ TAP ]' for a 'button' row). Called fresh
+	 * every frame for every visible row, so it can reflect live state (e.g.
+	 * an in-flight download's progress%) without the owning screen ever
+	 * needing to call setOptions() again.
+	 */
+	public var badgeProvider:Void->Null<OptionBadge> = null;
 	
-	public function new(name:String, description:String = '', variable:String, type:OptionType = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null)
+	public function new(name:String, description:String = '', variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null,
+			?storedValues:Array<String> = null, ?getter:Void->Dynamic, ?setter:Dynamic->Void)
 	{
 		this.name = name;
 		this.description = description;
@@ -52,7 +81,10 @@ class Option
 		this.type = type;
 		this.defaultValue = defaultValue;
 		this.options = options;
-		
+		this.storedValues = storedValues;
+		this.getter = getter;
+		this.setter = setter;
+
 		if (defaultValue == 'null variable value')
 		{
 			switch (type)
@@ -82,10 +114,24 @@ class Option
 		switch (type)
 		{
 			case 'string':
-				var num:Int = options.indexOf(getValue());
-				if (num > -1)
+				// If storedValues is provided, find curOption by matching stored value
+				if (storedValues != null)
 				{
-					curOption = num;
+					var storedVal:String = Std.string(getValue());
+					var num:Int = storedValues.indexOf(storedVal);
+					if (num > -1)
+					{
+						curOption = num;
+					}
+				}
+				else
+				{
+					// Legacy behavior: match display string
+					var num:Int = options.indexOf(getValue());
+					if (num > -1)
+					{
+						curOption = num;
+					}
 				}
 				
 			case 'percent':
@@ -95,7 +141,6 @@ class Option
 				maxValue = 1;
 				scrollSpeed = 0.5;
 				decimals = 2;
-			default:
 		}
 	}
 	
@@ -110,15 +155,16 @@ class Option
 	
 	public function getValue():Dynamic
 	{
-		return Reflect.getProperty(ClientPrefs, variable);
+		return (getter != null) ? getter() : Reflect.getProperty(ClientPrefs, variable);
 	}
-	
+
 	public function setValue(value:Dynamic)
 	{
-		Reflect.setProperty(ClientPrefs, variable, value);
+		if (setter != null) setter(value);
+		else Reflect.setProperty(ClientPrefs, variable, value);
 	}
 	
-	public function setChild(child:Alphabet)
+	public function setChild(child:FlxText)
 	{
 		this.child = child;
 	}
@@ -134,11 +180,8 @@ class Option
 	
 	private function set_text(newValue:String = '')
 	{
-		if (child != null)
-		{
-			child.changeText(newValue);
-		}
-		return null;
+		if (child != null) child.text = newValue;
+		return newValue;
 	}
 	
 	private function get_type()
@@ -146,16 +189,18 @@ class Option
 		var newValue:String = 'bool';
 		switch (type.toLowerCase().trim())
 		{
-			case 'int' | 'float' | 'percent' | 'string' | 'label':
+			case 'int' | 'float' | 'percent' | 'string':
 				newValue = type;
 			case 'integer':
-				newValue = INT;
+				newValue = 'int';
 			case 'str':
-				newValue = STRING;
+				newValue = 'string';
 			case 'fl':
-				newValue = FLOAT;
+				newValue = 'float';
 			case 'button':
-				newValue = BUTTON;
+				newValue = 'button';
+			case 'label':
+				newValue = 'label';
 		}
 		type = newValue;
 		return type;

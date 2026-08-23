@@ -1,0 +1,66 @@
+PENDING LANGUAGE TRANSLATIONS - VS Impostor Android (option C: full English parity)
+==============================================================================
+
+Generated: 2026-07-19
+Goal: Every language file must contain all keys present in english.json
+
+COMPLETED (8 languages, pushed to impostor-legacy-android):
+------------------------------------------------------------------------------
+  [x] spanish-latam
+  [x] spanish
+  [x] italian
+  [x] french
+  [x] pt-br
+  [x] pt-pt
+  [x] danish
+  [x] norwegian
+
+PENDING (23 languages):
+------------------------------------------------------------------------------
+language         missing   breakdown
+------------------------------------------------------------------------------
+english-gb           733   tips:34, who:53, awards:263, options:114, cutscene:64, dialogue:132, other:73
+hungarian            274   tips:34, who:53, awards:28, options:74, cutscene:64, other:21
+irish                272   tips:34, who:53, awards:25, options:75, cutscene:64, other:21
+serbian              271   tips:34, who:53, awards:24, options:74, cutscene:64, other:22
+czech                270   tips:34, who:53, awards:24, options:74, cutscene:64, other:21
+korean               270   tips:34, who:53, awards:24, options:74, cutscene:64, other:21
+ukrainian            270   tips:34, who:53, awards:24, options:74, cutscene:64, other:21
+dutch                266   tips:34, who:53, awards:23, options:73, cutscene:64, other:19
+german               195   tips:34, who:53, awards:26, options:64, other:18
+romanian             191   tips:34, who:53, awards:35, options:50, other:19
+swedish              182   tips:34, who:53, awards:34, options:49, other:12
+greek                172   tips:34, who:53, awards:20, options:53, other:12
+indonesia            168   tips:34, who:53, awards:17, options:50, other:14
+japanese             167   tips:34, who:53, awards:16, options:49, other:15
+polish               166   tips:34, who:53, awards:17, options:50, other:12
+turkish              164   tips:34, who:53, awards:16, options:49, other:12
+lithuanian           163   tips:34, who:53, awards:16, options:49, other:11
+arabic               162   tips:34, who:53, awards:16, options:49, other:10
+zh-tw                111   tips:34, awards:17, options:50, other:10
+russian              110   tips:34, awards:17, options:49, other:10
+thai                 109   tips:34, awards:16, options:49, other:10
+vietnamese           109   tips:34, awards:16, options:49, other:10
+zh-cn                109   tips:34, awards:16, options:49, other:10
+------------------------------------------------------------------------------
+TOTAL               4904   keys across 23 languages
+
+NOTES / METHOD:
+------------------------------------------------------------------------------
+- 'universal' = 75 fork-added mobile/Android option keys (botplay, virtual pad,
+  storage mode, aspect ratio, etc). Same set for every language.
+- 'tips' = 34 loading-screen tips + loading_title. Shared across most langs.
+- 'who' = 53-line 'who killed Noob69' cutscene dialogue block + who-end.
+- 'awards' = AWARDNAME/BIO/HINT + shop_ + pet/skin *_name/_hint/_desc entries.
+- 'options' = upstream opt_*/choice_* gameplay/graphics strings.
+- 'cutscene'/'dialogue' = story cutscene + character dialogue lines.
+
+- Tooling in scratchpad: merge.py (format-preserving JSON5 insert, filters to
+  manifest keys so no duplicates), check.py (verify coverage).
+- Per-lang manifests of exactly-missing keys live in scratchpad/lang/<name>.json
+- WORKFLOW: write scratchpad/tr/<name>.json covering EVERY manifest key, run
+  merge.py, then validate parse + full coverage BEFORE committing. Partial
+  translation files silently fail coverage and must not be committed.
+
+- IMPORTANT LESSON: the big langs (270+) need the FULL award/pet/dialogue/
+  cutscene sets, not just universal+tips+who. Budget accordingly.

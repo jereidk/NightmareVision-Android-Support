@@ -1,0 +1,34 @@
+﻿{"ATLAS": {"SPRITES":[ 
+{"SPRITE" : {"name": "0000","x":884,"y":849,"w":102,"h":84,"rotated": false}},
+{"SPRITE" : {"name": "0001","x":740,"y":875,"w":139,"h":82,"rotated": false}},
+{"SPRITE" : {"name": "0002","x":739,"y":300,"w":196,"h":135,"rotated": false}},
+{"SPRITE" : {"name": "0003","x":739,"y":440,"w":153,"h":108,"rotated": false}},
+{"SPRITE" : {"name": "0004","x":2,"y":714,"w":370,"h":290,"rotated": false}},
+{"SPRITE" : {"name": "0005","x":729,"y":962,"w":100,"h":54,"rotated": false}},
+{"SPRITE" : {"name": "0006","x":418,"y":2,"w":300,"h":365,"rotated": false}},
+{"SPRITE" : {"name": "0007","x":2,"y":2,"w":411,"h":352,"rotated": false}},
+{"SPRITE" : {"name": "0008","x":2,"y":359,"w":398,"h":350,"rotated": false}},
+{"SPRITE" : {"name": "0009","x":405,"y":372,"w":329,"h":162,"rotated": false}},
+{"SPRITE" : {"name": "0010","x":879,"y":741,"w":90,"h":103,"rotated": false}},
+{"SPRITE" : {"name": "0011","x":405,"y":539,"w":211,"h":236,"rotated": false}},
+{"SPRITE" : {"name": "0012","x":377,"y":780,"w":208,"h":235,"rotated": false}},
+{"SPRITE" : {"name": "0013","x":841,"y":553,"w":145,"h":89,"rotated": false}},
+{"SPRITE" : {"name": "0014","x":841,"y":647,"w":145,"h":89,"rotated": false}},
+{"SPRITE" : {"name": "0015","x":621,"y":688,"w":145,"h":89,"rotated": false}},
+{"SPRITE" : {"name": "0016","x":590,"y":782,"w":145,"h":89,"rotated": false}},
+{"SPRITE" : {"name": "0017","x":621,"y":539,"w":110,"h":133,"rotated": false}},
+{"SPRITE" : {"name": "0018","x":736,"y":553,"w":100,"h":130,"rotated": false}},
+{"SPRITE" : {"name": "0019","x":723,"y":2,"w":279,"h":293,"rotated": false}},
+{"SPRITE" : {"name": "0020","x":884,"y":938,"w":121,"h":67,"rotated": false}},
+{"SPRITE" : {"name": "0021","x":590,"y":876,"w":134,"h":93,"rotated": false}},
+{"SPRITE" : {"name": "0022","x":740,"y":782,"w":134,"h":88,"rotated": false}}
+]},
+"meta": {
+"app": "Adobe Animate",
+"version": "21.0.0.35450",
+"image": "spritemap1.png",
+"format": "RGBA8888",
+"size": {"w":1007,"h":1018},
+"resolution": "1"
+}
+}

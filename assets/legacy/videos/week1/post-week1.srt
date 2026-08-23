@@ -1,0 +1,191 @@
+1
+00:00:02,400 --> 00:00:04,800
+cutscene_polusending0
+
+2
+00:00:08,360 --> 00:00:10,160
+cutscene_polusending1
+
+3
+00:00:10,160 --> 00:00:10,200
+cutscene_polusending2
+
+4
+00:00:10,200 --> 00:00:10,240
+cutscene_polusending3
+
+5
+00:00:10,240 --> 00:00:10,280
+cutscene_polusending4
+
+6
+00:00:10,280 --> 00:00:10,320
+cutscene_polusending5
+
+7
+00:00:10,320 --> 00:00:10,360
+cutscene_polusending6
+
+8
+00:00:10,360 --> 00:00:10,400
+cutscene_polusending7
+
+9
+00:00:10,400 --> 00:00:10,480
+cutscene_polusending8
+
+10
+00:00:10,480 --> 00:00:10,560
+cutscene_polusending1
+
+11
+00:00:10,560 --> 00:00:10,600
+cutscene_polusending9
+
+12
+00:00:10,600 --> 00:00:10,640
+cutscene_polusending10
+
+13
+00:00:10,640 --> 00:00:10,680
+cutscene_polusending11
+
+14
+00:00:10,680 --> 00:00:10,760
+cutscene_polusending1
+
+15
+00:00:10,760 --> 00:00:10,800
+cutscene_polusending12
+
+16
+00:00:10,800 --> 00:00:10,960
+cutscene_polusending1
+
+17
+00:00:10,960 --> 00:00:11,000
+cutscene_polusending13
+
+18
+00:00:11,000 --> 00:00:11,040
+cutscene_polusending14
+
+19
+00:00:11,040 --> 00:00:11,120
+cutscene_polusending1
+
+20
+00:00:11,120 --> 00:00:11,240
+cutscene_polusending15
+
+21
+00:00:11,240 --> 00:00:11,320
+cutscene_polusending1
+
+22
+00:00:11,320 --> 00:00:11,360
+cutscene_polusending16
+
+23
+00:00:11,360 --> 00:00:11,400
+cutscene_polusending1
+
+24
+00:00:11,400 --> 00:00:11,480
+cutscene_polusending17
+
+25
+00:00:11,480 --> 00:00:11,520
+cutscene_polusending1
+
+26
+00:00:11,520 --> 00:00:11,600
+cutscene_polusending18
+
+27
+00:00:11,600 --> 00:00:11,640
+cutscene_polusending19
+
+28
+00:00:11,640 --> 00:00:11,720
+cutscene_polusending20
+
+29
+00:00:11,720 --> 00:00:11,760
+cutscene_polusending21
+
+30
+00:00:11,760 --> 00:00:11,800
+cutscene_polusending22
+
+31
+00:00:11,800 --> 00:00:11,880
+cutscene_polusending3
+
+32
+00:00:11,880 --> 00:00:11,920
+cutscene_polusending23
+
+33
+00:00:11,920 --> 00:00:12,000
+cutscene_polusending3
+
+34
+00:00:12,000 --> 00:00:12,040
+cutscene_polusending24
+
+35
+00:00:12,040 --> 00:00:12,120
+cutscene_polusending3
+
+36
+00:00:12,120 --> 00:00:12,240
+cutscene_polusending1
+
+37
+00:00:12,240 --> 00:00:12,280
+cutscene_polusending3
+
+38
+00:00:12,280 --> 00:00:12,360
+cutscene_polusending25
+
+39
+00:00:12,360 --> 00:00:12,400
+cutscene_polusending26
+
+40
+00:00:12,400 --> 00:00:12,520
+cutscene_polusending3
+
+41
+00:00:12,520 --> 00:00:12,560
+cutscene_polusending27
+
+42
+00:00:12,560 --> 00:00:12,680
+cutscene_polusending3
+
+43
+00:00:12,680 --> 00:00:12,760
+cutscene_polusending28
+
+44
+00:00:12,760 --> 00:00:12,840
+cutscene_polusending1
+
+45
+00:00:12,840 --> 00:00:14,840
+cutscene_polusending29
+
+46
+00:00:16,480 --> 00:00:18,480
+cutscene_polusending30
+
+47
+00:00:18,640 --> 00:00:20,640
+cutscene_polusending31
+
+48
+00:00:21,880 --> 00:00:23,200
+cutscene_polusending32

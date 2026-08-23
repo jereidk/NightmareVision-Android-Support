@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="props.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="deadBG0000" x="5" y="5" width="2269" height="683"/>
+	<SubTexture name="deadFG0000" x="2279" y="5" width="1811" height="587"/>
+	<SubTexture name="lol thing0000" x="5" y="693" width="1169" height="433"/>
+</TextureAtlas>

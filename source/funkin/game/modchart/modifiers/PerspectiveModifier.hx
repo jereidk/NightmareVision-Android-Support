@@ -23,40 +23,55 @@ class PerspectiveModifier extends NoteModifier
 	var near = 0;
 	var far = 2;
 	
-	function FastTan(rad:Float) // thanks schmoovin
+	inline function fastTan(rad:Float) // thanks schmoovin
 	{
 		return FlxMath.fastSin(rad) / FlxMath.fastCos(rad);
 	}
-	
-	public function getVector(curZ:Float, pos:Vector3):Vector3
+
+	// fov/near/far are never touched anywhere else in the codebase (grepped, zero hits outside
+	// this file) — they're de facto constants — but getVector() used to redo this trig/division
+	// work from scratch for every note/receptor/splash, every frame, even though the result never
+	// changes. Cache on first use instead; values are bit-identical to what getVector() used to
+	// recompute each call, so this changes nothing visually.
+	var _ta:Float;
+	var _projA:Float;
+	var _projB:Float;
+	var _projCached:Bool = false;
+
+	public inline function getVector(curZ:Float, pos:Vector3):Vector3
 	{
+		if (!_projCached)
+		{
+			_ta = fastTan(fov / 2);
+			_projA = (near + far) / (near - far);
+			_projB = 2 * near * far / (near - far);
+			_projCached = true;
+		}
+
 		pos.subtract(halfOffset, pos);
-		
+
 		var oX = pos.x;
 		var oY = pos.y;
-		
+
 		pos.put();
-		
+
 		// should I be using a matrix?
 		// .. nah im sure itll be fine just doing this manually
 		// instead of doing a proper perspective projection matrix
-		
+
 		// var aspect = FlxG.width/FlxG.height;
 		var aspect = 1;
-		
+
 		var shit = curZ - 1;
 		if (shit > 0) shit = 0; // thanks schmovin!!
-		
-		var ta = FastTan(fov / 2);
-		var x = oX * aspect / ta;
-		var y = oY / ta;
-		var a = (near + far) / (near - far);
-		var b = 2 * near * far / (near - far);
-		var z = (a * shit + b);
+
+		var x = oX * aspect / _ta;
+		var y = oY / _ta;
+		var z = (_projA * shit + _projB);
 		// trace(shit, curZ, z, x/z, y/z);
 		var returnedVector = Vector3.get(x / z, y / z, z);
 		returnedVector.add(halfOffset, returnedVector);
-		
+
 		return returnedVector;
 	}
 	

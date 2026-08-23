@@ -1,0 +1,16 @@
+:y:happy:dialogue_mando0
+:bf:neutral:dialogue_mando1
+:gf:suspect:dialogue_mando2
+:y:happy:dialogue_mando3
+:gf:suspect:dialogue_mando4
+:y:skeptical:dialogue_mando5
+:bf:neutral:dialogue_mando6
+:y:what:dialogue_mando7
+:y:skeptical:dialogue_mando8
+:y:neutral:dialogue_mando9
+:gf:neutral:dialogue_mando10
+:y:happy:dialogue_mando11
+:bf:neutral:dialogue_mando12
+:bf:neutral:dialogue_mando13
+:y:happy:dialogue_mando14
+:bf:happy:dialogue_mando15

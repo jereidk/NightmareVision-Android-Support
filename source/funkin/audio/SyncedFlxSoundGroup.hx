@@ -85,6 +85,8 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		
 		var diff:Float = 0;
 		forEachAlive(snd -> {
+			if (!snd.playing) return;
+			
 			final s = Math.abs(snd.time - time);
 			if (s > diff) diff = s; // get the highest difference
 		});
@@ -92,19 +94,40 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 		return diff;
 	}
 	
+	// Below this many ms of difference, don't bother -- native audio channel
+	// position readback has its own granularity/jitter (varies by device and
+	// backend), so comparing against a 1ms threshold meant almost every call
+	// force-restarted almost every track, even ones that were already close
+	// enough to be inaudible. 15ms is comfortably under one video frame at
+	// 60fps and still well under anything a player could perceive as desync.
+	static inline final RESYNC_THRESHOLD_MS:Float = 15;
+
 	/**
-	 * Resyncs all group members to a given time. 
+	 * Resyncs all group members to a given time.
 	 * @param baseTime The reference to compare difference to. Defaults to the groups first instance's time
+	 * @return How many members were actually pause()/play()'d back into sync --
+	 *         each one is a real stop-seek-restart on the underlying native
+	 *         sound (not a cheap position nudge), and PlayState.stepHit() can
+	 *         call this several times a second when a track is chronically
+	 *         drifting, so the caller can tell whether "resync fired" meant
+	 *         one track or the whole group jumping at once.
 	 */
-	public function resync(?baseTime:Float)
+	public function resync(?baseTime:Float):Int
 	{
 		final time = baseTime ?? getFirstAlive()?.time ?? 0.0;
-		
+		var restarted = 0;
+
 		forEachAlive(snd -> {
-			snd.pause();
-			snd.time = time;
-			snd.play(false, time);
+			if (snd.playing && time <= snd.length && Math.abs(snd.time - time) > RESYNC_THRESHOLD_MS)
+			{
+				snd.pause();
+				snd.time = time;
+				snd.play(false, time);
+				restarted++;
+			}
 		});
+
+		return restarted;
 	}
 	
 	@:inheritDoc
@@ -144,7 +167,7 @@ class SyncedFlxSoundGroup extends FlxTypedGroup<FlxSound>
 	
 	function set_time(value:Float):Float
 	{
-		forEachAlive(snd -> snd.time = value);
+		forEachAlive(snd -> if (Math.abs(snd.time - value) > 1) snd.time = Math.min(value, snd.length));
 		return value;
 	}
 	

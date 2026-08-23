@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="opp.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="d0000" x="639" y="0" width="314" height="220" frameX="0" frameY="-13" frameWidth="314" frameHeight="236"/>
+	<SubTexture name="d0001" x="639" y="0" width="314" height="220" frameX="0" frameY="-13" frameWidth="314" frameHeight="236"/>
+	<SubTexture name="d0002" x="561" y="584" width="288" height="236" frameX="-21" frameY="0" frameWidth="314" frameHeight="236"/>
+	<SubTexture name="i0000" x="0" y="563" width="233" height="303"/>
+	<SubTexture name="l0000" x="0" y="290" width="335" height="271"/>
+	<SubTexture name="l0001" x="0" y="290" width="335" height="271"/>
+	<SubTexture name="l0002" x="328" y="0" width="309" height="267" frameX="-25" frameY="-4" frameWidth="335" frameHeight="271"/>
+	<SubTexture name="r0000" x="0" y="0" width="326" height="288" frameX="-5" frameY="-4" frameWidth="331" frameHeight="292"/>
+	<SubTexture name="r0001" x="0" y="0" width="326" height="288" frameX="-5" frameY="-4" frameWidth="331" frameHeight="292"/>
+	<SubTexture name="r0002" x="337" y="269" width="282" height="291" frameX="0" frameY="0" frameWidth="331" frameHeight="292"/>
+	<SubTexture name="u0000" x="337" y="562" width="222" height="321" frameX="-3" frameY="0" frameWidth="240" frameHeight="324"/>
+	<SubTexture name="u0001" x="337" y="562" width="222" height="321" frameX="-3" frameY="0" frameWidth="240" frameHeight="324"/>
+	<SubTexture name="u0002" x="621" y="269" width="240" height="313" frameX="0" frameY="-11" frameWidth="240" frameHeight="324"/>
+</TextureAtlas>

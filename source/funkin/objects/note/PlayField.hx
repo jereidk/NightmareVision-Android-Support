@@ -8,21 +8,20 @@ import flixel.tweens.FlxTween;
 import flixel.group.FlxGroup.FlxTypedGroup;
 
 import funkin.objects.Character;
+import funkin.game.Rating;
 import funkin.data.*;
+import funkin.backend.SystemMonitor;
+import funkin.Mods;
 
 typedef NoteSignal = FlxTypedSignal<(Note, PlayField) -> Void>;
 
 class PlayField extends FlxTypedContainer<StrumNote>
 {
-	public static final UNDERLAY_PADDING:Float = 15;
-	
 	public var _skin:NoteSkin;
 	
-	public var owner(default, set):Character;
+	public var owner(get, set):Character;
 	public var singers:Array<Null<Character>> = [];
 	public var quants(default, set):Bool = ClientPrefs.quants;
-	
-	public var hasChangedSkin:Bool = false;
 	
 	private function set_quants(value:Bool)
 	{
@@ -40,19 +39,22 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		return value;
 	}
 	
-	private function set_owner(value:Character)
+	function set_owner(value:Character)
 	{
-		owner = value;
-		
 		singers.remove(owner);
-		singers.unshift(owner);
+		singers.unshift(value);
 		
 		return value;
 	}
 	
+	function get_owner():Character
+	{
+		return singers[0];
+	}
+	
 	public var onNoteHit:NoteSignal = new NoteSignal();
 	public var onNoteMiss:NoteSignal = new NoteSignal();
-	public var onMissPress:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
+	public var onMissPress:FlxTypedSignal<(Int, PlayField) -> Void> = new FlxTypedSignal<(Int, PlayField) -> Void>();
 	
 	public var playAnims:Bool = true;
 	public var noteSplashes:Bool = false;
@@ -66,6 +68,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	
 	public var notes:Array<Note> = [];
 	public var keyCount(default, set):Int = 0;
+	
+	public var underlay:LaneUnderlay;
 	
 	public var swagWidth(get, never):Float;
 	
@@ -83,8 +87,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public var player:Int = 0;
 	public var alpha(default, set):Float = 1;
 	
-	public var underlaySpr:FlxSprite;
-	public var underlayAlphaMult:Float = 1;
+	public var holdDropLeniency:Float = (1 / 3);
 	
 	public function set_alpha(value:Float)
 	{
@@ -117,19 +120,25 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	}
 	
 	public var splashLayer:FlxTypedContainer<FlxTypedContainer<Dynamic>>;
-	
+
 	/**
 	 * The container that all notesplashes are held in
 	 */
 	public var grpNoteSplashes:FlxTypedContainer<NoteSplash>;
-	
+
 	/**
 		The container that all sustain notesplashes are held in
 	**/
 	public var grpSusSplashes:FlxTypedContainer<SustainSplash>;
+
+	// Pre-allocated args for script calls in noteHit/noteMiss to avoid per-hit heap allocation.
+	// Must be static because noteHit/noteMiss are static callbacks.
+	static final _noteScriptArgs:Array<Dynamic> = [null, 0];
+	static final _noteTypeExclusions:Array<String> = [''];
+	static final _gfCharArray:Array<Null<Character>> = [null];
+	static final _ownerCharArray:Array<Null<Character>> = [null];
 	
-	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default',
-			?_skinInput:Null<NoteSkin> = null)
+	public function new(x:Float, y:Float, keyCount:Int = 4, ?who:Character, isPlayer:Bool = false, cpu:Bool = false, ?playerControls:Bool, player:Int = 0, skin:String = 'default')
 	{
 		super();
 		if (playerControls == null) playerControls = isPlayer;
@@ -145,12 +154,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		this.baseY = y;
 		this.keyCount = keyCount;
 		
-		if (_skinInput != null) this._skin = _skinInput;
-		else
-		{
-			this._skin = new NoteSkin(skin, keyCount, player);
-			NoteUtil.noteskins.push(this._skin);
-		}
+		underlay = new LaneUnderlay(this);
+		underlay.baseAlpha = ClientPrefs.laneUnderlayAlpha;
+		
+		this._skin = new NoteSkin(skin, keyCount, player);
+		NoteUtil.noteskins.push(this._skin);
 		
 		splashLayer = new FlxTypedContainer();
 		
@@ -166,75 +174,12 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		grpSusSplashes.add(sus);
 		sus.alpha = 0.0;
 		
-		underlaySpr = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
-		underlaySpr.color = FlxColor.BLACK;
-		underlaySpr.alpha = 0;
-		underlaySpr.scrollFactor.set();
-		
 		splashLayer.add(grpSusSplashes);
 		splashLayer.add(grpNoteSplashes);
 		
 		this.onNoteHit.add(noteHit);
 		this.onNoteMiss.add(noteMiss);
 		this.onMissPress.add(noteMissPress);
-	}
-	
-	override function draw()
-	{
-		if (underlaySpr.exists && ClientPrefs.underlayOpacity > 0 && ClientPrefs.underlayType == FIELD)
-		{
-			var minX:Float = Math.POSITIVE_INFINITY;
-			var maxX:Float = Math.NEGATIVE_INFINITY;
-			
-			for (strum in members)
-			{
-				if (strum != null && strum.exists && strum.visible)
-				{
-					minX = Math.min(minX, strum.x);
-					maxX = Math.max(maxX, strum.x + strum.width);
-				}
-			}
-			
-			forEachAliveNote((daNote:Note) -> {
-				if (daNote.isOnScreen())
-				{
-					minX = Math.min(minX, daNote.x);
-					maxX = Math.max(maxX, daNote.x + daNote.width);
-				}
-			});
-			
-			final targetX = minX - UNDERLAY_PADDING;
-			final targetW = (maxX - minX) + (UNDERLAY_PADDING * 2);
-			
-			underlaySpr.x = targetX;
-			
-			underlaySpr.scale.x = targetW;
-			underlaySpr.scale.y = camera.viewHeight;
-			underlaySpr.screenCenter(Y);
-			underlaySpr.updateHitbox();
-			
-			underlaySpr.camera = getDefaultCamera();
-			underlaySpr.alpha = ClientPrefs.underlayOpacity * underlayAlphaMult;
-			
-			if (PlayState.instance.modManager != null) // temp
-			{
-				final mgr = PlayState.instance.modManager;
-				
-				inline function getMgrVal(mod:String)
-				{
-					var val = mgr.getValue(mod, player);
-					
-					val = 1 - val;
-					return val;
-				}
-				
-				underlaySpr.alpha *= getMgrVal("alpha") * getMgrVal("dark");
-			}
-			
-			underlaySpr.draw();
-		}
-		
-		super.draw();
 	}
 	
 	public function clearReceptors()
@@ -286,8 +231,28 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		}
 		return collected;
 	}
-	
+
 	public function getTapNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> !note.isSustainNote);
+
+	/**
+	 * Zero-allocation version of getTapNotes: returns the highest-priority tap note
+	 * for the given direction without allocating any intermediate Array.
+	 */
+	public function getBestTapNote(dir:Int):Null<Note>
+	{
+		var best:Null<Note> = null;
+		for (note in notes)
+		{
+			if (!note.alive || note.isSustainNote || note.noteData != dir
+				|| note.wasGoodHit || note.tooLate || !note.canBeHit) continue;
+
+			if (best == null
+				|| note.hitPriority > best.hitPriority
+				|| (note.hitPriority == best.hitPriority && note.strumTime < best.strumTime))
+				best = note;
+		}
+		return best;
+	}
 	
 	public function getHoldNotes(dir:Int):Array<Note> return getNotes(dir, (note:Note) -> note.isSustainNote);
 	
@@ -298,12 +263,11 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	public inline function removeNote(note:Note)
 	{
 		notes.remove(note);
+		
 		note.scale.copyFrom(note.baseScale);
 		note.updateHitbox();
 		
 		if (note.playField == this) note.playField = null;
-		
-		if (PlayState.instance != null) PlayState.instance.notes.remove(note, true);
 	}
 	
 	public inline function addNote(note:Note)
@@ -316,16 +280,17 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		note.skin = _skin;
 		note.texture = _skin.noteTexture;
 		note.rgbEnabled = _skin.inEngineColoring;
-		note.rgbGraphics.enabled = note.rgbEnabled;
-		
-		if (hasChangedSkin) note.updateColors();
+		note.rgbShader.enabled = note.rgbEnabled;
 		
 		note.baseScale.copyFrom(note.scale);
 		note.updateHitbox();
+		
 		if (note.playField != this || note.playField == null) note.playField = this;
+		
+		note.strum = members[note.noteData];
 	}
 	
-	public inline function forEachAliveNote(func:Note->Void)
+	public function forEachAliveNote(func:Note->Void)
 	{
 		for (note in notes)
 			if (note != null && note.exists && note.alive) func(note);
@@ -338,93 +303,196 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		removeNote(note);
 	}
 	
-	public function noteHit(note:Note, field:PlayField):Void
+	// Paths.sound('hitsound') resolves through getPath()/modFolders(), which on
+	// Android (MODS_ALLOWED) does a real FileSystem.exists() call per enabled mod,
+	// falling back to a full linear scan of the cached asset list (thousands of
+	// entries) whenever none of those exist() checks hit — every single time,
+	// even though the Sound itself is already cached by FunkinAssets and the
+	// resolved path never changes between hits. Cached here once so a hit-dense
+	// section doesn't re-pay that resolution cost on every note.
+	static var _hitsoundCache:Null<openfl.media.Sound> = null;
+	static var _hitsoundCacheMod:String = null;
+
+	static inline function hitsound():openfl.media.Sound
+	{
+		if (_hitsoundCache == null || _hitsoundCacheMod != Mods.currentModDirectory)
+		{
+			_hitsoundCache = Paths.sound('hitsound');
+			_hitsoundCacheMod = Mods.currentModDirectory;
+		}
+		return _hitsoundCache;
+	}
+
+	public static function noteHit(note:Note, field:PlayField):Void
 	{
 		var scriptFunc:String = '';
-		if (field.playerControls) scriptFunc = 'goodNoteHit';
-		else scriptFunc = field.ID == 1 ? 'opponentNoteHit' : 'extraNoteHit';
-		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
-		PlayState.instance.scripts.call('${scriptFunc}Pre', scriptArgs);
-		
-		final strum:StrumNote = field.members[note.noteData];
+		var scriptFuncPre:String = '';
+		if (field.playerControls) { scriptFunc = 'goodNoteHit'; scriptFuncPre = 'goodNoteHitPre'; }
+		else if (field.ID == 1) { scriptFunc = 'opponentNoteHit'; scriptFuncPre = 'opponentNoteHitPre'; }
+		else { scriptFunc = 'extraNoteHit'; scriptFuncPre = 'extraNoteHitPre'; }
+
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		// scriptFuncPre used to be `scriptFunc + 'Pre'`, concatenated fresh on
+		// every single note hit -- three literal constants instead, same
+		// branching, zero per-hit allocation. This fires continuously for the
+		// whole song (every opponent/player note), not just at a few points,
+		// so the concat was a real sustained GC-pressure source.
+		#if android SystemMonitor.profBegin('hitPreScript'); #end
+		PlayState.instance.scripts.call(scriptFuncPre, scriptArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		final strum:StrumNote = note.strum;
+
+		#if android SystemMonitor.profBegin('hitStrum'); #end
 		if (strum != null)
 		{
-			strum.lastNote = note;
+			strum.copyNoteColor(note);
 			strum.playAnim('confirm', true);
-			
+
 			if (field.autoPlayed)
 			{
 				var time:Float = 0.15;
 				if (note.isSustainNote && !note.isSustainEnd) time += 0.15;
 				time /= PlayState.instance.playbackRate;
-				
+
 				strum.resetAnim = time;
 			}
 		}
-		
+
 		if (!note.isSustainNote)
 		{
-			for (sustain in note.tail)
-				sustain.blockHit = false; // makes the hold note active when you press the base note
+			for (sustain in note.tail) // makes the hold note active when you press the base note
+			{
+				if (sustain.parent != note) continue; // ignore notes that have already been recycled
+
+				sustain.blockHit = false;
+			}
 		}
-		
+		else if (strum != null)
+		{
+			strum.coyoteTime = field.holdDropLeniency;
+		}
+		#if android SystemMonitor.profEnd(); #end
+
 		if (field.playerControls)
 		{
 			if (note.wasGoodHit || field.autoPlayed && (note.ignoreNote || note.hitCausesMiss || note.canMiss)) return;
-			
-			if (ClientPrefs.hitsoundVolume > 0 && !note.hitsoundDisabled) FlxG.sound.play(Paths.sound('hitsound'), ClientPrefs.hitsoundVolume);
-			
+
+			#if android SystemMonitor.profBegin('hitsoundPlay'); #end
+			if (ClientPrefs.hitsoundVolume > 0 && !note.hitsoundDisabled) FlxG.sound.play(hitsound(), ClientPrefs.hitsoundVolume);
+			#if android SystemMonitor.profEnd(); #end
+
 			if (note.hitCausesMiss)
 			{
 				field.onNoteMiss.dispatch(note, field);
-				
+
 				note.wasGoodHit = true;
-				
-				if (!note.isSustainNote) disposeNote(note);
-				
+
+				if (!note.isSustainNote)
+				{
+					#if android SystemMonitor.profBegin('hitDispose'); #end
+					field.disposeNote(note);
+					#if android SystemMonitor.profEnd(); #end
+				}
+
 				return;
 			}
-			
+
 			final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
-			
+
+			// set_health() runs the HUD health-bar update synchronously on every
+			// hit — untagged until now, so any cost here was landing inside the
+			// unexplained noteHitDispatch gap instead of its own line.
+			#if android SystemMonitor.profBegin('hitHealth'); #end
 			PlayState.instance.health += note.hitHealth * PlayState.instance.healthGain * susMult;
+			#if android SystemMonitor.profEnd(); #end
+			PlayState.instance.missCombo = 0;
 		}
-		
-		var chars:Array<Null<Character>> = note.gfNote ? [PlayState.instance.gf] : field.singers;
-		if (note.owner != null) chars = [note.owner];
-		
+
+		var chars:Array<Null<Character>>;
+		if (note.owner != null)
+		{
+			if (note.singers != null && note.singers.length > 0)
+				chars = note.singers;
+			else
+			{
+				_ownerCharArray[0] = note.owner;
+				chars = _ownerCharArray;
+			}
+		}
+		else if (note.gfNote)
+		{
+			_gfCharArray[0] = PlayState.instance.gf;
+			chars = _gfCharArray;
+		}
+		else
+		{
+			chars = field.singers;
+		}
+
+		// Prime suspect for the Android hit-lag: bf-running/danger (Danger song)
+		// use the heavier FlxAnimate atlas format instead of a plain sprite
+		// sheet, and char.playAnim() runs here on every single note hit.
+		#if android SystemMonitor.profBegin('hitCharSing'); #end
 		for (char in chars)
 			if (char != null) characterSing(char, note, field.playerControls);
-			
+		#if android SystemMonitor.profEnd(); #end
+
 		note.wasGoodHit = true;
-		
+
+		#if android SystemMonitor.profBegin('hitSplash'); #end
 		var shouldSplash:Bool = true;
 		if (field.playerControls)
 		{
-			var ratingThing:funkin.game.Rating = funkin.game.Rating.judgeNote(note, Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) / PlayState.instance?.playbackRate);
-			
-			shouldSplash = (ratingThing.name == 'sick' || ratingThing.name == 'epic');
+			shouldSplash = ((note.ratingData = Rating.judgeNote(note, Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) / PlayState.instance?.playbackRate)).ratingMod >= 1);
 		}
-		
+
 		if (field.noteSplashes && shouldSplash) field.spawnSplash(note);
-		
-		spawnSusSplash(note, field.playerControls);
-		
+		field.spawnSusSplash(note, field.playerControls);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('hitNoteScript'); #end
 		final globalScript = PlayState.instance.callNoteTypeScript(note.noteType, 'hit', scriptArgs);
-		
+		if (ScriptConstants.stopping(globalScript))
+		{
+			#if android SystemMonitor.profEnd(); #end
+			return;
+		}
+
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, scriptFunc, scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, [note.noteType]);
-		
-		if (!note.isSustainNote) disposeNote(note);
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call(scriptFunc, scriptArgs, false, _noteTypeExclusions);
+		#if android SystemMonitor.profEnd(); #end
+
+		if (!note.isSustainNote)
+		{
+			#if android SystemMonitor.profBegin('hitDispose'); #end
+			field.disposeNote(note);
+			#if android SystemMonitor.profEnd(); #end
+		}
 	}
 	
-	function noteMiss(note:Note, field:PlayField):Void
+	public static function noteMiss(note:Note, field:PlayField):Void
 	{
 		final susMult:Float = (note.isSustainNote ? 1 / PlayState.instance.holdSubdivisions : 1);
 		
-		PlayState.instance.health -= note.missHealth * PlayState.instance.healthLoss * susMult;
+		if (field.playerControls)
+		{
+			final missMult:Float = (note.missHealth * PlayState.instance.healthLoss);
+			
+			if (!note.isSustainNote)
+			{
+				var combo = (++ PlayState.instance.missCombo);
+				PlayState.instance.health -= (missMult * (combo + 1) / 2);
+			}
+			else
+			{
+				PlayState.instance.health -= (missMult * susMult);
+			}
+		}
 		
 		for (owner in field.singers)
 		{
@@ -435,61 +503,63 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			{
 				if (char.animTimer <= 0)
 				{
-					var daAlt = '';
-					if (note.noteType == 'Alt Animation') daAlt = '-alt';
-					
-					var animToPlay:String = _skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss' + daAlt;
+					final baseMiss = field._skin.singAnimations[Std.int(Math.abs(note.noteData))] + 'miss';
+					final animToPlay:String = (note.noteType == 'Alt Animation') ? baseMiss + '-alt' : baseMiss;
 					char.playAnim(animToPlay, true);
 					char.holdTimer = 0;
 				}
 			}
 		}
 		
-		final scriptArgs:Array<Dynamic> = [note, field.ID];
-		
+		_noteScriptArgs[0] = note;
+		_noteScriptArgs[1] = field.ID;
+		final scriptArgs = _noteScriptArgs;
+
+		_noteTypeExclusions[0] = note.noteType;
 		final noteScriptRet = PlayState.instance.callNoteTypeScript(note.noteType, 'noteMiss', scriptArgs);
-		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, [note.noteType]);
+		if (noteScriptRet != ScriptConstants.STOP_FUNC) PlayState.instance.scripts.call('noteMiss', scriptArgs, false, _noteTypeExclusions);
 		
 		// hold note missing stuff, makes the hold unhittable (and kills it, might make it just transparent if i can fix some stuff)
 		if (!note.hitCausesMiss && !note.canMiss)
 		{
-			final tail = (note.isSustainNote ? note.parent.tail : note.tail);
-			for (sustain in tail)
+			note.tailState.missed = true;
+
+			// note here can be either the head itself (parent == null) or one
+			// of its own tail segments (parent == the head) -- always anchor
+			// the identity check on the actual head note, mirroring
+			// noteHit()'s "sustain.parent != note" idiom (there, note is
+			// always the head, guarded by !note.isSustainNote). Comparing
+			// against note.parent unconditionally broke for head notes: every
+			// valid sibling sustain (parent == the head, non-null) looked
+			// "already recycled" and got skipped, while a stale Note sitting
+			// in this hold's shared tail array whose own .parent field also
+			// happened to be null would incorrectly pass the check instead.
+			final headNote:Note = (note.parent != null) ? note.parent : note;
+
+			for (sustain in note.tail)
 			{
+				if (sustain.parent != headNote) continue; // ignore notes that have already been recycled
+
+				sustain.tooLate = true;
 				sustain.blockHit = true;
 				sustain.ignoreNote = true;
-				sustain.alphaMod *= 0.3;
+				sustain.copyAlpha = false;
+				sustain.alpha = 0.3;
 			}
 		}
-		
-		// if the sustain splash exists, KILL KIL KILL IT KILL KI L KLLK LSKD:LKLK
-		for (i in grpSusSplashes.members)
-		{
-			if (i.data == note.noteData)
-			{
-				// actually.. no need to kill it.. itll kill itself anwyays
-				i.alpha = 0.0;
-				i.visible = false;
-			}
-		}
-		
-		note.alphaMod *= 0.3;
 	}
 	
-	function noteMissPress(key:Int):Void
+	public static function noteMissPress(key:Int, field:PlayField):Void
 	{
-		if (ClientPrefs.ghostTapping) return;
-		
-		final char = PlayState.instance.playerStrums?.owner ?? PlayState.instance.boyfriend;
-		var gf = PlayState.instance.gf;
-		
-		if (!char.stunned)
+		for (char in field.singers)
 		{
-			PlayState.instance.health -= 0.05 * PlayState.instance.healthLoss;
+			if (char == null) continue;
 			
-			FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
-			
-			if (char.animTimer <= 0) char.playAnim(_skin.singAnimations[Std.int(Math.abs(key))] + 'miss', true);
+			if (char.animTimer <= 0)
+			{
+				char.playAnim(field._skin.singAnimations[Std.int(Math.abs(key))] + 'miss', true);
+				char.holdTimer = 0;
+			}
 		}
 	}
 	
@@ -498,7 +568,8 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	{
 		if (note.noAnimation) return;
 		
-		final animToPlay = note.skin.singAnimations[Std.int(Math.abs(note.noteData))] + note.animSuffix;
+		final baseAnim = note.skin.singAnimations[Std.int(Math.abs(note.noteData))];
+		final animToPlay = note.animSuffix.length > 0 ? baseAnim + note.animSuffix : baseAnim;
 		
 		char.holdTimer = 0;
 		
@@ -537,7 +608,13 @@ class PlayField extends FlxTypedContainer<StrumNote>
 				
 				char.playAnim(animToPlay, true);
 				
-				if (!note.isSustainNote || note.prevNote?.isSustainNote) char.lastHitTime = note.strumTime;
+				// Same "not the very first segment of a fresh hold" check the
+				// old prevNote?.isSustainNote read answered (a hold's HEAD
+				// QueueNote is always constructed with isSustainNote=false, so
+				// a first tail segment's old prevNote -- the head -- always
+				// read isSustainNote=false too; !isFirstTailSegment is that
+				// same fact without chasing another Note's identity for it).
+				if (!note.isSustainNote || !note.isFirstTailSegment) char.lastHitTime = note.strumTime;
 			}
 		}
 	}
@@ -555,12 +632,10 @@ class PlayField extends FlxTypedContainer<StrumNote>
 			final strum:Null<StrumNote> = note.playField.members[note.noteData];
 			if (strum != null)
 			{
-				final data = note.noteData;
 				final skin:String = _skin.splashTexture;
-				final colors = note.rgbGraphics;
 				
 				var splash:NoteSplash = grpNoteSplashes.recycle(NoteSplash);
-				splash.setupNoteSplash(strum, note, skin, colors, this);
+				splash.setupNoteSplash(strum, note, skin, note.rgbShader, this);
 				grpNoteSplashes.add(splash);
 				
 				PlayState.instance.scripts.call('onSpawnNoteSplash', [splash, note]);
@@ -574,27 +649,30 @@ class PlayField extends FlxTypedContainer<StrumNote>
 	
 	public function spawnSusSplash(note:Note, isPlayer:Bool = false):SustainSplash
 	{
-		if (_skin?.sustainSplashes && note.tail.length > 0)
+		// Same "ignore notes that have already been recycled" identity check
+		// noteHit()/noteMiss() already apply to tail-array entries before
+		// touching them -- this function read note.tailState/note.tail
+		// unconditionally despite that, the one place in this class that
+		// didn't. `note` itself can't go stale mid-call (single-threaded,
+		// synchronously reached from noteHit()), but a corrupted/shared
+		// tailState reaching here from elsewhere shouldn't be trusted either.
+		if (!note.exists || note.tailState == null) return null;
+
+		if (_skin?.sustainSplashes && note.tailState.splash == null && note.tail.length > 0)
 		{
-			final strum:Null<StrumNote> = note.playField.members[note.noteData];
+			final strum:Null<StrumNote> = note.playField?.members[note.noteData];
 			if (strum != null)
 			{
-				final data = note.noteData;
-				final colors = note.rgbGraphics;
-				
-				// sustain length + step length (all in ms) to time the ending of the sustain covering
-				final time = ((note.sustainLength + (Conductor.stepCrotchet * 1.25)) / 1000);
-				
 				var splash:SustainSplash = grpSusSplashes.recycle(SustainSplash);
-				splash.setupSplash(strum, note, time, isPlayer, colors, this);
+				splash.setupSplash(strum, note, isPlayer, note.rgbShader, this);
 				grpSusSplashes.add(splash);
-				
+
 				PlayState.instance.scripts.call('onSpawnSustainSplash', [splash, note]);
-				
-				return note.sustainSplash = splash;
+
+				return note.tailState.splash = note.sustainSplash = splash;
 			}
 		}
-		
+
 		return null;
 	}
 	
@@ -614,73 +692,7 @@ class PlayField extends FlxTypedContainer<StrumNote>
 		onMissPress.removeAll();
 		onMissPress.destroy();
 		
-		underlaySpr.destroy();
-		
+		underlay.destroy();
 		super.destroy();
-	}
-	
-	public function changeSkin(newSkin:NoteSkin)
-	{
-		_skin = newSkin;
-		NoteUtil.noteskins[player] = newSkin;
-		
-		// that way it checks the colors and re-assigns
-		this.hasChangedSkin = true;
-		
-		forEachAlive((strum) -> {
-			strum.skin = _skin;
-			strum.texture = _skin.noteTexture;
-			strum.useRGBShader = _skin.inEngineColoring;
-			strum.rgbGraphics.enabled = strum.useRGBShader;
-			strum.reloadNote();
-			
-			strum.playAnim('static');
-			strum.resetAnim = 0;
-		});
-		
-		forEachAliveNote((note) -> {
-			note.skin = _skin;
-			note.texture = _skin.noteTexture;
-			note.rgbEnabled = _skin.inEngineColoring;
-			note.rgbGraphics.enabled = note.rgbEnabled;
-			note.loadNoteAnims();
-			
-			note.reloadNote('', note.texture, '');
-			
-			note.scale.set(_skin.noteScale, _skin.noteScale);
-			note.baseScale.copyFrom(note.scale);
-			
-			note.rgbGraphics = NoteUtil.getCurColors(note.noteData, note.quant, note.player);
-		});
-		
-		grpNoteSplashes.forEachAlive((splash) -> {
-			splash.scale.set(_skin.splashScale, _skin.splashScale);
-			splash.baseScale.copyFrom(splash.scale);
-			
-			splash.rgbGraphics.enabled = _skin.inEngineColoring;
-		});
-		grpSusSplashes.forEachAlive((splash) -> {
-			splash.scale.set(_skin.susSplashScale, _skin.susSplashScale);
-			splash.baseScale.copyFrom(splash.scale);
-			
-			splash.rgbGraphics.enabled = _skin.inEngineColoring;
-		});
-	}
-	
-	// just because
-	override public function toString():String
-	{
-		var str = 'keys: $keyCount, pos: [x: $baseX, y: $baseY], skin: ${_skin.name}';
-		
-		if (owner != null && singers.length > 0)
-		{
-			var _singers = [];
-			for (i in singers)
-				_singers.push(i?.curCharacter ?? 'dad');
-				
-			str += ', owner: ${owner?.curCharacter ?? 'dad'}, singers: $_singers';
-		}
-		
-		return '($str)';
 	}
 }

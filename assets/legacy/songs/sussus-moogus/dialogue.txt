@@ -1,0 +1,15 @@
+:red:sad:dialogue_moogus0
+:bf:neutral:dialogue_moogus1
+:gf:suspect:dialogue_moogus2
+:gf:suspect:dialogue_moogus3
+:gf:q:dialogue_moogus4
+:bf:neutral:dialogue_moogus5
+:bf:q:dialogue_moogus6
+:red:sad:dialogue_moogus7
+:gf:happy:dialogue_moogus8
+:gf:mad:dialogue_moogus9
+:red:neutral:dialogue_moogus10
+:bf:happy:dialogue_moogus11
+:red:happy:dialogue_moogus12
+:red:happy:dialogue_moogus13
+:bf:neutral:dialogue_moogus14

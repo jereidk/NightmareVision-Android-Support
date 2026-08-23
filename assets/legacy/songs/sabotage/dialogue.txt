@@ -1,0 +1,13 @@
+:red:happy:dialogue_sabotage0
+:red:happy:dialogue_sabotage1
+:bf:realization:dialogue_sabotage2
+:bf:realization:dialogue_sabotage3
+:bf:sad:dialogue_sabotage4
+:bf:sad:dialogue_sabotage5
+:bf:sad:dialogue_sabotage6
+:bf:angry:dialogue_sabotage7
+:bf:mad:dialogue_sabotage8
+:bf:mad:dialogue_sabotage9
+:bf:sad:dialogue_sabotage10
+:red:neutral:dialogue_sabotage11
+:bf:happy:dialogue_sabotage12

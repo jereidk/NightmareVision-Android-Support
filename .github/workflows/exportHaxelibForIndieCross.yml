@@ -1,0 +1,181 @@
+name: Export haxelib/Lime cache (for Indie-Cross-Public)
+
+# One-off utility, not part of the normal release pipeline: packages the
+# already-warm haxelib + Lime caches (same FunkinCrew fork commits pinned in
+# Indie-Cross-Public's .hxpkg) as a downloadable artifact so that repo's CI
+# can import them instead of compiling lime/hxcpp/flixel/openfl from source
+# on every cold cache. Safe to delete once Indie-Cross-Public no longer
+# needs it.
+on:
+  workflow_dispatch:
+
+# The release tag below is a single shared resource -- two overlapping runs
+# would interleave their asset uploads under it and leave a mixed set. Queue
+# them instead, and never cancel: a half-finished export that gets cancelled
+# mid-upload is exactly the mixed state this is avoiding.
+concurrency:
+  group: haxelib-cache-export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    # Needed to create/replace the release below; the default token is
+    # read-only for contents on some repo settings.
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+
+      # Read-only restores against the exact same keys devBuilds.yml already
+      # populated -- fails loudly (fail-on-cache-miss) instead of silently
+      # exporting an empty/partial cache if these ever go stale.
+      - name: Restore Haxe libraries cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+          fail-on-cache-miss: true
+
+      - name: Restore Lime cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+          fail-on-cache-miss: true
+
+      - name: Package for export
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/export
+          tar -C "$HOME" -czf /tmp/export/haxelib-root.tar.gz haxelib
+          tar -czf /tmp/export/haxelib-project.tar.gz .haxelib
+
+          # Release assets are capped at 2GB EACH (the artifact this used to
+          # produce ran ~3GB for the pair), so both tarballs are split into
+          # numbered parts. Split unconditionally rather than only when a file
+          # is over the limit: a small file just yields a single .part.000, so
+          # the consumer always does the same `cat *.part.* > file` and there
+          # is no second code path that only gets exercised once the export
+          # happens to grow past 2GB.
+          cd /tmp/export
+          for f in haxelib-root.tar.gz haxelib-project.tar.gz; do
+            split -b 1900M -d -a 3 "$f" "$f.part."
+            rm "$f"
+          done
+          sha256sum ./*.part.* > SHA256SUMS
+          ls -la
+
+      # Published as a RELEASE, not an artifact. Artifacts expire (this used
+      # to ship with retention-days: 3, and even the 90-day maximum is a
+      # ticking clock), and Indie-Cross-Public's CI only reaches for this on a
+      # cold cache -- which is exactly the case that shows up weeks later,
+      # long after any artifact is gone. A release asset has no expiry, so the
+      # export stays usable until it is deliberately replaced.
+      #
+      # The tag is fixed, so the consumer resolves "download tag
+      # haxelib-cache-export" without hunting for a run id. It must stay fixed
+      # rather than becoming a per-run tag resolved as "latest release": this
+      # repo publishes unrelated releases too (dlc-v1, asian-langs-v1,
+      # lang-fonts-v1), so "latest" would happily hand the consumer a
+      # language pack.
+      #
+      # The release is updated IN PLACE and never deleted first. Deleting it
+      # to recreate it -- the obvious way to write this -- means any failure
+      # in create or in one of the ~3GB asset uploads leaves the previous,
+      # known-good export gone and every cold-cache consumer getting a 404.
+      # Since the tag has to be reused, updating in place is what keeps it
+      # continuously resolvable.
+      #
+      # SHA256SUMS is uploaded LAST, on purpose: it is what the consumer
+      # verifies before extracting. While the parts are being replaced the
+      # manifest still describes the OLD set, so a consumer that downloads
+      # mid-update fails its checksum check and falls back to installing from
+      # scratch -- noisy, but it never imports a half-swapped library tree.
+      - name: Publish export as a Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=haxelib-cache-export
+          NOTES="Prebuilt haxelib + Lime tree (source and compiled lime.ndll/liblime .so) for the FunkinCrew fork commits pinned in .hxpkg, consumed by Indie-Cross-Public's CI to skip compiling lime/hxcpp/flixel/openfl on a cold cache.
+
+          Split into 1900MB parts (release assets cap at 2GB each); reassemble with 'cat haxelib-root.tar.gz.part.* > haxelib-root.tar.gz'. SHA256SUMS covers the parts and is uploaded last.
+
+          Regenerated by: $GITHUB_WORKFLOW run $GITHUB_RUN_ID"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG exists -- updating its assets in place."
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES"
+          else
+            echo "Release $TAG does not exist yet -- creating it empty."
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "haxelib/Lime cache export" \
+              --notes "$NOTES"
+          fi
+
+          # Parts first, manifest last (see the comment above).
+          for f in /tmp/export/*.part.*; do
+            echo "Uploading $(basename "$f")..."
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$f"
+          done
+
+          # Drop assets left over from a previous, larger export. This has to
+          # be FATAL on failure, not best-effort: `sha256sum -c` on the
+          # consumer side only verifies the files the manifest lists, so an
+          # extra leftover .part.NNN passes the checksum gate untouched and is
+          # still swept into the consumer's 'cat *.part.*', silently
+          # corrupting the reassembled tarball. Swallowing a failed delete
+          # here and then publishing SHA256SUMS would bless exactly that.
+          #
+          # Read from a file rather than piping into the loop: a piped `while`
+          # runs in a subshell, where `exit 1` would only leave the subshell.
+          ( cd /tmp/export && ls ) > /tmp/export-keep.txt
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+            > /tmp/release-assets.txt
+          while read -r asset; do
+            [ -z "$asset" ] && continue
+            grep -qxF "$asset" /tmp/export-keep.txt && continue
+            echo "Deleting stale asset $asset from a previous export."
+            deleted=0
+            for attempt in 1 2 3; do
+              if gh release delete-asset "$TAG" "$asset" --repo "$GITHUB_REPOSITORY" --yes; then
+                deleted=1
+                break
+              fi
+              echo "  delete failed (attempt $attempt/3), retrying in 5s..."
+              sleep 5
+            done
+            if [ "$deleted" -ne 1 ]; then
+              echo "ERROR: could not delete stale asset '$asset' after 3 attempts."
+              echo "Refusing to publish SHA256SUMS -- the consumer would concatenate it."
+              exit 1
+            fi
+          done < /tmp/release-assets.txt
+
+          # Assert the release now holds EXACTLY the parts just built, before
+          # publishing the manifest that blesses them. Catches any drift at
+          # all -- a silently failed upload, a delete that reported success
+          # without taking effect, an asset added out of band -- not just the
+          # prune path above.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+            | grep -vxF 'SHA256SUMS' | sort > /tmp/remote-parts.txt
+          ( cd /tmp/export && ls ./*.part.* | sed 's#^\./##' ) | sort > /tmp/local-parts.txt
+          if ! diff -u /tmp/local-parts.txt /tmp/remote-parts.txt; then
+            echo "ERROR: the release's asset set does not match the export just built."
+            echo "Refusing to publish SHA256SUMS over a mismatched set."
+            exit 1
+          fi
+          echo "Release asset set matches the freshly built export."
+
+          echo "Uploading SHA256SUMS (last, so it only validates a complete set)..."
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber /tmp/export/SHA256SUMS
+
+          echo "Published release $TAG:"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "  \(.name)  \(.size) bytes"'

@@ -1,5 +1,7 @@
 package funkin.backend;
 
+import crowplexus.iris.ErrorSeverity;
+
 import haxe.PosInfos;
 
 using funkin.backend.Logger.Ansi;
@@ -23,6 +25,17 @@ enum abstract Severity(Int) to Int
 			case NOTICE: '[NOTICE] ';
 		}
 	}
+	
+	public static function fromIris(severity:ErrorSeverity):Severity
+	{
+		return switch (severity)
+		{
+			default: PRINT;
+			case ErrorSeverity.WARN: WARN;
+			case ErrorSeverity.ERROR | ErrorSeverity.FATAL: ERROR;
+			case ErrorSeverity.NONE: PRINT;
+		};
+	}
 }
 
 /**
@@ -33,34 +46,166 @@ enum abstract Severity(Int) to Int
 class Logger
 {
 	/**
-	 * Primary `trace` function
+	 * Enable detailed prefix with timestamp and state info
+	 */
+	public static var detailedPrefix:Bool = true;
+
+	/**
+	 * Current game state name for logging (cached)
+	 */
+	static var _cachedStateName:String = "Unknown";
+
+	#if sys
+	/**
+	 * The main/UI thread's identity, captured once via initMainThread() as
+	 * early as possible (Main.new(), before FunkinGame or any Thread.create()
+	 * call exists anywhere in the app). log() compares against this to decide
+	 * whether touching Flixel is safe.
+	 *
+	 * Why this matters: LoadingState's background preload/prefetch threads
+	 * (startPreload(), prefetchSong()) call Logger.log(..., showInGame=true)
+	 * while actively decoding assets. With showInGame true and dev mode on,
+	 * that used to unconditionally reach getStateContext() (reads FlxG.state
+	 * via Type.getClass()) and DebugTextPlugin.addText() (inserts into a live
+	 * FlxTypedGroup registered as an FlxG.plugin, iterated/drawn by the main
+	 * thread every single frame) -- both plain Flixel objects with no locking
+	 * of their own, mutated/read from a second native thread with zero
+	 * synchronization. On hxcpp that's exactly the kind of concurrent
+	 * Array/object-graph mutation that corrupts memory instead of throwing a
+	 * catchable exception -- a real SIGSEGV, only reproducible while one of
+	 * those two background threads is actually alive (LoadingState up to
+	 * "Ready", or a FreeplayState/endSong() song prefetch), matching crashes
+	 * reported in exactly that window.
+	 */
+	static var _mainThread:Null<sys.thread.Thread> = null;
+
+	/**
+	 * Must be called once, as early as possible on the real main thread --
+	 * see this class's _mainThread doc comment for why. Safe to call more
+	 * than once (idempotent, just re-captures Thread.current()).
+	 */
+	public static function initMainThread():Void
+	{
+		_mainThread = sys.thread.Thread.current();
+	}
+
+	static inline function isMainThread():Bool
+		return _mainThread == null || sys.thread.Thread.current() == _mainThread;
+	#end
+
+	/**
+	 * Get a formatted timestamp string
+	 */
+	static function getTimestamp():String
+	{
+		var now = Date.now();
+		return StringTools.lpad(Std.string(now.getHours()), "0", 2) + ":" +
+			   StringTools.lpad(Std.string(now.getMinutes()), "0", 2) + ":" +
+			   StringTools.lpad(Std.string(now.getSeconds()), "0", 2) + "." +
+			   StringTools.lpad(Std.string(now.getFullYear() % 100), "0", 2) +
+			   StringTools.lpad(Std.string(now.getMonth() + 1), "0", 2) +
+			   StringTools.lpad(Std.string(now.getDate()), "0", 2);
+	}
+
+	/**
+	 * Get current state and substate names for context
+	 */
+	static function getStateContext():String
+	{
+		#if flixel
+		var stateName = "NoState";
+		var subStateName = "";
+
+		if (FlxG.state != null)
+		{
+			stateName = Type.getClassName(Type.getClass(FlxG.state));
+			// Get just the class name without package
+			var dotIdx = stateName.lastIndexOf(".");
+			if (dotIdx >= 0) stateName = stateName.substring(dotIdx + 1);
+
+			// Check for substates
+                        if (Std.isOfType(FlxG.state, flixel.FlxSubState))
+                        {
+                                stateName = "SubState>" + stateName;
+                        }
+                }
+		_cachedStateName = stateName;
+		return stateName;
+		#else
+		return "NoFlixel";
+		#end
+	}
+
+	/**
+	 * Primary `trace` function with enhanced prefix
 	 * @param data The value to trace
 	 * @param severity provides ansi colour coding to better highlight specific messages
 	 * @param showInGame whether to have it display in game
+	 * @param pos Haxe position info (file:line:column)
 	 */
 	public static function log(data:Dynamic, severity:Severity = PRINT, showInGame:Bool = false, ?pos:PosInfos)
 	{
+		// LoadingState's background preload/prefetch threads call this with
+		// showInGame=true while actively decoding assets -- FlxG.log and
+		// DebugTextPlugin are both plain Flixel objects the main thread reads/
+		// mutates every frame with no locking of their own, so touching them
+		// from a second thread is unsafe. See _mainThread's doc comment.
+		final onMainThread = #if sys isMainThread() #else true #end;
+
 		#if FLX_DEBUG
-		switch (severity)
+		if (onMainThread)
 		{
-			case ERROR:
-				FlxG.log.error(data, pos);
-				
-			case WARN:
-				FlxG.log.warn(data, pos);
-			case NOTICE:
-				FlxG.log.notice(data, pos);
-				
-			case PRINT:
+			switch (severity)
+			{
+				case ERROR:
+					FlxG.log.error(data, pos);
+
+				case WARN:
+					FlxG.log.warn(data, pos);
+				case NOTICE:
+					FlxG.log.notice(data, pos);
+
+				case PRINT:
+			}
 		}
 		#end
-		
-		if (showInGame && ClientPrefs.inDevMode)
+
+		if (showInGame && onMainThread && ClientPrefs.inDevMode)
 		{
 			DebugTextPlugin.addText(Std.string(data), getHexColourFromSeverity(severity));
 		}
-		
-		var output:String = severity.toString() + haxe.Log.formatOutput(data, pos);
+
+		// Build enhanced prefix
+		var prefix:String = "";
+		if (detailedPrefix)
+		{
+			var timestamp = getTimestamp();
+			// getStateContext() reads FlxG.state via reflection -- also
+			// main-thread-owned, same reasoning as above. A background
+			// thread gets a fixed label instead of touching it.
+			var stateInfo = onMainThread ? getStateContext() : 'BGThread';
+
+			// Format: [HH:MM:SS.YYMMDD] [STATE] [SEVERITY]
+			prefix = '[$timestamp] [$stateInfo] ${severity.toString()}';
+		}
+		else
+		{
+			prefix = severity.toString();
+		}
+
+		// Build full output
+		var output:String = prefix + haxe.Log.formatOutput(data, pos);
+
+		// Add file:line info if available and not already included
+		if (pos != null && detailedPrefix)
+		{
+			// Check if file info is already in the output
+			if (output.indexOf(pos.fileName) < 0 && output.indexOf(Std.string(pos.customParams)) < 0)
+			{
+				// Add file:line at the end
+				output += ' @ ${pos.fileName}:${pos.lineNumber}';
+			}
+		}
 		
 		output = output.fg(getAnsiColourFromSeverity(severity)).reset();
 		
@@ -71,6 +216,7 @@ class Logger
 		
 		#if sys
 		Sys.println(output);
+		GameLogger.write(output);
 		#else
 		trace(output); // idk others lol!
 		#end
@@ -94,7 +240,7 @@ class Logger
 	{
 		return switch (severity)
 		{
-			case ERROR: 0xffff4040;
+			case ERROR: FlxColor.RED;
 			
 			case WARN: FlxColor.YELLOW;
 			

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="overlay.png" width="2916" height="1943">
+	<SubTexture name="idleLIGHT instance 10000" x="1" y="1" width="1478" height="497" frameX="-228" frameY="-171" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10001" x="1" y="1" width="1478" height="497" frameX="-228" frameY="-171" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10002" x="1" y="503" width="1477" height="495" frameX="-228" frameY="-173" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10003" x="1" y="503" width="1477" height="495" frameX="-228" frameY="-173" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10004" x="1" y="1003" width="1462" height="490" frameX="-236" frameY="-175" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10005" x="1" y="1003" width="1462" height="490" frameX="-236" frameY="-175" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10006" x="1468" y="1003" width="1447" height="481" frameX="-243" frameY="-179" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10007" x="1468" y="1003" width="1447" height="481" frameX="-243" frameY="-179" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10008" x="1483" y="503" width="1432" height="475" frameX="-251" frameY="-182" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10009" x="1483" y="503" width="1432" height="475" frameX="-251" frameY="-182" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10010" x="1484" y="1" width="1418" height="467" frameX="-257" frameY="-187" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10011" x="1484" y="1" width="1418" height="467" frameX="-257" frameY="-187" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10012" x="1468" y="1489" width="1393" height="453" frameX="-271" frameY="-193" frameWidth="1939" frameHeight="842"/>
+	<SubTexture name="idleLIGHT instance 10013" x="1468" y="1489" width="1393" height="453" frameX="-271" frameY="-193" frameWidth="1939" frameHeight="842"/>
+</TextureAtlas>

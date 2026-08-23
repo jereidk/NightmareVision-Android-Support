@@ -7,7 +7,6 @@ import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 
 import funkin.data.*;
-import funkin.game.shaders.*;
 import funkin.game.shaders.RGBShader;
 import funkin.objects.Character;
 import funkin.scripts.*;
@@ -82,46 +81,50 @@ abstract NoteSharedTailState(Array<Dynamic>) to Array<Dynamic>
 	{
 		this = [parent, [], null, false];
 	}
-	
+
 	public var parent(get, set):Note;
 	public var tail(get, set):Array<Note>;
 	public var splash(get, set):Null<SustainSplash>;
 	public var missed(get, set):Bool;
-	
+
 	function get_parent():Note return this[0];
-	
+
 	function get_tail():Array<Note> return this[1];
-	
+
 	function get_splash():Null<SustainSplash> return this[2];
-	
+
 	function get_missed():Bool return this[3];
-	
+
 	function set_parent(v:Note):Note return this[0] = v;
-	
+
 	function set_tail(v:Array<Note>):Array<Note> return this[1] = v; // well this one is useless
-	
+
 	function set_splash(v:Null<SustainSplash>):Null<SustainSplash> return this[2] = v;
-	
+
 	function set_missed(v:Bool):Bool return this[3] = v;
 }
 
-class Note extends FunkinSprite implements funkin.game.modchart.IModNote
+@:allow(funkin.states.PlayState)
+class Note extends RGBSprite implements funkin.game.modchart.IModNote
 {
 	public static var defaultNotes = ['No Animation', 'GF Sing', ''];
 	
 	var queueNote:Null<QueueNote> = null;
 	
-	public var row:Int = 0;
 	public var lane:Int = 0;
 	
 	public var noteScript:Null<FunkinScript> = null;
-	
+
+	// Reused for noteScript.executeFunc("update", ...) below instead of allocating
+	// a fresh [this, elapsed] array every frame for every scripted note type.
+	final _scriptUpdateArgs:Array<Dynamic> = [null, 0];
+
 	public var visualTime:Float = 0;
 	public var visualLength:Float = 0;
 	public var typeOffsetX:Float = 0; // used to offset notes, mainly for note types. use in place of offset.x and offset.y when offsetting notetypes
 	public var typeOffsetY:Float = 0;
 	
-	public var noteDiff:Float = 1000;
+	public var noteDiff(get, never):Float;
 	public var quant:Int = 4;
 	
 	public var z:Float = 0;
@@ -138,26 +141,35 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var mustPress:Bool = false;
 	public var noteData:Int = 0;
 	public var hitPriority:Int = 1;
-	public var canBeHit:Bool = false;
+	public var canBeHit(get, never):Bool;
 	public var tooLate:Bool = false;
 	public var wasGoodHit:Bool = false;
 	public var ignoreNote:Bool = false;
 	public var hitByOpponent:Bool = false;
 	public var noteWasHit:Bool = false;
-	public var prevNote:Note;
-	public var nextNote:Note;
-	
+
+	// Set (only for tail segments) by PlayState.enqueuePendingTails() at
+	// construction time from the segment's own known position in its hold's
+	// tail array -- true for exactly the first one. Replaces a prevNote/
+	// nextNote pointer chain that used to answer this same "was I preceded
+	// by another segment of this same hold" question (PlayField.hx's own
+	// characterSing() ghost-anim check is the only place that ever asked):
+	// prevNote pointed at a pooled Note that staggered/deferred tail
+	// spawning could have already recycled for a totally unrelated hold by
+	// the time a later segment's turn to spawn came up (three rounds of
+	// "detect staleness, drop the segment" guards accumulated in
+	// spawnPendingTail() trying to keep that pointer trustworthy). This
+	// field needs no such guarding -- it's decided once, from data already
+	// known at construction, never chases another object's identity.
+	public var isFirstTailSegment:Bool = false;
+
 	public var spawned:Bool = false;
 	
-	// shared between a note and its tail to prevent some issues
+	public var tailState:NoteSharedTailState; // shared between a note and its tail to prevent some issues
+	
 	// its kind of  fuking stupid theres probably some other way to fix it but i cant think rn
-	public var tailState:NoteSharedTailState;
-	
-	public var tail:Array<Note> = []; // for sustains
+	public var tail(get, never):Array<Note>; // for sustains
 	public var parent:Null<Note> = null;
-	
-	// 0 to 1, 1 = missed
-	public var coyoteProgress:Float = 0;
 	
 	/**
 	 * if true, the note cannot be hit.
@@ -172,7 +184,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var alreadyShifted:Bool = false;
 	
-	public var rgbGraphics:RGBGraphics;
 	public var rgbEnabled:Bool = true;
 	public var reAssignable:Bool = true;
 	
@@ -182,7 +193,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var earlyHitMult:Float = 1;
 	
-	@:isVar
 	public var daWidth(get, never):Float;
 	
 	inline function get_daWidth():Float return (playField == null ? Note.swagWidth : playField.swagWidth);
@@ -190,9 +200,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public static var swagWidth:Float = 160 * 0.7;
 	
 	public var noteSplashDisabled:Bool = false;
-	public var noteSplashHue:Float = 0;
-	public var noteSplashSat:Float = 0;
-	public var noteSplashBrt:Float = 0;
 	
 	public var offsetX:Float = 0;
 	public var offsetY:Float = 0;
@@ -208,18 +215,24 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var hitHealth:Float = 0.023;
 	public var missHealth:Float = 0.0475;
 	public var rating:String = 'unknown';
-	public var ratingMod:Float = 0; // 9 = unknown, 0.25 = shit, 0.5 = bad, 0.75 = good, 1 = sick
+	public var ratingData:Null<funkin.game.Rating> = null;
+	public var ratingMod:Float = 0; // 0 = unknown, 0.25 = shit, 0.5 = bad, 0.75 = good, 1 = sick
 	public var ratingDisabled:Bool = false;
 	
 	public var texture(default, set):String = null;
 	public var prefix:String = '';
 	public var suffix:String = '';
+
+	// What _loadNoteAnims() actually registered animations FOR, last time a
+	// real reload happened -- see set_texture()'s comment for why the guard
+	// needs both of these, not just the texture string.
+	var _lastLoadedSkin:NoteSkin = null;
+	var _lastLoadedNoteData:Int = -1;
 	
 	public var noAnimation:Bool = false;
 	public var noMissAnimation:Bool = false;
 	public var hitCausesMiss:Bool = false;
 	public var canMiss:Bool = false;
-	public var distance:Float = 2000; // plan on doing scroll directions soon -bb
 	
 	public var hitsoundDisabled:Bool = false;
 	
@@ -227,9 +240,20 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public var owner:Character = null;
 	public var singers:Array<Character> = null;
-	public var playField(default, set):PlayField;
+	public var playField(default, set):PlayField = null;
 	public var sustainSplash:SustainSplash = null;
 	public var noteSplash:NoteSplash = null;
+	// Single-sprite hold rendering (see SustainTrail.hx). Only ever set on
+	// the HEAD note (parent == null), never on tail segments -- unlike
+	// tailState.splash, this doesn't need to be shared across segments.
+	// Always spawned alongside the head; whether it's actually SHOWN (vs.
+	// falling back to the per-segment chain) is re-checked every frame in
+	// PlayState.isModchartActive(), not decided once here, because
+	// ModManager.activeMods can change mid-hold (DLC/scripts push
+	// modifiers via EaseEvents and scripted setValue/setPercent calls at
+	// arbitrary chart timing, not just a static session-level toggle).
+	public var sustainTrail:SustainTrail = null;
+	public var strum:StrumNote = null;
 	
 	public var skin:NoteSkin;
 	
@@ -248,11 +272,39 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	private function set_texture(value:String):String
 	{
-		if (texture == value) return texture;
-		
+		// Comparing the resolved texture STRING alone isn't enough:
+		// _loadNoteAnims() (called from inside reloadNote() below) registers
+		// scroll/hold/holdend using `skin.noteAnims[noteData % ...]` -- picked
+		// by NOTEDATA (which of the 4 lane directions), not by texture name.
+		// A pooled Note reused for the SAME skin but a DIFFERENT direction
+		// (extremely common -- notes.recycle() hands back ANY dead member,
+		// not one that was previously this same lane) would otherwise keep
+		// showing its previous life's direction under the "scroll" name,
+		// since the texture string alone shows no change. Must also compare
+		// `skin` (object identity, not just its texture string -- two skins
+		// COULD share a texture name) and `noteData` against what was
+		// actually last loaded.
+		final resolved:String = (value != null && value.length > 0) ? value : (skin?.noteTexture ?? 'NOTE_assets');
+		if (texture == resolved && skin == _lastLoadedSkin && noteData == _lastLoadedNoteData) return texture;
+
+		// Tagged separately from the surrounding 'noteSpawn' zone so a device
+		// log can show directly how much of that cost is genuinely "had to
+		// reload" (atlas-frame lookup via addAnimByPrefix, unavoidable here)
+		// vs. everything else recycleNote()/spawnNote() does per note
+		// (preRecycle's field resets, script hooks, sustain-trail setup) --
+		// _deadNotesByType (PlayState.hx) only changes how fast a compatible
+		// dead note is FOUND, not whether the chart's own note pattern
+		// actually has one sitting dead at that moment; if it usually
+		// doesn't, this fires just as often as before and dominates either
+		// way.
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload'); #end
 		reloadNote('', value);
-		
-		return (texture = value);
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		_lastLoadedSkin = skin;
+		_lastLoadedNoteData = noteData;
+
+		return (texture = resolved);
 	}
 	
 	private function set_noteType(value:String):String
@@ -291,12 +343,19 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		return noteType = value;
 	}
 	
-	public function new(strumTime:Float = 0, noteData:Int = 0, ?prevNote:Note, sustainNote:Bool = false, inEditor:Bool = false, player:Int = 0)
+	public function new(strumTime:Float = 0, noteData:Int = 0, sustainNote:Bool = false, inEditor:Bool = false, player:Int = 0)
 	{
 		super();
-		
+
+		// Position is always driven manually (modManager.getPos()/updateObject() overwrites
+		// x/y every frame) — nothing ever sets velocity/acceleration/drag on a Note. Without
+		// this, FlxObject.update() still runs updateMotion()'s velocity/drag integration on
+		// every single note, every frame, for no effect. Psych Mobile's Note.hx sets this too
+		// (this.moves = false in its constructor) — confirmed here it's the same story:
+		// nothing in this codebase ever touches note.velocity/.acceleration/.drag.
+		this.moves = false;
+
 		this.player = player;
-		this.prevNote = prevNote;
 		this.isSustainNote = sustainNote;
 		this.strumTime = strumTime;
 		this.noteData = noteData;
@@ -309,60 +368,108 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	
 	public inline function _reset():Void
 	{
-		exists = true;
-		alive = true;
+		// MAYBE we need a macro to reset all of this :pray:
+		animSuffix = '';
+		rating = 'unknown';
+		ratingData = null;
+		ratingMod = 0;
+		
 		garbage = spawned = false;
 		reAssignable = true;
+		canQuant = true;
 		
 		hitPriority = 1;
 		hitHealth = .023;
 		missHealth = .0475;
-		coyoteProgress = 0;
-		
 		noAnimation = noMissAnimation = ratingDisabled = hitCausesMiss = false;
 		
-		ignoreNote = canBeHit = tooLate = wasGoodHit = noteWasHit = hitByOpponent = false;
+		ignoreNote = tooLate = wasGoodHit = noteWasHit = hitByOpponent = false;
 		
 		owner = null;
 		singers?.resize(0);
 		
-		tail.resize(0);
+		parent = null;
+		color = FlxColor.WHITE;
 		sustainSplash = null;
 		noteSplash = null;
-		nextNote = null;
+		sustainTrail = null;
 		clipRect = null;
 		alpha = 1;
 	}
 	
 	inline function get_tail():Array<Note> return tailState.tail;
 	
-	inline function _resetTexture():Void
+	// skipHitbox: preRecycle() (the pooling/gameplay path) is ALWAYS followed,
+	// later in the same spawn, by PlayField.addNote()'s own
+	// baseScale.copyFrom(scale)+updateHitbox() (or reloadNote()'s identical
+	// pair, if `texture`'s setter decides a real reload is needed) -- both use
+	// `skin`/`frames` that are still stale here (addNote() hasn't set the
+	// correct skin yet), so this call's result is guaranteed to be overwritten
+	// before the note is ever drawn. Confirmed via every current caller: the
+	// only exception is ChartEditorState.refreshNote(), which calls
+	// _resetTexture() directly with nothing after it -- that caller (and
+	// the constructor) keep the default `false` so their result stays final.
+	inline function _resetTexture(skipHitbox:Bool = false):Void
 	{
-		if (ClientPrefs.quants && canQuant) quant = (prevNote?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
-		
-		rgbGraphics = NoteUtil.getCurColors(noteData, quant, player);
-		rgbEnabled = NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false;
-		
-		updateColors();
-		
-		prefix = suffix = animSuffix = texture = '';
-		
+		// parent (not a prevNote chain) -- every tail segment inherits its
+		// quant directly from its hold's head, always correct and always
+		// already set by this point in preRecycle() (right below _reset()),
+		// instead of transitively re-reading whatever the PREVIOUS segment
+		// happened to compute -- which, if that segment's own prevNote link
+		// had gone stale, used to silently give it (and everything after it)
+		// a freshly-recomputed, inconsistent quant instead of the hold's own.
+		if (ClientPrefs.quants && canQuant) quant = (parent?.quant ?? NoteUtil.getQuant(Conductor.getBeat(strumTime)));
+
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
+		rgbEnabled = (NoteUtil.getSkinFromID(player)?.inEngineColoring ?? false);
+
+		// Undo any leftover sustain-hold stretch from this Note's PREVIOUS
+		// life before deciding (below) whether a real reload is even needed.
+		// PlayState.notesLoop() scales a hold segment's `scale.y`/`baseScale.y`
+		// independently of `scale.x` every frame to make it visually span the
+		// hold's length -- it never touches `scale.x`, so `scale.x` is always
+		// this Note's last genuinely correct uniform noteScale. A note
+		// recycled for the same skin+direction as before (the common case,
+		// see set_texture()'s guard) now skips reloadNote() entirely, which
+		// used to be the only place that re-squared scale.y back to scale.x
+		// -- without this, a former hold segment reused as a head (or a
+		// shorter hold) kept rendering stretched tall/short from its old
+		// life. Re-square first so a skipped reload still starts clean.
+		scale.y = scale.x;
+
+		prefix = suffix = '';
+
+		// Only force a reload here if this Note has never had one (frames
+		// still null -- true only for a just-constructed object). For a
+		// pooled note being reused, `skin` at this point is still whatever
+		// this Note's PREVIOUS life had (never reset elsewhere), so deciding
+		// whether to reload HERE would be unreliable -- PlayField.addNote(),
+		// called a few lines later in the same spawn (via spawnNote()), sets
+		// `skin` to the correct target field's skin BEFORE reassigning
+		// texture, so it's the only place that can answer this correctly.
+		// Leaving frames/animation stale here is safe: nothing ever renders
+		// between this call and that one.
+		if (frames == null) texture = '';
+
 		playAnim(getDefaultAnim(), true);
-		updateHitbox();
-		
-		baseScale.copyFrom(scale);
+
+		if (!skipHitbox)
+		{
+			updateHitbox();
+			baseScale.copyFrom(scale);
+		}
 	}
 	
-	public function preRecycle(?queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Void
+	public function preRecycle(?queueNote:QueueNote, ?parent:Note):Void
 	{
 		_reset();
-		
+
 		this.parent = parent;
-		
+		this.isFirstTailSegment = false;
+
 		if (parent != null)
 		{
 			tailState = parent.tailState;
-			parent.coyoteProgress = 0;
 		}
 		else if (tailState == null || tailState.tail.length > 0)
 		{
@@ -373,13 +480,7 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 			tailState.missed = false;
 			tailState.splash = null;
 		}
-		
-		if (prevNote != null)
-		{
-			this.prevNote = prevNote;
-			prevNote.nextNote = this;
-		}
-		
+
 		if (queueNote != null)
 		{
 			this.queueNote = queueNote;
@@ -398,8 +499,11 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		blockHit = isSustainNote;
 		
 		hitsoundDisabled = isSustainNote;
-		
-		_resetTexture();
+
+		// addNote() (or reloadNote(), via the texture setter it triggers)
+		// redoes updateHitbox()/baseScale further down this same spawn once the
+		// correct skin is in place -- see _resetTexture()'s comment.
+		_resetTexture(true);
 		
 		if (queueNote != null) noteType = queueNote.noteType;
 		
@@ -426,11 +530,6 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		return (animation.exists('$anim$noteData') ? '$anim$noteData' : anim);
 	}
 	
-	var lastNoteOffsetXForPixelAutoAdjusting:Float = 0;
-	var lastNoteScaleToo:Float = 1;
-	
-	public var originalHeightForCalcs:Float = 6;
-	
 	public function reloadNote(?_prefix:String = '', ?_texture:String = '', ?_suffix:String = '')
 	{
 		// Fix null values
@@ -442,8 +541,14 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		if (_prefix.length > 0) this.prefix = _prefix;
 		if (_suffix.length > 0) this.suffix = _suffix;
 		
-		if (noteScript != null) if (noteScript.executeFunc("onReloadNote", [this, _prefix, _texture, _suffix], this) == ScriptConstants.STOP_FUNC) return;
-		
+		if (noteScript != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.scriptPre'); #end
+			final _stopped = (noteScript.executeFunc("onReloadNote", [this, _prefix, _texture, _suffix], this) == ScriptConstants.STOP_FUNC);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+			if (_stopped) return;
+		}
+
 		skin ??= NoteUtil.getSkinFromID(player);
 		
 		var _skin:String = _texture;
@@ -463,23 +568,40 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 		var atlasPath:String = arraySkin.join('/');
 		
 		isQuant = ClientPrefs.quants && (skin?.quantsEnabled ?? true) && canQuant;
-		
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.atlas'); #end
 		frames = Paths.getSparrowAtlas(atlasPath);
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.anims'); #end
 		loadNoteAnims();
-		
-		if (animName != null) playAnim(animName, true);
-		
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		if (animName != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.playAnim'); #end
+			playAnim(animName, true);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+		}
+
 		if (inEditor && !skipScale) setGraphicSize(ChartEditorState.GRID_SIZE, ChartEditorState.GRID_SIZE);
-		
+
 		baseScale.copyFrom(scale);
-		
+
+		#if android funkin.backend.SystemMonitor.profBegin('noteReload.hitbox'); #end
 		updateHitbox();
-		
-		antialiasing = skin?.antialiasing ?? true;
-		
+		#if android funkin.backend.SystemMonitor.profEnd(); #end
+
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
+
 		x += swagWidth * (noteData % (skin?.keys ?? 4));
-		
-		if (noteScript != null) noteScript.executeFunc("postReloadNote", [this, _prefix, _texture, _suffix], this);
+
+		if (noteScript != null)
+		{
+			#if android funkin.backend.SystemMonitor.profBegin('noteReload.scriptPost'); #end
+			noteScript.executeFunc("postReloadNote", [this, _prefix, _texture, _suffix], this);
+			#if android funkin.backend.SystemMonitor.profEnd(); #end
+		}
 	}
 	
 	public override function playAnim(anim:String, force:Bool = false, isReversed:Bool = false, frame:Int = 0)
@@ -522,16 +644,22 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	public function updateColors()
 	{
 		if (!reAssignable) return;
-		
-		rgbGraphics = NoteUtil.getCurColors(noteData, quant, player);
+
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
 	}
-	
+
 	// SPECIFICALLY for note types, only use if u 100% do not want to have ur note re-colored
 	public function setCustomColor(color:Array<FlxColor>)
 	{
-		var fallback = NoteUtil.getCurColors(noteData, quant, player);
-		
-		rgbGraphics = fallback;
+		// Reuse the existing RGBGraphics instance (see _resetTexture()'s own
+		// `into` use) instead of allocating a new one -- this runs on every
+		// preRecycle() of a 'Hurt Note' (set_noteType's 'Hurt Note' case
+		// calls this right after _resetTexture() already reused rgbGraphics
+		// correctly), so allocating here silently reintroduced the same
+		// per-recycle GC pressure that reusing `into` elsewhere was meant
+		// to eliminate.
+		NoteUtil.getCurColors(noteData, quant, player, rgbGraphics);
+
 		if (color != null || color.length == skin?.keys ?? 4)
 		{
 			reAssignable = false;
@@ -573,55 +701,43 @@ class Note extends FunkinSprite implements funkin.game.modchart.IModNote
 	{
 		super.update(elapsed);
 		
-		if (!inEditor)
+		if (!inEditor && noteScript != null)
 		{
-			noteScript?.executeFunc("update", [this, elapsed], this);
+			_scriptUpdateArgs[0] = this;
+			_scriptUpdateArgs[1] = elapsed;
+			noteScript.executeFunc("update", _scriptUpdateArgs, this);
 		}
 		
-		if (rgbGraphics != null)
+		if (rgbShader != null)
 		{
-			rgbGraphics.enabled = rgbEnabled;
+			rgbShader.enabled = rgbEnabled;
 			
-			rgbGraphics.alpha = (alphaMod * alphaMod2) * (playField?.baseAlpha ?? 1.0);
-		}
-		
-		var actualHitbox:Float = hitbox * earlyHitMult;
-		
-		var diff = (strumTime - Conductor.songPosition);
-		noteDiff = diff;
-		var absDiff = Math.abs(diff);
-		canBeHit = absDiff <= actualHitbox;
-		
-		if (isSustainNote && parent != null)
-		{
-			if (parent.coyoteProgress >= 1 && !wasGoodHit) tooLate = true;
+			rgbShader.alpha = (alphaMod * alphaMod2) * (playField?.baseAlpha ?? 1.0);
 		}
 		
 		if (tooLate && !inEditor && alpha > 0.3) alpha = 0.3;
 	}
 	
+	public inline function get_noteDiff():Float
+	{
+		return (strumTime - Conductor.songPosition);
+	}
+	
+	public inline function get_canBeHit():Bool
+	{
+		return (Math.abs(noteDiff) <= (hitbox * earlyHitMult));
+	}
+	
 	public inline function isLate():Bool
 	{
-		return (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit && (parent?.coyoteProgress ?? 1) >= 1);
-	}
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
+		return (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit);
 	}
 	
 	override public function destroy()
 	{
 		playField?.removeNote(this);
 		
-		prevNote = nextNote = parent = null;
+		parent = null;
 		tailState = null;
 		
 		_cacheRect?.put();

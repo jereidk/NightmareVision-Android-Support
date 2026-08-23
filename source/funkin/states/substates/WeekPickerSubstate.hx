@@ -1,0 +1,322 @@
+package funkin.states.substates;
+
+import funkin.data.*;
+import funkin.states.*;
+import funkin.objects.*;
+import funkin.backend.MusicBeatSubstate;
+import mobile.utils.MobileNavUtil;
+
+import flixel.addons.display.FlxBackdrop;
+import flixel.group.FlxSpriteGroup;
+
+typedef FreeplayWeek =
+{
+	// JSON variables
+	var songs:Array<Dynamic>;
+	var section:String;
+	var ?mod:String;
+	var title:String;
+}
+
+class WeekPickerSubstate extends MusicBeatSubstate
+{
+	// IM GOING TO KILL MYSEEEEEEEEEEEEEELF
+	public var weeks:Array<FreeplayWeek> = []; // Freeplay Weeks, put your shit in here
+	public var parent:FreeplayState;
+
+	var bg:FlxSprite;
+	var bgThing:FlxSprite;
+	var cubeCamera:FlxCamera;
+	var menuBackButton:FlxSprite;
+	var otherTitleText:FlxText;
+
+	var bubl:FlxSpriteGroup;
+	var CIRCLE_PADDING:Float = 12;
+	var CIRC_WRAP = 7;
+	var curSelection:Int = 0;
+	var WEEKS_WRAP = 0;
+	var lockMovement:Bool = true;
+	final uiTweenOffsetY:Float = 120;
+
+	public function new(parent:FreeplayState, month:Int = 0)
+	{
+		camera = CameraUtil.lastCamera;
+
+		this.weeks = (this.parent = parent).weeks;
+		curSelection = month;
+
+		super();
+
+		bg = new flixel.system.FlxBGSprite();
+		bg.color = FlxColor.BLACK;
+		bg.alpha = 0;
+		add(bg);
+		// sorry bullshit
+		bgThing = new FlxSprite().loadGraphic(Paths.image('menu/freeplay/resetPrompt'));
+		bgThing.screenCenter();
+		add(bgThing);
+		(cubeCamera = new FlxCamera(bgThing.x + 6, bgThing.y + 67, 620, 234)).bgColor = FlxColor.BLACK;
+		FlxG.cameras.add(cubeCamera, false);
+
+		// bgThing.screenCenter() reads the live FlxG.width, so it recenters
+		// further right on a wide 'expand'-mode screen -- anchored to its
+		// actual position instead of a hardcoded x so this doesn't drift off
+		// the panel there.
+		otherTitleText = new FlxText(bgThing.x + 16, 205, 0, Lang.str('freeplay'), 50);
+		otherTitleText.setFormat(Paths.font('AmaticSC-Bold.ttf', false), 50, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		otherTitleText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 2);
+		add(otherTitleText);
+
+		// Touch-only close 'X' -- its tap test below is gated the same way, so
+		// skip creating it entirely under Virtual Pad (B already closes this
+		// screen there).
+		#if mobile
+		if (ClientPrefs.navInputMode != 'Virtual Pad')
+		#end
+		{
+			menuBackButton = new FlxSprite(bgThing.x + bgThing.width - 5, bgThing.y + 5).loadGraphic(Paths.image('menu/common/menuBack'));
+			menuBackButton.x -= menuBackButton.width;
+			add(menuBackButton);
+		}
+	}
+
+	override function create()
+	{
+		// Wired up FIRST, before any of the circle-grid building below --
+		// this substate had a real-world repro where the panel came up
+		// completely empty (no circles at all, just the 'Freeplay' label and
+		// bare panel/canvas) AND the Virtual Pad did nothing whatsoever. If
+		// anything below this point throws (a missing/bad section image, an
+		// out-of-sync weeks/mod state, etc.), create() aborts right there --
+		// which previously meant addVirtualPad()/controls.isInSubstate down
+		// at the bottom never ran either, leaving a pad that visibly
+		// animates on tap but is never actually wired to Controls at all.
+		// Setting this up first means a Virtual Pad user can always at least
+		// press B to back out, regardless of what happens to the grid.
+		#if mobile
+		controls.isInSubstate = true;
+		if (ClientPrefs.navInputMode == 'Virtual Pad')
+		{
+			addVirtualPad(LEFT_FULL, A_B);
+			addVirtualPadCamera();
+		}
+		#end
+
+		var iX = 0;
+		var iY = .05;
+
+		WEEKS_WRAP = weeks.length;
+		var starsBG:FlxBackdrop = new FlxBackdrop(Paths.image('menu/common/starBG'));
+		starsBG.camera = cubeCamera;
+		starsBG.scrollFactor.set();
+		starsBG.velocity.x = -4.5;
+		add(starsBG);
+
+		bubl = new FlxSpriteGroup();
+		bubl.camera = cubeCamera;
+		add(bubl);
+		for (i in 0...WEEKS_WRAP)
+		{
+			if (iX > CIRC_WRAP)
+			{
+				iX = 0;
+				iY += 1;
+			}
+
+			Mods.currentModDirectory = weeks[i].mod;
+
+			var w:String = weeks[i].section;
+			var circ:FlxSprite = new FlxSprite(0, Std.int(iY * 78));
+			// Section icons are a cosmetic nice-to-have, not something this
+			// screen's actual job (picking a section) should ever fail over --
+			// a bad/missing modded section image threw here and skipped
+			// EVERY remaining circle in the loop (not just this one), which
+			// looked exactly like "the whole grid is empty" even though
+			// weeks.length was never actually 0.
+			try circ.loadGraphic(Paths.image('menu/freeplay/sections/$w'))
+			catch (e:Dynamic) circ.makeGraphic(71, 71, 0xFF444444);
+			circ.setGraphicSize(-1, 71);
+			circ.updateHitbox();
+			circ.x = iX * 78; // Std.int(FlxMath.remapToRange(iX, 0, CIRC_WRAP - 1, 0, Math.min((CIRC_WRAP - 1) * (71 + CIRCLE_PADDING), 1110)) - circ.width);
+			circ.ID = i;
+			// Belt-and-suspenders on top of bubl.camera above (which already
+			// cascades to every member added to it) -- assigning this
+			// directly on each sprite matches the pattern CosmicubeSubState's
+			// own (working) camera-scoped panel already uses.
+			circ.cameras = [cubeCamera];
+			circ.visible = true;
+			bubl.add(circ);
+
+			iX += 1;
+		}
+
+		bubl.x = Std.int((cubeCamera.width - bubl.width) * .5 - bubl.findMinX());
+
+		Mods.currentModDirectory = null;
+
+		super.create();
+		changeSelection();
+
+		FlxTween.tween(bg, {alpha: .72}, .35, {ease: FlxEase.circOut});
+
+		// menuBackButton is absent under Virtual Pad nav (see the constructor)
+		// -- skip it in the slide-in then.
+		final slideObjs:Array<FlxSprite> = [bgThing, otherTitleText];
+		if (menuBackButton != null) slideObjs.push(menuBackButton);
+		for (obj in slideObjs)
+		{
+			var alpha:Float = obj.alpha;
+			obj.alpha = 0;
+			obj.y += uiTweenOffsetY;
+			var tween = FlxTween.tween(obj, {y: obj.y - uiTweenOffsetY, alpha: alpha}, .35, {ease: FlxEase.circOut});
+
+			if (obj == bgThing)
+			{
+				tween.onUpdate = function(_) {
+					cubeCamera.y = bgThing.y + 67;
+				};
+			}
+		}
+
+		for (obj in bubl.members)
+		{
+			if (obj == null) continue;
+
+			var alpha:Float = obj.alpha;
+			obj.alpha = 0;
+			FlxTween.tween(obj, {alpha: alpha}, .35, {ease: FlxEase.circOut});
+		}
+
+		new FlxTimer().start(.35, function(_) lockMovement = false);
+	}
+
+	function updateItems()
+	{
+		for (i in bubl)
+			i.alpha = i.ID == curSelection ? 1 : .72;
+	}
+
+	function changeSelection(by = 0)
+	{
+		if (curSelection + by > WEEKS_WRAP - 1 || curSelection + by < 0) return;
+		if (by != 0) FlxG.sound.play(Paths.sound('hover'), 0.5);
+
+		curSelection = Std.int(FlxMath.bound(curSelection + by, 0, WEEKS_WRAP - 1));
+		updateItems();
+		// trace([WEEKS_WRAP, curSelection]);
+	}
+
+	function acceptWeek(sect:Int)
+	{
+		if (lockMovement) return;
+		lockMovement = true;
+		parent.goToSection(sect, true);
+		FlxG.sound.play(Paths.sound('panelAppear'), .5);
+		closeTween();
+	}
+
+	function closeWeek()
+	{
+		if (lockMovement) return;
+		lockMovement = true;
+		FlxG.sound.play(Paths.sound('cancelMenu'), 1);
+		closeTween();
+	}
+
+	/**
+	 * Fades this screen out, then closes it once the tween finishes -- calling
+	 * close() directly on the same frame BACK/ACCEPT is read left no gap
+	 * between Flixel's own request-then-destroy-next-frame close sequence and
+	 * the originating press still reading as fresh, the exact window that let
+	 * a substate's own B press also affect its parent state underneath it
+	 * (confirmed on GameplayChangersSubstate/LanguagePickerSubState this same
+	 * session). Ported from upstream with an immediate close() originally --
+	 * upstream never had a virtual pad here to race against, this fork does
+	 * now (see the constructor's addVirtualPad() call), so it gets the same
+	 * deferred-close pattern every other substate in this codebase already
+	 * uses. See MusicBeatSubstate.addVirtualPad()'s doc comment for the full
+	 * mechanism.
+	 */
+	function closeTween():Void
+	{
+		FlxTween.cancelTweensOf(bg);
+		FlxTween.tween(bg, {alpha: 0}, .25, {ease: FlxEase.circIn});
+
+		final closeObjs:Array<FlxSprite> = [bgThing, otherTitleText];
+		if (menuBackButton != null) closeObjs.push(menuBackButton);
+		for (obj in closeObjs)
+		{
+			FlxTween.cancelTweensOf(obj);
+			FlxTween.tween(obj, {alpha: 0}, .25, {ease: FlxEase.circIn});
+		}
+
+		for (obj in bubl.members)
+		{
+			if (obj == null) continue;
+			FlxTween.cancelTweensOf(obj);
+			FlxTween.tween(obj, {alpha: 0}, .25, {ease: FlxEase.circIn});
+		}
+
+		new FlxTimer().start(.25, function(_) close());
+	}
+
+	override function update(elapsed:Float)
+	{
+		if (lockMovement)
+		{
+			super.update(elapsed);
+			return;
+		}
+
+		if (MobileNavUtil.allowPointerNav() && FlxG.mouse.justPressed)
+		{
+			var mousePos = FlxG.mouse.getWorldPosition();
+
+			if (menuBackButton != null && menuBackButton.overlapsPoint(mousePos))
+			{
+				closeWeek();
+			}
+			for (i in bubl.members)
+			{
+				if (FlxG.mouse.overlaps(i, cubeCamera))
+				{
+					if (curSelection == i.ID)
+					{
+						acceptWeek(curSelection);
+						break;
+					}
+					curSelection = i.ID;
+					FlxG.sound.play(Paths.sound('hover'), 0.5);
+					updateItems();
+				}
+			}
+		}
+		if (controls.UI_LEFT_P) changeSelection(-1);
+		if (controls.UI_DOWN_P) changeSelection(CIRC_WRAP + 1);
+		if (controls.UI_UP_P) changeSelection(-CIRC_WRAP - 1);
+		if (controls.UI_RIGHT_P) changeSelection(1);
+		if (controls.BACK) closeWeek();
+		if (controls.ACCEPT)
+		{
+			acceptWeek(curSelection);
+		}
+		var ugh = FlxMath.bound((curSelection - CIRC_WRAP - 1) / (CIRC_WRAP + 1), 0, WEEKS_WRAP);
+		cubeCamera.scroll.y = FlxMath.lerp(cubeCamera.scroll.y, Math.floor(ugh) * 78, FlxMath.bound(elapsed * 15.6, 0, 1));
+	}
+
+	override function destroy()
+	{
+		for (obj in members)
+		{
+			if (obj != null) FlxTween.cancelTweensOf(obj);
+		}
+
+		if (cubeCamera != null)
+		{
+			FlxG.cameras.remove(cubeCamera, true);
+			cubeCamera = null;
+		}
+
+		super.destroy();
+	}
+}

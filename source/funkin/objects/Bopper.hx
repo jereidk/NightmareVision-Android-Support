@@ -33,6 +33,11 @@ class Bopper extends FunkinSprite
 	}
 	
 	/**
+	 * danceEveryNumBeats multiplier
+	 */
+	public var danceSpeed:Int = 1;
+	
+	/**
 	 * However many beats between dances
 	 */
 	public var danceEveryNumBeats:Int = 2;
@@ -55,7 +60,24 @@ class Bopper extends FunkinSprite
 	 * Suffix added to the characters `dance` animation.
 	 */
 	public var idleSuffix:String = '';
-	
+
+	// Cached 'danceLeft$idleSuffix'/'danceRight$idleSuffix'/'idle$idleSuffix' anim names.
+	// idleSuffix rarely changes at runtime, so building these via string interpolation
+	// on every single dance() call (i.e. every beat, for every Bopper on screen) was
+	// pure GC churn; rebuilt only when idleSuffix actually changes.
+	var _cachedIdleSuffix:String;
+	var _danceLeftAnim:String;
+	var _danceRightAnim:String;
+	var _idleAnim:String;
+
+	inline function updateIdleAnimNames():Void
+	{
+		_cachedIdleSuffix = idleSuffix;
+		_danceLeftAnim = 'danceLeft$idleSuffix';
+		_danceRightAnim = 'danceRight$idleSuffix';
+		_idleAnim = 'idle$idleSuffix';
+	}
+
 	//-----
 	
 	public function new(x:Float = 0, y:Float = 0, danceEveryNumBeats:Int = 2)
@@ -84,30 +106,33 @@ class Bopper extends FunkinSprite
 		}
 		
 		if (!canDance) return;
-		
+
+		if (_cachedIdleSuffix != idleSuffix) updateIdleAnimNames();
+
 		if (alternatingDance)
 		{
 			danced = !danced;
-			if (danced) playAnim('danceRight$idleSuffix', forced);
-			else playAnim('danceLeft$idleSuffix', forced);
+			if (danced) playAnim(_danceRightAnim, forced);
+			else playAnim(_danceLeftAnim, forced);
 		}
 		else
 		{
-			playAnim('idle$idleSuffix', forced);
+			playAnim(_idleAnim, forced);
 		}
 	}
-	
+
 	/**
 	 * Updates if the current character has a alternating `left/right` dance
 	 */
 	public function recalculateDanceIdle():Void
 	{
-		alternatingDance = hasAnim('danceLeft' + idleSuffix) && hasAnim('danceRight' + idleSuffix);
+		if (_cachedIdleSuffix != idleSuffix) updateIdleAnimNames();
+		alternatingDance = hasAnim(_danceLeftAnim) && hasAnim(_danceRightAnim);
 	}
 	
 	public function onBeatHit(beat:Int)
 	{
-		if (!isAnimNull() && beat % danceEveryNumBeats == 0) dance();
+		if (!isAnimNull() && beat % (danceEveryNumBeats * danceSpeed) == 0) dance();
 	}
 	
 	override function destroy()

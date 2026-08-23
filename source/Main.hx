@@ -11,13 +11,15 @@ import flixel.FlxGame;
 import flixel.input.keyboard.FlxKey;
 
 import funkin.backend.DebugDisplay;
+import funkin.scripts.GlobalScriptManager;
 
 @:nullSafety(Strict)
 class Main extends Sprite
 {
 	public static final PSYCH_VERSION:String = '0.5.2h';
-	public static final NMV_VERSION:String = '1.0';
+	public static final NMV_VERSION:String = '1.1.2b';
 	public static final FUNKIN_VERSION:String = '0.2.7';
+	public static final LEGACY_VERSION:String = 'v' + NMV_VERSION;
 	
 	public static final startMeta =
 		{
@@ -45,8 +47,12 @@ class Main extends Sprite
 	{
 		super();
 
+		// Captures the main thread's identity before anything else can run --
+		// see Logger.initMainThread()'s own doc comment for why this matters.
+		funkin.backend.Logger.initMainThread();
+
 		#if mobile
-		StorageSystem.getPermissions();
+		if (StorageSystem.getPermissions()) return;
 		Sys.setCwd(StorageSystem.getStorageDirectory());
 		#end
 
@@ -77,12 +83,35 @@ class Main extends Sprite
 		#end
 		
 		DebugDisplay.init();
-		
+		GlobalScriptManager.init();
+		#if mobile
+		mobile.backend.MobileDebugPlugin.register();
+		#end
+
 		FlxG.signals.gameResized.add(onResize);
 		#if DISABLE_TRACES
 		haxe.Log.trace = (v:Dynamic, ?infos:haxe.PosInfos) -> {}
 		#end
+
+		#if sys
+		FlxG.stage.window.onClose.add(onWindowClose);
+		#end
 	}
+
+	#if sys
+	static function onWindowClose():Void
+	{
+		@:privateAccess MusicBeatState.addPlayTimeDelta();
+		ClientPrefs.flush();
+		funkin.Mods.writeModList();
+
+		#if hxvlc
+		hxvlc.util.Handle.dispose();
+		#end
+
+		Sys.exit(0);
+	}
+	#end
 	
 	@:access(flixel.FlxCamera)
 	static function onResize(w:Int, h:Int)
@@ -120,6 +149,17 @@ class Main extends Sprite
 		haxe.ui.Toolkit.init();
 		haxe.ui.Toolkit.theme = 'dark';
 		haxe.ui.Toolkit.autoScale = false;
+		#if mobile
+		// The dev-tool editors (Character/Chart/Noteskin Editor) are built
+		// with desktop-sized HaxeUI layouts -- fine with a mouse, but small
+		// and cramped for touch on an actual phone/tablet screen. scaleX/
+		// scaleY is HaxeUI's own built-in global scale knob (already read
+		// internally by components like Slider for their own touch/drag
+		// coordinate math), so this scales every haxeui-based editor
+		// uniformly instead of hand-tuning sizes across each one's XML
+		// layout separately.
+		haxe.ui.Toolkit.scaleX = haxe.ui.Toolkit.scaleY = 1.4;
+		#end
 		haxe.ui.focus.FocusManager.instance.autoFocus = false;
 		haxe.ui.tooltips.ToolTipManager.defaultDelay = 200;
 		#end

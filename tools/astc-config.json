@@ -1,0 +1,45 @@
+{
+  "_comment": "Configuration for tools/convert_astc.py - 12x12 exhaustive mode",
+  "_doc": {
+    "blocksize": "Default block size (12x12 for Impostor Legacy)",
+    "quality": "Compression quality (exhaustive = best)",
+    "colorprofile": "cs for sRGB, cl for linear",
+    "min_size": "Minimum width/height in pixels. Sprites smaller than this are excluded (default: 500)",
+    "overrides": "Map of filename substrings to ASTC block size overrides",
+    "exclusions": "List of filename substrings. Matching files are NEVER converted"
+  },
+
+  "blocksize": "12x12",
+  "quality": "exhaustive",
+  "colorprofile": "cs",
+  "min_size": 500,
+
+  "overrides": {
+    "Arrows":       {"blocksize": "6x6"},
+    "sustainHold":  {"blocksize": "6x6"},
+    "noteSplashes": {"blocksize": "6x6"},
+    "icon-":        {"blocksize": "4x4"},
+    "GF_assets":    {"blocksize": "12x12"},
+    "greenmenu":    {"blocksize": "12x12"},
+    "menuBGBlue":   {"blocksize": "12x12"},
+    "stageBack":    {"blocksize": "12x12"},
+    "stageFront":   {"blocksize": "12x12"},
+    "finale/light": {"blocksize": "12x12"},
+    "finalframe":   {"blocksize": "12x12"}
+  },
+
+  "exclusions": [
+    "pixel",
+    "Pixel",
+    "PIXEL",
+    "fonts",
+    "Font",
+    "alphabet",
+    "icon.png",
+    "icon-hd.png",
+    "logo.png",
+    "preloader",
+    "Preloader",
+    "loading"
+  ]
+}

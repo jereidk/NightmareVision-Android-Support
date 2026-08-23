@@ -14,12 +14,18 @@ class RotateModifier extends NoteModifier
 	public var daOrigin:Vector3;
 	
 	var prefix:String;
-	
+	// prefix never changes after construction, so these two lookup keys are built once here
+	// instead of every getPos() call (i.e. once per active note/receptor, per frame).
+	var _rotateYKey:String;
+	var _rotateZKey:String;
+
 	public function new(modMgr:ModManager, ?prefix:String = '', ?origin:Vector3, ?parent:Modifier)
 	{
 		this.prefix = prefix;
 		this.daOrigin = origin;
 		super(modMgr, parent);
+		_rotateYKey = '${prefix}rotateY';
+		_rotateZKey = '${prefix}rotateZ';
 	}
 	
 	// thanks schmoovin'
@@ -52,10 +58,11 @@ class RotateModifier extends NoteModifier
 		var diff = pos.subtract(origin);
 		var scale = FlxG.height;
 		diff.z *= scale;
-		var out = rotateV3(diff, getValue(player), getSubmodValue('${prefix}rotateY', player), getSubmodValue('${prefix}rotateZ', player));
+		var out = rotateV3(diff, getValue(player), getSubmodValue(_rotateYKey, player), getSubmodValue(_rotateZKey, player));
 		out.z /= scale;
 		
 		origin.add(out, pos);
+		diff.put();
 		out.put(); // hehehehe
 		
 		return pos;

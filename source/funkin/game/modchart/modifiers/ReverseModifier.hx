@@ -53,9 +53,15 @@ class ReverseModifier extends NoteModifier
 		var shift = MathUtil.scale(perc, 0, 1, 50, FlxG.height - 50 - Note.swagWidth);
 		var mult = MathUtil.scale(perc, 0, 1, 1, -1);
 		shift = MathUtil.scale(getSubmodValue("centered", player), 0, 1, shift, FlxG.height / 2);
-		
+
+		if (funkin.data.ClientPrefs.noteLayout == 'VSlice')
+		{
+			pos.y = (player == 0 ? modMgr.vsliceBaseY : modMgr.vsliceOpponentBaseY) + (visualDiff * mult);
+			return pos;
+		}
+
 		pos.y = (shift + (visualDiff * mult) + Note.swagWidth * .5);
-		
+
 		return pos;
 	}
 	

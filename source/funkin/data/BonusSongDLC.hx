@@ -1,0 +1,217 @@
+package funkin.data;
+
+import funkin.FunkinAssets;
+
+#if mobile
+import flixel.util.FlxTimer;
+import mobile.backend.DLCManager;
+import mobile.backend.DLCManager.DLCEntry;
+import mobile.backend.DLCManager.DLCTaskState;
+import mobile.backend.StorageSystem;
+#end
+
+/**
+ * Maps shop-purchasable songs whose heavy assets ship as separate DLC
+ * packages, rather than bundled in the APK, to their DLC package id:
+ *
+ * - weekBonus.json's 10 songs (Ow, Who, Insane Streamer, Sussus Nuzzus,
+ *   Idk, Esculent, Drippypop, Crewicide, Monotone Attack, Top 10) --
+ *   each ships as its OWN small DLC (chart+audio+exclusive character/stage
+ *   art). Buying just one shouldn't force downloading the other nine.
+ * - weekCval.json's 3 songs (Chippin, Chipping, Torture) -- these share one
+ *   character-art spritesheet set (images/characters/misc/cvp/) across all
+ *   three, so splitting them per-song would just triplicate that shared
+ *   art; they ship as a single "weekcval" DLC instead. Torture has no
+ *   purchase of its own (it's a `special` lock requiring Chippin+Chipping
+ *   already cleared) but needs no separate download trigger either -- by
+ *   the time it's reachable, the other two were already played, so
+ *   "weekcval" is already installed.
+ *
+ * Either week's own WeekFile JSON (names/prices/icons, all tiny) stays
+ * bundled in the APK so the shop cards can render and be purchased before
+ * anything is downloaded; only the heavy per-song assets are DLC-gated.
+ *
+ * Unlike a regular DLC/mod, these install as plain loose files under the
+ * SAME relative path the bundled copy would have used (Paths.CORE_DIRECTORY,
+ * e.g. "assets/songs/ow/..."), not into content/<id>/. FunkinAssets already
+ * checks that exact loose-file location before falling back to the bundled
+ * asset for every single load (see FunkinAssets.getContent()/getBitmapData()) --
+ * this is the same mechanism used to override an individual bundled file,
+ * just applied to files that no longer HAVE a bundled copy at all. That
+ * means: no content/<id>/meta.json, never touches Mods.hx's mod list, and
+ * never shows up in ModsState's mod browser -- as far as the rest of the
+ * game is concerned this content either exists at its normal path or it
+ * doesn't, exactly like it always did before it was split out of the APK.
+ *
+ * Explicit hardcoded map rather than deriving the id from the song name
+ * (e.g. 'weekbonus-' + Paths.sanitize(name)) -- a wrong guess here would
+ * silently fail to find the entry instead of erroring, and there are only
+ * ever exactly 10 of these, so there's nothing saved by deriving it.
+ */
+class BonusSongDLC
+{
+	static final _ids:Map<String, String> = [
+		'Ow' => 'weekbonus-ow',
+		'Who' => 'weekbonus-who',
+		'Insane Streamer' => 'weekbonus-insane-streamer',
+		'Sussus Nuzzus' => 'weekbonus-sussus-nuzzus',
+		'Idk' => 'weekbonus-idk',
+		'Esculent' => 'weekbonus-esculent',
+		'Drippypop' => 'weekbonus-drippypop',
+		'Crewicide' => 'weekbonus-crewicide',
+		'Monotone Attack' => 'weekbonus-monotone-attack',
+		'Top 10' => 'weekbonus-top-10',
+		'Chippin' => 'weekcval',
+		'Chipping' => 'weekcval',
+		'Torture' => 'weekcval',
+	];
+
+	/** Null if `songName` isn't one of this DLC set's songs -- never gates anything else. */
+	public static inline function dlcIdFor(songName:String):Null<String>
+		return _ids.get(songName);
+
+	/**
+	 * True for any song this class doesn't gate at all (nothing to check),
+	 * or one whose chart is actually present -- checked directly via
+	 * FunkinAssets, the exact same path/lookup Chart.fromSong() itself uses
+	 * (songs/<slug>/data/normal.json, present for all 10 of these songs
+	 * regardless of their real difficulty set), NOT DLCManager's
+	 * content/<id>/meta.json bookkeeping -- there isn't one for this
+	 * install style. A file-existence check is also strictly more honest
+	 * here: it can't go stale the way a "did we mark this installed"
+	 * flag could if a file got deleted out from under it.
+	 *
+	 * BUT that file-existence check alone races against an in-flight
+	 * install: _extractZip() writes zip entries sequentially, and the
+	 * chart json (songs/<slug>/data/.../normal.json) sits earlier in the
+	 * archive than the character/stage art -- so the chart can already
+	 * exist on disk while the SAME background thread is still writing the
+	 * image files a few entries later. loadSong()/BonusDLCDownloadSubstate
+	 * both call this in a polling loop and proceed the instant it returns
+	 * true, so without this guard they could jump straight into
+	 * PlayState.create() reading images that genuinely aren't written yet
+	 * (they show up correctly a moment later, once extraction finishes --
+	 * "the files are right there on disk" is true, just not yet at the
+	 * moment this was checked). Treat "still actively installing this
+	 * exact id" as not-installed regardless of which files have landed so
+	 * far; DLCManager only flips out of BUSY after _extractZip() returns.
+	 */
+	public static function isInstalled(songName:String):Bool
+	{
+		final id = dlcIdFor(songName);
+		if (id == null) return true;
+		#if mobile
+		if (DLCManager.taskState == BUSY && DLCManager.activeTaskId == id) return false;
+		#end
+		final slug = Paths.sanitize(songName);
+		if (!FunkinAssets.exists(Paths.json('$slug/data/normal'))) return false;
+		#if mobile
+		// The chart file existing only means SOME version of this DLC was
+		// installed at some point -- it says nothing about whether it's the
+		// CURRENT version. A destOverride install has no meta.json to check
+		// (see DLCManager._extractZip()), so compare against
+		// DLCManager.getLooseInstalledVersion() instead: null covers both
+		// "never installed through this mechanism" and "installed before
+		// version-tracking existed at all" (i.e. every real player's existing
+		// weekbonus-* installs today), and either way that's treated as
+		// needing a (re)download, same as a fresh purchase. Only runs the
+		// comparison when the registry is actually loaded and has this id --
+		// otherwise there's nothing to compare against, so fall back to
+		// trusting the file exists (ensureRegistryFetched() below is what
+		// makes "registry not loaded yet" the rare case in practice).
+		final entry = findEntry(id);
+		if (entry != null && entry.version != null && entry.version != ""
+			&& DLCManager.getLooseInstalledVersion(id) != entry.version)
+			return false;
+		#end
+		return true;
+	}
+
+	#if mobile
+	/**
+	 * Where a bonus song's DLC zip gets extracted -- the app's external
+	 * storage root plus Paths.CORE_DIRECTORY's OWN relative prefix (mirrored
+	 * literally, not hardcoded, so this can't drift out of sync with
+	 * whatever Paths.hx actually resolves loose-asset lookups against).
+	 */
+	static function _installRoot():String
+		return StorageSystem.getStorageDirectory() + Paths.CORE_DIRECTORY + '/';
+
+	/**
+	 * Fire-and-forget: called right after a successful shop purchase (see
+	 * FreeplayState.acceptSong()) so the download is very likely already
+	 * done by the time the player actually presses play. This is a
+	 * best-effort nicety, NOT the safety net -- FreeplayState.loadSong()'s
+	 * own gate is what actually guarantees the files exist before a song
+	 * starts, and shows the blocking download substate if this background
+	 * attempt hasn't finished (or never started -- e.g. the app was closed
+	 * and reopened before it completed).
+	 *
+	 * No-ops if already installed, if a DLCManager task is already running
+	 * (never stomps an in-flight download/install), or if the registry
+	 * doesn't have this id for some reason (stale registry, id typo) --
+	 * loadSong()'s substate retries the lookup properly and surfaces a real
+	 * error to the player if it's still missing there.
+	 */
+	public static function beginBackgroundDownload(songName:String):Void
+	{
+		if (isInstalled(songName)) return;
+		final id = dlcIdFor(songName);
+		if (id == null) return;
+		if (DLCManager.taskState == BUSY) return;
+
+		function tryStart():Void
+		{
+			if (DLCManager.taskState == BUSY) return;
+			final entry = findEntry(id);
+			if (entry != null) DLCManager.downloadAndInstallAsync(entry, _installRoot());
+		}
+
+		if (DLCManager.registryData != null)
+		{
+			tryStart();
+			return;
+		}
+
+		// Registry not fetched yet this session -- kick off the fetch and
+		// give it a few short retries. Bounded (6 x 0.5s = 3s) since this is
+		// only the background nicety; if the network is slow or down,
+		// loadSong()'s own gate fetches/retries again for real later.
+		DLCManager.fetchRegistryAsync();
+		new FlxTimer().start(0.5, function(_)
+		{
+			if (DLCManager.registryData != null) tryStart();
+		}, 6);
+	}
+
+	public static function findEntry(id:String):Null<DLCEntry>
+	{
+		if (DLCManager.registryData == null) return null;
+		for (e in DLCManager.registryData.dlcs)
+			if (e.id == id) return e;
+		return null;
+	}
+
+	/** Same install destination beginBackgroundDownload() uses -- exposed so BonusDLCDownloadSubstate's own retry can pass it too. */
+	public static function installRoot():String
+		return _installRoot();
+
+	/**
+	 * Kicks a background registry fetch if nothing has fetched one yet this
+	 * session (no-ops otherwise). isInstalled()'s stale-version check above
+	 * can only compare against a version it actually knows -- called from
+	 * FreeplayState/MarathonMenuState's create() so that, by the time the
+	 * player actually navigates to and picks a bonus-shop song, the registry
+	 * has almost always already arrived, instead of only ever discovering an
+	 * update the first time they happen to open the DLC/mobile options
+	 * screen.
+	 */
+	public static function ensureRegistryFetched():Void
+	{
+		if (DLCManager.taskState != BUSY && DLCManager.registryData == null)
+			DLCManager.fetchRegistryAsync();
+	}
+	#else
+	public static function beginBackgroundDownload(songName:String):Void {}
+	#end
+}

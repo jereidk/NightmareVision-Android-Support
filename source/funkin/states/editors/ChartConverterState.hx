@@ -11,6 +11,8 @@ import moonchart.formats.fnf.legacy.FNFLegacy;
 import moonchart.formats.BasicFormat.FormatDifficulty;
 import moonchart.formats.fnf.FNFVSlice;
 
+import extensions.moonchart.SusJsonFormat;
+
 import openfl.net.FileFilter;
 
 import moonchart.formats.fnf.FNFCodename;
@@ -18,6 +20,8 @@ import moonchart.formats.fnf.FNFCodename;
 import flixel.group.FlxSpriteContainer.FlxTypedSpriteContainer;
 
 import funkin.objects.Alphabet;
+
+using Lambda;
 
 // this class could be alot better but its fine enough i think...
 class ChartConverterState extends MusicBeatState
@@ -43,9 +47,18 @@ class ChartConverterState extends MusicBeatState
 		
 		persistentUpdate = true;
 		
-		bg = new FlxSprite(Paths.image('menus/menuDesat'));
+		bg = new FlxSprite(Paths.image('menuDesat'));
 		bg.scrollFactor.set();
 		bg.color = 0xFF4D3551;
+		// Full 1280x720 background graphic -- same "leaves a gap on wide
+		// 'expand'-mode screens" issue as StoryMenuState's own border frame.
+		// Gated on gameCutoutSize.x (zero outside 'expand' mode) rather than
+		// comparing FlxG.width to the asset's own size.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		add(bg);
 		
 		var titleText = new Alphabet(0, 0, 'Chart Converter', true, false, 0, 0.6);
@@ -67,7 +80,7 @@ class ChartConverterState extends MusicBeatState
 		add(description);
 		description.y = FlxG.height - description.height - 20;
 		
-		for (k => i in ['From VSlice', 'From CNE', 'From Psych 1.0'])
+		for (k => i in ['From VSlice', 'From CNE', 'From Psych 1.0', 'From Vs. Impostor Extra'])
 		{
 			final txt = new Alphabet(0, 0, i, true, false);
 			txt.isMenuItem = true;
@@ -78,7 +91,7 @@ class ChartConverterState extends MusicBeatState
 		}
 		
 		changeSel();
-		
+
 		#if mobile
 		addVirtualPad(UP_DOWN, A_B);
 		#end
@@ -97,7 +110,7 @@ class ChartConverterState extends MusicBeatState
 				canSelect = false;
 				final nextState:NextState = goToFreeplay ? () -> new FreeplayState() : () -> new MasterEditorMenu();
 				FlxG.switchState(nextState);
-				if (!goToFreeplay) FunkinSound.playMusic(Paths.music('freakyMenu'));
+				
 				goToFreeplay = false;
 			}
 		}
@@ -115,7 +128,7 @@ class ChartConverterState extends MusicBeatState
 	{
 		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 		
-		curSelection = FlxMath.wrap(curSelection + diff, 0, 2);
+		curSelection = FlxMath.wrap(curSelection + diff, 0, 3);
 		
 		for (k => i in txtGroup.members)
 			i.targetY = k - curSelection;
@@ -125,12 +138,14 @@ class ChartConverterState extends MusicBeatState
 			default: 0xFF674B6C;
 			case 1: 0xFF4D2454;
 			case 2: 0xFF354465;
+			case 3: 0xFF674242;
 		}
 		final desc = switch (curSelection)
 		{
 			default: 'Converts a VSlice/Base Game chart and meta to a functional chart for NMV.\nPlease note that when using this provide both the chart.json and meta.json';
 			case 1: 'Converts a Codename engine chart to a functional chart for NMV.\nPlease note that when using this provide both the chart.json and meta.json';
 			case 2: 'Converts a Psych 1.0 chart to a functional chart for NMV.';
+			case 3: 'Merges a main and extra Vs. Impostor chart into a functional chart for NMV.\nPlease note that when using this provide both the chart.json and other.json';
 		}
 		
 		description.text = desc;
@@ -250,7 +265,7 @@ class ChartConverterState extends MusicBeatState
 				}
 				
 				FileUtil.browseForMultipleFiles({typeFilter: [new FileFilter('json', 'json')]}, onSelect, onCancel);
-       
+				
 			case 2: // psych 1.0
 				function onSelect(path:String)
 				{
@@ -269,6 +284,53 @@ class ChartConverterState extends MusicBeatState
 				}
 				
 				FileUtil.browseForFile({typeFilter: [new FileFilter('json', 'json')]}, onSelect, onCancel);
+				
+			case 3: // impostor
+				function onSelect(files:Array<String>)
+				{ // pretty dirty but like whateverr
+					var pathToMain:Null<String> = files.find((f) -> !f.contains('other'));
+					var pathToExtra:Null<String> = files.find((f) -> f.contains('other'));
+					
+					try
+					{
+						if (pathToMain == null) throw "Did not recieve a main chart Json!";
+						if (pathToExtra == null) throw "Did not recieve an extra chart Json!";
+						
+						final mainChart = new FNFPsychBasic<SusJsonFormat>().fromFile(pathToMain);
+						final extraChart = new FNFPsychBasic<SusJsonFormat>().fromFile(pathToExtra);
+						
+						mainChart.data.song.lanes = 4;
+						
+						for (i => section in extraChart.data.song.notes)
+						{
+							var mainSection = mainChart.data.song.notes[i];
+							
+							if (mainSection != null)
+							{
+								for (noteDatas in section.sectionNotes)
+								{
+									if (extraChart.offsetMustHits && section.mustHitSection) noteDatas[1] = ((noteDatas[1] + 4) % 8);
+									
+									noteDatas[1] += 8;
+									
+									mainSection.sectionNotes.push(noteDatas);
+								}
+							}
+							else if (section.sectionNotes.length > 0)
+							{ // Is it really worth it?
+								mainChart.data.song.notes[i] = section;
+							}
+						}
+						
+						saveFromFormat(pathToMain, mainChart, false);
+					}
+					catch (e:Dynamic)
+					{
+						showError(e);
+					}
+				}
+				
+				FileUtil.browseForMultipleFiles({typeFilter: [new FileFilter('json', 'json')]}, onSelect, onCancel);
 		}
 	}
 	
@@ -277,25 +339,30 @@ class ChartConverterState extends MusicBeatState
 		Logger.log('Failed to convert chart\nException: $exception', ERROR, true);
 	}
 	
-	function saveFromFormat(path:String, format:OneOfArray<DynamicFormat>, ?diff:FormatDifficulty)
-    {
-        final nmvChart = new FNFPsych().fromFormat(format, diff);
-        nmvChart.beautify = true;
-        final saveResult = nmvChart.save(path.replace('.json', '-converted.json'));
-        if (saveResult == null) throw "failed to save.";
-        Logger.log('Successfully saved chart at ${saveResult.dataPath}', NOTICE, true);
-        #if android
-        PopUp.showAlert("Success!", "Successfully saved chart at:\n" + saveResult.dataPath, "OK");
-        #end
-    }
+	function onCancel()
+	{
+		Logger.log('File selecting was canceled.', WARN, true);
+	}
+	
+	function saveFromFormat(path:String, format:OneOfArray<DynamicFormat>, ?diff:FormatDifficulty, convert:Bool = true)
+	{
+		var nmvChart:DynamicFormat;
+		if (convert)
+		{
+			nmvChart = new FNFPsych().fromFormat(format, diff);
+			cast(nmvChart, FNFPsych).beautify = true;
+		}
+		else
+		{
+			nmvChart = format;
+		}
+		final saveResult = nmvChart.save(path.replace('.json', '-converted.json'));
+		if (saveResult == null) throw "failed to save.";
+		Logger.log('Successfuly saved chart at ${saveResult.dataPath}', NOTICE, true);
+	}
 	
 	override function destroy()
 	{
 		super.destroy();
-	}
-	
-	function onCancel()
-	{
-		Logger.log('File selecting was canceled.', WARN, true);
 	}
 }

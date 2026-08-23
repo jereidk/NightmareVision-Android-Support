@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="spritesheet.png">
+	<SubTexture name="anim0000" x="0" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0001" x="0" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0002" x="185" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0003" x="185" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0004" x="370" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0005" x="370" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0006" x="555" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0007" x="555" y="0" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0008" x="0" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0009" x="0" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0010" x="185" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0011" x="185" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0012" x="370" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0013" x="370" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0014" x="555" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0015" x="555" y="64" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0016" x="0" y="128" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0017" x="0" y="128" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0018" x="185" y="128" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+	<SubTexture name="anim0019" x="185" y="128" width="185" height="64" frameX="0" frameY="0" frameWidth="185" frameHeight="64" />
+</TextureAtlas>

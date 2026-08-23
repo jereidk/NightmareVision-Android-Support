@@ -3,11 +3,10 @@ package funkin.objects.note;
 import funkin.data.*;
 import funkin.objects.Bopper;
 import funkin.game.shaders.RGBShader;
+import funkin.objects.note.Note.NoteSharedTailState;
 
-class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNote
+class SustainSplash extends RGBSprite implements funkin.game.modchart.IModNote
 {
-	public var rgbGraphics:RGBGraphics = new RGBGraphics();
-	
 	public var data(get, set):Int;
 	public var noteData:Int = 0;
 	
@@ -15,6 +14,8 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 	
 	private var _note:Note;
 	private var _strum:StrumNote;
+	
+	public var completed:Bool = false; // uhh coudl probably siwtch this up to use tail state
 	
 	// internal thing to optimize loading frames
 	@:noCompletion var _textureLoaded:Null<String> = null;
@@ -24,7 +25,11 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 	public function new(x:Float = 0, y:Float = 0, noteData:Int = 0, player:Int = 0)
 	{
 		super(x, y);
-		
+
+		// Position is fully driven by modManager.updateObject() every frame — same reasoning
+		// as Note.hx's moves=false.
+		moves = false;
+
 		addAnims(NoteUtil.getSkinFromID(player));
 	}
 	
@@ -42,7 +47,7 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 			{
 				final animName = '${anim.anim}$noteData';
 				
-				animation.addByPrefix(animName, anim.xmlName, anim.fps, anim.looping);
+				addAnimByPrefix(animName, anim.xmlName, anim.fps, anim.looping);
 				addOffset(animName, anim.offsets[0], anim.offsets[1]);
 			}
 		}
@@ -51,6 +56,8 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 			if (anim.contains('start')) playAnim('loop$data', false);
 			if (anim.contains('end')) kill();
 		});
+
+		_textureLoaded = _skin.sustainSplashTexture;
 	}
 	
 	public override function playAnim(anim:String, force:Bool = false, isReversed:Bool = false, frame:Int = 0)
@@ -67,18 +74,20 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 		
 		final sanitzedColourArray = colors ?? NoteUtil.colorToArray(skin.colors[data]);
 		
-		rgbGraphics.enabled = skin.inEngineColoring;
-		rgbGraphics.setColors(sanitzedColourArray);
+		rgbShader.enabled = skin.inEngineColoring;
+		rgbShader.setColors(sanitzedColourArray);
 	}
 	
-	public function setupSplash(strum:StrumNote, ?note:Note, ?time:Float = 0.5, ?isPlayer:Bool = false, ?graphicsInput:RGBGraphics, ?field:PlayField)
+	public function setupSplash(strum:StrumNote, ?note:Note, ?isPlayer:Bool = false, ?graphicsInput:RGBGraphics, ?field:PlayField)
 	{
 		this._note = note;
 		this._strum = strum;
 		
+		completed = false;
+		
 		data = note.noteData;
 		
-		visible = true;
+		visible = (note?.visible ?? true);
 		angle = 0;
 		alpha = 1;
 		
@@ -86,7 +95,9 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 		
 		skin = NoteUtil.getSkinFromID(player);
 		
-		antialiasing = skin.antialiasing;
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
+
+			if (_textureLoaded != skin.sustainSplashTexture) addAnims(skin);
 		
 		if (skin?.susSplashScale != null) scale.set(skin.susSplashScale, skin.susSplashScale);
 		
@@ -98,38 +109,92 @@ class SustainSplash extends FunkinSprite implements funkin.game.modchart.IModNot
 		setColors(graphicsInput?.getColors());
 		_position();
 		
-		FlxTimer.wait(time, () -> {
-			if (isPlayer && ClientPrefs.noteSplashes) playAnim('end$data', true);
+		findTail(note);
+		__isPlayer = isPlayer;
+	}
+	
+	var __parent:Note;
+	// The specific NoteSharedTailState __parent had when this splash was
+	// created. Note.preRecycle() always allocates a FRESH tailState when a
+	// head note's pool slot gets reused for a different hold -- comparing
+	// against this lets watchTail() detect "my parent isn't my hold's head
+	// anymore" instead of silently re-resolving __tail against whatever
+	// unrelated hold __parent now represents (see watchTail()'s comment).
+	var __parentTailState:NoteSharedTailState;
+	var __tail:Note;
+	var __isPlayer:Bool = false;
+
+	function findTail(note:Null<Note>)
+	{
+		__parent = note;
+		__parentTailState = note?.tailState;
+		__tail = note;
+		if (__tail != null && __tail.tail.length > 0)
+		{
+			__tail = __tail.tail[__tail.tail.length - 1];
+		}
+	}
+
+	override function update(elapsed:Float)
+	{
+		super.update(elapsed);
+
+		watchTail();
+	}
+
+	function watchTail()
+	{
+		// Re-resolve the last known segment every frame instead of trusting
+		// the one findTail() cached at construction time -- with deferred
+		// tail spawning (PlayState._pendingTails), a hold's segments can now
+		// spawn gradually over several frames after the head instead of all
+		// at once, so "the last segment" right when this splash was created
+		// isn't necessarily the sustain's TRUE final segment yet for a long
+		// enough hold. Keep tracking forward as later segments come into
+		// existence instead of completing early against a still-growing tail.
+		//
+		// BUT: __parent's pool slot can get reused for a completely
+		// different hold once THIS hold is over (confirmed regression --
+		// a stuck/never-disappearing glow on device). If that happened,
+		// __parent.tail now belongs to that unrelated hold and would keep
+		// looking "alive" for as long as ITS tail keeps staggered-spawning,
+		// making this splash silently track someone else's hold forever
+		// instead of completing. Detect it via tailState identity (always
+		// reallocated on reuse, see Note.preRecycle()) and just let the
+		// existing "no tail" path below finish this splash instead.
+		if (__parent != null && __parent.tailState != __parentTailState) __tail = null;
+		else if (__parent != null && __parent.tail.length > 0) __tail = __parent.tail[__parent.tail.length - 1];
+
+		if (__tail == null)
+		{
+			kill(); // die dont even splash jsut die
+			return;
+		}
+
+		if (__tail.wasGoodHit) completed = true;
+
+		if (!__tail.alive && !getAnimName().startsWith('end'))
+		{
+			completed = true;
+			
+			if (__isPlayer) playAnim('end$data', true);
 			else kill();
-		});
+		}
 	}
 	
 	function _position()
 	{
-		if (_strum != null)
-		{
-			final _skin:NoteSkin = NoteUtil.getSkinFromID(player);
-			
-			final offsets = _skin.sustainSplashOffsets != null ? _skin.sustainSplashOffsets[data] : null;
-			
-			setPosition(_strum.x + (_strum.width - width) * .5, _strum.y + (_strum.height - height) * .5);
-			spriteOffset.set(offsets?.x, offsets?.y);
-		}
+		if (_strum == null) return;
+		
+		final _skin:NoteSkin = NoteUtil.getSkinFromID(player);
+		
+		final offsets = _skin.sustainSplashOffsets != null ? _skin.sustainSplashOffsets[data] : null;
+		
+		setPosition(_strum.x + (_strum.width - width) * .5, _strum.y + (_strum.height - height) * .5);
+		spriteOffset.set(offsets?.x, offsets?.y);
 	}
 	
 	inline function get_data():Int return noteData;
 	
 	inline function set_data(v:Int):Int return noteData = v;
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
-	}
 }

@@ -3,6 +3,7 @@ package funkin.objects;
 import funkin.data.CharacterData.CharacterParser;
 import funkin.data.CharacterData.AnimationInfo;
 import funkin.data.CharacterData.CharacterInfo;
+import funkin.backend.SystemMonitor;
 
 import animate.FlxAnimate;
 
@@ -13,7 +14,7 @@ import animate.FlxAnimate;
  * Bopper with extended features to be animated to the strums
  */
 // NOT DONE NOT DONE NOT DONE
-class Character extends Bopper
+class Character extends Bopper implements IFlags
 {
 	public static final DEFAULT_CHARACTER:String = 'bf';
 	
@@ -32,15 +33,23 @@ class Character extends Bopper
 	/**
 	 * Character's json name
 	 */
-	public var curCharacter:String = DEFAULT_CHARACTER;
+	public var curCharacter:String;
 	
 	public var holdTimer:Float = 0;
 	
 	public var animTimer:Float = 0;
 	public var specialAnim:Bool = false;
+
+	// Cache for the '-loop' name check in update() below: a finished non-looping animation stays
+	// "finished" every frame until something else plays, so without this the same string got
+	// reallocated (getAnimName() + '-loop') on every single frame a character sat idle on it.
+	var _loopAnimCacheKey:String;
+	var _loopAnimCacheVal:String;
 	public var holding(default, set):Bool = false;
 	public var stunned:Bool = false;
-	
+
+	public var canTaunt:Bool = true;
+
 	/**
 	 * Multiplier of how long a character holds the sing pose
 	 */
@@ -101,7 +110,27 @@ class Character extends Bopper
 	 * Array of all ghosts
 	 */
 	public var doubleGhosts:Array<FunkinSprite> = [];
-	
+
+	/**
+	 * Workaround for a screen/lighten-blend "glow" symbol (e.g. green/parasite's
+	 * eye glow) not rendering when drawn as part of the character's own ~20+
+	 * layer timeline -- confirmed on-device that the SAME symbol renders fine
+	 * completely standalone (FlxAnimateController.addBySymbol), just not when
+	 * nested in the full rig, on any character tried (green, maroonParasite,
+	 * bf-ghost), with or without useRenderTexture. Root cause not isolated
+	 * (not occlusion, not masking, not the stage shader) -- this sidesteps it
+	 * by drawing the glow as a second, fully independent FunkinSprite showing
+	 * ONLY that symbol, manually kept in sync with this character every frame.
+	 * Opt in per-character via the JSON `flags` map:
+	 *   "flags": { "glowSymbol": "glow shit", "glowOffset": [x, y] }
+	 * `glowOffset` is in this character's own local space (before `scale`) --
+	 * the symbol's standalone bounds don't line up with its nested position,
+	 * so this needs calibrating by eye per character/symbol.
+	 */
+	var glowSprite:Null<FunkinSprite> = null;
+	var glowOffsetX:Float = 0;
+	var glowOffsetY:Float = 0;
+
 	/**
 	 * Array of all ghosts tweens
 	 */
@@ -146,29 +175,46 @@ class Character extends Bopper
 	 */
 	public var vSliceSustains = false;
 	
-	public function new(x:Float = 0, y:Float = 0, character:String = 'bf', isPlayer:Bool = false)
+	public var legacyOffset:Bool = true;
+	
+	public var flags:haxe.DynamicAccess<Dynamic> = {};
+	
+	public var pausePortrait:String = '';
+	
+	public function new(x:Float = 0, y:Float = 0, character:String, isPlayer:Bool = false)
 	{
 		super(x, y);
 		
-		this.curCharacter = character;
 		this.isPlayer = isPlayer;
 		
-		genGhosts();
-		
-		loadFile(CharacterParser.fetchInfo(curCharacter));
+		loadCharacter(character ?? DEFAULT_CHARACTER);
 	}
 	
-	function genGhosts()
+	function genGhosts(count:Int):Void
 	{
-		for (i in 0...4)
+		while (doubleGhosts.length < count)
 		{
 			final ghost = new FunkinSprite();
-			ghost.visible = false;
 			ghost.useRenderTexture = true;
 			ghost.antialiasing = true;
-			ghost.alpha = ghostAlpha;
+			ghost.visible = false;
+
 			doubleGhosts.push(ghost);
 		}
+	}
+	
+	public function loadCharacter(name:String, force:Bool = false):Character
+	{
+		if (curCharacter == name && !force) return this;
+			
+		for (ghost in doubleGhosts) ghost?.destroy();
+		doubleGhosts.resize(0);
+			
+		loadFile(CharacterParser.fetchInfo(curCharacter = name));
+			
+		genGhosts(PlayState.SONG?.keys ?? 0);
+
+		return this;
 	}
 	
 	// clean this up
@@ -183,29 +229,56 @@ class Character extends Bopper
 		this.cameraPosition = json.camera_position;
 		
 		this.healthIcon = json.healthicon;
+		this.ghostsEnabled = json.afterimages;
 		this.vSliceSustains = json.vslice_sustains;
 		this.singDuration = json.sing_duration;
 		this.noAntialiasing = json.no_antialiasing;
+		this.scalableOffsets = json.scalableOffsets;
+		
+		this.flags = json.flags;
+		
+		this.pausePortrait = json.pausePortrait;
 		
 		this.flipX = (json.flip_x != isPlayer);
 		this.originalFlipX = (json.flip_x == true);
 		this.imageFile = json.image;
 		
+		this.baseFlipX = (isPlayer ? !originalFlipX : originalFlipX);
+		this.baseFlipY = false;
+		
 		this.antialiasing = !noAntialiasing && ClientPrefs.globalAntialiasing;
 		
 		this.danceEveryNumBeats = json.dance_every ?? 2;
+		
+		this.isPlayerInEditor = json._editor_isPlayer;
 		
 		this.gameoverCharacter = json.gameover_character;
 		this.gameoverConfirmDeathSound = json.gameover_confirm_sound;
 		this.gameoverLoopDeathSound = json.gameover_loop_sound;
 		this.gameoverInitialDeathSound = json.gameover_intial_sound;
 		
-		this.scalableOffsets = json.scalableOffsets ?? false;
-		
-		this.isPlayerInEditor = json._editor_isPlayer;
-		
-		loadAtlas(imageFile);
-		
+		loadAtlas(imageFile, LOOSE);
+
+		glowSprite = FlxDestroyUtil.destroy(glowSprite);
+		glowOffsetX = 0;
+		glowOffsetY = 0;
+		if (flags != null && hasFlag('glowSymbol'))
+		{
+			final glowSymbolName:String = getFlag('glowSymbol');
+			final offset:Array<Float> = getFlag('glowOffset');
+			if (offset != null && offset.length > 1)
+			{
+				glowOffsetX = offset[0];
+				glowOffsetY = offset[1];
+			}
+
+			glowSprite = new FunkinSprite();
+			glowSprite.loadAtlas(imageFile, LOOSE);
+			glowSprite.anim.addBySymbol('glow', glowSymbolName, 24, true);
+			glowSprite.anim.play('glow');
+			glowSprite.antialiasing = antialiasing;
+		}
+
 		if (jsonScale != 1)
 		{
 			scale.set(jsonScale, jsonScale);
@@ -251,24 +324,42 @@ class Character extends Bopper
 				{
 					addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				}
+				else
+				{
+					addOffset(anim.anim, 0, 0);
+				}
 			}
 		}
 		else
 		{
 			addAnimByPrefix('idle', 'BF idle dance', 24, false);
 		}
-		
-		dance(forceDance);
+
+		dance(true);
+		if (!animation.curAnim?.looped) finishAnim();
+		setBaseFrameSize();
 	}
 	
+	// Wraps _updateCharacter() (below) instead of timing this function's own
+	// body directly -- that body has an early return (debugMode/isAnimNull),
+	// and a wrapper here means profEnd() always fires exactly once no matter
+	// which path _updateCharacter() takes, instead of needing a matching
+	// profEnd() call duplicated at every return site.
 	override function update(elapsed:Float)
+	{
+		#if android SystemMonitor.profBegin('charUpdate'); #end
+		_updateCharacter(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+	}
+
+	function _updateCharacter(elapsed:Float):Void
 	{
 		if (debugMode || isAnimNull())
 		{
 			super.update(elapsed);
 			return;
 		}
-		
+
 		if (animTimer > 0)
 		{
 			animTimer -= elapsed;
@@ -279,18 +370,22 @@ class Character extends Bopper
 			}
 		}
 		
-		if (specialAnim && isAnimFinished() && !holding)
+		final _curAnim = getAnimName();
+		if (!holding && isAnimFinished())
 		{
-			specialAnim = false;
-			dance(forceDance);
+			if (specialAnim)
+			{
+				specialAnim = false;
+				dance(forceDance);
+			}
+			else if (_curAnim.endsWith('miss') && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
+			{
+				dance(forceDance);
+				finishAnim();
+			}
 		}
-		else if (getAnimName().endsWith('miss') && isAnimFinished() && holdTimer >= Conductor.stepCrotchet * 0.002 * singDuration)
-		{
-			dance(forceDance);
-			finishAnim();
-		}
-		
-		if (getAnimName().startsWith('sing') || holding) holdTimer += elapsed;
+
+		if (_curAnim.startsWith('sing') || holding) holdTimer += elapsed;
 		
 		if (!holding && holdTimer >= Conductor.stepCrotchet * 0.001 * singDuration)
 		{
@@ -298,18 +393,41 @@ class Character extends Bopper
 			holdTimer = 0;
 		}
 		
-		if (isAnimFinished() && hasAnim(getAnimName() + '-loop')) playAnim(getAnimName() + '-loop');
+		if (isAnimFinished())
+		{
+			final _an = getAnimName();
+			if (_loopAnimCacheKey != _an)
+			{
+				_loopAnimCacheKey = _an;
+				_loopAnimCacheVal = _an + '-loop';
+			}
+			if (hasAnim(_loopAnimCacheVal)) playAnim(_loopAnimCacheVal);
+		}
 		
 		if (ghostsEnabled)
 		{
 			for (ghost in doubleGhosts)
 				ghost.update(elapsed);
 		}
+
+		if (glowSprite != null)
+		{
+			glowSprite.x = x + glowOffsetX * scale.x;
+			glowSprite.y = y + glowOffsetY * scale.y;
+			glowSprite.scale.copyFrom(scale);
+			glowSprite.flipX = flipX;
+			glowSprite.visible = visible;
+			glowSprite.alpha = alpha;
+			glowSprite.color = color;
+			glowSprite.update(elapsed);
+		}
+
 		super.update(elapsed);
 	}
-	
+
 	override function draw()
 	{
+		#if android SystemMonitor.profBegin('charDraw'); #end
 		if (ghostsEnabled)
 		{
 			for (ghost in doubleGhosts)
@@ -318,6 +436,8 @@ class Character extends Bopper
 			}
 		}
 		super.draw();
+		if (glowSprite != null && glowSprite.visible) glowSprite.draw();
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
 	function set_holding(isIt:Bool):Bool
@@ -336,77 +456,89 @@ class Character extends Bopper
 	 */
 	override function dance(forced:Bool = false)
 	{
-		if (debugMode || specialAnim) return;
+		if (debugMode || specialAnim || skipDance) return;
+		
 		super.dance(forced);
 	}
 	
 	override function playAnim(animToPlay:String, isForced:Bool = false, isReversed:Bool = false, frame:Int = 0)
 	{
 		specialAnim = false;
-		animToPlay += animSuffix;
 		
-		super.playAnim(animToPlay, isForced, isReversed, frame);
+		super.playAnim(animToPlay + animSuffix, isForced, isReversed, frame);
 	}
 	
 	override function onBeatHit(beat:Int)
 	{
 		if (stunned || getAnimName().startsWith('sing') || holding) return;
+		
 		super.onBeatHit(beat);
 	}
 	
 	public function getSingDisplacement():FlxPoint
 	{
-		return switch (getAnimName().substr(4).split('-')[0].toLowerCase())
+		// Use charCodeAt to avoid substr/split/toLowerCase string allocations every frame.
+		// Bit-OR with 32 converts uppercase ASCII letters to lowercase (A-Z → a-z).
+		// Character 4 of a sing anim is the first letter of the direction: singUp, singDown, etc.
+		final name = getAnimName();
+		if (name.length < 5) return FlxPoint.weak();
+		return switch (name.charCodeAt(4) | 32)
 		{
-			case 'up':
-				FlxPoint.weak(0, -camDisplacement);
-			case 'down':
-				FlxPoint.weak(0, camDisplacement);
-			case 'left':
-				FlxPoint.weak(-camDisplacement, 0);
-			case 'right':
-				FlxPoint.weak(camDisplacement, 0);
-			default:
-				FlxPoint.weak();
+			case 117: FlxPoint.weak(0, -camDisplacement); // 'u' / 'U' → up
+			case 100: FlxPoint.weak(0,  camDisplacement); // 'd' / 'D' → down
+			case 108: FlxPoint.weak(-camDisplacement, 0); // 'l' / 'L' → left
+			case 114: FlxPoint.weak( camDisplacement, 0); // 'r' / 'R' → right
+			default:  FlxPoint.weak();
 		}
 	}
 	
-	public function playGhostAnim(ghostID = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
+	public function playGhostAnim(ghostID:Int = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
-		var ghost:FunkinSprite = doubleGhosts[ghostID];
+		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
+
+		var ghost = doubleGhosts[ghostID];
+
+		if (ghost == null) return trace('what $ghostID');
+
+		if (ghost.frames == null)
+		{
+			ghost.frames = frames;
+			ghost.copyAnimController(animation);
+		}
+		
 		ghost.scale.copyFrom(scale);
-		ghost.frames = frames;
-		ghost.animation.copyFrom(animation);
+		ghost.offset.copyFrom(offset);
+		ghost.origin.copyFrom(origin);
 		ghost.antialiasing = antialiasing;
+		ghost.angle = angle;
 		ghost.x = x;
 		ghost.y = y;
+		ghost.width = width;
+		ghost.height = height;
+		ghost.baseFrameWidth = baseFrameWidth;
+		ghost.baseFrameHeight = baseFrameHeight;
 		ghost.flipX = flipX;
 		ghost.flipY = flipY;
+		ghost.baseFlipX = baseFlipX;
+		ghost.baseFlipY = baseFlipY;
 		ghost.alpha = alpha * ghostAlpha;
 		ghost.visible = true;
 		ghost.color = healthColour;
-		ghost.animation.play(animName, force, reversed, frame);
 		
 		ghostTweenGrp[ghostID]?.cancel();
 		
-		final direction:String = animName.substring(4).split('-')[0];
-		
-		inline function resolveDir(xDir:Bool = false):Float
+		final _dirCode:Int = (animName.length > 4) ? (animName.charCodeAt(4) | 32) : 0;
+
+		inline function resolveDir(x:Bool):Float
 		{
-			var output:Float = 0;
-			switch (direction)
+			return switch (_dirCode)
 			{
-				case 'UP':
-					if (!xDir) output = -ghostDisplacement;
-				case 'DOWN':
-					if (!xDir) output = ghostDisplacement;
-				case 'RIGHT':
-					if (xDir) output = ghostDisplacement;
-				case 'LEFT':
-					if (xDir) output = -ghostDisplacement;
+				case 117 /* u */: !x ? -ghostDisplacement : 0;
+				case 100 /* d */: !x ?  ghostDisplacement : 0;
+				case 114 /* r */:  x ?  ghostDisplacement : 0;
+				case 108 /* l */:  x ? -ghostDisplacement : 0;
+				default: 0;
 			}
-			
-			return output;
 		}
 		
 		final moveX = x + resolveDir(true);
@@ -420,10 +552,12 @@ class Character extends Bopper
 				}
 			});
 			
+		ghost.animation.play(animName, force, reversed, frame);
+		
 		if (animOffsets.exists(animName))
 		{
 			final daOffset = animOffsets.get(animName);
-			ghost.animOffset.set(daOffset[0] * scale.x, daOffset[1] * scale.y);
+			ghost.setAnimOffset(daOffset[0], daOffset[1]);
 		}
 	}
 	
@@ -438,7 +572,28 @@ class Character extends Bopper
 		ghostTweenGrp = FlxDestroyUtil.destroyArray(ghostTweenGrp);
 		
 		doubleGhosts = FlxDestroyUtil.destroyArray(doubleGhosts);
+
+		glowSprite = FlxDestroyUtil.destroy(glowSprite);
+
+		flags = null;
 		
 		super.destroy();
+	}
+	
+	public override function updateHitbox():Void // im so disgusted
+	{
+		super.updateHitbox();
+		
+		if (legacyOffset) offset.set();
+	}
+	
+	public function hasFlag(flag:String):Bool
+	{
+		return flags.exists(flag);
+	}
+	
+	public function getFlag(flag:String):Dynamic
+	{
+		return flags.get(flag);
 	}
 }

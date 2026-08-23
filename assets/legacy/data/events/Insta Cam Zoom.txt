@@ -1,0 +1,4 @@
+Functionality: global
+instantly add camera zoom
+- value 1: zoom
+- value 2: 0 (additive) 1 (set)

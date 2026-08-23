@@ -14,14 +14,14 @@ class FlxMacro
 	/**
 	 * Adds a variety of functions related to loading sprites for convenienec
 	 */
-	public static macro function buildFlxSprite():Array<haxe.macro.Expr.Field>
+	public static macro function buildFlxSprite():Array<Field>
 	{
-		var fields:Array<haxe.macro.Expr.Field> = Context.getBuildFields();
+		var fields:Array<Field> = Context.getBuildFields();
 		
 		fields.push(
 			{
 				name: "loadFromSheet",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [
@@ -33,13 +33,53 @@ class FlxMacro
 						expr: macro
 						{
 							this.frames = funkin.Paths.getAtlasFrames(path);
-							this.animation.addByPrefix(animName, animName, fps, looped);
+
+							// A frame named EXACTLY animName (no numeric suffix at
+							// all -- e.g. a static prop atlas with one frame
+							// literally called "bg") is a single-image
+							// "animation" using the addByPrefix machinery only to
+							// grab itself. FlxAnimationController's own
+							// addByPrefix() always calls FlxFrame.sortFrames()
+							// with its default warn=true, which tries to parse a
+							// numeric index out of whatever's between the prefix
+							// and suffix and logs "Could not parse frame number"
+							// when there isn't one -- harmless (falls back to
+							// index 0) but noisy. Skip straight to a direct
+							// single-frame animation.add() whenever that's
+							// exactly the case; anything else (real numbered
+							// sequences, or multiple frames sharing this prefix)
+							// still goes through addByPrefix exactly as before.
+							var singleFrameIndex = -1;
+							var matchCount = 0;
+							if (this.frames != null)
+							{
+								var atlasFrames = this.frames.frames;
+								for (i in 0...atlasFrames.length)
+								{
+									var f = atlasFrames[i];
+									if (f.name != null && StringTools.startsWith(f.name, animName))
+									{
+										matchCount++;
+										if (f.name == animName) singleFrameIndex = i;
+									}
+								}
+							}
+
+							if (matchCount == 1 && singleFrameIndex != -1)
+							{
+								this.animation.add(animName, [singleFrameIndex], fps, looped);
+							}
+							else
+							{
+								this.animation.addByPrefix(animName, animName, fps, looped);
+							}
+
 							this.animation.play(animName);
 							if (this.animation.curAnim == null || this.animation.curAnim.numFrames == 1)
 							{
 								this.active = false;
 							}
-							
+
 							return this;
 						}
 					}),
@@ -50,7 +90,7 @@ class FlxMacro
 			{
 				doc: "sets frames to the given collection.\nReturns `this` for chaining.",
 				name: "loadAtlasFrames",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [
@@ -69,7 +109,7 @@ class FlxMacro
 			{
 				doc: "creates a 1x1 graphic and scales it to the given width and height.",
 				name: "makeScaledGraphic",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [
@@ -95,31 +135,9 @@ class FlxMacro
 			
 		fields.push(
 			{
-				doc: "Sets the scale of an object then updates the hitbox.",
-				name: "setScale",
-				access: [haxe.macro.Expr.Access.APublic],
-				kind: FFun(
-					{
-						args: [
-							{name: "x", type: (macro :Float)},
-							{name: "y", type: (macro :Float)},
-							{name: "update", type: (macro :Bool), value: (macro $v{true})}
-						],
-						expr: macro
-						{
-							this.scale.set(x, y);
-							if (update) this.updateHitbox();
-							return this;
-						}
-					}),
-				pos: Context.currentPos(),
-			});
-			
-		fields.push(
-			{
 				doc: "centers the sprite onto a FlxObject by their hitboxes.",
 				name: "centerOnObject",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [
@@ -146,14 +164,14 @@ class FlxMacro
 	/**
 	 * Adds zIndex to `FlxBasic`'
 	 */
-	public static macro function buildFlxBasic():Array<haxe.macro.Expr.Field>
+	public static macro function buildFlxBasic():Array<Field>
 	{
-		var fields:Array<haxe.macro.Expr.Field> = Context.getBuildFields();
+		var fields:Array<Field> = Context.getBuildFields();
 		
 		fields.push(
 			{
 				name: "zIndex",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FVar(macro :Int, macro $v{0}),
 				pos: Context.currentPos(),
 			});
@@ -161,14 +179,14 @@ class FlxMacro
 		return fields;
 	}
 	
-	public static macro function buildFlxCamera():Array<haxe.macro.Expr.Field>
+	public static macro function buildFlxCamera():Array<Field>
 	{
-		var fields:Array<haxe.macro.Expr.Field> = Context.getBuildFields();
+		var fields:Array<Field> = Context.getBuildFields();
 		
 		fields.push(
 			{
 				name: "addShader",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [{name: 'shader', type: (macro :flixel.graphics.tile.FlxGraphicsShader)}],
@@ -187,7 +205,7 @@ class FlxMacro
 		fields.push(
 			{
 				name: "removeShader",
-				access: [haxe.macro.Expr.Access.APublic],
+				access: [APublic],
 				kind: FFun(
 					{
 						args: [{name: 'shader', type: (macro :flixel.graphics.tile.FlxGraphicsShader)}],
@@ -217,6 +235,33 @@ class FlxMacro
 		return fields;
 	}
 	
+	
+	public static macro function buildFlxText():Array<Field>
+	{
+		var fields:Array<Field> = Context.getBuildFields();
+		
+		for (field in fields) {
+			switch (field.kind) {
+				default:
+				case FFun(fun):
+					if (field.name == 'set_text') {
+						fun.expr = macro {
+							if (textField == null || textField.text == Text)
+								return text = Text;
+							
+							_regen = true;
+							return textField.text = text = Text;
+						}
+					}
+			}
+			
+			if (field.name == 'set_antialiasing') // fucj ou
+				fields.remove(field);
+		}
+		
+		return fields;
+	}
+	
 	/**
 	 * Adds an rgbShader field to `FlxGraphic`
 	 * Pretty cheap trick but its ok :)
@@ -230,7 +275,7 @@ class FlxMacro
 			{
 				name: "rgbShader",
 				access: [haxe.macro.Expr.Access.APublic],
-				kind: FVar(macro :Null<funkin.game.shaders.RGBShader.BackendRGB>),
+				kind: FVar(macro :Null<funkin.game.shaders.RGBShader>),
 				pos: Context.currentPos()
 			});
 			
@@ -238,15 +283,15 @@ class FlxMacro
 	}
 	
 	/**
-	 * Related to above function, adds arrays to store draw info for rgb shaders and an rgbShader field
-	 * Also edits the `reset` function to reset said arrays
+	 * Related to above function, adds two arrays to store draw info for rgb shaders and an rgbShader field
+	 * Also edits the `reset` function to reset said fields
 	 * @return Array<haxe.macro.Expr.Field>
 	 */
 	public static macro function buildFlxDrawBaseItem():Array<haxe.macro.Expr.Field>
 	{
 		var fields:Array<haxe.macro.Expr.Field> = Context.getBuildFields();
 		
-		final shaderParams:Array<String> = ["rgbR", "rgbG", "rgbB", "rgbMult", "rgbAlpha", "rgbFlash"];
+		final shaderParams:Array<String> = ['rgbR', 'rgbG', 'rgbB', 'rgbMult', 'rgbAlpha', 'rgbFlash', 'rgbEnabled'];
 		for (f in shaderParams)
 		{
 			fields.push(
@@ -262,29 +307,27 @@ class FlxMacro
 			{
 				name: "rgbShader",
 				access: [haxe.macro.Expr.Access.APublic],
-				kind: FVar(macro :Null<funkin.game.shaders.RGBShader.BackendRGB>),
+				kind: FVar(macro :Null<funkin.game.shaders.RGBShader>),
 				pos: Context.currentPos()
 			});
 			
 		for (field in fields)
 		{
-			switch (field.name)
+			if (field.name != 'reset') continue;
+			
+			switch (field.kind)
 			{
-				case "reset":
-					switch field.kind
-					{
-						case FFun(f):
-							final expr = f.expr;
-							f.expr = macro
-								{
-									$expr;
-									rgbShader = null;
-									// looks confusing im just making "ArrayTools.clear(rgbR)", "ArrayTools.clear(rgbG)", etc..
-									$b{[for (i in shaderParams) macro funkin.utils.tools.ArrayTools.clear(this.$i)]}
-								}
-						default:
-							throw "Invalid field";
-					}
+				case FFun(f):
+					final expr = f.expr;
+					f.expr = macro
+						{
+							$expr;
+							rgbShader = null;
+							$b{[for (i in shaderParams) macro this.$i.resize(0)]}
+						}
+					
+				default:
+					throw "Invalid field";
 			}
 		}
 		
@@ -301,35 +344,45 @@ class FlxMacro
 		var cls:haxe.macro.Type.ClassType = Context.getLocalClass().get();
 		var fields:Array<haxe.macro.Expr.Field> = Context.getBuildFields();
 		
+		switch (cls.name)
+		{
+			case "FlxDrawQuadsItem" | "FlxDrawTrianglesItem":
+				// well idk
+				
+			case _:
+				throw "Invalid class";
+		}
+		
 		for (field in fields)
 		{
-			switch (field.name)
+			if (field.name != 'render') continue;
+			
+			switch (field.kind)
 			{
-				case "render":
-					switch (field.kind)
-					{
-						case FFun(f):
-							final expr = f.expr;
-							f.expr = macro
-								{
-									#if !flash
-									if (rgbShader != null)
-									{
-										rgbShader.r.value = rgbR;
-										rgbShader.g.value = rgbG;
-										rgbShader.b.value = rgbB;
-										rgbShader.mult.value = rgbMult;
-										
-										rgbShader.a_alpha.value = rgbAlpha;
-										rgbShader.a_flash.value = rgbFlash;
-										shader ??= rgbShader;
-									}
-									#end
-									$expr;
-								}
-						default:
-							throw "Invalid field";
-					}
+				case FFun(f):
+					final expr = f.expr;
+					
+					f.expr = macro
+						{
+							#if !flash
+							if (rgbShader != null)
+							{
+								rgbShader.r.value = rgbR;
+								rgbShader.g.value = rgbG;
+								rgbShader.b.value = rgbB;
+								rgbShader.mult.value = rgbMult;
+								rgbShader.enabled.value = rgbEnabled;
+								
+								rgbShader.a_alpha.value = rgbAlpha;
+								rgbShader.a_flash.value = rgbFlash;
+								shader ??= rgbShader;
+							}
+							#end
+							$expr;
+						}
+					
+				default:
+					throw "Invalid field";
 			}
 		}
 		

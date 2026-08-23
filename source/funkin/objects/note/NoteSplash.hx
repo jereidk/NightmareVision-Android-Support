@@ -2,20 +2,14 @@ package funkin.objects.note;
 
 import flixel.FlxSprite;
 
-import funkin.game.shaders.*;
 import funkin.game.shaders.RGBShader;
 import funkin.data.*;
 import funkin.states.*;
 import funkin.data.NoteSkin;
 
 // @:nullSafety
-class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
+class NoteSplash extends RGBSprite implements funkin.game.modchart.IModNote
 {
-	/**
-	 * Colors applied to the notesplash to support custom colours
-	 */
-	public var rgbGraphics:RGBGraphics = new RGBGraphics();
-	
 	/**
 	 * The notedata of the splash
 	 */
@@ -36,7 +30,11 @@ class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
 	public function new(x:Float = 0, y:Float = 0, noteData:Int = 0, player:Int = 0)
 	{
 		super(x, y);
-		
+
+		// Position is fully driven by modManager.updateObject() every frame — same reasoning
+		// as Note.hx's moves=false.
+		moves = false;
+
 		this._note = null;
 		this._strum = null;
 		
@@ -64,18 +62,32 @@ class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
 		
 		skin = NoteUtil.getSkinFromID(player);
 		
-		antialiasing = skin.antialiasing;
-		
 		texture ??= 'noteSplashes';
+		
+		antialiasing = (skin?.antialiasing ?? true) && ClientPrefs.globalAntialiasing;
 		
 		if (_textureLoaded != texture) loadAnims(texture);
 		
 		updateHitbox();
 		
-		playAnim('note$data', true);
+		final randomAnim:String = 'splash-${FlxG.random.int(0, (skin.noteSplashVariants ?? 1) - 1)}';
+		
+		if (animation.exists(randomAnim))
+		{
+			playAnim(randomAnim, true);
+		}
+		else if (animation.exists('splash'))
+		{
+			playAnim('splash', true);
+		}
+		else
+		{
+			kill();
+		}
+		
 		setColors(graphicsInput?.getColors());
 		
-		if (!field.trackNoteSplashes) _position();
+		_position();
 	}
 	
 	public override function playAnim(anim:String, force:Bool = false, isReversed:Bool = false, frame:Int = 0):Void
@@ -92,8 +104,8 @@ class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
 		
 		final sanitzedColourArray = colors ?? NoteUtil.colorToArray(skin.colors[data]);
 		
-		rgbGraphics.enabled = skin.inEngineColoring;
-		rgbGraphics.setColors(sanitzedColourArray);
+		rgbShader.enabled = skin.inEngineColoring;
+		rgbShader.setColors(sanitzedColourArray);
 	}
 	
 	function loadAnims(skin:String)
@@ -107,15 +119,15 @@ class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
 			default:
 				final data = _skin.splashAnims ?? NoteUtil.DEFAULT_NOTESPLASH_ANIMATIONS;
 				
-				for (noteData in 0..._skin.keys)
+				for (anim in data[noteData % data.length])
 				{
-					if (data[noteData] == null || data[noteData].anim == null || data[noteData].xmlName == null) continue;
+					if (anim.anim == null || anim.xmlName == null) continue;
 					
-					final animName = data[noteData].anim;
-					final offsets = data[noteData].offsets;
+					final animName = anim.anim;
+					final offsets = anim.offsets;
 					
 					@:nullSafety(Off)
-					addAnimByPrefix(animName, data[noteData].xmlName, 24, false);
+					addAnimByPrefix(animName, anim.xmlName, anim.fps, false);
 					addOffset(animName, offsets[0], offsets[1]);
 				}
 		}
@@ -147,16 +159,4 @@ class NoteSplash extends FunkinSprite implements funkin.game.modchart.IModNote
 	inline function get_data():Int return noteData;
 	
 	inline function set_data(v:Int):Int return noteData = v;
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
-	}
 }

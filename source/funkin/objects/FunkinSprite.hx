@@ -1,9 +1,14 @@
 package funkin.objects;
 
 import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.graphics.frames.FlxFramesCollection;
+import flixel.graphics.frames.FlxFrame;
 
+import animate.FlxAnimateController;
 import animate.FlxAnimateFrames;
 import animate.FlxAnimate;
+
+using StringTools;
 
 class FunkinSprite extends FlxAnimate
 {
@@ -49,11 +54,18 @@ class FunkinSprite extends FlxAnimate
 	public var skewableOffsets:Bool = true;
 	
 	/**
-	 * Corrects this sprite's animation offsets when it's flipped.
+	 * The base flipX for this sprite's offsets.
 	 * 
-	 * (incomplete saaave me saaave me)
+	 * If not null, animation offsets will be corrected based on this value.
 	 */
-	public var correctFlippedOffsets:Bool = false;
+	public var baseFlipX:Null<Bool> = null;
+	
+	/**
+	 * The base flipY for this sprite's offsets.
+	 * 
+	 * If not null, animation offsets will be corrected based on this value.
+	 */
+	public var baseFlipY:Null<Bool> = null;
 	
 	/**
 	 * If `false`, playAnim will no longer function
@@ -72,35 +84,56 @@ class FunkinSprite extends FlxAnimate
 	 * 
 	 * @return this `Bopper` instance. Useful for chaining
 	 */
-	public function loadAtlas(path:String):FunkinSprite
+	@:access(animate.FlxAnimateSpritemapCollection)
+	public function loadAtlas(path:String, ?settings:FlxAnimateSettings, mode:PathsTestMode = NORMAL):FunkinSprite
 	{
+		trace('[FunkinSprite] loadAtlas($path, mode=$mode)');
 		final splitPath = path.split(',');
-		
+
 		var framesFound:Array<FlxAtlasFrames> = [];
-		
+
 		var containsFlxAnimate:Bool = false;
-		
+
 		for (path in splitPath)
 		{
 			path = path.trim();
-			
-			final isAtlasSprite = FunkinAssets.exists(Paths.getPath('images/$path/Animation.json', null, true));
+
+			final isAtlasSprite = FunkinAssets.exists(Paths.getPath('images/$path/Animation.json', mode));
+			trace('[FunkinSprite]   Checking atlas for: $path → isAtlasSprite=$isAtlasSprite');
 			if (isAtlasSprite)
 			{
-				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', null, true), null, null, null, false, {cacheOnLoad: true});
+				trace('[FunkinSprite]   Loading FlxAnimate frames from: images/$path');
+				// cacheOnLoad:false matches flixel-animate's own documented-safe
+				// default ("Disabled by default", FlxAnimateFrames.hx) -- forcing
+				// it to true here made every MovieClipInstance with filters bake
+				// ALL of its frames eagerly during construction (inside
+				// MovieClipInstance's own constructor, see cacheOnLoad handling in
+				// animate/internal/elements/MovieClipInstance.hx) instead of lazily
+				// per-frame during normal draw(). Confirmed on-device as the cause
+				// of the Double Trouble native crash (SIGSEGV in
+				// FilterRenderer._bakeFilters/_drawTimeline) -- flipping this one
+				// flag to false reproducibly fixed it. flixel-animate's own source
+				// already flags cacheOnLoad as unfinished ("TODO: fix some size
+				// issues when using cacheOnLoad with masks", animate/internal/
+				// Layer.hx), so this stops overriding their default rather than
+				// trying to out-guess a known-rough area of the library.
+				var atlas = FlxAnimateFrames.fromAnimate(Paths.getPath('images/$path', mode), null, null, null, false, settings ?? {cacheOnLoad: false});
+				trace('[FunkinSprite]   FlxAnimate frames loaded: ${atlas != null ? "OK" : "NULL"}');
 				if (atlas != null)
 				{
-					// unsure if flxanimate messes with the buffer or not but if it does then drop this
-					if (ClientPrefs.gpuCaching && atlas.parent.bitmap != null) atlas.parent.bitmap.disposeImage();
-					
+					for (spritemap in cast(atlas.parent, FlxAnimateSpritemapCollection).spritemaps)
+					{
+						if (spritemap.bitmap != null) FunkinAssets.cache.cacheBitmap(spritemap.key, spritemap.bitmap);
+					}
+
 					containsFlxAnimate = true;
-					
+
 					framesFound.push(atlas);
 				}
 			}
 			else
 			{
-				var atlas = Paths.getAtlasFrames(path);
+				var atlas = Paths.getAtlasFrames(path, mode);
 				
 				if (atlas != null) framesFound.push(atlas);
 			}
@@ -129,7 +162,24 @@ class FunkinSprite extends FlxAnimate
 			this.frames = FlxAnimateFrames.combineAtlas(framesFound);
 		}
 		
+		setBaseFrameSize();
+		
 		return this;
+	}
+	
+	var baseFrameWidth:Float = -1;
+	var baseFrameHeight:Float = -1;
+	
+	inline function setBaseFrameSize():Void
+	{
+		baseFrameWidth = frameWidth;
+		baseFrameHeight = frameHeight;
+	}
+	
+	override function updateHitbox():Void
+	{
+		super.updateHitbox();
+		setBaseFrameSize();
 	}
 	
 	/**
@@ -167,27 +217,9 @@ class FunkinSprite extends FlxAnimate
 		
 		animation.play(correctedAnim, isForced, isReversed, frame);
 		
-		setOffsets(correctedAnim);
-	}
-
-	public function setOffsets(anim:String = 'idle')
-	{
-		final animationOffsets = animOffsets.get(anim);
+		final animationOffsets = animOffsets.get(correctedAnim);
 		
-		if (animationOffsets != null)
-		{
-			animOffset.set(animationOffsets[0], animationOffsets[1]);
-			
-			if (correctFlippedOffsets)
-			{
-				final scaleXFactor:Float = scalableOffsets ? scale.x : 1.0;
-				final scaleYFactor:Float = scalableOffsets ? scale.y : 1.0;
-				
-				if (flipX) animOffset.x = ((frameWidth * scaleXFactor) - width) - animOffset.x;
-				
-				if (flipY) animOffset.y = ((frameHeight * scaleYFactor) - height) - animOffset.y;
-			}
-		}
+		if (animationOffsets != null) setAnimOffset(animationOffsets[0], animationOffsets[1]);
 	}
 	
 	final forcedAnimationTimer:FlxTimer = new FlxTimer();
@@ -209,13 +241,33 @@ class FunkinSprite extends FlxAnimate
 	}
 	
 	/**
-	 * Helper function to quickly set an anim offset
+	 * Helper function to quickly define an anim offset
 	 */
 	public function addOffset(anim:String, x:Float = 0, y:Float = 0):Void
 	{
 		animOffsets[anim] = [x, y];
 	}
 	
+	/**
+	 * Sets the animation offset, applying corrections from baseFlipX and baseFlipY.
+	 */
+	public inline function setAnimOffset(x:Float = 0, y:Float = 0):Void
+	{
+		if (baseFrameWidth < 0) setBaseFrameSize();
+		
+ 		animOffset.set(
+ 			(baseFlipX != null && flipX != baseFlipX) ? (frameWidth - baseFrameWidth - x) : x,
+ 			(baseFlipY != null && flipY != baseFlipY) ? (frameHeight - baseFrameHeight - y) : y
+ 		);
+	}
+	
+	// (FlxFramesCollection, prefix) -> resolved frame-index list for that
+	// prefix within that atlas -- see addAnimByPrefix()'s own comment for
+	// why this exists. Keyed weakly so a disposed/reloaded atlas (mod swap,
+	// destructive cache mode) doesn't pin dead FlxFramesCollections alive
+	// forever just because something once animated off them.
+	static var _animByPrefixCache = new haxe.ds.WeakMap<FlxFramesCollection, Map<String, Array<Int>>>();
+
 	/**
 	 * Helper function add a animation by prefix. It will attempt to add by `frame label`, `symbol`, then `prefix`
 	 */
@@ -229,6 +281,72 @@ class FunkinSprite extends FlxAnimate
 		else if (checkLibraryForSymbol(library, prefix))
 		{
 			anim.addBySymbol(name, prefix, fps, looping, flipX, flipY);
+		}
+		else if (frames != null)
+		{
+			// FlxAnimationController.addByPrefix() does a full O(n) scan of
+			// frames.frames to find every frame whose name starts with
+			// `prefix`, then for EACH match calls getFrameIndex(), which does
+			// ANOTHER full O(n) `indexOf` scan to find that frame's position
+			// -- an O(n*m) cost paid from scratch on every single call. Note
+			// skins call this 3+ times per reload (scroll/hold/holdend), and
+			// reload fires on nearly every pooled note spawn whenever the
+			// dead-note pool doesn't happen to have an exact (skin, lane)
+			// match sitting dead (see PlayState.recycleCompatibleNote()'s own
+			// doc comment) -- on a dense song this dominated noteSpawn cost
+			// outright (device logs showed noteReload regularly 200-400ms in
+			// a single frame). The (prefix, atlas) -> frame-index list is
+			// entirely determined by the atlas itself and never changes for
+			// as long as that FlxFramesCollection is alive, so it's computed
+			// once per atlas and reused after that instead of rescanning
+			// every time.
+			var byPrefix = _animByPrefixCache.get(frames);
+			if (byPrefix == null)
+			{
+				byPrefix = [];
+				_animByPrefixCache.set(frames, byPrefix);
+			}
+
+			var indices = byPrefix.get(prefix);
+			if (indices == null)
+			{
+				indices = [];
+
+				final matched:Array<FlxFrame> = [];
+				for (frame in frames.frames) if (frame.name != null && frame.name.startsWith(prefix)) matched.push(frame);
+
+				if (matched.length > 0)
+				{
+					// Same suffix-detection + sort FlxAnimationController's own
+					// byPrefixHelper() uses, so frame ORDER matches exactly --
+					// only the index lookup below differs.
+					final firstName = matched[0].name;
+					final postIndex = firstName.indexOf(".", prefix.length);
+					final suffix = firstName.substring(postIndex == -1 ? firstName.length : postIndex, firstName.length);
+					FlxFrame.sortFrames(matched, prefix, suffix);
+
+					// One O(n) pass building frame -> array-position, shared
+					// across every matched frame, instead of an O(n) indexOf()
+					// scan PER frame (the actual O(n*m) blowup this exists to
+					// avoid).
+					final positionOf = new Map<FlxFrame, Int>();
+					for (i in 0...frames.frames.length) positionOf.set(frames.frames[i], i);
+					for (frame in matched) indices.push(positionOf.get(frame));
+				}
+				else
+				{
+					FlxG.log.warn('Could not create animation: "$name", no frames were found with the prefix "$prefix"');
+				}
+
+				byPrefix.set(prefix, indices);
+			}
+
+			// Copied, not handed out by reference -- FlxAnimation.frames is a
+			// plain mutable Array<Int>, and at least one Flixel animation API
+			// (append-style prefix/indices calls) mutates it in place. A
+			// script or future call path doing that to one note's animation
+			// must not corrupt every other note sharing this cached list.
+			if (indices.length > 0) animation.add(name, indices.copy(), fps, looping, flipX, flipY);
 		}
 		else
 		{
@@ -299,6 +417,24 @@ class FunkinSprite extends FlxAnimate
 		animOffsets.remove(anim);
 	}
 	
+	public inline function renameAnim(anim:String, newAnim:String):Void
+	{
+		animation.rename(anim, newAnim);
+		animOffsets.set(newAnim, animOffsets.get(anim));
+		animOffsets.remove(anim);
+	}
+	
+	public inline function swapAnims(animA:String, animB:String):Void
+	{
+		final tempName:String = '__temp$animB';
+		
+		if (hasAnim(animB)) renameAnim(animB, tempName);
+		
+		renameAnim(animA, animB);
+		
+		if (hasAnim(tempName)) renameAnim(tempName, animA);
+	}
+	
 	public inline function finishAnim():Void
 	{
 		if (isAnimNull()) return;
@@ -355,26 +491,35 @@ class FunkinSprite extends FlxAnimate
 		return point;
 	}
 	
-	override function clone():FunkinSprite
-	{
-		final spr = new FunkinSprite();
-		
-		spr.frames = this.frames;
-		spr.animation.copyFrom(this.animation);
-		
-		for (key in this.animOffsets.keys())
+	@:access(flixel.animation.FlxAnimationController)
+	public inline function copyAnimController(controller:flixel.animation.FlxAnimationController):Void
+	{ // maybe could be an extension. i dont know.im lazey
+		animation.destroyAnimations();
+
+		for (name => anim in controller._animations)
 		{
-			var offsets = this.animOffsets.get(key);
-			
-			spr.animOffsets.set(key, offsets);
+			if (anim is FlxAnimateAnimation)
+			{
+				var newAnim:FlxAnimateAnimation = new FlxAnimateAnimation(animation, anim.name, anim.frames, anim.frameRate, anim.looped, anim.flipX, anim.flipY);
+				newAnim.timeline = cast(anim, FlxAnimateAnimation).timeline;
+				animation._animations.set(name, newAnim);
+			}
+			else
+			{
+				animation.add(anim.name, anim.frames, anim.frameRate, anim.looped, anim.flipX, anim.flipY);
+			}
 		}
-		
-		spr.spriteOffset.copyFrom(this.spriteOffset);
-		spr.baseScale.copyFrom(this.baseScale);
-		spr.scale.copyFrom(this.scale);
-		
-		spr.updateHitbox();
-		
-		return spr;
+
+		if (controller._prerotated != null)
+		{
+			animation.createPrerotated();
+		}
+
+		if (controller.name != null)
+		{
+			animation.name = controller.name;
+		}
+
+		animation.frameIndex = controller.frameIndex;
 	}
 }

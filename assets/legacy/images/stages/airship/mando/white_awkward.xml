@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="white_awkward.png" width="1470" height="1514">
+	<SubTexture name="fetal position 0000" x="433" y="865" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0001" x="1" y="878" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0002" x="983" y="425" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0003" x="984" y="1" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0004" x="983" y="849" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0005" x="425" y="1110" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0006" x="425" y="1110" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0007" x="1" y="1123" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0008" x="1228" y="425" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0009" x="1229" y="1" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0010" x="1228" y="849" width="240" height="419" rotated="true" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0011" x="849" y="1273" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0012" x="425" y="1110" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="fetal position 0013" x="425" y="1110" width="419" height="240" frameX="-0" frameY="-0" frameWidth="419" frameHeight="249"/>
+	<SubTexture name="white stare0000" x="738" y="1" width="241" height="419" rotated="true" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0001" x="734" y="433" width="244" height="426" rotated="true" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0002" x="734" y="433" width="244" height="426" rotated="true" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0003" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0004" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0005" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0006" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0007" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0008" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0009" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0010" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0011" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0012" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0013" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0014" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0015" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0016" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0017" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0018" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0019" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0020" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0021" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0022" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0023" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0024" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0025" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0026" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0027" x="1" y="629" width="427" height="244" frameX="-0" frameY="-73" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0028" x="1" y="1" width="427" height="312" frameX="-0" frameY="-5" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0029" x="1" y="318" width="427" height="306" frameX="-0" frameY="-11" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0030" x="433" y="1" width="300" height="427" rotated="true" frameX="-0" frameY="-17" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0031" x="433" y="433" width="296" height="427" rotated="true" frameX="-0" frameY="-21" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0032" x="433" y="433" width="296" height="427" rotated="true" frameX="-0" frameY="-21" frameWidth="427" frameHeight="329"/>
+	<SubTexture name="white stare0033" x="433" y="433" width="296" height="427" rotated="true" frameX="-0" frameY="-21" frameWidth="427" frameHeight="329"/>
+</TextureAtlas>

@@ -11,6 +11,8 @@ import flixel.graphics.FlxGraphic;
 import openfl.display.BitmapData;
 import openfl.media.Sound;
 
+using funkin.backend.SystemMonitor;
+
 class CacheMap<T>
 {
 	public function new() {}
@@ -44,37 +46,37 @@ class FunkinCache
 {
 	/**
 	 * Clears all graphics and sounds that are considered inactive. Flags everything to be inactive as well.
-	 * 
+	 *
 	 * use `clearUnusedMemory` afterwards to purge everything
 	 */
 	public function clearStoredMemory() // maybe rename
 	{
-		// @:privateAccess
-		// for (key in FlxG.bitmap._cache.keys())
-		// {
-		// 	// ok this is dumb fix this later
-		// 	if (!currentTrackedGraphics.exists(key)
-		// 		&& !key.startsWith('pixels')
-		// 		&& !key.contains('editors/notification_neutral.png')
-		// 		&& !key.contains('editors/notification_success.png')
-		// 		&& !key.contains('editors/notification_warn.png')) // for haxeui is a bit hacky will do for now //find out hwo to avoid haxeui nicer or just do a different caching method //rewrite soonish ok.
-		// 	{
-		// 		disposeGraphic(FlxG.bitmap.get(key));
-		// 	}
-		// }
-		
-		Paths.tempAtlasFramesCache.clear();
-		
-		// clear all sounds that are cached
-		for (key in currentTrackedSounds.keys())
+		// Accumulative mode: keep everything loaded — don't flag assets as
+		// inactive or purge sounds between states.  Only clear transient
+		// data that is always recreated on demand (temp atlas frames,
+		// OpenFL's internal song cache which is re-populated by each
+		// song load anyway).
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative')
 		{
-			if (!localTrackedAssets.contains(key) && !currentTrackedSounds.permanentKeys.contains(key))
+			Paths.tempAtlasFramesCache.clear();
+			openfl.Assets.cache.clear("songs");
+			return;
+		}
+
+		Paths.tempAtlasFramesCache.clear();
+
+		// clear all sounds that are cached
+		final soundKeys = [for (k in currentTrackedSounds.keys()) k];
+		for (key in soundKeys)
+		{
+			if (!localTrackedAssets.exists(key) && !currentTrackedSounds.permanentKeys.contains(key))
 			{
 				removeFromCache(key);
 			}
 		}
+
 		// flags everything to be cleared out next unused memory clear
-		localTrackedAssets.resize(0);
+		localTrackedAssets.clear();
 		openfl.Assets.cache.clear("songs");
 	}
 	
@@ -83,27 +85,76 @@ class FunkinCache
 	 */
 	public function clearUnusedMemory()
 	{
-		for (key in currentTrackedGraphics.keys())
+		// Accumulative mode: keep everything loaded — skip the full sweep.
+		// Still run a GC pass so unreferenced temporaries (makeGraphic rects,
+		// FlxAnimate filter results not yet adopted by any live sprite) get
+		// collected without waiting for hxcpp's own scheduler.
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative')
 		{
-			if (!localTrackedAssets.contains(key) && !currentTrackedGraphics.permanentKeys.contains(key))
+			forceGcPass();
+			return;
+		}
+
+		final graphicKeys = [for (k in currentTrackedGraphics.keys()) k];
+		for (key in graphicKeys)
+		{
+			if (!localTrackedAssets.exists(key) && !currentTrackedGraphics.permanentKeys.contains(key))
 			{
 				removeFromCache(key);
 			}
 		}
-		
+
+		// Second pass: sweep FlxG.bitmap._cache for textures created outside FunkinCache
+		// (makeGraphic, flixel-animate, HaxeUI, scripts).  These are never registered in
+		// currentTrackedGraphics so the loop above never touches them, causing them to
+		// accumulate across state transitions and grow GPU memory each visit.
+		// Guard with useCount <= 0 so we never evict textures still held by live sprites
+		// (e.g. health bar created before clearUnusedMemory runs mid-PlayState.create).
+		@:privateAccess
+		{
+			final bitmapKeys:Array<String> = [for (k in FlxG.bitmap._cache.keys()) k];
+			for (key in bitmapKeys)
+			{
+				if (currentTrackedGraphics.exists(key) || currentTrackedGraphics.permanentKeys.contains(key))
+					continue;
+				if (key.indexOf('flixel') >= 0)
+					continue;
+				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
+				if (g != null && g.useCount <= 0)
+					disposeGraphic(g);
+			}
+		}
+
+		forceGcPass();
+	}
+
+	/**
+	 * Forces an immediate GC pass. Split out of clearUnusedMemory() so states
+	 * can request one on its own -- clearStoredMemory()/clearUnusedMemory()
+	 * only ever run at the START of create(), before that state's own new
+	 * textures/atlases are loaded, so the decode garbage THIS state generates
+	 * never gets swept by that pass. Left to hxcpp's own scheduler, that
+	 * garbage was showing up as a [LARGE-GC] pause a second or two after the
+	 * state had already finished loading and the player was already looking
+	 * at it -- calling this again at the END of a texture-heavy create()
+	 * bundles that same unavoidable pause into the loading transition itself
+	 * instead of leaving it to surface later as a random-feeling stutter.
+	 */
+	public function forceGcPass():Void
+	{
 		openfl.system.System.gc();
 		#if cpp
 		cpp.vm.Gc.compact();
 		#end
 	}
-	
+
 	function new() {}
 	
 	public final currentTrackedGraphics:CacheMap<FlxGraphic> = new CacheMap();
 	
 	public final currentTrackedSounds:CacheMap<Sound> = new CacheMap();
 	
-	public final localTrackedAssets:Array<String> = [];
+	public final localTrackedAssets:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap<Bool>();
 	
 	/**
 	 * Removes a asset from the cache
@@ -117,6 +168,10 @@ class FunkinCache
 		{
 			if (disposeToo) disposeGraphic(currentTrackedGraphics.get(key));
 			currentTrackedGraphics.remove(key);
+			#if (android && cpp)
+			mobile.backend.AstcLoader.removeTracking(key);
+			mobile.backend.AstcLoader.untrackGpuCached(key);
+			#end
 			
 			// #if VERBOSE_LOGS
 			// Logger.log('Cleared Graphic [$key]');
@@ -142,14 +197,146 @@ class FunkinCache
 	
 	/**
 	 * Disposes of a flxgraphic
-	 * 
+	 *
 	 * frees its gpu texture as well.
-	 * @param graphic 
+	 * @param graphic
 	 */
 	public function disposeGraphic(graphic:Null<FlxGraphic>)
 	{
-		if (graphic != null && graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
-		@:nullSafety(Off) FlxG.bitmap.remove(graphic);
+		if (graphic == null) return;
+		if (graphic.bitmap != null && graphic.bitmap.__texture != null) graphic.bitmap.__texture.dispose();
+		FlxG.bitmap.remove(graphic);
+	}
+
+	/**
+	 * Snapshot of every key currently in `FlxG.bitmap._cache`, for later diffing
+	 * via `disposeNewSince()`. Call at the very start of a state's `create()`.
+	 */
+	public function snapshotBitmapKeys():haxe.ds.StringMap<Bool>
+	{
+		var snap = new haxe.ds.StringMap<Bool>();
+		@:privateAccess for (k in FlxG.bitmap._cache.keys()) snap.set(k, true);
+		return snap;
+	}
+
+	/**
+	 * Force-disposes any `FlxG.bitmap._cache` entry that didn't exist in `snapshot`
+	 * and isn't tracked/permanent. Call from a state's `destroy()` (after
+	 * `super.destroy()`) with the snapshot taken at that state's `create()`.
+	 *
+	 * `clearUnusedMemory()`'s untracked-graphics sweep only evicts entries whose
+	 * `useCount` has dropped to 0, which misses graphics still referenced by a
+	 * stray static/closure outside the normal FlxGroup destroy chain (e.g. a
+	 * `makeGraphic()` rect with a slightly different computed color each call,
+	 * so it never reuses a cache key and keeps a live reference forever). Since
+	 * this state is being destroyed, nothing it created ephemerally should
+	 * legitimately outlive it, so this sweep ignores useCount entirely.
+	 */
+	/**
+	 * Same as disposeNewSince(), but a no-op when the user has chosen the
+	 * 'Accumulative' cache mode -- there, graphics loaded by a state are kept
+	 * resident after it's destroyed so returning to it (or the next song) reuses
+	 * them instantly, trading RAM for speed. 'Destructive' (default) frees them.
+	 * The single place the cache-mode preference gates per-state disposal, so
+	 * every call site stays a plain one-liner.
+	 */
+	public function disposeNewSinceIfDestructive(snapshot:haxe.ds.StringMap<Bool>):Int
+	{
+		if (funkin.data.ClientPrefs.cacheMode == 'Accumulative') return 0;
+		return disposeNewSince(snapshot);
+	}
+
+	public function disposeNewSince(snapshot:haxe.ds.StringMap<Bool>):Int
+	{
+		var disposed = 0;
+		// Only collected when monitoring is actually on -- this loop already
+		// runs at most a few times a second (state destroy(), not a hot
+		// per-frame path), so the list itself is cheap, but no reason to
+		// build it just to throw it away when nobody's reading the log.
+		final disposedKeys:Null<Array<String>> = SystemMonitor.enabled ? [] : null;
+		@:privateAccess
+		{
+			final bitmapKeys:Array<String> = [for (k in FlxG.bitmap._cache.keys()) k];
+			for (key in bitmapKeys)
+			{
+				if (snapshot.exists(key)) continue;
+				if (currentTrackedGraphics.exists(key) || currentTrackedGraphics.permanentKeys.contains(key)) continue;
+				if (key.indexOf('flixel') >= 0) continue;
+
+				// Every MusicBeatState extends flixel-ui's FlxUIState (needed
+				// for the level editors, which genuinely use FlxUI widgets),
+				// whose own create() unconditionally builds a
+				// FlxUITooltipManager -- even on screens that never show a
+				// single tooltip (confirmed: nothing in this codebase reads
+				// state.tooltips). That manager's constructor eagerly builds
+				// a default FlxUITooltip(100, 50), which caches its
+				// background + arrow-background bitmaps under these two
+				// exact, deterministic key shapes (getStyleKey()/
+				// makeArrowBkg() in FlxUITooltip.hx -- not vendored in this
+				// repo, read from the installed haxelib to confirm). They're
+				// cached with a shared, reusable key on purpose (multiple
+				// tooltips are meant to reuse one), so treating them like any
+				// other orphaned per-state graphic just meant destroying and
+				// immediately rebuilding the same bitmap on every single
+				// state transition in the whole game, forever. Skipping them
+				// here (same idea as the .persist check below) lets the
+				// first one built stay cached and reused for the rest of the
+				// session -- deliberately NOT touching FlxUIState.tooltips
+				// itself to disable this at the source: its update() does
+				// `if (tooltips != null) tooltips.update(elapsed)`, and
+				// tooltips' own setter is private to FlxUIState, so a
+				// subclass can only call tooltips.destroy() without ever
+				// being able to null the field back -- destroy() nulls the
+				// manager's internal `list` Array, and its update() does
+				// `for (i in 0...list.length)` with no null guard, so that
+				// path is a guaranteed null-pointer crash on the very next
+				// frame of every single screen. Not worth it for a few KB of
+				// harmless, already-deduplicated cache.
+				if (key.indexOf('arrowBkg:') == 0) continue;
+				if (key.indexOf('100,50,') == 0) continue;
+
+				final g:Null<FlxGraphic> = FlxG.bitmap._cache.get(key);
+				if (g == null) continue;
+
+				// persist is FlxGraphic's own "never auto-dispose this" flag
+				// (Flixel's built-in clearUnusedMemory sweep already honors it:
+				// `if (useCount <= 0 && destroyOnNoUse && !persist)`), and
+				// flixel-animate's FilterRenderer relies on exactly that
+				// contract for baked-filter/masked results meant to survive
+				// past a single PlayState (frame.parent.persist = true;
+				// frame.parent.destroyOnNoUse = false;) -- those graphics are
+				// never registered with this project's own currentTrackedGraphics,
+				// so without this check they looked like plain forgotten
+				// ephemeral graphics and got force-disposed here anyway. A
+				// stage/character whose FlxAnimateFrames atlas is cached across
+				// retries (confirmed live via a symbolicated
+				// native_crash_trace.log SIGSEGV in FilterRenderer._bakeFilters,
+				// e.g. doubletrouble.hx's cross-retry "red placeholder" cache)
+				// then kept its already-baked MovieClipInstance/Frame around
+				// with its texture ripped out from under it on the next visit.
+				if (g.persist) continue;
+
+				disposeGraphic(g);
+				disposed++;
+				if (disposedKeys != null) disposedKeys.push(key);
+			}
+		}
+
+		#if android
+		// Naming the actual keys (not just the count) turns "something isn't
+		// self-cleaning" into "THIS specific graphic isn't self-cleaning" --
+		// no more guessing what the stragglers are on every device log.
+		// Checking `disposedKeys != null` directly (not `SystemMonitor.enabled`,
+		// even though they're equivalent by construction above) so the
+		// compiler's null-safety analysis can actually narrow the type in
+		// this block -- it can't follow that a *different* variable being
+		// true implies this one is non-null, and rejected the old version
+		// at compile time.
+		if (disposed > 0 && disposedKeys != null)
+			SystemMonitor.logMemoryEvent('disposeNewSince', 'force-disposed $disposed ephemeral graphic(s) still alive after destroy(): ${disposedKeys.join(", ")}');
+		#end
+
+		return disposed;
 	}
 	
 	/**
@@ -160,16 +347,32 @@ class FunkinCache
 	 */
 	public function cacheBitmap(key:String, bitmap:BitmapData, allowGPU:Bool = true):FlxGraphic
 	{
+		#if android
+		if (bitmap.width > 4096 || bitmap.height > 4096)
+		{
+			Logger.log('Oversized texture [$key]: ${bitmap.width}x${bitmap.height} exceeds 4096px — compress or convert to ASTC', WARN);
+			SystemMonitor.notifyOversizedTexture(key, bitmap.width, bitmap.height);
+		}
+		#end
+
 		if (allowGPU && ClientPrefs.gpuCaching)
 		{
+			// bitmap.image == null already means this came from AstcLoader
+			// (BitmapData.fromTexture() never sets .image at all -- it was
+			// GPU-only from the start) -- that path already tracks its own
+			// context-loss recovery via a real GL texture handle, so
+			// there's no CPU image to lose here and nothing new to track.
+			#if (android && cpp)
+			if (bitmap.image != null) mobile.backend.AstcLoader.trackGpuCached(key, bitmap);
+			#end
 			bitmap.disposeImage();
 		}
-		
+
 		var newGraphic:FlxGraphic = FlxGraphic.fromBitmapData(bitmap, false, key);
 		newGraphic.persist = true;
 		newGraphic.destroyOnNoUse = false;
 		
-		localTrackedAssets.push(key);
+		localTrackedAssets.set(key, true);
 		currentTrackedGraphics.set(key, newGraphic);
 		return newGraphic;
 	}
@@ -177,10 +380,49 @@ class FunkinCache
 	public function cacheSound(key:String, sound:Sound):Sound
 	{
 		currentTrackedSounds.set(key, sound);
-		
-		localTrackedAssets.push(key);
+		localTrackedAssets.set(key, true);
 		
 		return sound;
+	}
+	
+	/**
+	 * Clears assets matching a specific path prefix.
+	 * Useful for selective memory cleanup (e.g., freeplay songs, specific stages).
+	 * 
+	 * @param categoryPrefix Path prefix to match, e.g., "freeplay/" or "songs/week"
+	 * @param clearFromPermanent Whether to also remove from permanent cache (default: false)
+	 */
+	public function clearCategoryAssets(categoryPrefix:String, clearFromPermanent:Bool = false):Int
+	{
+		var clearedCount = 0;
+
+		// Clear graphics
+		final gKeys = [for (k in currentTrackedGraphics.keys()) k];
+		for (key in gKeys)
+		{
+			if (key.contains(categoryPrefix))
+			{
+				if (!clearFromPermanent && currentTrackedGraphics.permanentKeys.contains(key))
+					continue;
+				removeFromCache(key);
+				clearedCount++;
+			}
+		}
+
+		// Clear sounds
+		final sKeys = [for (k in currentTrackedSounds.keys()) k];
+		for (key in sKeys)
+		{
+			if (key.contains(categoryPrefix))
+			{
+				if (!clearFromPermanent && currentTrackedSounds.permanentKeys.contains(key))
+					continue;
+				removeFromCache(key);
+				clearedCount++;
+			}
+		}
+		
+		return clearedCount;
 	}
 	
 	public function toString():String

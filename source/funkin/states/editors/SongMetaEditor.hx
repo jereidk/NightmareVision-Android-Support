@@ -20,6 +20,8 @@ class MetaDialog extends Dialog {}
 
 class SongMetaEditor extends UISubState
 {
+	static final CONFIRM = funkin.states.editors.ui.ToolKitUtils.CONFIRM;
+
 	var dialog:MetaDialog;
 	var iconDummy:HealthIcon;
 	
@@ -79,7 +81,7 @@ class SongMetaEditor extends UISubState
 		if (_song != null)
 		{
 			_song = Paths.sanitize(_song);
-			var songPath = Paths.getPath('songs/$_song/meta.json', null, true);
+			var songPath = Paths.getPath('songs/$_song/meta.json', NORMAL);
 			loadMeta(songPath);
 		}
 	}
@@ -88,7 +90,7 @@ class SongMetaEditor extends UISubState
 	{
 		dialog.displayNameField.value = '';
 		
-		dialog.iconField.changeSilent('');
+		dialog.iconField.value = '';
 		
 		dialog.difficultyField.value = '';
 		
@@ -151,7 +153,7 @@ class SongMetaEditor extends UISubState
 		
 		dialog.displayNameField.value = meta.displayName ?? '';
 		
-		dialog.iconField.changeSilent(meta.freeplayIcon ?? '');
+		dialog.iconField.value = (meta.freeplayIcon ?? '');
 		
 		var diffs = '';
 		if (meta.difficulties != null) diffs = meta.difficulties.join(',');
@@ -214,7 +216,7 @@ class SongMetaEditor extends UISubState
 			{
 				//
 				
-				final file = Paths.getPath('songs/$_song/meta.json', null, true);
+				final file = Paths.getPath('songs/$_song/meta.json', NORMAL);
 				if (FunkinAssets.exists(file))
 				{
 					FileUtil.saveFileToPath(getEncodedMeta(), file);

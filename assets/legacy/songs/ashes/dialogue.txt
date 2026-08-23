@@ -1,0 +1,10 @@
+:maroon:happy:dialogue_ash0
+:bf:neutral:dialogue_ash1
+:maroon:threat:dialogue_ash2
+:gf:mad:dialogue_ash3
+:maroon:happy:dialogue_ash4
+:bf:angry:dialogue_ash5
+:maroon:happy:dialogue_ash6
+:bf:neutral:dialogue_ash7
+:maroon:threat:dialogue_ash8
+

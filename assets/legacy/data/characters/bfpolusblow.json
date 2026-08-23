@@ -1,0 +1,268 @@
+{
+	"pausePortrait": "",
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				65
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "Blow-Hey",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-3,
+				64
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Blow-Left",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-14,
+				63
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "Blow-Down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				64
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "Blow-Up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				64
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Blow-Right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				-2,
+				65
+			],
+			"flipY": false,
+			"loop": true,
+			"fps": 24,
+			"anim": "hey-loop",
+			"flipX": false,
+			"indices": [
+				22,
+				23,
+				24,
+				25
+			],
+			"name": "Blow-Hey"
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				65
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Blow-Idle",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				-2,
+				65
+			],
+			"indices": [
+				10,
+				11,
+				12,
+				13
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "idle-loop",
+			"loop": true,
+			"name": "Blow-Idle"
+		},
+		{
+			"offsets": [
+				-14,
+				63
+			],
+			"indices": [
+				3,
+				4,
+				5,
+				6
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWN-loop",
+			"loop": true,
+			"name": "Blow-Down"
+		},
+		{
+			"offsets": [
+				-3,
+				64
+			],
+			"indices": [
+				4,
+				5,
+				6,
+				7
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFT-loop",
+			"loop": true,
+			"name": "Blow-Left"
+		},
+		{
+			"offsets": [
+				-2,
+				64
+			],
+			"indices": [
+				3,
+				4,
+				5,
+				6
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singRIGHT-loop",
+			"loop": true,
+			"name": "Blow-Right"
+		},
+		{
+			"offsets": [
+				-2,
+				64
+			],
+			"indices": [
+				3,
+				4,
+				5,
+				6
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singUP-loop",
+			"loop": true,
+			"name": "Blow-Up"
+		},
+		{
+			"offsets": [
+				-21,
+				63
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singUPmiss",
+			"loop": false,
+			"name": "BF NOTE UP MISS"
+		},
+		{
+			"offsets": [
+				-46,
+				7
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singRIGHTmiss",
+			"loop": false,
+			"name": "BF NOTE RIGHT MISS"
+		},
+		{
+			"offsets": [
+				-14,
+				63
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "Down Miss"
+		},
+		{
+			"offsets": [
+				-3,
+				64
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFTmiss",
+			"loop": false,
+			"name": "Left Miss"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/bfpolus",
+	"position": [
+		-12,
+		332
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"flags": {},
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"afterimages": true,
+	"gameover_character": "bf-polus-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		682,
+		-702
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

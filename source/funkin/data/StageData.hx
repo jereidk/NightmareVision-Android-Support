@@ -10,6 +10,11 @@ typedef StageFile =
 	var defaultZoom:Float;
 	
 	/**
+	 * If enabled, pixelUI will be enabled
+	 */
+	var isPixelStage:Bool;
+	
+	/**
 	 * The boyfriend postion as [x, y]
 	 */
 	var boyfriend:Array<Float>;
@@ -23,6 +28,11 @@ typedef StageFile =
 	 * The dad position as [x, y]
 	 */
 	var opponent:Array<Float>;
+	
+	/**
+	 * The pet position as [x, y]
+	 */
+	var ?pet:Array<Float>;
 	
 	/**
 	 * If true, the girlfriend will not be loaded in anyway
@@ -71,9 +81,21 @@ typedef StageFile =
 	var ?bfZIndex:Null<Int>;
 	
 	/**
+	 * The pet's Z index.
+	 * 
+	 * default is (boyfriend Z index + 1)
+	 */
+	var ?petZIndex:Null<Int>;
+	
+	/**
 	 * Optional array of data to make background sprites.
 	 */
 	var ?stageObjects:Array<StageObject>;
+	
+	/**
+	 * Flags
+	 */
+	var ?flags:haxe.DynamicAccess<Dynamic>;
 }
 
 typedef StageObject =
@@ -209,8 +231,8 @@ class StageData
 	// dealing with putting ur stage in data or just in the content folder directly
 	public static function getStageFromDir(dir:String, stage:String):String
 	{
-		var path = Paths.getPath('$dir/$stage/data.json', null, true);
-		if (!FunkinAssets.exists(path, TEXT)) path = Paths.getPath('$dir/$stage.json', null, true);
+		var path = Paths.getPath('$dir/$stage/data.json', NORMAL);
+		if (!FunkinAssets.exists(path, TEXT)) path = Paths.getPath('$dir/$stage.json', NORMAL);
 		
 		return path;
 	}
@@ -225,6 +247,7 @@ class StageData
 	
 	public static function getTemplateStageFile():StageFile return
 		{
+			isPixelStage: false,
 			defaultZoom: 0.8,
 			boyfriend: [500, 100],
 			girlfriend: [0, 100],

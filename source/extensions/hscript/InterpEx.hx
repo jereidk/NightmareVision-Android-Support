@@ -68,7 +68,7 @@ class InterpEx extends crowplexus.hscript.Interp
 		parentFields = value != null ? Type.getInstanceFields(Type.getClass(value)) : [];
 		return parent;
 	}
-	
+
 	override function increment(e:Expr, prefix:Bool, delta:Int):Dynamic
 	{
 		#if hscriptPos
@@ -128,7 +128,7 @@ class InterpEx extends crowplexus.hscript.Interp
 				
 		if (imports.exists(id)) return imports.get(id);
 		
-		if (parentFields?.contains(id)) return Reflect.getProperty(parent, id);
+		if (parentFields != null && (parentFields.contains(id) || parentFields.contains('get_$id'))) return Reflect.getProperty(parent, id);
 		
 		if (sharedFields?.exists(id)) return sharedFields.get(id);
 		
@@ -147,11 +147,11 @@ class InterpEx extends crowplexus.hscript.Interp
 				v = fop(expr(e1), expr(e2));
 				if (l == null)
 				{
-					if (parentFields.contains(id))
+					if (!variables.exists(id) && (parentFields.contains(id) || parentFields.contains('set_$id')))
 					{
 						Reflect.setProperty(parent, id, v);
 					}
-					else if (sharedFields?.exists(id))
+					else if (!variables.exists(id) && sharedFields?.exists(id))
 					{
 						sharedFields.set(id, v);
 					}
@@ -199,7 +199,7 @@ class InterpEx extends crowplexus.hscript.Interp
 				var l = locals.get(id);
 				if (l == null)
 				{
-					if (!variables.exists(id) && parentFields.contains(id))
+					if (!variables.exists(id) && (parentFields.contains(id) || parentFields.contains('set_$id')))
 					{
 						Reflect.setProperty(parent, id, v);
 					}

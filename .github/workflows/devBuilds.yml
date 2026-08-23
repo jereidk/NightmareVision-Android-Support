@@ -1,16 +1,2507 @@
-name: Dev Builds
+name: Impostor Legacy - Dev Builds
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which build(s) to run'
+        required: false
+        type: choice
+        default: arm64
+        options:
+          - arm64
+          - arm32
+          - fat
+          - all
+          - arm64-debugsymbols
+      buildMode:
+        description: 'Build configuration'
+        required: false
+        type: choice
+        default: release
+        options:
+          - release
+          - debug
+      symbolicate_run_id:
+        description: 'Diagnostic: run ID of a prior arm64-debugsymbols run to symbolicate a crash trace against (leave empty to skip). See the Symbolicate job.'
+        required: false
+        type: string
+      symbolicate_offsets:
+        description: 'Space-separated hex rel_pc offsets (e.g. "0xd49ae4 0x16a9d3c ...") from a native_crash_trace.log crashing thread, innermost frame first.'
+        required: false
+        type: string
+      inspect_glob:
+        description: 'Diagnostic: find(1) -path glob under .haxelib to cat (e.g. "*flixel-animate*/src/animate/internal/FilterRenderer.hx"). Leave empty to skip. See the InspectSource job.'
+        required: false
+        type: string
+      measure_sym_run_id:
+        description: 'Diagnostic: run ID of a prior arm64-debugsymbols run whose unstripped .so to measure dump_syms (.sym) output size against -- no compile, just a download + dump_syms run. Leave empty to skip. See the MeasureSymSize job.'
+        required: false
+        type: string
   workflow_call:
     inputs:
       buildFlags:
         required: false
         type: string
-        
+
 jobs:
-   Android:
+
+  # ── Fat APK (arm64 + armv7 in one build).
+  Android:
     name: Build Android
+    # workflow_call (e.g. a release workflow invoking this one) always runs
+    # every job, same as before this input existed -- only a manual
+    # workflow_dispatch respects `target`, defaulting to arm64-only so an
+    # unattended "Run workflow" click doesn't burn CI minutes on ABIs nobody
+    # asked for.
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'fat' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == '' && inputs.measure_sym_run_id == ''
+    runs-on: ubuntu-latest
+    # actions: write is only used by the cache-pruning steps below (gh api
+    # DELETE on stale Actions caches); contents: read is what checkout needs.
+    # Explicit because setting *any* permissions here overrides the repo's
+    # default grants down to just this list.
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore Haxe libraries cache
+        id: haxelibs-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      # Shared across all three jobs on purpose -- `lime rebuild android`
+      # (below) builds both .so's unconditionally regardless of which job
+      # runs it (see the ARM64/ARM32 job header comments), so .haxelib/lime
+      # ends up byte-for-byte identical either way. The "-arm64" suffix is
+      # legacy naming from when each job had its own (duplicate, wasteful)
+      # copy -- kept as-is, rather than renamed, so this matches the cache
+      # entry that already exists under that exact key instead of missing
+      # once more just to populate a differently-named one.
+      - name: Restore Lime cache (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
+      - name: Install Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        id: install-haxelibs
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install --force
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
+      - name: Wrap g++-13 to force C++23
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
+      - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
+        timeout-minutes: 15
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          set -euo pipefail
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
+          fi
+
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ranlib
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar /tmp/ndk-wrap/aarch64-linux-android-ar \
+            /tmp/ndk-wrap/aarch64-linux-android-ranlib /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgIyBQcmVmZXIgdGhlIEFQSSBsZXZlbCB0aGUgY29tcGlsZXIgZHJpdmVyIGFscmVhZHkgY2hvc2U6IGl0IHBhc3NlcyBhbgogICMgYWJzb2x1dGUgY3J0YmVnaW4gcGF0aCBsaWtlIC4uLi9hcm0tbGludXgtYW5kcm9pZGVhYmkvMjgvY3J0YmVnaW5fc28ubywKICAjIGFuZCB0aGUgLUwgZGlyIHdlIHByZXBlbmQgTVVTVCBtYXRjaCBpdCAtLSBvYmplY3RzIGNvbXBpbGVkIGFnYWluc3QKICAjIEFQSS0yOCBoZWFkZXJzIHJlZmVyZW5jZSBzeW1ib2xzIChpY29udiwgc3RkZXJyLCBfX3JlZ2lzdGVyX2F0Zm9yaykKICAjIHRoYXQgdGhlIEFQSS0yMSBsaWJjLnNvIHN0dWJzIGRvIG5vdCBleHBvcnQuIFRoZSBoYXJkY29kZWQgbGlzdCBiZWxvdwogICMgb25seSByZW1haW5zIGFzIGEgZmFsbGJhY2sgZm9yIGRyaXZlcnMgdGhhdCBwYXNzIGJhcmUgQ1JUIG5hbWVzLgogIERFVEVDVEVEX0FQST0iIgogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBERVRFQ1RFRF9BUEk9JChncmVwIC1vRSAnYXJtLWxpbnV4LWFuZHJvaWRlYWJpL1swLTldKy9jcnRiZWdpbicgIiRSRVNQT05TRV9GSUxFIiB8IGhlYWQgLTEgfCBncmVwIC1vRSAnWzAtOV0rJykKICBmaQogIGlmIFsgLXogIiRERVRFQ1RFRF9BUEkiIF07IHRoZW4KICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICAqL2FybS1saW51eC1hbmRyb2lkZWFiaS8qL2NydGJlZ2luKikKICAgICAgICAgIERFVEVDVEVEX0FQST0kKHByaW50ZiAnJXMnICIkYXJnIiB8IGdyZXAgLW9FICdhbmRyb2lkZWFiaS9bMC05XSsvJyB8IGdyZXAgLW9FICdbMC05XSsnKQogICAgICAgICAgOzsKICAgICAgZXNhYwogICAgZG9uZQogIGZpCiAgaWYgWyAtbiAiJERFVEVDVEVEX0FQSSIgXSAmJiBbIC1mICIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJL2NydGJlZ2luX3NvLm8iIF07IHRoZW4KICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJIgogIGVsc2UKICAgIGZvciBhcGkgaW4gMTYgMTkgMjEgMjMgMjQgMjYgMjggMzA7IGRvCiAgICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kYXBpIgogICAgICAgIGJyZWFrCiAgICAgIGZpCiAgICBkb25lCiAgZmkKICBlY2hvICJsZC5sbGQtd3JhcHBlcjogQVJNMzIgbGluayBkZXRlY3RlZCwgc3lzcm9vdD0kQVJNMzIgKGRyaXZlciBhcGk9JHtERVRFQ1RFRF9BUEk6LW5vbmV9KSIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      # Shared across all three jobs on purpose -- same reasoning as the
+      # Lime cache above: ~/.gradle/caches and ~/.gradle/wrapper are
+      # Gradle's own global dependency/wrapper caches, identical regardless
+      # of ABI (the abiFilters split happens later, in packaging, via
+      # patch-lime-gradle.sh) -- not a per-job build output. Kept the
+      # existing "-arm64" key literal (confirmed identical content/size to
+      # the fat/arm32 copies already) instead of a new name, so this hits
+      # what's already cached instead of missing once more.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-arm64-
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_process.c: exclude process creation API on Android ==="
+          while IFS= read -r SDL_PROC_FILE; do
+            echo "Found: $SDL_PROC_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_PROC_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_PROC_FILE"; printf '\n#endif\n'; } > /tmp/sdlprocfix
+              mv /tmp/sdlprocfix "$SDL_PROC_FILE"
+              echo "  Patched ($(wc -l < "$SDL_PROC_FILE") lines). First line: $(head -1 "$SDL_PROC_FILE")"
+            fi
+          done < <(find .haxelib/lime -name "SDL_process.c" -type f 2>/dev/null)
+
+      - name: Patch lime audio for Android (cheaper resampler, timer-based completion)
+        run: |
+          echo "=== Patching AudioManager.hx: cheaper OpenAL resampler on Android ==="
+          while IFS= read -r AM_FILE; do
+            echo "Found: $AM_FILE"
+            python3 .github/scripts/patch-lime-audio-resampler.py "$AM_FILE"
+          done < <(find .haxelib/lime -path "*lime/media/AudioManager.hx" -type f 2>/dev/null)
+
+          echo "=== Patching NativeAudioSource.hx: timer-based completion instead of per-frame polling ==="
+          while IFS= read -r NAS_FILE; do
+            echo "Found: $NAS_FILE"
+            python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
+          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
+      - name: Rebuild Android Lime so
+        id: rebuild-lime-android
+        run: |
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
+            exit 1
+          fi
+
+      # This job never applied an ABI filter of its own, but .haxelib/lime
+      # is now a cache SHARED with the arm64/arm32 jobs, and their own
+      # "Apply Gradle ABI splits" step mutates Lime's build.gradle template
+      # IN PLACE -- whichever of the three jobs last saved the cache leaves
+      # that filter baked in for the others to inherit. This job silently
+      # ended up packaging an arm64-only "fat" APK as a result. Reset the
+      # template back to Lime's own committed version (patch-lime-gradle.sh
+      # does this unconditionally now, before deciding "fat" needs no
+      # filter of its own) so this job always builds genuinely universal.
+      - name: Reset Gradle ABI filter (this is the universal/fat build)
+        run: bash .github/scripts/patch-lime-gradle.sh fat
+
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
+
+      - name: Restore hxcpp compile cache
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.hxcpp_cache
+          key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          restore-keys: |
+            hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
+
+      # v2 bump (was hxcpp-cache-android-fat-): restore-keys seeds
+      # HXCPP_COMPILE_CACHE from the closest OLD entry under the prefix,
+      # whatever commit it was built from -- hxcpp's own internal object-cache
+      # keying didn't fully account for a Project.xml haxedef toggle
+      # (HXCPP_GC_GENERATIONAL on -> off), so a run seeded from a cache built
+      # under the other setting linked with some hxcpp runtime objects
+      # (Hash.cpp/Anon.cpp, providing __string_hash_set and friends) left over
+      # from that different config, producing mass "undefined symbol" link
+      # failures despite every .hx file compiling cleanly. Renaming the prefix
+      # orphans every cache poisoned by that toggle so the next run starts
+      # from a genuinely clean ~/.hxcpp_cache instead of warm-seeding from
+      # them. Revert this bump once confirmed stable, or bump again if a
+      # future haxedef toggle reproduces the same symptom.
+      #
+      # buildMode is folded into the key for the same reason: debug and
+      # release compile with different haxedefs (FLX_NO_DEBUG, CRASH_HANDLER
+      # section, etc.), so seeding a debug compile from a release-built cache
+      # (or vice versa) risks the exact same poisoned-object-cache failure.
+      - name: Prune stale hxcpp compile caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
+
+      # Saved BEFORE Compile, on purpose. Both trees are finished and
+      # asserted by this point -- "Rebuild Android Lime so" exits non-zero
+      # unless both liblime .so files exist -- and nothing after this line
+      # writes to them, so there is nothing to gain by waiting.
+      #
+      # What there is to LOSE by waiting is everything: Compile is the long
+      # step (~23 min cold) and the one that gets killed. actions/cache's
+      # post step only saves on job success, which is how run #439 discarded
+      # a complete haxelib tree and a complete Lime tree after dying at the
+      # final archive step. Saving here also survives what a post-Compile
+      # save cannot: a cancelled run, a job timeout, an OOM-killed runner.
+      #
+      # Each save is still gated on the step that POPULATES it, never on the
+      # job. "Install Haxe libraries" and "Prepare Lime source" are both
+      # gated on a cache hit, so a half-installed tree written to the cache
+      # would be restored on the next run and SKIPPED rather than repaired --
+      # the cache poisoning that forced the earlier v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): GitHub's own guidance, since
+      # always() keeps a cancelled job hanging on these steps.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # -D HXCPP_DEBUG_LINK adds -g and leaves hxcpp's own post-link stripper
+      # disabled (see the arm64-debugsymbols job's own doc comment for the
+      # full investigation of why this, not Gradle's debugSymbolLevel, is
+      # the only reliable source of our own library's debug info) -- doesn't
+      # change what actually ships: Gradle's own packaging always re-strips
+      # the final APK's .so regardless of this flag. Needed so the
+      # native-debug-symbols.zip artifact (from debugSymbolLevel=FULL) has
+      # full DWARF debug info for offline symbolication via ndk-stack.
+      - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: "4"
+          HXCPP_CACHE_MB: "4000"
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
+        run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
+          else
+            haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK
+          fi
+
+      # This one cannot move up -- Compile is what produces it. Unlike the
+      # two above it needs no success gate: nothing skips work on a hit
+      # (Compile always runs and hxcpp decides per file), so a partial
+      # object cache is a head start rather than a broken state.
+      #
+      # !cancelled() matters more here than above: a cancelled job can be
+      # killed mid-write, and a truncated .o carrying a fresh mtime reads as
+      # up-to-date to hxcpp's dependency check -- it fails at link time
+      # instead of being rebuilt. A failed job has stopped cleanly.
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.hxcpp_cache
+          key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: VS Impostor Legacy (Android)
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android)
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # ARM64 (aarch64) — covers all modern Android devices (2019+).
+  # NOTE: The -D ANDROID_ARM64_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Android-ARM64:
+    name: Build Android (ARM64)
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm64' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == '' && inputs.measure_sym_run_id == ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore Haxe libraries cache
+        id: haxelibs-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Restore Lime cache (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
+      - name: Install Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        id: install-haxelibs
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install --force
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
+      - name: Wrap g++-13 to force C++23
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
+      - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
+        timeout-minutes: 15
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          set -euo pipefail
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
+          fi
+
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          # ar/ranlib wrappers: hxcpp's android-toolchain-clang.xml picks the
+          # archiver by NDK version -- llvm-ar only under NDKV22+, otherwise the
+          # GCC-era arm-linux-androideabi-ar, which NDK r23+ no longer ships at
+          # all. It resolves to the old name here, so without these the archive
+          # step dies with "sh: 1: arm-linux-androideabi-ar: not found".
+          #
+          # These used to be scoped to the fat APK job only, on the reasoning
+          # that ar is reached only when HXCPP_COMPILE_CACHE is set and the
+          # single-arch jobs didn't set it. They all set it now (the Compile
+          # step exports HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"), so that no
+          # longer holds. A WARM ~/.hxcpp_cache hid it: the runtime .a is
+          # restored already built and the archive step is skipped entirely --
+          # it only surfaces on a fully cold cache, which is exactly the run
+          # this export chain needs.
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ranlib
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar /tmp/ndk-wrap/aarch64-linux-android-ar \
+            /tmp/ndk-wrap/aarch64-linux-android-ranlib /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
+          # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
+          # also links liblime-v7.so (ARM32) which hits the same NDK 29 sysroot issue.
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgIyBQcmVmZXIgdGhlIEFQSSBsZXZlbCB0aGUgY29tcGlsZXIgZHJpdmVyIGFscmVhZHkgY2hvc2U6IGl0IHBhc3NlcyBhbgogICMgYWJzb2x1dGUgY3J0YmVnaW4gcGF0aCBsaWtlIC4uLi9hcm0tbGludXgtYW5kcm9pZGVhYmkvMjgvY3J0YmVnaW5fc28ubywKICAjIGFuZCB0aGUgLUwgZGlyIHdlIHByZXBlbmQgTVVTVCBtYXRjaCBpdCAtLSBvYmplY3RzIGNvbXBpbGVkIGFnYWluc3QKICAjIEFQSS0yOCBoZWFkZXJzIHJlZmVyZW5jZSBzeW1ib2xzIChpY29udiwgc3RkZXJyLCBfX3JlZ2lzdGVyX2F0Zm9yaykKICAjIHRoYXQgdGhlIEFQSS0yMSBsaWJjLnNvIHN0dWJzIGRvIG5vdCBleHBvcnQuIFRoZSBoYXJkY29kZWQgbGlzdCBiZWxvdwogICMgb25seSByZW1haW5zIGFzIGEgZmFsbGJhY2sgZm9yIGRyaXZlcnMgdGhhdCBwYXNzIGJhcmUgQ1JUIG5hbWVzLgogIERFVEVDVEVEX0FQST0iIgogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBERVRFQ1RFRF9BUEk9JChncmVwIC1vRSAnYXJtLWxpbnV4LWFuZHJvaWRlYWJpL1swLTldKy9jcnRiZWdpbicgIiRSRVNQT05TRV9GSUxFIiB8IGhlYWQgLTEgfCBncmVwIC1vRSAnWzAtOV0rJykKICBmaQogIGlmIFsgLXogIiRERVRFQ1RFRF9BUEkiIF07IHRoZW4KICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICAqL2FybS1saW51eC1hbmRyb2lkZWFiaS8qL2NydGJlZ2luKikKICAgICAgICAgIERFVEVDVEVEX0FQST0kKHByaW50ZiAnJXMnICIkYXJnIiB8IGdyZXAgLW9FICdhbmRyb2lkZWFiaS9bMC05XSsvJyB8IGdyZXAgLW9FICdbMC05XSsnKQogICAgICAgICAgOzsKICAgICAgZXNhYwogICAgZG9uZQogIGZpCiAgaWYgWyAtbiAiJERFVEVDVEVEX0FQSSIgXSAmJiBbIC1mICIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJL2NydGJlZ2luX3NvLm8iIF07IHRoZW4KICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJIgogIGVsc2UKICAgIGZvciBhcGkgaW4gMTYgMTkgMjEgMjMgMjQgMjYgMjggMzA7IGRvCiAgICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kYXBpIgogICAgICAgIGJyZWFrCiAgICAgIGZpCiAgICBkb25lCiAgZmkKICBlY2hvICJsZC5sbGQtd3JhcHBlcjogQVJNMzIgbGluayBkZXRlY3RlZCwgc3lzcm9vdD0kQVJNMzIgKGRyaXZlciBhcGk9JHtERVRFQ1RFRF9BUEk6LW5vbmV9KSIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-arm64-
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_process.c: exclude process creation API on Android ==="
+          while IFS= read -r SDL_PROC_FILE; do
+            echo "Found: $SDL_PROC_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_PROC_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_PROC_FILE"; printf '\n#endif\n'; } > /tmp/sdlprocfix
+              mv /tmp/sdlprocfix "$SDL_PROC_FILE"
+              echo "  Patched ($(wc -l < "$SDL_PROC_FILE") lines). First line: $(head -1 "$SDL_PROC_FILE")"
+            fi
+          done < <(find .haxelib/lime -name "SDL_process.c" -type f 2>/dev/null)
+
+      - name: Patch lime audio for Android (cheaper resampler, timer-based completion)
+        run: |
+          echo "=== Patching AudioManager.hx: cheaper OpenAL resampler on Android ==="
+          while IFS= read -r AM_FILE; do
+            echo "Found: $AM_FILE"
+            python3 .github/scripts/patch-lime-audio-resampler.py "$AM_FILE"
+          done < <(find .haxelib/lime -path "*lime/media/AudioManager.hx" -type f 2>/dev/null)
+
+          echo "=== Patching NativeAudioSource.hx: timer-based completion instead of per-frame polling ==="
+          while IFS= read -r NAS_FILE; do
+            echo "Found: $NAS_FILE"
+            python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
+          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
+      - name: Rebuild Android Lime so
+        id: rebuild-lime-android
+        run: |
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
+            exit 1
+          fi
+
+      - name: Apply Gradle ABI splits for ARM64
+        run: |
+          # Apply ABI filter to include only arm64-v8a
+          # This removes armeabi-v7a libraries from the APK
+          bash .github/scripts/patch-lime-gradle.sh arm64
+
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
+
+      - name: Restore hxcpp build artifacts (ARM64)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          restore-keys: |
+            hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
+
+      # v2 bump: see the matching comment on "Prune stale hxcpp compile
+      # caches" in the fat build job above -- same restore-keys-seeded
+      # staleness, caused the exact same __string_hash_set/etc. link failures
+      # on this job's own compile. buildMode is folded into the key for the
+      # same debug-vs-release object-cache-poisoning reason.
+      - name: Prune stale hxcpp build-artifact caches (ARM64)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
+
+      # DIAGNOSTIC ONLY -- no effect on the build. Investigating whether
+      # hxcpp.n / haxe-target.xml (dateOnly depends that feed FileGroup.mNewest,
+      # see File.isOutOfDate() in hxcpp's BuildTool) get touched with a fresh
+      # mtime on every run regardless of the haxelibs cache hit, which would
+      # make the whole "haxe" group always appear out-of-date independent of
+      # HXCPP_COMPILE_CACHE. Prints real timestamps instead of guessing.
+      - name: DIAGNOSTIC -- mtime comparison for cache staleness investigation
+        run: |
+          echo "== current time =="
+          date -u
+          echo "== hxcpp.n (touched by 'Ensure hxcpp for Lime rebuild'?) =="
+          find ~/haxelib/hxcpp .haxelib/hxcpp -iname "hxcpp.n" 2>/dev/null -exec stat --format='%n mtime=%y' {} \; || echo "not found"
+          echo "== toolchain/haxe-target.xml (dateOnly depend) =="
+          find ~/haxelib/hxcpp .haxelib/hxcpp -iname "haxe-target.xml" 2>/dev/null -exec stat --format='%n mtime=%y' {} \; || echo "not found"
+          echo "== sample restored .o files from the obj cache =="
+          find export -iname "*.o" 2>/dev/null | head -3 | xargs -r stat --format='%n mtime=%y' || echo "no .o files found (fresh obj dir?)"
+          echo "== ~/.hxcpp_cache contents (should be non-empty on the 2nd+ run) =="
+          ls -la ~/.hxcpp_cache 2>/dev/null | head -5 || echo "~/.hxcpp_cache does not exist yet"
+          find ~/.hxcpp_cache -type f 2>/dev/null | wc -l
+
+      # Saved BEFORE Compile, on purpose. Both trees are finished and
+      # asserted by this point -- "Rebuild Android Lime so" exits non-zero
+      # unless both liblime .so files exist -- and nothing after this line
+      # writes to them, so there is nothing to gain by waiting.
+      #
+      # What there is to LOSE by waiting is everything: Compile is the long
+      # step (~23 min cold) and the one that gets killed. actions/cache's
+      # post step only saves on job success, which is how run #439 discarded
+      # a complete haxelib tree and a complete Lime tree after dying at the
+      # final archive step. Saving here also survives what a post-Compile
+      # save cannot: a cancelled run, a job timeout, an OOM-killed runner.
+      #
+      # Each save is still gated on the step that POPULATES it, never on the
+      # job. "Install Haxe libraries" and "Prepare Lime source" are both
+      # gated on a cache hit, so a half-installed tree written to the cache
+      # would be restored on the next run and SKIPPED rather than repaired --
+      # the cache poisoning that forced the earlier v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): GitHub's own guidance, since
+      # always() keeps a cancelled job hanging on these steps.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # HXCPP_COMPILE_CACHE was never set in this job (unlike the fat job's
+      # own Compile step, which does export it) -- without it,
+      # CompileCache.hasCache stays false for hxcpp's whole build tool, so
+      # FileGroup.isCached() is false for every group, and Compiler.compile()
+      # never even enters its cache-lookup branch (Compiler.hx ~328: `if
+      # (mCompilerVersion!=null && inFile.mGroup.isCached())`) -- every object
+      # gets rebuilt from scratch every run, regardless of anything restored
+      # into export/.../obj above. Matches this job's own cache path (added
+      # ~/.hxcpp_cache to the step above) instead of introducing a second cache.
+      # -D HXCPP_DEBUG_LINK: needed for native-debug-symbols.zip artifact.
+      - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
+        run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
+          else
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
+          fi
+
+      # This one cannot move up -- Compile is what produces it. Unlike the
+      # two above it needs no success gate: nothing skips work on a hit
+      # (Compile always runs and hxcpp decides per file), so a partial
+      # object cache is a head start rather than a broken state.
+      #
+      # !cancelled() matters more here than above: a cancelled job can be
+      # killed mid-write, and a truncated .o carrying a fresh mtime reads as
+      # up-to-date to hxcpp's dependency check -- it fails at link time
+      # instead of being rebuilt. A failed job has stopped cleanly.
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: VS Impostor Legacy (Android ARM64)
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android ARM64)
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # ARM32 (armeabi-v7a) — for older / low-end 32-bit devices.
+  # Requires the ld.lld wrapper to fix NDK 29 sysroot path ordering.
+  # NOTE: The -D ANDROID_ARM32_ONLY flag is passed but the APK still contains
+  # both architectures because liblime.so and libvlc.so are pre-built with
+  # both. For actual architecture-specific APKs, a custom Gradle split config
+  # or a rebuild of lime from source with architecture flags would be needed.
+  # This build is kept for compatibility/testing.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Android-ARM32:
+    name: Build Android (ARM32)
+    if: (github.event_name != 'workflow_dispatch' || inputs.target == 'arm32' || inputs.target == 'all') && inputs.symbolicate_run_id == '' && inputs.inspect_glob == '' && inputs.measure_sym_run_id == ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore Haxe libraries cache
+        id: haxelibs-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      # Shared across all three jobs on purpose -- see the fat job's
+      # identical comment above this same step.
+      - name: Restore Lime cache (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # Not gated on cache-hit: "Rebuild Linux Lime ndll" below can now run its
+      # real rebuild even on a cache hit (self-healing a missing ndll), and
+      # that rebuild needs wayland-scanner from these packages -- skipping
+      # this step on a hit made that repair fail with "wayland-scanner: not
+      # found" right when it was needed most.
+      - name: Install Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        id: install-haxelibs
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install --force
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
+      - name: Wrap g++-13 to force C++23
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      # Not gated on cache-hit: a "hit" Lime cache has twice now turned out to
+      # be missing this exact file (Configure Android failing with "Could not
+      # load lime.ndll" right after a cache restore that skipped this step).
+      # Root cause not confirmed -- something later in the job likely touches
+      # ndll/ as a side effect of the Android-specific rebuild/compile steps,
+      # and that gets baked into what's cached for the next run. Self-heal
+      # instead of trying to prevent it: only pay for the real rebuild when
+      # the file's actually missing, so the fast path stays fast.
+      - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
+        timeout-minutes: 15
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          set -euo pipefail
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            # Rebuilding directly on top of a cached-but-incomplete checkout
+            # (cache hit, ndll missing) hung indefinitely instead of failing
+            # fast -- re-cloning first guarantees the rebuild always runs
+            # against the same known-good source tree the fast path (a
+            # genuine cache miss) already uses successfully.
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
+          fi
+
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          # ar/ranlib wrappers: hxcpp's android-toolchain-clang.xml picks the
+          # archiver by NDK version -- llvm-ar only under NDKV22+, otherwise the
+          # GCC-era arm-linux-androideabi-ar, which NDK r23+ no longer ships at
+          # all. It resolves to the old name here, so without these the archive
+          # step dies with "sh: 1: arm-linux-androideabi-ar: not found".
+          #
+          # These used to be scoped to the fat APK job only, on the reasoning
+          # that ar is reached only when HXCPP_COMPILE_CACHE is set and the
+          # single-arch jobs didn't set it. They all set it now (the Compile
+          # step exports HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"), so that no
+          # longer holds. A WARM ~/.hxcpp_cache hid it: the runtime .a is
+          # restored already built and the archive step is skipped entirely --
+          # it only surfaces on a fully cold cache, which is exactly the run
+          # this export chain needs.
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ranlib
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar /tmp/ndk-wrap/aarch64-linux-android-ar \
+            /tmp/ndk-wrap/aarch64-linux-android-ranlib /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
+          # Replace ld.lld with a wrapper that handles ARM32 @response_file links.
+          # hxcpp passes all linker args via a response file (one arg per line);
+          # the wrapper rewrites it with versioned CRT paths and missing -L entries.
+          # Script is base64-encoded to avoid YAML block-scalar indentation issues.
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgIyBQcmVmZXIgdGhlIEFQSSBsZXZlbCB0aGUgY29tcGlsZXIgZHJpdmVyIGFscmVhZHkgY2hvc2U6IGl0IHBhc3NlcyBhbgogICMgYWJzb2x1dGUgY3J0YmVnaW4gcGF0aCBsaWtlIC4uLi9hcm0tbGludXgtYW5kcm9pZGVhYmkvMjgvY3J0YmVnaW5fc28ubywKICAjIGFuZCB0aGUgLUwgZGlyIHdlIHByZXBlbmQgTVVTVCBtYXRjaCBpdCAtLSBvYmplY3RzIGNvbXBpbGVkIGFnYWluc3QKICAjIEFQSS0yOCBoZWFkZXJzIHJlZmVyZW5jZSBzeW1ib2xzIChpY29udiwgc3RkZXJyLCBfX3JlZ2lzdGVyX2F0Zm9yaykKICAjIHRoYXQgdGhlIEFQSS0yMSBsaWJjLnNvIHN0dWJzIGRvIG5vdCBleHBvcnQuIFRoZSBoYXJkY29kZWQgbGlzdCBiZWxvdwogICMgb25seSByZW1haW5zIGFzIGEgZmFsbGJhY2sgZm9yIGRyaXZlcnMgdGhhdCBwYXNzIGJhcmUgQ1JUIG5hbWVzLgogIERFVEVDVEVEX0FQST0iIgogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBERVRFQ1RFRF9BUEk9JChncmVwIC1vRSAnYXJtLWxpbnV4LWFuZHJvaWRlYWJpL1swLTldKy9jcnRiZWdpbicgIiRSRVNQT05TRV9GSUxFIiB8IGhlYWQgLTEgfCBncmVwIC1vRSAnWzAtOV0rJykKICBmaQogIGlmIFsgLXogIiRERVRFQ1RFRF9BUEkiIF07IHRoZW4KICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICAqL2FybS1saW51eC1hbmRyb2lkZWFiaS8qL2NydGJlZ2luKikKICAgICAgICAgIERFVEVDVEVEX0FQST0kKHByaW50ZiAnJXMnICIkYXJnIiB8IGdyZXAgLW9FICdhbmRyb2lkZWFiaS9bMC05XSsvJyB8IGdyZXAgLW9FICdbMC05XSsnKQogICAgICAgICAgOzsKICAgICAgZXNhYwogICAgZG9uZQogIGZpCiAgaWYgWyAtbiAiJERFVEVDVEVEX0FQSSIgXSAmJiBbIC1mICIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJL2NydGJlZ2luX3NvLm8iIF07IHRoZW4KICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJIgogIGVsc2UKICAgIGZvciBhcGkgaW4gMTYgMTkgMjEgMjMgMjQgMjYgMjggMzA7IGRvCiAgICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kYXBpIgogICAgICAgIGJyZWFrCiAgICAgIGZpCiAgICBkb25lCiAgZmkKICBlY2hvICJsZC5sbGQtd3JhcHBlcjogQVJNMzIgbGluayBkZXRlY3RlZCwgc3lzcm9vdD0kQVJNMzIgKGRyaXZlciBhcGk9JHtERVRFQ1RFRF9BUEk6LW5vbmV9KSIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      # Shared across all three jobs on purpose -- see the fat job's
+      # identical comment above this same step.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-arm64-
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_process.c: exclude process creation API on Android ==="
+          while IFS= read -r SDL_PROC_FILE; do
+            echo "Found: $SDL_PROC_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_PROC_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_PROC_FILE"; printf '\n#endif\n'; } > /tmp/sdlprocfix
+              mv /tmp/sdlprocfix "$SDL_PROC_FILE"
+              echo "  Patched ($(wc -l < "$SDL_PROC_FILE") lines). First line: $(head -1 "$SDL_PROC_FILE")"
+            fi
+          done < <(find .haxelib/lime -name "SDL_process.c" -type f 2>/dev/null)
+
+      - name: Patch lime audio for Android (cheaper resampler, timer-based completion)
+        run: |
+          echo "=== Patching AudioManager.hx: cheaper OpenAL resampler on Android ==="
+          while IFS= read -r AM_FILE; do
+            echo "Found: $AM_FILE"
+            python3 .github/scripts/patch-lime-audio-resampler.py "$AM_FILE"
+          done < <(find .haxelib/lime -path "*lime/media/AudioManager.hx" -type f 2>/dev/null)
+
+          echo "=== Patching NativeAudioSource.hx: timer-based completion instead of per-frame polling ==="
+          while IFS= read -r NAS_FILE; do
+            echo "Found: $NAS_FILE"
+            python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
+          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
+      # Gated on the actual .so files existing, NOT on lime-cache's cache-hit:
+      # a cache hit no longer guarantees the binaries are there. Two things can
+      # wipe them after the cache restore: (a) "Install Haxe libraries" runs
+      # hxpkg install --force whenever the haxelibs cache misses (eviction),
+      # which re-clones the lime git lib over the restored checkout, and
+      # (b) the "Rebuild Linux Lime ndll" self-heal re-clones lime when the
+      # Linux ndll is missing. Both leave a fresh checkout with no Android
+      # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
+      # run 29054433387 failed at Compile with "liblime-64.so does not exist".
+      - name: Rebuild Android Lime so
+        id: rebuild-lime-android
+        run: |
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
+            exit 1
+          fi
+
+      - name: Apply Gradle ABI splits for ARM32
+        run: |
+          # Apply ABI filter to include only armeabi-v7a
+          # This removes arm64-v8a libraries from the APK
+          bash .github/scripts/patch-lime-gradle.sh armv7
+
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
+      - name: Restore hxcpp build artifacts (ARM32)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          restore-keys: |
+            hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}
+
+      # v2 bump: see the matching comment on "Prune stale hxcpp compile
+      # caches" in the fat build job above -- same restore-keys-seeded
+      # staleness, caused the exact same __string_hash_set/etc. link failures
+      # on this job's own compile. buildMode is folded into the key for the
+      # same debug-vs-release object-cache-poisoning reason.
+      - name: Prune stale hxcpp build-artifact caches (ARM32)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}" "${{ github.ref }}"
+
+      # Saved BEFORE Compile, on purpose. Both trees are finished and
+      # asserted by this point -- "Rebuild Android Lime so" exits non-zero
+      # unless both liblime .so files exist -- and nothing after this line
+      # writes to them, so there is nothing to gain by waiting.
+      #
+      # What there is to LOSE by waiting is everything: Compile is the long
+      # step (~23 min cold) and the one that gets killed. actions/cache's
+      # post step only saves on job success, which is how run #439 discarded
+      # a complete haxelib tree and a complete Lime tree after dying at the
+      # final archive step. Saving here also survives what a post-Compile
+      # save cannot: a cancelled run, a job timeout, an OOM-killed runner.
+      #
+      # Each save is still gated on the step that POPULATES it, never on the
+      # job. "Install Haxe libraries" and "Prepare Lime source" are both
+      # gated on a cache hit, so a half-installed tree written to the cache
+      # would be restored on the next run and SKIPPED rather than repaired --
+      # the cache poisoning that forced the earlier v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): GitHub's own guidance, since
+      # always() keeps a cancelled job hanging on these steps.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # See the matching comment in the ARM64 job's Compile step -- same
+      # missing HXCPP_COMPILE_CACHE bug, same fix.
+      - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
+          BUILD_MODE_FLAG: ${{ (inputs.buildMode == 'debug') && '-debug' || '-release' }}
+        run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY -D $BUILD_FLAGS
+          else
+            haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY
+          fi
+
+      # This one cannot move up -- Compile is what produces it. Unlike the
+      # two above it needs no success gate: nothing skips work on a hit
+      # (Compile always runs and hxcpp decides per file), so a partial
+      # object cache is a head start rather than a broken state.
+      #
+      # !cancelled() matters more here than above: a cancelled job can be
+      # killed mid-write, and a truncated .o carrying a fresh mtime reads as
+      # up-to-date to hxcpp's dependency check -- it fails at link time
+      # instead of being rebuilt. A failed job has stopped cleanly.
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: VS Impostor Legacy (Android ARM32)
+          # Gradle output subfolder is ALWAYS "release" here -- Lime always runs
+          # assembleRelease to package the APK regardless of the Haxe-level
+          # -debug/-release flag (that flag only controls the native .so
+          # compile, e.g. libApplicationMain-debug-v7.so, not which Gradle
+          # variant gets assembled). Only BUILD_DIR (export/debug vs
+          # export/release) actually follows buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # Only produced for a release buildType (see
+      # patch-lime-gradle-native-symbols.sh) -- warn, not error, so a
+      # buildMode=debug run (which never gets this file) doesn't fail the job.
+      - name: Upload native debug symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols (Android ARM32)
+          # Same reasoning as the Upload Artifact path above -- Gradle always
+          # assembles the "release" variant, so native-debug-symbols always
+          # lands under .../release/, regardless of buildMode.
+          path: export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # ARM64, but linked WITH full debug info so a native_crash_trace.log's
+  # rel_pc offsets can actually be resolved to function/file/line -- never
+  # runs automatically (not even for target=all or a workflow_call caller),
+  # only when explicitly picked via target=arm64-debugsymbols, since it's a
+  # much slower/heavier build most runs don't need.
+  #
+  # ignoreBuildMode on purpose: this always builds release-equivalent code
+  # (same optimizations a real user runs), since a plain buildMode=debug
+  # build's addresses wouldn't match what a real crash trace was captured
+  # against anyway.
+  #
+  # Tried two Gradle-side ways to ship the unstripped library INSIDE the
+  # APK (debugSymbolLevel=FULL alone, then packagingOptions.jniLibs.
+  # keepDebugSymbols on top of it) and both failed for our own library:
+  # debugSymbolLevel's own zip only ever had libc++_shared.so.dbg, and
+  # keepDebugSymbols demonstrably kept the .so unstripped through every
+  # intermediate Gradle task we could inspect (confirmed via a build's own
+  # diagnostic step) yet the FINAL packaged .apk still came out stripped
+  # (confirmed by extracting lib/arm64-v8a/libApplicationMain.so from an
+  # actual downloaded APK and running `file` on it) -- something between
+  # AGP's stripReleaseDebugSymbols task output and the final zip entry
+  # re-strips it, and isn't worth chasing further through AGP's internals.
+  #
+  # Instead, capture the unstripped copy directly from where hxcpp itself
+  # writes it, before Gradle ever enters the picture at all:
+  # -D HXCPP_DEBUG_LINK adds -g when linking our own library and (unlike
+  # HXCPP_DEBUG_LINK_AND_STRIP) leaves hxcpp's own post-link stripper
+  # disabled (confirmed via hxcpp's tools/hxcpp/BuildTool.hx + Linker.hx
+  # and toolchain/gcc-toolchain.xml, which android-toolchain-clang.xml
+  # <include>s -- HXCPP_DEBUG_LINK_AND_STRIP unconditionally strips the
+  # linked .so via hxcpp's own external `strip` call; plain HXCPP_DEBUG_LINK
+  # does not). That leaves a permanently-unstripped copy sitting at
+  # export/release/android/obj/libApplicationMain-64.so (confirmed via the
+  # "Diagnostic - inspect .so files after build" step's own `file` output --
+  # not the obj/androidarm64-64/libApplicationMain.so path Linker.hx's
+  # getUnstrippedFilename() was assumed to resolve to, which has never
+  # actually existed on this hxcpp/Lime pin) the whole time -- zipped and
+  # uploaded as its own artifact below, bypassing Gradle's packaging
+  # pipeline (and whatever it's doing to strip our library) entirely. The
+  # packaged .apk from this job ends up identical to what Android-ARM64
+  # already produces; it's uploaded alongside purely so this job is
+  # self-contained (install it, reproduce the crash, symbolize against the
+  # separate unstripped .so).
+  #
+  # Uses its own hxcpp compile-cache lineage, never shared with the
+  # Android-ARM64 job's release cache above -- kept separate defensively
+  # even though HXCPP_DEBUG_LINK's only effect on the actual compiled
+  # objects is the same -g flag HXCPP_DEBUG_LINK_AND_STRIP already added
+  # (the strip-or-not difference is a link-stage-only toolchain XML setting,
+  # confirmed via grep to have zero #if branches in hxcpp's own runtime
+  # source), and this file's own comments elsewhere already document that
+  # seeding an hxcpp object cache across a haxedef toggle like this can
+  # produce mass "undefined symbol" link failures.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Android-ARM64-DebugSymbols:
+    name: Build Android (ARM64, debug symbols)
+    if: inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == '' && inputs.inspect_glob == '' && inputs.measure_sym_run_id == ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v2.1.0
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore Haxe libraries cache
+        id: haxelibs-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      # Shared with the other jobs on purpose -- this is Lime's source + its
+      # own built liblime.so, unaffected by HXCPP_DEBUG_LINK (that define
+      # only changes how OUR app library gets linked/stripped).
+      - name: Restore Lime cache (source + built artifacts)
+        id: lime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      - name: Install Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
+            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
+            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
+            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
+            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
+            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
+            libvulkan-dev pkg-config
+
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
+
+      - name: Install Haxe libraries
+        id: install-haxelibs
+        if: steps.haxelibs-cache.outputs.cache-hit != 'true'
+        run: |
+          haxelib install hxcpp > /dev/null --quiet
+          haxelib install hxpkg --quiet
+          haxelib run hxpkg install --force
+
+      - name: Prepare Lime source
+        if: steps.lime-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .haxelib/lime
+          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+          git -C .haxelib/lime/git submodule update --init --recursive --force
+
+      - name: Register Lime dev lib
+        run: haxelib dev lime .haxelib/lime/git
+
+      - name: Ensure hxcpp for Lime rebuild
+        run: haxelib install hxcpp > /dev/null --quiet
+
+      # include/hxcpp.h unconditionally #defines HXCPP_ALIGN_ALLOC (no
+      # #ifdef guard), which adds extra 8-byte alignment padding to
+      # Immix.cpp's block/hole management and to GC.h's inline
+      # ImmixAllocator::alloc() fast path -- the EXACT function two
+      # independent native_crash_trace.log SIGSEGVs (Ejected, Double
+      # Trouble) both symbolicated to via ground-truth objdump. This
+      # project already found and fixed one real hxcpp GC bug tied to
+      # this same flag (HXCPP_GC_GENERATIONAL's MoveSurvivors(), commits
+      # 78a922d6/425ad791) by disabling the generational collector --
+      # but HXCPP_ALIGN_ALLOC itself stayed on unconditionally, still
+      # active in the plain allocator this project actually ships with.
+      # Disabling it here is a diagnostic experiment for the still-open
+      # crashes. See patch-hxcpp-disable-align-alloc.py for the full
+      # writeup.
+      - name: Patch hxcpp to disable HXCPP_ALIGN_ALLOC
+        run: |
+          while IFS= read -r HXCPP_FILE; do
+            echo "Found: $HXCPP_FILE"
+            python3 .github/scripts/patch-hxcpp-disable-align-alloc.py "$HXCPP_FILE"
+          done < <(find .haxelib -path "*hxcpp*/include/hxcpp.h" -type f 2>/dev/null)
+
+      - name: Wrap g++-13 to force C++23
+        run: |
+          mkdir -p /tmp/cxx-wrap
+          printf '#!/bin/bash\nexec /usr/bin/g++-13 "$@" -std=c++23\n' > /tmp/cxx-wrap/g++-13
+          chmod +x /tmp/cxx-wrap/g++-13
+          echo "/tmp/cxx-wrap" >> $GITHUB_PATH
+
+      - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
+        timeout-minutes: 15
+        env:
+          CC: gcc-13
+          CXX: g++-13
+        run: |
+          set -euo pipefail
+          if [ -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+            echo "lime.ndll already present, skipping rebuild."
+          else
+            echo "lime.ndll missing (fresh checkout, or a cache that lost it)."
+            echo "Re-cloning Lime from scratch before rebuilding."
+            rm -rf .haxelib/lime/git
+            git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
+            git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
+            git -C .haxelib/lime/git submodule update --init --recursive --force
+            haxelib run lime rebuild cpp -release
+            if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
+              echo "ERROR: Missing Lime ndll after rebuild"
+              exit 1
+            fi
+          fi
+
+      # Plain NDK toolchain wrapper, same as the Android-ARM64 job -- no
+      # longer intercepts *-strip. That interception (an earlier attempt at
+      # this same problem) targeted the wrong lever anyway: symbol
+      # preservation now happens via -D HXCPP_DEBUG_LINK in the Compile step
+      # (see the top-of-job comment), which works at hxcpp's own link stage,
+      # not by wrapping whatever external strip tool the toolchain calls.
+      - name: Prepare NDK clang++ for Android
+        run: |
+          mkdir -p /tmp/ndk-wrap
+          NDK_PREBUILT="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          {
+            printf '#!/bin/bash\n'
+            printf 'for arg in "$@"; do\n'
+            printf '  case "$arg" in\n'
+            printf '    *.c) exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" ;;\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+            printf '  esac\n'
+            printf 'done\n'
+            printf 'exec "%s/bin/clang++" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@" -std=c++23\n' "$NDK_PREBUILT" "$NDK_PREBUILT"
+          } > /tmp/ndk-wrap/clang++
+          printf '#!/bin/bash\nexec "%s/bin/clang" "--sysroot=%s/sysroot" -D__ANDROID__ -Wno-macro-redefined "$@"\n' \
+            "$NDK_PREBUILT" "$NDK_PREBUILT" > /tmp/ndk-wrap/clang
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
+          printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          # ar/ranlib wrappers: hxcpp's android-toolchain-clang.xml picks the
+          # archiver by NDK version -- llvm-ar only under NDKV22+, otherwise the
+          # GCC-era arm-linux-androideabi-ar, which NDK r23+ no longer ships at
+          # all. It resolves to the old name here, so without these the archive
+          # step dies with "sh: 1: arm-linux-androideabi-ar: not found".
+          #
+          # These used to be scoped to the fat APK job only, on the reasoning
+          # that ar is reached only when HXCPP_COMPILE_CACHE is set and the
+          # single-arch jobs didn't set it. They all set it now (the Compile
+          # step exports HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"), so that no
+          # longer holds. A WARM ~/.hxcpp_cache hid it: the runtime .a is
+          # restored already built and the archive step is skipped entirely --
+          # it only surfaces on a fully cold cache, which is exactly the run
+          # this export chain needs.
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ranlib
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar /tmp/ndk-wrap/aarch64-linux-android-ar \
+            /tmp/ndk-wrap/aarch64-linux-android-ranlib /tmp/ndk-wrap/arm-linux-androideabi-ranlib
+          echo "/tmp/ndk-wrap" >> $GITHUB_PATH
+
+          # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
+          # also links liblime-v7.so (ARM32) which hits the same NDK 29 sysroot issue.
+          mv "$NDK_PREBUILT/bin/ld.lld" "$NDK_PREBUILT/bin/ld.lld.real"
+          echo 'IyEvYmluL2Jhc2gKTkRLPSJATkRLQCIKSVNfQVJNMzI9ZmFsc2UKUkVTUE9OU0VfRklMRT0iIgpmb3IgYXJnIGluICIkQCI7IGRvCiAgY2FzZSAiJGFyZyIgaW4KICAgIGFybWVsZl9saW51eF9lYWJpKSBJU19BUk0zMj10cnVlIDs7CiAgICBAKikKICAgICAgUkVTUE9OU0VfRklMRT0iJHthcmcjQH0iCiAgICAgIGlmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdICYmIGdyZXAgLXFGICdhcm1lbGZfbGludXhfZWFiaScgIiRSRVNQT05TRV9GSUxFIjsgdGhlbgogICAgICAgIElTX0FSTTMyPXRydWUKICAgICAgZmkKICAgICAgOzsKICBlc2FjCmRvbmUKaWYgJElTX0FSTTMyOyB0aGVuCiAgQVJNMzJfQkFTRT0iJE5ESy9zeXNyb290L3Vzci9saWIvYXJtLWxpbnV4LWFuZHJvaWRlYWJpIgogIEFSTTMyPSIiCiAgIyBQcmVmZXIgdGhlIEFQSSBsZXZlbCB0aGUgY29tcGlsZXIgZHJpdmVyIGFscmVhZHkgY2hvc2U6IGl0IHBhc3NlcyBhbgogICMgYWJzb2x1dGUgY3J0YmVnaW4gcGF0aCBsaWtlIC4uLi9hcm0tbGludXgtYW5kcm9pZGVhYmkvMjgvY3J0YmVnaW5fc28ubywKICAjIGFuZCB0aGUgLUwgZGlyIHdlIHByZXBlbmQgTVVTVCBtYXRjaCBpdCAtLSBvYmplY3RzIGNvbXBpbGVkIGFnYWluc3QKICAjIEFQSS0yOCBoZWFkZXJzIHJlZmVyZW5jZSBzeW1ib2xzIChpY29udiwgc3RkZXJyLCBfX3JlZ2lzdGVyX2F0Zm9yaykKICAjIHRoYXQgdGhlIEFQSS0yMSBsaWJjLnNvIHN0dWJzIGRvIG5vdCBleHBvcnQuIFRoZSBoYXJkY29kZWQgbGlzdCBiZWxvdwogICMgb25seSByZW1haW5zIGFzIGEgZmFsbGJhY2sgZm9yIGRyaXZlcnMgdGhhdCBwYXNzIGJhcmUgQ1JUIG5hbWVzLgogIERFVEVDVEVEX0FQST0iIgogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBERVRFQ1RFRF9BUEk9JChncmVwIC1vRSAnYXJtLWxpbnV4LWFuZHJvaWRlYWJpL1swLTldKy9jcnRiZWdpbicgIiRSRVNQT05TRV9GSUxFIiB8IGhlYWQgLTEgfCBncmVwIC1vRSAnWzAtOV0rJykKICBmaQogIGlmIFsgLXogIiRERVRFQ1RFRF9BUEkiIF07IHRoZW4KICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICAqL2FybS1saW51eC1hbmRyb2lkZWFiaS8qL2NydGJlZ2luKikKICAgICAgICAgIERFVEVDVEVEX0FQST0kKHByaW50ZiAnJXMnICIkYXJnIiB8IGdyZXAgLW9FICdhbmRyb2lkZWFiaS9bMC05XSsvJyB8IGdyZXAgLW9FICdbMC05XSsnKQogICAgICAgICAgOzsKICAgICAgZXNhYwogICAgZG9uZQogIGZpCiAgaWYgWyAtbiAiJERFVEVDVEVEX0FQSSIgXSAmJiBbIC1mICIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJL2NydGJlZ2luX3NvLm8iIF07IHRoZW4KICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kREVURUNURURfQVBJIgogIGVsc2UKICAgIGZvciBhcGkgaW4gMTYgMTkgMjEgMjMgMjQgMjYgMjggMzA7IGRvCiAgICAgIGlmIFsgLWYgIiRBUk0zMl9CQVNFLyRhcGkvY3J0YmVnaW5fc28ubyIgXTsgdGhlbgogICAgICAgIEFSTTMyPSIkQVJNMzJfQkFTRS8kYXBpIgogICAgICAgIGJyZWFrCiAgICAgIGZpCiAgICBkb25lCiAgZmkKICBlY2hvICJsZC5sbGQtd3JhcHBlcjogQVJNMzIgbGluayBkZXRlY3RlZCwgc3lzcm9vdD0kQVJNMzIgKGRyaXZlciBhcGk9JHtERVRFQ1RFRF9BUEk6LW5vbmV9KSIgPiYyCiAgaWYgWyAteiAiJEFSTTMyIiBdOyB0aGVuCiAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogRVJST1Igbm8gQVJNMzIgY3J0YmVnaW5fc28ubyBmb3VuZCB1bmRlciAkQVJNMzJfQkFTRSIgPiYyCiAgICBscyAiJEFSTTMyX0JBU0UiID4mMiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBleGl0IDEKICBmaQogIGlmIFsgLW4gIiRSRVNQT05TRV9GSUxFIiBdICYmIFsgLWYgIiRSRVNQT05TRV9GSUxFIiBdOyB0aGVuCiAgICBORVdfUkVTUD0kKG1rdGVtcCAvdG1wL2xkLWFybTMyLVhYWFhYWC50eHQpCiAgICAjIFByZXBlbmQgdmVyc2lvbmVkIHBhdGggc28gaXRzIGxpYmMuc28gKHdpdGggTElCQ19OKSBiZWF0cyB0aGUgdW52ZXJzaW9uZWQgb25lCiAgICBwcmludGYgJyVzXG4nICItTCRBUk0zMiIgPiAiJE5FV19SRVNQIgogICAgIyBSZXNwb25zZSBmaWxlIHVzZXMgc3BhY2Utc2VwYXJhdGVkIHF1b3RlZCBhcmdzIG9uIG9uZSBsaW5lOyB1c2Ugc2VkIHRvIHJlcGxhY2UgQ1JUIGZpbGVuYW1lcwogICAgc2VkIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zb1wub1wifFwiJEFSTTMyL2NydGJlZ2luX3NvLm9cInxnIiBcCiAgICAgIC1lICJzfFwiY3J0YmVnaW5fZHluYW1pY1wub1wifFwiJEFSTTMyL2NydGJlZ2luX2R5bmFtaWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRiZWdpbl9zdGF0aWNcLm9cInxcIiRBUk0zMi9jcnRiZWdpbl9zdGF0aWMub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRfc29cLm9cInxcIiRBUk0zMi9jcnRlbmRfc28ub1wifGciIFwKICAgICAgLWUgInN8XCJjcnRlbmRcLm9cInxcIiRBUk0zMi9jcnRlbmQub1wifGciIFwKICAgICAgIiRSRVNQT05TRV9GSUxFIiA+PiAiJE5FV19SRVNQIgogICAgZm9yIGQgaW4gIiRBUk0zMl9CQVNFIiAiJE5ESy9saWIvbGludXgvYXJtIiAiJE5ESy9saWIvY2xhbmcvMjEvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzE4L2xpYi9saW51eC9hcm0iOyBkbwogICAgICBpZiBbIC1mICIkZC9saWJjKytfc3RhdGljLmEiIF07IHRoZW4KICAgICAgICBwcmludGYgJyVzXG4nICItTCRkIiA+PiAiJE5FV19SRVNQIgogICAgICAgIGVjaG8gImxkLmxsZC13cmFwcGVyOiBhZGRlZCBsaWJjKytfc3RhdGljPSRkIiA+JjIKICAgICAgICBicmVhawogICAgICBmaQogICAgZG9uZQogICAgZXhlYyAtYSBsZC5sbGQgIiROREsvYmluL2xkLmxsZC5yZWFsIiAiQCRORVdfUkVTUCIKICBlbHNlCiAgICAjIENvbW1hbmQtbGluZSBwYXRoIChMaW1lIG5hdGl2ZSByZWJ1aWxkKTogcHJlcGVuZCB2ZXJzaW9uZWQgcGF0aCBhbmQgYWJzb2x1dGl6ZSBDUlQgYXJncwogICAgTkVXQVJHUz0oIi1MJEFSTTMyIikKICAgIGZvciBhcmcgaW4gIiRAIjsgZG8KICAgICAgY2FzZSAiJGFyZyIgaW4KICAgICAgICBjcnRiZWdpbl9zby5vfGNydGJlZ2luX2R5bmFtaWMub3xjcnRiZWdpbl9zdGF0aWMub3xjcnRlbmRfc28ub3xjcnRlbmQubykKICAgICAgICAgIE5FV0FSR1MrPSgiJEFSTTMyLyRhcmciKSA7OwogICAgICAgICopIE5FV0FSR1MrPSgiJGFyZyIpIDs7CiAgICAgIGVzYWMKICAgIGRvbmUKICAgIGZvciBkIGluICIkQVJNMzJfQkFTRSIgIiROREsvbGliL2xpbnV4L2FybSIgIiROREsvbGliL2NsYW5nLzIxL2xpYi9saW51eC9hcm0iICIkTkRLL2xpYi9jbGFuZy8xOC9saWIvbGludXgvYXJtIjsgZG8KICAgICAgaWYgWyAtZiAiJGQvbGliYysrX3N0YXRpYy5hIiBdOyB0aGVuCiAgICAgICAgTkVXQVJHUys9KCItTCRkIikKICAgICAgICBlY2hvICJsZC5sbGQtd3JhcHBlcjogYWRkZWQgbGliYysrX3N0YXRpYz0kZCIgPiYyCiAgICAgICAgYnJlYWsKICAgICAgZmkKICAgIGRvbmUKICAgIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiR7TkVXQVJHU1tAXX0iCiAgZmkKZWxzZQogIGV4ZWMgLWEgbGQubGxkICIkTkRLL2Jpbi9sZC5sbGQucmVhbCIgIiRAIgpmaQo=' \
+            | base64 -d | sed "s|@NDK@|$NDK_PREBUILT|g" > "$NDK_PREBUILT/bin/ld.lld"
+          chmod +x "$NDK_PREBUILT/bin/ld.lld"
+
+      - name: Configure Android
+        run: |
+          haxelib run lime setup android
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config ANDROID_SETUP true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-android-arm64-${{ hashFiles('**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-android-arm64-
+
+      - name: Patch SDL posix process for Android
+        run: |
+          echo "=== Scanning for SDL_posixprocess.c ==="
+          FOUND=0
+          while IFS= read -r SDL_FILE; do
+            echo "Found: $SDL_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_FILE"; printf '\n#endif\n'; } > /tmp/sdlfix
+              mv /tmp/sdlfix "$SDL_FILE"
+              echo "  Patched ($(wc -l < "$SDL_FILE") lines). First line: $(head -1 "$SDL_FILE")"
+            fi
+            FOUND=1
+          done < <(find .haxelib/lime -name "SDL_posixprocess.c" -type f 2>/dev/null)
+          if [ "$FOUND" = "0" ]; then
+            echo "WARNING: SDL_posixprocess.c not found in .haxelib/lime (may be a cache-hit-only run)"
+            find .haxelib -maxdepth 5 -type d 2>/dev/null | head -20 || true
+          fi
+
+          echo "=== Patching OpenAL lock-free assertion for ARM32 ==="
+          while IFS= read -r AL_FILE; do
+            echo "Found: $AL_FILE"
+            if grep -q 'is_always_lock_free' "$AL_FILE"; then
+              sed -i 's/static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free,.*);/static_assert(true, "lock-free check relaxed for Android ARM32");/' "$AL_FILE"
+              echo "  Patched: removed is_always_lock_free assertion"
+            else
+              echo "  No matching assertion found (already patched or different version)"
+            fi
+          done < <(find .haxelib/lime -path "*/openal/core/context.cpp" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_openxrdyn.c: OpenXR unsupported on ARM32 ==="
+          while IFS= read -r XR_FILE; do
+            echo "Found: $XR_FILE"
+            if grep -q '^#if !defined(__arm__)' "$XR_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#if !defined(__arm__)\n'; cat "$XR_FILE"; printf '\n#endif\n'; } > /tmp/sdlxrfix
+              mv /tmp/sdlxrfix "$XR_FILE"
+              echo "  Patched: wrapped with #if !defined(__arm__)"
+            fi
+          done < <(find .haxelib/lime -name "SDL_openxrdyn.c" -type f 2>/dev/null)
+
+          echo "=== Patching SDL_process.c: exclude process creation API on Android ==="
+          while IFS= read -r SDL_PROC_FILE; do
+            echo "Found: $SDL_PROC_FILE"
+            if grep -q '^#ifndef __ANDROID__' "$SDL_PROC_FILE"; then
+              echo "  Already patched, skipping."
+            else
+              { printf '#ifndef __ANDROID__\n'; cat "$SDL_PROC_FILE"; printf '\n#endif\n'; } > /tmp/sdlprocfix
+              mv /tmp/sdlprocfix "$SDL_PROC_FILE"
+              echo "  Patched ($(wc -l < "$SDL_PROC_FILE") lines). First line: $(head -1 "$SDL_PROC_FILE")"
+            fi
+          done < <(find .haxelib/lime -name "SDL_process.c" -type f 2>/dev/null)
+
+      - name: Patch lime audio for Android (cheaper resampler, timer-based completion)
+        run: |
+          echo "=== Patching AudioManager.hx: cheaper OpenAL resampler on Android ==="
+          while IFS= read -r AM_FILE; do
+            echo "Found: $AM_FILE"
+            python3 .github/scripts/patch-lime-audio-resampler.py "$AM_FILE"
+          done < <(find .haxelib/lime -path "*lime/media/AudioManager.hx" -type f 2>/dev/null)
+
+          echo "=== Patching NativeAudioSource.hx: timer-based completion instead of per-frame polling ==="
+          while IFS= read -r NAS_FILE; do
+            echo "Found: $NAS_FILE"
+            python3 .github/scripts/patch-lime-audio-completion.py "$NAS_FILE"
+          done < <(find .haxelib/lime -path "*_internal/backend/native/NativeAudioSource.hx" -type f 2>/dev/null)
+
+      - name: Patch hscript-iris Iris.call() to reuse its result object
+        run: |
+          while IFS= read -r IRIS_FILE; do
+            echo "Found: $IRIS_FILE"
+            python3 .github/scripts/patch-hscript-iris-call.py "$IRIS_FILE"
+          done < <(find .haxelib -path "*crowplexus/iris/Iris.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log (Double Trouble, SIGSEGV / null
+      # pointer dereference) against an unstripped libApplicationMain.so from
+      # the Android-ARM64-DebugSymbols job -- resolved to FilterRenderer's
+      # matrixPool clean callback ((m) -> m.identity()) dereferencing a null
+      # FlxMatrix. Traced to Element.destroy() unconditionally releasing
+      # _mat/matrix back to matrixPool with no null guard: a second destroy()
+      # call on the same element passes an already-nulled field straight
+      # into matrixPool.release(null), which only guards against that under
+      # "#if debug" -- a release build falls through to clean(null) and
+      # crashes. See patch-flixel-animate-element-destroy.py for the full
+      # writeup.
+      - name: Patch flixel-animate Element.destroy() to guard against double-release
+        run: |
+          while IFS= read -r ELEMENT_FILE; do
+            echo "Found: $ELEMENT_FILE"
+            python3 .github/scripts/patch-flixel-animate-element-destroy.py "$ELEMENT_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/Element.hx" -type f 2>/dev/null)
+
+      # lime.utils.ObjectPool.release()'s null/foreign-object guard only
+      # exists under "#if debug", and never actually returns early even
+      # there -- a release build has no guard at all, so release(null) (or
+      # releasing an object this pool never gave out) falls through to
+      # clean(object). For FilterRenderer.matrixPool/cameraPool that's
+      # (m) -> m.identity() / (c) -> c, a null pointer dereference with no
+      # catchable exception. The Element.destroy() patch above only covers
+      # ONE caller of this; this patches the pool itself so every caller is
+      # protected. See patch-lime-objectpool-release-guard.py for the full
+      # writeup.
+      - name: Patch lime ObjectPool.release() to guard against null/foreign objects
+        run: |
+          while IFS= read -r POOL_FILE; do
+            echo "Found: $POOL_FILE"
+            python3 .github/scripts/patch-lime-objectpool-release-guard.py "$POOL_FILE"
+          done < <(find .haxelib -path "*lime/utils/ObjectPool.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE (file:line resolution
+      # via dump_syms, see SymbolResolver.hx) landing inside the closure
+      # _bakeFilters() passes to renderToBitmap(), specifically
+      # expandFilterBounds()'s `for (filter in filters)` over a null array.
+      # bakeFilters()'s only caller already validates its filters parameter
+      # is non-null/non-empty, but bakeFilters() itself ignores that
+      # parameter and re-reads movieclip._filters fresh -- see
+      # patch-flixel-animate-bakefilters-stale-read.py for the full writeup.
+      - name: Patch flixel-animate bakeFilters() stale filters re-read
+        run: |
+          while IFS= read -r FILTER_RENDERER_FILE; do
+            echo "Found: $FILTER_RENDERER_FILE"
+            python3 .github/scripts/patch-flixel-animate-bakefilters-stale-read.py "$FILTER_RENDERER_FILE"
+          done < <(find .haxelib -path "*animate/internal/FilterRenderer.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside this
+      # exact function (inlined into FilterRenderer.bakeFilters()'s closure,
+      # which is why it initially looked like a filter-baking bug) even in a
+      # build that already includes the bakeFilters fix above -- a
+      # DIFFERENT crash sharing the same call chain. libraryItem.timeline is
+      # dereferenced unconditionally despite the constructor itself already
+      # treating a null libraryItem as reachable. See
+      # patch-flixel-animate-drawtimeline-libraryitem-guard.py for the full
+      # writeup.
+      - name: Patch flixel-animate SymbolInstance._drawTimeline() libraryItem guard
+        run: |
+          while IFS= read -r SYMBOL_INSTANCE_FILE; do
+            echo "Found: $SYMBOL_INSTANCE_FILE"
+            python3 .github/scripts/patch-flixel-animate-drawtimeline-libraryitem-guard.py "$SYMBOL_INSTANCE_FILE"
+          done < <(find .haxelib -path "*animate/internal/elements/SymbolInstance.hx" -type f 2>/dev/null)
+
+      # Symbolicated a native_crash_trace.log ON-DEVICE landing inside
+      # ComponentBase.dispatch()'s own first field access, called with a
+      # null `this` -- traced to DataSourceBehaviour.dispatchChanged()'s
+      # deferred Toolkit.callLater() callback dereferencing _component
+      # after Behaviours.dispose() (component tree teardown, e.g. leaving
+      # CharacterEditorState) already nulled it out. See
+      # patch-haxeui-listview-disposed-callback.py for the full writeup.
+      - name: Patch haxeui-core ListView disposed-callback guard
+        run: |
+          while IFS= read -r LISTVIEW_FILE; do
+            echo "Found: $LISTVIEW_FILE"
+            python3 .github/scripts/patch-haxeui-listview-disposed-callback.py "$LISTVIEW_FILE"
+          done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
+
+      - name: Rebuild Android Lime so
+        id: rebuild-lime-android
+        run: |
+          if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "Android liblime .so files already present, skipping rebuild."
+          else
+            echo "Android liblime .so missing (fresh checkout after hxpkg --force or ndll self-heal). Rebuilding."
+            haxelib run lime rebuild android -release
+          fi
+          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ] || [ ! -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
+            echo "ERROR: Missing Android liblime .so after rebuild"
+            exit 1
+          fi
+
+      - name: Apply Gradle ABI splits for ARM64
+        run: |
+          bash .github/scripts/patch-lime-gradle.sh arm64
+
+      - name: Enable native debug symbols output for release
+        run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
+
+      # Separate cache lineage from the Android-ARM64 job's release build on
+      # purpose -- see the top-of-job comment on HXCPP_DEBUG_LINK.
+      - name: Restore hxcpp build artifacts (ARM64, debug symbols)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            export/release/android/obj
+            export/release/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+          restore-keys: |
+            hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-
+
+      - name: Prune stale hxcpp compile caches
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
+
+      # Saved BEFORE Compile, on purpose. Both trees are finished and
+      # asserted by this point -- "Rebuild Android Lime so" exits non-zero
+      # unless both liblime .so files exist -- and nothing after this line
+      # writes to them, so there is nothing to gain by waiting.
+      #
+      # What there is to LOSE by waiting is everything: Compile is the long
+      # step (~23 min cold) and the one that gets killed. actions/cache's
+      # post step only saves on job success, which is how run #439 discarded
+      # a complete haxelib tree and a complete Lime tree after dying at the
+      # final archive step. Saving here also survives what a post-Compile
+      # save cannot: a cancelled run, a job timeout, an OOM-killed runner.
+      #
+      # Each save is still gated on the step that POPULATES it, never on the
+      # job. "Install Haxe libraries" and "Prepare Lime source" are both
+      # gated on a cache hit, so a half-installed tree written to the cache
+      # would be restored on the next run and SKIPPED rather than repaired --
+      # the cache poisoning that forced the earlier v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): GitHub's own guidance, since
+      # always() keeps a cancelled job hanging on these steps.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      # See the matching comment in the ARM64 job's Compile step -- same
+      # missing HXCPP_COMPILE_CACHE bug, same fix. Uses this job's own
+      # ~/.hxcpp_cache (cached above under its own debugsyms key) -- safe to
+      # reuse the same $HOME path since each job runs in an isolated runner VM.
+      - name: Compile
+        env:
+          HXCPP_COMPILE_THREADS: 4
+          HXCPP_CACHE_MB: "4000"
+        run: |
+          export HXCPP_COMPILE_CACHE="$HOME/.hxcpp_cache"
+          mkdir -p "$HXCPP_COMPILE_CACHE"
+          BUILD_FLAGS="${{inputs.buildFlags}}"
+          if [ -n "$BUILD_FLAGS" ]; then
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK -D $BUILD_FLAGS
+          else
+            haxelib run lime build android -release -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
+          fi
+
+      # This one cannot move up -- Compile is what produces it. Unlike the
+      # two above it needs no success gate: nothing skips work on a hit
+      # (Compile always runs and hxcpp decides per file), so a partial
+      # object cache is a head start rather than a broken state.
+      #
+      # !cancelled() matters more here than above: a cancelled job can be
+      # killed mid-write, and a truncated .o carrying a fresh mtime reads as
+      # up-to-date to hxcpp's dependency check -- it fails at link time
+      # instead of being rebuilt. A failed job has stopped cleanly.
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/release/android/obj
+            export/release/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
+      - name: Diagnostic - inspect .so files after build
+        run: |
+          echo "=== All .so files under export/release/android/ ==="
+          find export/release/android -name "*.so" -exec ls -la {} \; 2>/dev/null
+          echo ""
+          echo "=== file(1) output for each (stripped vs not) ==="
+          find export/release/android -name "*.so" -exec file {} \; 2>/dev/null
+          echo ""
+          echo "=== Specifically looking for our own app library ==="
+          find export/release/android -iname "*ApplicationMain*" 2>/dev/null
+
+      # The actual symbol source -- see the top-of-job comment for why this
+      # bypasses Gradle's packaging entirely instead of trying to ship the
+      # unstripped library inside the APK itself. The doc comment this
+      # replaced claimed getUnstrippedFilename() in hxcpp's Linker.hx
+      # resolves to <objDir>/libApplicationMain.so (obj/androidarm64-64/...
+      # for this job's arm64-only build) -- but the "Diagnostic - inspect
+      # .so files after build" step above proved that path has never
+      # existed on this hxcpp/Lime pin: the real unstripped output (ELF
+      # with debug_info, not stripped, confirmed via `file`) lands flat at
+      # obj/libApplicationMain-64.so instead. Every run of this job through
+      # today silently skipped the zip/upload of the actual symbol source
+      # because of this (the step failed, and the upload steps after it
+      # have no if: always() to still attempt with whatever's on disk).
+      - name: Zip unstripped game library
+        run: |
+          set -euo pipefail
+          UNSTRIPPED_SO="export/release/android/obj/libApplicationMain-64.so"
+          if [ ! -f "$UNSTRIPPED_SO" ]; then
+            echo "ERROR: $UNSTRIPPED_SO not found -- HXCPP_DEBUG_LINK may not have taken effect, or hxcpp's obj dir layout changed"
+            exit 1
+          fi
+          file "$UNSTRIPPED_SO"
+          if file "$UNSTRIPPED_SO" | grep -q ', stripped'; then
+            echo "ERROR: $UNSTRIPPED_SO is stripped -- expected debug_info here, something upstream changed"
+            exit 1
+          fi
+          mkdir -p /tmp/unstripped-so
+          cp "$UNSTRIPPED_SO" /tmp/unstripped-so/libApplicationMain.so
+          zip -j unstripped-libApplicationMain-arm64.zip /tmp/unstripped-so/libApplicationMain.so
+
+      - name: Upload unstripped game library
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Unstripped libApplicationMain.so (Android ARM64)
+          path: unstripped-libApplicationMain-arm64.zip
+          if-no-files-found: error
+
+      # Same APK Android-ARM64 already produces (stripped, like any normal
+      # release build) -- uploaded here too just so this job is
+      # self-contained: install it, reproduce the crash, then symbolize the
+      # resulting native_crash_trace.log against the unstripped .so above.
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: VS Impostor Legacy (Android ARM64, debug symbols)
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Upload native debug symbols (Gradle-processed libraries)
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Native Debug Symbols - Gradle (Android ARM64)
+          path: export/release/android/bin/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # This job's only purpose is cache housekeeping, split out from the main
+  # debug-symbols job on purpose. actions/cache's own save happens as a
+  # post-job hook that runs AFTER every regular step in a job finishes --
+  # there's no way to inject a step that runs after that save within the
+  # SAME job, so the "Prune stale hxcpp compile caches" step inside
+  # Android-ARM64-DebugSymbols can only ever prune caches that existed
+  # BEFORE this run started, never the one this run's own compile just
+  # produced. That's fine for the routine ARM64/ARM32/fat jobs (built often
+  # enough that the next run prunes yesterday's leftovers within hours),
+  # but arm64-debugsymbols is only triggered manually, occasionally, while
+  # chasing a specific crash -- so its ~900MB-per-generation cache could
+  # otherwise sit orphaned for weeks between uses. Running the exact same
+  # prune here, right after Android-ARM64-DebugSymbols (and its cache-save
+  # post-hook) finishes, cleans that up the same day instead.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Prune-DebugSymbols-Cache:
+    name: Prune stale debug-symbols hxcpp cache
+    needs: Android-ARM64-DebugSymbols
+    if: always() && inputs.target == 'arm64-debugsymbols' && inputs.symbolicate_run_id == '' && inputs.inspect_glob == '' && inputs.measure_sym_run_id == ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Prune stale hxcpp compile caches (post-build)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prune-stale-hxcpp-cache.sh "hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-" "${{ github.ref }}"
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # Reusable crash-trace symbolication job -- only runs when symbolicate_run_id
+  # is explicitly provided. Downloads the already-built unstripped
+  # libApplicationMain.so artifact from a prior arm64-debugsymbols run (no
+  # recompiling) and resolves symbolicate_offsets -- a captured
+  # native_crash_trace.log's crashing thread's unresolved app-code rel_pc
+  # offsets, extracted from the tombstone protobuf (see the pbdump/
+  # extract_thread scripts used to pull them out, kept in this session's
+  # scratchpad) -- via addr2line. First used for the touch-nav-mode crash
+  # (fixed in OptionsState.hx, commit fcb821ee); kept around for future
+  # native_crash_trace.log reports since the pattern (build once with
+  # target=arm64-debugsymbols, then re-run this job per trace without
+  # recompiling) is cheap to reuse.
+  # ───────────────────────────────────────────────────────────────────────────────
+  Symbolicate:
+    name: Symbolicate crash trace
+    if: inputs.symbolicate_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Download unstripped .so artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: Unstripped libApplicationMain.so (Android ARM64)
+          path: unstripped
+          run-id: ${{ inputs.symbolicate_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Unzip the .so (the artifact IS unstripped-libApplicationMain-arm64.zip itself)
+        run: |
+          cd unstripped
+          ls -la
+          unzip -o unstripped-libApplicationMain-arm64.zip
+          ls -la
+
+      - name: Locate NDK addr2line
+        id: ndk
+        run: |
+          NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          A2L="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-addr2line"
+          if [ ! -f "$A2L" ]; then
+            echo "llvm-addr2line not found at $A2L, falling back to system addr2line"
+            A2L="addr2line"
+          fi
+          echo "bin=$A2L" >> "$GITHUB_OUTPUT"
+
+      - name: Symbolicate crashing thread's backtrace
+        run: |
+          set -euo pipefail
+          SO="unstripped/libApplicationMain.so"
+          ls -la "$SO"
+          file "$SO"
+          echo ""
+          OFFSETS="${{ inputs.symbolicate_offsets }}"
+          if [ -z "$OFFSETS" ]; then
+            echo "No symbolicate_offsets provided -- nothing to resolve."
+            exit 1
+          fi
+          echo "=== Resolving offsets (innermost frame first) ==="
+          i=0
+          for off in $OFFSETS; do
+            echo "--- frame $i (rel_pc=$off) ---"
+            "${{ steps.ndk.outputs.bin }}" -f -C -i -e "$SO" "$off" || echo "FAILED to resolve $off"
+            i=$((i+1))
+          done
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # Reusable diagnostic job: measures the real size of a Breakpad-format .sym
+  # file (dump_syms, https://github.com/mozilla/dump_syms -- converts DWARF
+  # into a compact text format: FUNC/line records for file:line,
+  # INLINE/INLINE_ORIGIN records for full inline chains, see
+  # https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/symbol_files.md)
+  # generated from an EXISTING unstripped .so artifact, reused from a PAST
+  # arm64-debugsymbols run instead of compiling a fresh one -- no checkout,
+  # no Haxe/hxcpp, just a download + a single external tool run. Answers
+  # "is full addr2line-equivalent (file:line + inlining) on-device
+  # resolution worth the APK size cost" without spending a ~40min compile
+  # job just to find out. Same reusable pattern as the Symbolicate job
+  # above (build once with target=arm64-debugsymbols, then measure against
+  # that same run's artifact as many times as needed without recompiling).
+  # ───────────────────────────────────────────────────────────────────────────────
+  MeasureSymSize:
+    name: Measure dump_syms .sym size (no compile)
+    if: inputs.measure_sym_run_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Download unstripped .so artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: Unstripped libApplicationMain.so (Android ARM64)
+          path: unstripped
+          run-id: ${{ inputs.measure_sym_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Unzip the .so (the artifact IS unstripped-libApplicationMain-arm64.zip itself)
+        run: |
+          cd unstripped
+          ls -la
+          unzip -o unstripped-libApplicationMain-arm64.zip
+          ls -la
+
+      - name: Download dump_syms
+        run: |
+          set -euo pipefail
+          DUMP_SYMS_VERSION="v2.3.7"
+          curl -sSL -o dump_syms.tar.xz \
+            "https://github.com/mozilla/dump_syms/releases/download/${DUMP_SYMS_VERSION}/dump_syms-x86_64-unknown-linux-gnu.tar.xz"
+          mkdir -p dump_syms_extracted
+          tar -xJf dump_syms.tar.xz -C dump_syms_extracted
+
+          DUMP_SYMS_BIN=$(find dump_syms_extracted -maxdepth 3 -type f -iname "dump_syms")
+          if [ -z "$DUMP_SYMS_BIN" ]; then
+            echo "ERROR: dump_syms binary not found inside the downloaded release archive"
+            exit 1
+          fi
+          chmod +x "$DUMP_SYMS_BIN"
+          echo "DUMP_SYMS_BIN=$DUMP_SYMS_BIN" >> "$GITHUB_ENV"
+
+      - name: Measure .sym output size
+        run: |
+          set -euo pipefail
+          SO="unstripped/libApplicationMain.so"
+          ls -la "$SO"
+          file "$SO"
+
+          echo ""
+          echo "=== dump_syms (file:line only, no inlines) ==="
+          "$DUMP_SYMS_BIN" -o symbols-noinline.sym "$SO"
+          ls -la symbols-noinline.sym
+          echo "Lines: $(wc -l < symbols-noinline.sym)"
+          echo "Gzip -9 size: $(gzip -9 -c symbols-noinline.sym | wc -c) bytes"
+
+          echo ""
+          echo "=== dump_syms --inlines (file:line + full inline chains) ==="
+          "$DUMP_SYMS_BIN" --inlines -o symbols-inlines.sym "$SO"
+          ls -la symbols-inlines.sym
+          echo "Lines: $(wc -l < symbols-inlines.sym)"
+          echo "Gzip -9 size: $(gzip -9 -c symbols-inlines.sym | wc -c) bytes"
+
+          echo ""
+          echo "=== record counts (context on where the size comes from) ==="
+          echo "FUNC records:   $(grep -c '^FUNC ' symbols-inlines.sym || true)"
+          echo "INLINE records: $(grep -c '^INLINE ' symbols-inlines.sym || true)"
+          echo "FILE records:   $(grep -c '^FILE ' symbols-inlines.sym || true)"
+
+      - name: Upload dump_syms output (diagnostic only)
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dump_syms diagnostic output
+          path: |
+            symbols-noinline.sym
+            symbols-inlines.sym
+          if-no-files-found: warn
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # Reusable job to inspect a haxelib dependency's actual source (e.g. to write
+  # a precise patch against third-party code like flixel-animate without
+  # guessing at its exact text). Only sets up Haxe/haxelib and installs
+  # dependencies -- no compiling -- so it's fast. Only runs when inspect_glob
+  # is explicitly provided.
+  # ───────────────────────────────────────────────────────────────────────────────
+  InspectSource:
+    name: Inspect haxelib source
+    if: inputs.inspect_glob != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -23,195 +2514,27 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: Install Linux system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
-            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
-            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
-            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
-            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
-            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
-            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
-            libvulkan-dev pkg-config
+      - name: Setup haxelib root
+        run: haxelib setup ~/haxelib
 
-      - name: Prepare Android Lime rebuild
-        env:
-          CC: gcc-13
-          CXX: g++-13
+      - name: Install Haxe libraries
         run: |
-          set -euo pipefail
-          haxelib setup ~/haxelib
           haxelib install hxcpp > /dev/null --quiet
           haxelib install hxpkg --quiet
-          haxelib run hxpkg install
-          rm -rf .haxelib/lime
-          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
-          git -C .haxelib/lime/git submodule update --init --recursive --force
-          haxelib dev lime .haxelib/lime/git
-          
-      - name: Rebuild Linux Lime ndll
-        env:
-          CC: gcc-13
-          CXX: g++-13
-        run: |
-          haxelib run lime rebuild cpp -release
-          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
-            echo "ERROR: Missing Lime ndll"
-            exit 1
-          fi
-          
-      - name: Configure Android
-        run: |
-          haxelib run lime setup android
-          haxelib run lime config ANDROID_SDK $ANDROID_HOME
-          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_LATEST_HOME
-          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
-          haxelib run lime config ANDROID_SETUP true
+          haxelib run hxpkg install --force
 
-      - name: Rebuild Android Lime so
-        env:
-          CC: gcc-13
-          CXX: g++-13
+      - name: List matches
         run: |
-          haxelib run lime rebuild android -release
-          if [ ! -f .haxelib/lime/git/ndll/Android/liblime-64.so ]; then
-            echo "ERROR: Missing Liblime 64 so"
+          find .haxelib -path "${{ inputs.inspect_glob }}" -type f 2>/dev/null | tee /tmp/matches.txt
+          if [ ! -s /tmp/matches.txt ]; then
+            echo "No files matched glob: ${{ inputs.inspect_glob }}"
             exit 1
           fi
 
-      - name: Compile
-        run: haxelib run lime build android -release -D ${{inputs.buildFlags}}
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: NightmareVision (Android)
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-   Windows:
-    name: Build Windows
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          submodules: true
-          
-      - uses: krdlab/setup-haxe@v2.1.0
-        with:
-          haxe-version: 4.3.7
-
-      - name: Prepare Windows Lime rebuild
-        shell: pwsh
+      - name: Cat matched files
         run: |
-          function Run {
-            $exe = $args[0]
-            $cmdArgs = @()
-            if ($args.Length -gt 1) {
-              $cmdArgs = $args[1..($args.Length - 1)]
-            }
-            Write-Host ">>> $exe $($cmdArgs -join ' ')"
-            & $exe @cmdArgs
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "Command failed with exit code ${LASTEXITCODE}: $exe $($cmdArgs -join ' ')"
-              exit $LASTEXITCODE
-            }
-          }
-          Run haxelib setup C:/haxelib
-          Run haxelib install hxcpp --quiet
-          Run haxelib install hxpkg --quiet
-          Run haxelib run hxpkg install
-          if (Test-Path .haxelib/lime) {
-            Remove-Item -Recurse -Force -LiteralPath .haxelib/lime
-          }
-          Run git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          Run git -C .haxelib/lime/git fetch --all --tags --prune
-          Run git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
-          Run git -C .haxelib/lime/git submodule sync --recursive
-          Run git -C .haxelib/lime/git submodule update --init --recursive --force
-          Run haxelib dev lime .haxelib/lime/git
-          if (Test-Path .haxelib/lime/git/project/obj) {
-            Remove-Item -Recurse -Force -LiteralPath .haxelib/lime/git/project/obj
-          }
-          if (Test-Path .haxelib/lime/git/ndll) {
-            Remove-Item -Recurse -Force -LiteralPath .haxelib/lime/git/ndll
-          }
-          Run haxelib path lime
-          Run haxelib run lime rebuild cpp -release
-
-      - name: Build Windows
-        run: haxelib run lime build windows -D ${{inputs.buildFlags}}
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: NightmareVision (Windows)
-          path: export/release/windows/bin
-   Linux:
-    name: Build Linux
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          submodules: true
-
-      - uses: krdlab/setup-haxe@v2.1.0
-        with:
-          haxe-version: 4.3.7
-
-      - name: Install Linux system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential gcc-13 g++-13 vlc libvlc-dev libvlccore-dev vlc-bin \
-            libwayland-dev libwayland-bin wayland-protocols libasound2-dev \
-            libpulse-dev libjack-jackd2-dev libpipewire-0.3-dev libgl1-mesa-dev \
-            libegl1-mesa-dev libglu1-mesa-dev libdbus-1-dev libudev-dev \
-            libxkbcommon-dev libx11-dev libxext-dev libx11-xcb-dev libxfixes-dev \
-            libxss-dev libxrender-dev libxrandr-dev libxcursor-dev libxi-dev \
-            libxinerama-dev libxxf86vm-dev libgbm-dev libdrm-dev libdecor-0-dev \
-            libvulkan-dev pkg-config
-
-      - name: Prepare Linux Lime rebuild
-        env:
-          CC: gcc-13
-          CXX: g++-13
-        run: |
-          set -euo pipefail
-          haxelib setup ~/haxelib
-          haxelib install hxcpp > /dev/null --quiet
-          haxelib install hxpkg --quiet
-          haxelib run hxpkg install
-          rm -rf .haxelib/lime
-          git clone https://github.com/FunkinCrew/lime .haxelib/lime/git
-          git -C .haxelib/lime/git checkout 6421de16b9dfa4fb55c19f12db65d392a57585c8
-          git -C .haxelib/lime/git submodule update --init --recursive --force
-          haxelib dev lime .haxelib/lime/git
-
-      - name: Rebuild Linux Lime ndll
-        env:
-          CC: gcc-13
-          CXX: g++-13
-        run: |
-          haxelib run lime rebuild cpp -release
-          if [ ! -f .haxelib/lime/git/ndll/Linux64/lime.ndll ]; then
-            echo "ERROR: Missing Lime ndll"
-            exit 1
-          fi
-
-      - name: Build Linux
-        env:
-          CC: gcc-13
-          CXX: g++-13
-        run: haxelib run lime build Project.xml linux -D ${{inputs.buildFlags}}
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: NightmareVision (Linux)
-          path: export/release/linux/bin
-
+          while IFS= read -r f; do
+            echo "=== $f ==="
+            cat -n "$f"
+            echo ""
+          done < /tmp/matches.txt

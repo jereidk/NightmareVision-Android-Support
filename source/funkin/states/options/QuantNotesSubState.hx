@@ -21,15 +21,26 @@ class QuantNotesSubState extends MusicBeatSubstate
 	private var grpNumbers:FlxTypedGroup<Alphabet>;
 	private var grpNotes:FlxTypedGroup<FlxSprite>;
 	private var grpQuants:FlxTypedGroup<AttachedAlphabet>;
-	private var shaderArray:Array<HSLColorSwap> = [];
+	// Same gameplay-matching RGB coloring as NotesSubState. Was HSLColorSwap
+	// over frames from a 'QUANTNOTE_assets' atlas that doesn't exist in this
+	// fork at all -- so every preview note loaded no frames (blank / fallback).
+	private var paletteArray:Array<funkin.game.shaders.RGBShader.RGBPalette> = [];
 	var curValue:Float = 0;
 	var holdTime:Float = 0;
 	var nextAccept:Int = 5;
 	
 	var blackBG:FlxSprite;
 	var hsbText:Alphabet;
-	
-	var posX = 230;
+
+	// Same rationale as NotesSubState: every note/number preview alpha here
+	// is already meaningful selection state, so a covering sprite faded to
+	// opaque (rather than fading every member) avoids clobbering it.
+	var closeCover:FlxSprite;
+	var isClosing:Bool = false;
+
+	// Same symmetric-margin panel as NotesSubState.posX — shifted by half the
+	// 'expand'-mode cutout to stay centered.
+	var posX = 230 + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.5;
 	
 	public static var defaults:Array<Array<Int>> = [
 		[0, -20, 0], // 4th
@@ -44,20 +55,6 @@ class QuantNotesSubState extends MusicBeatSubstate
 		[-120, -70, -35], // 96th
 		[-120, -70, -35] // 192nd
 	];
-	public static var quantStepmania:Array<Array<Int>> = [
-		[10, -20, 0], // 4th
-		[-110, -40, 0], // 8th
-		[140, -20, 0], // 12th
-		[50, 25, 0], // 16th
-		[0, -100, -50], // 20th
-		[-80, -40, 0], // 24th
-		[-180, 10, -10], // 32nd
-		[-35, 50, 30], // 48th
-		[160, -15, 0], // 64th
-		[-120, -70, -35], // 96th
-		[-120, -70, -35] // 192nd
-	];
-	
 	public static var quantizations:Array<String> = [
 		"4th", "8th", "12th", "16th", "20th", "24th", "32nd", "48th", "64th", "96th", "192nd"
 	];
@@ -66,8 +63,21 @@ class QuantNotesSubState extends MusicBeatSubstate
 	{
 		super();
 		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
+		// Was 'menus/menuDesat' -- doesn't exist under this fork's own legacy
+		// assets (only assets/game/images/menus/menuDesat.png, the upstream
+		// base-game copy), unlike NotesSubState's identical background which
+		// correctly uses the plain 'menuDesat' key (assets/legacy/images/
+		// menuDesat.png) -- this substate rendered with no background at all.
+		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = 0xFFea71fd;
+		// Same fixed 1286x730 background as CreditsState/NotesSubState —
+		// stretch first (gated on gameCutoutSize.x) so screenCenter() covers
+		// the full width instead of leaving black bars on both sides.
+		if (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+		{
+			bg.setGraphicSize(Std.int(bg.width + funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x), Std.int(bg.height));
+			bg.updateHitbox();
+		}
 		bg.screenCenter();
 		add(bg);
 		
@@ -93,23 +103,25 @@ class QuantNotesSubState extends MusicBeatSubstate
 			}
 			
 			var note:FlxSprite = new FlxSprite(posX, yPos);
-			note.frames = Paths.getSparrowAtlas('QUANTNOTE_assets');
-			
+			// Quant notes use the same NOTE_assets sprites as regular notes,
+			// just recolored per quantization (there is no QUANTNOTE_assets
+			// atlas). Cycle the 4 directions so consecutive rows aren't all the
+			// same arrow shape.
+			note.frames = Paths.getSparrowAtlas('NOTE_assets');
+			var dirs:Array<String> = ['left note', 'down note', 'up note', 'right note'];
+			note.animation.addByPrefix('idle', dirs[i % 4], 24, true);
+			note.animation.play('idle');
+
 			var txt:AttachedAlphabet = new AttachedAlphabet(quantizations[i], 0, 0, true);
 			txt.sprTracker = note;
 			txt.copyAlpha = true;
 			add(txt);
-			var animations:Array<String> = ['purple0', 'blue0', 'green0', 'red0'];
-			note.animation.addByPrefix('idle', animations[i % 4]);
-			note.animation.play('idle');
 			grpNotes.add(note);
-			
-			var newShader:HSLColorSwap = new HSLColorSwap();
-			note.shader = newShader.shader;
-			newShader.hue = ClientPrefs.quantHSV[i][0] / 360;
-			newShader.saturation = ClientPrefs.quantHSV[i][1] / 100;
-			newShader.lightness = ClientPrefs.quantHSV[i][2] / 100;
-			shaderArray.push(newShader);
+
+			var palette = new funkin.game.shaders.RGBShader.RGBPalette();
+			note.shader = palette.shader;
+			paletteArray.push(palette);
+			_applyNoteColor(i);
 		}
 		
 		hsbText = new Alphabet(0, 0, "Hue    Saturation  Luminosity", false, false, 0, 0.65);
@@ -117,12 +129,40 @@ class QuantNotesSubState extends MusicBeatSubstate
 		add(hsbText);
 		
 		changeSelection();
+
+		#if mobile
+		controls.isInSubstate = true;
+		// forceShow: true -- same reasoning as NotesSubState: no touch-tap
+		// equivalent exists here, so a 'Touch' nav mode user needs the pad
+		// to interact with this screen at all.
+		addVirtualPad(LEFT_FULL, A_B_C, true);
+		addVirtualPadCamera();
+		#end
+
+		closeCover = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		closeCover.alpha = 0;
+		add(closeCover);
 	}
-	
+
+	/** Covers the screen in black, then closes -- see BACK below. */
+	function closeTween():Void
+	{
+		if (isClosing) return;
+		isClosing = true;
+		changingNote = false;
+		FlxTween.tween(closeCover, {alpha: 1}, 0.2, {ease: FlxEase.circIn, onComplete: (_) -> close()});
+	}
+
 	var changingNote:Bool = false;
 	
 	override function update(elapsed:Float)
 	{
+		if (isClosing)
+		{
+			super.update(elapsed);
+			return;
+		}
+
 		if (changingNote)
 		{
 			if (holdTime < 0.5)
@@ -137,7 +177,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 					updateValue(1);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
-				else if (controls.RESET)
+				else if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 				{
 					resetValue(curSelected, typeSelected);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
@@ -196,7 +236,7 @@ class QuantNotesSubState extends MusicBeatSubstate
 				changeType(1);
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
-			if (controls.RESET)
+			if (controls.RESET #if mobile || virtualPad?.buttonC?.justPressed == true #end)
 			{
 				for (i in 0...3)
 				{
@@ -236,7 +276,9 @@ class QuantNotesSubState extends MusicBeatSubstate
 		{
 			if (!changingNote)
 			{
-				close();
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				closeTween();
+				return;
 			}
 			else
 			{
@@ -257,7 +299,15 @@ class QuantNotesSubState extends MusicBeatSubstate
 			var item = grpNotes.members[i];
 			if (curSelected > 2) yIndex -= curSelected - 2;
 			
-			var lerpVal:Float = 0.4 * (elapsed / (1 / 120));
+			// FlxMath.getElapsedLerp() instead of a raw "0.4 * (elapsed / (1/120))"
+			// scale -- that naive version has no ceiling, so a lag spike
+			// (elapsed well past a 120fps frame) pushed the ratio past 1.0 and
+			// overshot the target position instead of just closing the gap
+			// faster. getElapsedLerp() asymptotically approaches 1.0 for any
+			// elapsed, same framerate-independent-smoothing pattern already
+			// used elsewhere (TouchOptionList, MobileSettingsSubState). 0.65
+			// picked to match the old formula's speed at a normal framerate.
+			var lerpVal:Float = FlxMath.getElapsedLerp(0.65, elapsed);
 			
 			var yPos:Float = (165 * yIndex) + 35;
 			
@@ -331,26 +381,34 @@ class QuantNotesSubState extends MusicBeatSubstate
 		}
 	}
 	
+	// Recolors quant `i`'s preview exactly as gameplay does: shift that
+	// quant's base color trio by its current quantHSV and push it to the shader.
+	function _applyNoteColor(i:Int)
+	{
+		if (i < 0 || i >= paletteArray.length) return;
+		final base = (i < funkin.utils.NoteUtil.quantDefaultColors.length)
+			? funkin.utils.NoteUtil.quantDefaultColors[i] : funkin.utils.NoteUtil.quantDefaultColors[0];
+		final shifted = funkin.utils.NoteUtil.applyHSVShift(base, ClientPrefs.quantHSV[i]);
+		paletteArray[i].setColors(funkin.utils.NoteUtil.colorToArray(shifted));
+	}
+
 	function resetValue(selected:Int, type:Int)
 	{
-		curValue = 0;
-		if (ClientPrefs.quants)
-		{
-			ClientPrefs.quantHSV[selected][type] = defaults[selected][type];
-			switch (type)
-			{
-				case 0:
-					shaderArray[selected].hue = defaults[selected][type];
-				case 1:
-					shaderArray[selected].saturation = defaults[selected][type];
-				case 2:
-					shaderArray[selected].lightness = defaults[selected][type];
-			}
-		}
-		
+		// Was unconditional on ClientPrefs.quants while updateValue() (the
+		// manual arrow-key edit path) isn't -- Reset silently no-opped the
+		// actual value whenever quants were toggled off, while still lying
+		// about it below (see the other two fixes in this function).
+		curValue = defaults[selected][type];
+		ClientPrefs.quantHSV[selected][type] = defaults[selected][type];
+		_applyNoteColor(selected);
+
 		var item = grpNumbers.members[(selected * 3) + type];
-		item.changeText('0');
+		// Was hardcoded '0' -- correct for NotesSubState (whose defaults are
+		// always 0) but QuantNotesSubState's defaults are mostly nonzero, so
+		// this displayed a false "0" no matter what the reset value actually was.
+		item.changeText(Std.string(defaults[selected][type]));
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;
+		if (defaults[selected][type] < 0) item.offset.x += 10;
 	}
 	
 	function updateValue(change:Float = 0)
@@ -374,17 +432,9 @@ class QuantNotesSubState extends MusicBeatSubstate
 		}
 		roundedValue = Math.round(curValue);
 		ClientPrefs.quantHSV[curSelected][typeSelected] = roundedValue;
-		
-		switch (typeSelected)
-		{
-			case 0:
-				shaderArray[curSelected].hue = roundedValue / 360;
-			case 1:
-				shaderArray[curSelected].saturation = roundedValue / 100;
-			case 2:
-				shaderArray[curSelected].lightness = roundedValue / 100;
-		}
-		
+
+		_applyNoteColor(curSelected);
+
 		var item = grpNumbers.members[(curSelected * 3) + typeSelected];
 		item.changeText(Std.string(roundedValue));
 		item.offset.x = (40 * (item.lettersArray.length - 1)) / 2;

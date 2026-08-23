@@ -1,0 +1,63 @@
+package funkin.states.substates;
+
+class CreditsRollSubState extends funkin.backend.MusicBeatSubstate
+{
+	public var canSkip:Bool = false;
+	
+	public var onSkip:Void->Void = null;
+	public var onFinish:Void->Void = null;
+	
+	public var camCredits:FlxCamera;
+
+	// Same fix as MusicBeatState's own _updateArgs: reused every frame instead
+	// of allocating a fresh `[elapsed]` array literal on every single
+	// scriptGroup.call('onUpdatePost', ...) below.
+	final _updatePostArgs:Array<Dynamic> = [0.0];
+
+	public function new(skippable:Bool = false, ?onFinish:Void->Void, ?onSkip:Void->Void)
+	{
+		super();
+		
+		this.bgColor = FlxColor.BLACK;
+		
+		this.canSkip = skippable;
+		this.onFinish = onFinish;
+		this.onSkip = onSkip;
+	}
+	
+	public override function create():Void
+	{
+		super.create();
+		
+		FlxG.cameras.add(camera = camCredits = new FlxCamera(), false);
+		camCredits.bgColor = 0;
+		
+		initStateScript();
+
+		#if mobile
+		controls.isInSubstate = true;
+		#end
+	}
+	
+	public override function update(elapsed:Float):Void
+	{
+		super.update(elapsed);
+		
+		if (controls.BACK && canSkip)
+		{
+			if (onSkip != null) onSkip();
+			
+			close();
+		}
+		
+		_updatePostArgs[0] = elapsed;
+		scriptGroup.call('onUpdatePost', _updatePostArgs);
+	}
+	
+	public override function destroy():Void
+	{
+		FlxG.cameras.remove(camCredits);
+		
+		super.destroy();
+	}
+}

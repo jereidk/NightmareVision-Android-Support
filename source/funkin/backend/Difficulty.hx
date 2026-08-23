@@ -45,6 +45,16 @@ class Difficulty
 	}
 	
 	/**
+	 * Returns the difficulty suffix from a string
+	 */
+	public static function getDifficultySuffix(?name:String)
+	{
+		if (name == null || name.trim().length == 0) return '';
+		
+		return Paths.sanitize('-$name');
+	}
+	
+	/**
 	 * Gets the current difficulty by string.
 	 * @return String
 	 */

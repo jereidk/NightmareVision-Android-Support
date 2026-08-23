@@ -1,0 +1,15 @@
+1
+00:00:00,700 --> 00:00:03,500
+cutscene_turbulence0
+
+2
+00:00:04,050 --> 00:00:04,800
+cutscene_turbulence1
+
+3
+00:00:05,600 --> 00:00:06,130
+cutscene_turbulence2
+
+4
+00:00:06,130 --> 00:00:08,130
+cutscene_turbulence3

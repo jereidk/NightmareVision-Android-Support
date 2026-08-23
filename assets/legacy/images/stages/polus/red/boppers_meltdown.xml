@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="boppers_meltdown.png" width="3861" height="3417">
+	<SubTexture name="BoppersMeltdown0000" x="0" y="0" width="3002" height="858" frameX="-0" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0001" x="0" y="0" width="3002" height="858" frameX="-0" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0002" x="0" y="858" width="2998" height="855" frameX="-3" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0003" x="0" y="858" width="2998" height="855" frameX="-3" frameY="-28" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0004" x="0" y="1713" width="2993" height="846" frameX="-5" frameY="-16" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0005" x="0" y="1713" width="2993" height="846" frameX="-5" frameY="-16" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0006" x="0" y="2559" width="2986" height="858" frameX="-9" frameY="-1" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0007" x="0" y="2559" width="2986" height="858" frameX="-9" frameY="-1" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0008" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0009" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0010" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0011" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0012" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0013" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+	<SubTexture name="BoppersMeltdown0014" x="3002" y="0" width="859" height="2989" rotated="true" frameX="-8" frameY="-0" frameWidth="3005" frameHeight="890"/>
+</TextureAtlas>

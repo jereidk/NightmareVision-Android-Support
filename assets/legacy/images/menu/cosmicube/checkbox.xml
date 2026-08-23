@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="checkbox.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481. Symbol timeline mod by emi3 -->
+	<SubTexture name="unchecked0000" x="1" y="326" width="80" height="93" frameX="-1" frameY="-30" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="unchecked0001" x="1" y="326" width="80" height="93" frameX="-1" frameY="-30" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="unchecked0002" x="1" y="422" width="80" height="84" frameX="-1" frameY="-39" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="checked0000" x="1" y="1" width="81" height="120" frameX="-4" frameY="0" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="checked0001" x="1" y="1" width="81" height="120" frameX="-4" frameY="0" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="checked0002" x="1" y="227" width="92" height="96" frameX="0" frameY="-28" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="checked0003" x="1" y="227" width="92" height="96" frameX="0" frameY="-28" frameWidth="92" frameHeight="124"/>
+	<SubTexture name="checked0004" x="1" y="124" width="89" height="100" frameX="-1" frameY="-24" frameWidth="92" frameHeight="124"/>
+</TextureAtlas>

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="stick_bf_death.png" width="2214" height="2259">
+	<SubTexture name="stick dea confirm0000" x="1412" y="929" width="324" height="450" frameX="-0" frameY="-48" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0001" x="774" y="1" width="357" height="468" frameX="-0" frameY="-30" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0002" x="480" y="490" width="468" height="357" rotated="true" frameX="-0" frameY="-30" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0003" x="944" y="852" width="463" height="348" rotated="true" frameX="-0" frameY="-35" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0004" x="953" y="474" width="463" height="348" rotated="true" frameX="-0" frameY="-35" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0005" x="936" y="1246" width="461" height="344" rotated="true" frameX="-0" frameY="-37" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0006" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0007" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0008" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0009" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0010" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0011" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0012" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0013" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0014" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0015" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0016" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0017" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0018" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0019" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0020" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0021" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0022" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0023" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0024" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0025" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0026" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-38" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0027" x="474" y="895" width="465" height="346" rotated="true" frameX="-0" frameY="-33" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0028" x="1421" y="470" width="360" height="454" frameX="-0" frameY="-44" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0029" x="1" y="1" width="321" height="498" frameX="-0" frameY="-0" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0030" x="327" y="1" width="442" height="484" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0031" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0032" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0033" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0034" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0035" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0036" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0037" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0038" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0039" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0040" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0041" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0042" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0043" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0044" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0045" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0046" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0047" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0048" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0049" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0050" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0051" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0052" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0053" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0054" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0055" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0056" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0057" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0058" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0059" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0060" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0061" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0062" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0063" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0064" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0065" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0066" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0067" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0068" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0069" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0070" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0071" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0072" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0073" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0074" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0075" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0076" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0077" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0078" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0079" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0080" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0081" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0082" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0083" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0084" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0085" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0086" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0087" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0088" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0089" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0090" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dea confirm0091" x="453" y="1610" width="442" height="321" rotated="true" frameX="-0" frameY="-56" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0000" x="1412" y="929" width="324" height="450" frameX="-0" frameY="-18" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0001" x="1" y="895" width="468" height="357" rotated="true" frameX="-0" frameY="-0" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0002" x="1" y="895" width="468" height="357" rotated="true" frameX="-0" frameY="-0" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0003" x="1" y="1257" width="463" height="348" rotated="true" frameX="-0" frameY="-5" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0004" x="1" y="1257" width="463" height="348" rotated="true" frameX="-0" frameY="-5" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0005" x="936" y="1246" width="461" height="344" rotated="true" frameX="-0" frameY="-7" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0006" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0007" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0008" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0009" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0010" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0011" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0012" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0013" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0014" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0015" x="1412" y="929" width="324" height="450" frameX="-0" frameY="-18" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0016" x="1" y="895" width="468" height="357" rotated="true" frameX="-0" frameY="-0" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0017" x="1" y="895" width="468" height="357" rotated="true" frameX="-0" frameY="-0" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0018" x="1" y="1257" width="463" height="348" rotated="true" frameX="-0" frameY="-5" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0019" x="1" y="1257" width="463" height="348" rotated="true" frameX="-0" frameY="-5" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0020" x="936" y="1246" width="461" height="344" rotated="true" frameX="-0" frameY="-7" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0021" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0022" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0023" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0024" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0025" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0026" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0027" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0028" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick death loop0029" x="1484" y="1" width="343" height="460" frameX="-0" frameY="-8" frameWidth="487" frameHeight="498"/>
+	<SubTexture name="stick dies0000" x="1402" y="1384" width="375" height="444" frameX="-17" frameY="-31" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0001" x="1832" y="1" width="381" height="444" frameX="-15" frameY="-31" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0002" x="1832" y="450" width="381" height="442" frameX="-15" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0003" x="1741" y="929" width="392" height="442" frameX="-9" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0004" x="1741" y="929" width="392" height="442" frameX="-9" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0005" x="1782" y="1376" width="412" height="442" frameX="-0" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0006" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0007" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0008" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0009" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0010" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0011" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0012" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0013" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0014" x="900" y="1608" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0015" x="1" y="1937" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0016" x="1" y="1937" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0017" x="1" y="1937" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0018" x="448" y="1937" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0019" x="448" y="1937" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0020" x="895" y="1936" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0021" x="895" y="1936" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0022" x="1342" y="1934" width="442" height="321" rotated="true" frameX="-23" frameY="-32" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0023" x="1" y="504" width="474" height="386" rotated="true" frameX="-13" frameY="-0" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0024" x="1" y="504" width="474" height="386" rotated="true" frameX="-13" frameY="-0" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0025" x="1" y="1610" width="447" height="322" rotated="true" frameX="-23" frameY="-27" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0026" x="1" y="1610" width="447" height="322" rotated="true" frameX="-23" frameY="-27" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0027" x="1136" y="1" width="343" height="464" frameX="-23" frameY="-10" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0028" x="1136" y="1" width="343" height="464" frameX="-23" frameY="-10" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0029" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0030" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0031" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0032" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0033" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0034" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0035" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0036" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0037" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0038" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0039" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0040" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0041" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0042" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0043" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0044" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0045" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0046" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0047" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0048" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0049" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0050" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0051" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0052" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0053" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0054" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0055" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0056" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+	<SubTexture name="stick dies0057" x="469" y="1257" width="462" height="346" rotated="true" frameX="-23" frameY="-12" frameWidth="412" frameHeight="475"/>
+</TextureAtlas>

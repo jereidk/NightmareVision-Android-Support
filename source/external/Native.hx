@@ -36,7 +36,34 @@ class Native
 		return 0.0;
 		#end
 	}
-	
+
+	/**
+	 * System-wide total physical RAM, in bytes. `0` if unsupported
+	 * (currently Linux/Android only).
+	 */
+	public static function getSystemTotalMemory()
+	{
+		#if cpp
+		return external.memory.Memory.getSystemTotalMemory();
+		#else
+		return 0.0;
+		#end
+	}
+
+	/**
+	 * System-wide currently available RAM, in bytes — the same figure
+	 * Android's low-memory killer watches. `0` if unsupported (currently
+	 * Linux/Android only).
+	 */
+	public static function getSystemAvailableMemory()
+	{
+		#if cpp
+		return external.memory.Memory.getSystemAvailableMemory();
+		#else
+		return 0.0;
+		#end
+	}
+
 	/**
 	 * Sets the window to either `Dark` or `Light` mode
 	 * 

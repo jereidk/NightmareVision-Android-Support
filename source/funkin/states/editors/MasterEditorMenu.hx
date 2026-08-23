@@ -1,5 +1,7 @@
 package funkin.states.editors;
 
+import flixel.addons.display.FlxBackdrop;
+
 import funkin.objects.Character;
 
 import flixel.FlxG;
@@ -10,41 +12,62 @@ import flixel.util.FlxColor;
 
 import funkin.data.*;
 import funkin.objects.*;
+import mobile.utils.MobileNavUtil;
 
 class MasterEditorMenu extends MusicBeatState
 {
 	var options:Array<String> = [
-		'Chart Editor',
+		// 'Week Editor',
+		// 'Menu Character Editor',
 		'Character Editor',
-	//	'Note Skin Editor',
-		'Chart Converter',
-		"Metadata Editor",
-		'Mods Manager',
-		'Week Editor',
-		'Menu Character Editor',
+		'Chart Editor',
+		'Chart Converter'
 	];
+	#if mobile
+	private var grpTexts:FlxTypedGroup<FlxText>;
+	private var mobileTouchItemIdx:Int = -1;
+	#else
 	private var grpTexts:FlxTypedGroup<Alphabet>;
+	#end
 	private var directories:Array<String> = [null];
-	
+
 	private var curSelected = 0;
 	private var curDirectory = 0;
 	private var directoryTxt:FlxText;
-	
+
 	override function create()
 	{
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("Editors Main Menu");
-		
+
 		persistentUpdate = true;
-		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
-		bg.scrollFactor.set();
-		bg.color = 0xFF353535;
-		add(bg);
-		
+
+		var starBG = new FlxBackdrop(Paths.image('menu/common/starBG'));
+		add(starBG);
+		starBG.velocity.x -= 7;
+
+		var starFG = new FlxBackdrop(Paths.image('menu/common/starFG'));
+		add(starFG);
+		starFG.velocity.x = -15;
+
+		#if mobile
+		grpTexts = new FlxTypedGroup<FlxText>();
+		add(grpTexts);
+
+		final itemH:Int = 90;
+		final startY:Float = (FlxG.height - options.length * itemH) / 2;
+		for (i in 0...options.length)
+		{
+			var leText:FlxText = new FlxText(0, startY + i * itemH, FlxG.width, options[i], 42);
+			leText.setFormat(Paths.DEFAULT_FONT, 42, FlxColor.WHITE, CENTER);
+			leText.setBorderStyle(OUTLINE, FlxColor.BLACK, 3);
+			leText.scrollFactor.set();
+			grpTexts.add(leText);
+		}
+		#else
 		grpTexts = new FlxTypedGroup<Alphabet>();
 		add(grpTexts);
-		
+
 		for (i in 0...options.length)
 		{
 			var leText:Alphabet = new Alphabet(0, (70 * i) + 30, options[i], true, false);
@@ -52,37 +75,38 @@ class MasterEditorMenu extends MusicBeatState
 			leText.targetY = i;
 			grpTexts.add(leText);
 		}
-		
+		#end
+
 		#if MODS_ALLOWED
 		var textBG:FlxSprite = new FlxSprite(0, FlxG.height - 42).makeGraphic(FlxG.width, 42, 0xFF000000);
 		textBG.alpha = 0.6;
 		add(textBG);
-		
+
 		directoryTxt = new FlxText(textBG.x, textBG.y + 4, FlxG.width, '', 32);
 		directoryTxt.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER);
 		directoryTxt.scrollFactor.set();
 		add(directoryTxt);
-		
+
 		for (folder in Mods.getModDirectories())
 		{
 			directories.push(folder);
 		}
-		
+
 		var found:Int = directories.indexOf(Mods.currentModDirectory);
 		if (found > -1) curDirectory = found;
 		changeDirectory();
 		#end
 		changeSelection();
-		
+
 		FlxG.mouse.visible = false;
-
-        #if mobile
-		addVirtualPad(LEFT_FULL, A_B);
-		#end
-
 		super.create();
+
+		#if mobile
+		addVirtualPad(LEFT_FULL, A_B);
+		addVirtualPadCamera();
+		#end
 	}
-	
+
 	override function update(elapsed:Float)
 	{
 		if (controls.UI_UP_P)
@@ -103,75 +127,133 @@ class MasterEditorMenu extends MusicBeatState
 			changeDirectory(1);
 		}
 		#end
-		
+
 		if (controls.BACK)
 		{
 			FlxG.switchState(() -> new MainMenuState());
 		}
-		
+
 		if (controls.ACCEPT)
 		{
-			switch (options[curSelected])
-			{
-				case 'Mods Manager':
-					FlxG.switchState(() -> new ModsState());
-				case 'Character Editor':
-					FlxG.switchState(() -> new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
-				case 'Week Editor':
-					FlxG.switchState(() -> new WeekEditorState());
-				case 'Metadata Editor':
-					openSubState(new SongMetaEditor());
-				case 'Menu Character Editor':
-					FlxG.switchState(() -> new MenuCharacterEditorState());
-				case 'Chart Editor': // felt it would be cool maybe
-					FlxG.switchState(ChartEditorState.new);
-				// case 'Note Skin Editor':
-				// 	FlxG.switchState(() -> new NoteSkinEditor('default'));
-				case 'Chart Converter':
-					FlxG.switchState(() -> new ChartConverterState());
-			}
-			if (FlxG.sound.music != null) FlxG.sound.music.volume = 0;
-			FreeplayState.destroyFreeplayVocals();
+			acceptCurrentOption();
 		}
-		
+
+		#if mobile
+		// Gated to Touch nav mode only -- these grpTexts items span the FULL
+		// screen width (new FlxText(0, ..., FlxG.width, ...)), so with no
+		// gate here, EVERY touch anywhere on screen (including pressing the
+		// Virtual Pad's own D-pad buttons, wherever LEFT_FULL happens to
+		// place them) always overlapped SOME item's Y-band and got read as
+		// "tap on menu item N" -- immediately overwriting curSelected right
+		// alongside the correct controls.UI_UP_P/UI_DOWN_P-driven change from
+		// that same D-pad press. That's exactly the reported bug: pressing
+		// up from the 2nd item didn't move to the 1st, it snapped to
+		// whichever item's band the pad's fixed on-screen position always
+		// overlaps (the 3rd, on the layouts/screens this was seen on).
+		if (MobileNavUtil.allowPointerNav())
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					var members = grpTexts.members;
+					for (i in 0...members.length)
+					{
+						var item = members[i];
+						if (touch.viewY >= item.y && touch.viewY < item.y + item.height)
+						{
+							mobileTouchItemIdx = i;
+							break;
+						}
+					}
+				}
+				if (touch.justReleased && mobileTouchItemIdx >= 0)
+				{
+					var members = grpTexts.members;
+					for (i in 0...members.length)
+					{
+						var item = members[i];
+						if (touch.viewY >= item.y && touch.viewY < item.y + item.height && i == mobileTouchItemIdx)
+						{
+							if (i == curSelected)
+								acceptCurrentOption();
+							else
+							{
+								curSelected = i;
+								changeSelection(0);
+							}
+							break;
+						}
+					}
+					mobileTouchItemIdx = -1;
+				}
+			}
+		}
+
+		var bullShit:Int = 0;
+		for (item in grpTexts.members)
+		{
+			item.alpha = (bullShit == curSelected) ? 1.0 : 0.6;
+			bullShit++;
+		}
+		#else
 		var bullShit:Int = 0;
 		for (item in grpTexts.members)
 		{
 			item.targetY = bullShit - curSelected;
 			bullShit++;
-			
+
 			item.alpha = 0.6;
 			// item.setGraphicSize(Std.int(item.width * 0.8));
-			
+
 			if (item.targetY == 0)
 			{
 				item.alpha = 1;
 				// item.setGraphicSize(Std.int(item.width));
 			}
 		}
+		#end
 		super.update(elapsed);
 	}
-	
+
+	function acceptCurrentOption():Void
+	{
+		switch (options[curSelected])
+		{
+			case 'Character Editor':
+				FlxG.switchState(() -> new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
+			case 'Week Editor':
+				FlxG.switchState(() -> new WeekEditorState());
+			case 'Menu Character Editor':
+				FlxG.switchState(() -> new MenuCharacterEditorState());
+			case 'Chart Editor': // felt it would be cool maybe
+				FlxG.switchState(ChartEditorState.new);
+			case 'Chart Converter':
+				FlxG.switchState(() -> new ChartConverterState());
+		}
+		if (FlxG.sound.music != null) FlxG.sound.music.volume = 0;
+	}
+
 	function changeSelection(change:Int = 0)
 	{
 		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-		
+
 		curSelected += change;
-		
+
 		if (curSelected < 0) curSelected = options.length - 1;
 		if (curSelected >= options.length) curSelected = 0;
 	}
-	
+
 	#if MODS_ALLOWED
 	function changeDirectory(change:Int = 0)
 	{
 		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-		
+
 		curDirectory += change;
-		
+
 		if (curDirectory < 0) curDirectory = directories.length - 1;
 		if (curDirectory >= directories.length) curDirectory = 0;
-		
+
 		WeekData.setDirectoryFromWeek();
 		if (directories[curDirectory] == null || directories[curDirectory].length < 1) directoryTxt.text = '< No Mod Directory Loaded >';
 		else

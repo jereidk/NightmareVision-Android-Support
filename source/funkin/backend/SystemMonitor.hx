@@ -1,0 +1,1386 @@
+package funkin.backend;
+
+#if android
+import openfl.system.System as OpenFLSystem;
+#end
+
+#if (android && sys)
+import sys.FileSystem;
+import sys.io.File;
+#end
+
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
+import flixel.FlxG;
+
+#if (android && cpp)
+import external.Native;
+#end
+
+/**
+ * System Monitor - Captures and logs system/resource information
+ * 
+ * Logs to `sysmon.log` in external storage with:
+ * - GPU memory usage (if available)
+ * - CPU/RAM info
+ * - Flixel bitmap cache stats
+ * - FPS tracking
+ * - Asset loading snapshots
+ * 
+ * Only active when ClientPrefs.inDevMode is true.
+ * Useful for debugging memory leaks and performance issues on Android.
+ */
+class SystemMonitor
+{
+	/**
+	 * Enable/disable system monitoring
+	 */
+	public static var enabled:Bool = true;
+
+	/**
+	 * Log file path (set by init())
+	 */
+	static var logPath:String = '';
+
+	// Monotonic session clock (haxe.Timer.stamp() at init()) used to append a
+	// "t+SSSSSms" field to every timestamp — wall-clock HH:MM:SS alone can't
+	// distinguish ordering between two lines that land in the same second,
+	// which happened more than once in real device logs (a [SPIKE] and a
+	// [LARGE-GC] both landing at the same wall-clock second).
+	static var _startStamp:Float = 0.0;
+
+	/**
+	 * Previous FPS values for averaging
+	 */
+	static var fpsHistory:Array<Int> = [];
+	static inline var FPS_HISTORY_SIZE:Int = 60;
+
+	// Frame-spike tracking
+	static var _smoothElapsed:Float = 0.016;
+	static var _lastSpikeTime:Float = -999.0;
+	static inline final SPIKE_FACTOR:Float = 3.5;
+	static inline final SPIKE_COOLDOWN:Float = 2.0;
+
+	// SPIKE_FACTOR is relative to the recent average, which is itself inflated
+	// during dense note sections — a genuinely huge GC collection (tens of MB)
+	// can land in a frame that's slow in absolute terms but not 3.5x slower than
+	// an already-elevated average, so it never fires as a [SPIKE] and never gets
+	// cause-attributed. This fires on an absolute byte threshold instead, so it
+	// catches those regardless of how busy the surrounding frames already are.
+	static var _lastLargeGcTime:Float = -999.0;
+	static inline final LARGE_GC_THRESHOLD_BYTES:Int = 10 * 1024 * 1024; // 10MB
+	static inline final LARGE_GC_COOLDOWN:Float = 1.0;
+
+	// Above this, a wall-clock gap between checkFrame() calls almost certainly
+	// isn't a real single-frame hitch — it's this state's update() not having
+	// run at all for a while (a FlxSubstate without persistentUpdate was open,
+	// or the app was backgrounded), since MusicBeatSubstate doesn't call
+	// checkFrame() itself. Treat gaps past this as a resume, not a spike.
+	static inline final MAX_REASONABLE_GAP:Float = 4.0;
+
+	// Self-suppression: skip spike detection right after file I/O so we
+	// don't report the write latency as a fake frame spike.
+	static var _suppressUntil:Float = 0.0;
+	static inline final WRITE_SUPPRESS_S:Float = 0.15;
+
+	// _write() used to open+append+flush+close the file on every single call —
+	// every [SPIKE]/[GAMEPLAY]/[LARGE-GC] line paid a fresh file-open syscall on
+	// Android flash storage, which is exactly why WRITE_SUPPRESS_S above had to
+	// exist in the first place. Now _write() only appends to an in-memory
+	// buffer (no I/O); the buffer is flushed to one file handle kept open for
+	// the whole session, either every FLUSH_LINE_THRESHOLD lines or every
+	// FLUSH_INTERVAL_S seconds, whichever comes first. Actual disk I/O — and
+	// the spike-suppression window — now only happens on that periodic flush,
+	// not on every logged event.
+	static var _writeBuffer:StringBuf = new StringBuf();
+	static var _bufferedLines:Int = 0;
+	static var _lastFlushTime:Float = 0.0;
+	static inline final FLUSH_LINE_THRESHOLD:Int = 20;
+	static inline final FLUSH_INTERVAL_S:Float = 1.0;
+	#if (android && sys)
+	static var _fileOut:sys.io.FileOutput = null;
+	#end
+	static var _totalBytesWritten:Int = 0;
+	static inline final RUNTIME_LOG_CAP_BYTES:Int = 5 * 1024 * 1024; // 5MB
+
+	// Script timing: annotate the next spike with which script event caused it
+	static var _lastScriptNote:String = '';
+	static inline final SCRIPT_NOTE_MS:Float = 5.0;   // >5ms → annotate next spike
+	static inline final SCRIPT_LOG_MS:Float = 33.0;   // >33ms (1 frame @30fps) → write immediately
+
+	// Member-growth leak detection
+	static var _prevMemberCount:Int = -1;
+	static var _memberGrowthStreak:Int = 0;
+	static var _memberCheckTimer:Int = 0;
+	static inline final MEMBER_CHECK_INTERVAL:Int = 60;   // check every N frames
+	static inline final MEMBER_GROWTH_THRESHOLD:Int = 8;  // members added per interval
+	static inline final MEMBER_GROWTH_STREAK:Int = 4;     // consecutive checks before warning
+
+	// State-transition texture tracking
+	static var _texCountBefore:Int = 0;
+	static var _prevStateName:String = '';
+	// Keys present before the switch — diffed on post to list exactly what loaded
+	static var _keysBefore:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
+	// Last texture count seen when each state NAME was exited — re-entry leak detector
+	static var _stateTexOnExit:haxe.ds.StringMap<Int> = new haxe.ds.StringMap();
+	// Full key SET seen when each state NAME was exited -- lets the re-entry
+	// leak detector below name exactly which textures are new since last
+	// time, instead of just reporting a growing count. Safe to hold a direct
+	// reference to the StringMap _onPreStateSwitch() just built: that
+	// function always REASSIGNS _keysBefore to a fresh map next time rather
+	// than mutating the existing one, so what's stored here is never touched
+	// again after being set.
+	static var _stateKeysOnExit:haxe.ds.StringMap<haxe.ds.StringMap<Bool>> = new haxe.ds.StringMap();
+
+	// GC spike detection
+	#if cpp
+	static var _lastGcUsage:Float = 0.0;
+
+	// [LARGE-GC] tells you how much a collection freed, but not how long it
+	// took to accumulate — 42MB freed after 30s of light gameplay reads very
+	// differently from 42MB freed after 3s of dense notes. This tracks heap
+	// growth on every frame that ISN'T itself a collection, so it holds
+	// "bytes allocated since the last collection" at all times; read (and
+	// reset) whenever any collection actually fires, alongside how long that
+	// took, to turn a one-off byte count into an allocation rate.
+	static var _heapGrowthSinceLastGc:Float = 0.0;
+	static var _lastGcGrowthResetTime:Float = 0.0;
+	#end
+
+	// Every-frame GC accumulation across a whole [GAMEPLAY] reporting window
+	// (distinct from the per-tag GC-collision check in profBegin/profEnd,
+	// which attributes a collision to whichever specific span it landed in).
+	// Folds into the next gameplay line regardless of which tag the pause
+	// happened to land in — noteHitDispatch, notesLoop, draw, script,
+	// whatever was being timed when the collection ran.
+	static var _frameGcCollisions:Int = 0;
+	static var _frameGcBytesFreed:Int = 0;
+	static inline final FRAME_GC_THRESHOLD_BYTES:Int = 100 * 1024;
+
+	// Total bytes allocated during the current [GAMEPLAY] window (sum of the
+	// positive heap-usage deltas checkFrame() already computes). [LARGE-GC]'s
+	// "grew X over Ys" only surfaces a rate when a big collection happens to
+	// fire; this puts the allocation rate on EVERY gameplay line instead, so
+	// it can be correlated with the live note count next to it — the device
+	// logs that led here showed the rate swinging ~2MB/s → ~54MB/s between
+	// sparse and dense sections and the correlation is the open question.
+	static var _windowAllocBytes:Float = 0.0;
+
+	// Per-frame evidence capture for "[cause unknown]" spikes: texture/sound
+	// loads and sudden member-count jumps that happen to land in the same
+	// frame as a spike are much stronger evidence than nothing at all.
+	static var _lastBitmapCount:Int = -1;
+	static var _lastBitmapKeys:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
+	static var _lastFrameMemberCount:Int = -1;
+
+	/**
+	 * Initialize system monitoring
+	 * Only activates if ClientPrefs.inDevMode is true.
+	 */
+	public static function init():Void
+	{
+		#if (android && sys)
+		// Only enable monitoring in developer mode
+		if (ClientPrefs == null || !ClientPrefs.inDevMode) {
+			enabled = false;
+			return;
+		}
+		
+		try {
+			var dir:String = mobile.backend.StorageSystem.getDirectory();
+			logPath = dir + 'sysmon.log';
+
+			// Clear or start fresh
+			try {
+				if (FileSystem.exists(logPath)) {
+					var stat = FileSystem.stat(logPath);
+					if (stat.size > 2 * 1024 * 1024) { // > 2MB
+						FileSystem.deleteFile(logPath);
+					}
+				}
+			} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to check log file: $e', WARN); }
+
+			_startStamp = haxe.Timer.stamp();
+			#if cpp
+			// Seed with the real current usage instead of the 0.0 default —
+			// otherwise the very first checkFrame() sees a fake multi-MB "growth"
+			// (0 → actual heap usage) that would otherwise pollute the very first
+			// _heapGrowthSinceLastGc reading.
+			_lastGcUsage = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			_lastGcGrowthResetTime = _startStamp;
+			#end
+
+			_write('============================================================');
+			_write('SYSTEM MONITOR START  ' + Date.now().toString());
+			_write('============================================================');
+			_write('Device Info:');
+			_write('  Platform: ' + getPlatform());
+			_write('  OS: ' + getOSInfo());
+			_write('');
+
+			#if flixel
+			FlxG.signals.preStateSwitch.add(_onPreStateSwitch);
+			FlxG.signals.postStateSwitch.add(_onPostStateSwitch);
+			// See beginGpuPresent()'s own doc comment -- closes the 'gpuPresent'
+			// span PlayState.draw() opens, right after FlxGame's own draw() has
+			// finished everything our own tags can't see (FlxG.cameras.render(),
+			// the actual GPU tile-batch submission).
+			FlxG.signals.postDraw.add(_onPostDraw);
+			#end
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to initialize: $e', WARN); }
+		#end
+	}
+
+	/**
+	 * Get current timestamp
+	 */
+	static function timestamp():String
+	{
+		var d = Date.now();
+		var tMs = Std.int((haxe.Timer.stamp() - _startStamp) * 1000);
+		return '[' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + ' t+${tMs}ms]';
+	}
+
+	static inline function pad(n:Int):String
+		return StringTools.lpad(Std.string(n), '0', 2);
+
+	/**
+	 * Log current system stats snapshot
+	 */
+	public static function logSnapshot(tag:String = 'SNAPSHOT'):Void
+	{
+		if (!enabled) return;
+
+		var lines:Array<String> = [];
+		lines.push('');
+		lines.push('============================================================');
+		lines.push('[' + tag + '] ' + Date.now().toString());
+		lines.push('============================================================');
+
+		// FPS Stats
+		#if flixel
+		var fps = DebugDisplay.instance != null ? DebugDisplay.instance.currentFPS : 0;
+		var avgMs = _smoothElapsed > 0 ? Std.int(_smoothElapsed * 1000) : 0;
+		lines.push('[FPS]');
+		lines.push('  Current: $fps');
+		lines.push('  Avg frame: ~${avgMs}ms');
+		#end
+
+		// Memory Stats
+		lines.push('');
+		lines.push('[MEMORY]');
+		lines.push('  Total RAM: ' + getTotalRAM());
+		lines.push('  App Memory Used: ' + getAppMemoryUsage());
+
+		#if (openfl_v22_up)
+		try {
+			lines.push('  OpenFL Memory: N/A');
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get OpenFL memory info: $e', WARN); }
+		#end
+
+		// Flixel Bitmap Cache Stats
+		lines.push('');
+		lines.push('[FLX BITMAP CACHE]');
+		#if flixel
+		lines.push('  Cache Count: ' + getBitmapCacheCount());
+		lines.push('  GPU Memory: ' + getEstimatedGPUMemory());
+		#end
+
+		// Asset Stats
+		lines.push('');
+		lines.push('[ASSETS]');
+		lines.push('  Loaded Graphics: ' + getLoadedGraphicsCount());
+		lines.push('  Loaded Sounds: ' + getLoadedSoundsCount());
+
+		// Write all lines
+		for (line in lines) {
+			_write(line);
+		}
+	}
+
+	/**
+	 * Log a memory event (texture loaded, garbage collected, etc.)
+	 */
+	public static function logMemoryEvent(event:String, details:String = ''):Void
+	{
+		if (!enabled) return;
+		_write('');
+		_write('[MEM EVENT] ' + event);
+		if (details.length > 0) {
+			_write('  Details: ' + details);
+		}
+		
+		// Also log current memory state. App-used and system-free are two
+		// different things (this app's own RSS vs. the whole device's
+		// remaining headroom) -- both on the same line so a reader can
+		// correlate them directly instead of hunting down a nearby
+		// [GAMEPLAY]/[SPIKE] line's own "sysFree=" for context.
+		_write('  App Memory Used: ' + getAppMemoryUsage() + _systemMemContext());
+		#if flixel
+		_write('  GPU Textures: ' + getBitmapCacheCount());
+		#end
+	}
+
+	/**
+	 * Log GPU context info
+	 */
+	public static function logGPUInfo():Void
+	{
+		if (!enabled) return;
+		
+		_write('');
+		_write('[GPU INFO]');
+		
+		#if (openfl && html5 == false)
+		try {
+			// Context3D info
+			var context = openfl.display3D.Context3D.current;
+			if (context != null) {
+				_write('  Context: Active');
+				#if (openfl_v22_up)
+				// More GPU info if available
+				#end
+			}
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: Failed to get GPU context: $e', WARN);
+			_write('  Context: Not available');
+		}
+		#end
+		
+		_write('  Renderer: ' + getRendererInfo());
+		_write('  Driver: ' + getDriverInfo());
+	}
+
+	/**
+	 * Log current state context
+	 */
+	public static function logStateChange(fromState:String, toState:String):Void
+	{
+		if (!enabled) return;
+		_write('');
+		_write('[STATE CHANGE]');
+		_write('  From: ' + fromState);
+		_write('  To: ' + toState);
+		logSnapshot('POST_STATE_' + toState);
+	}
+
+	/**
+	 * Whether LoadingState's background preload actually finished before it
+	 * handed off to PlayState, or MAX_WAIT_TIME's ceiling forced an early
+	 * switch with some assets still not finalized (PlayState then loads the
+	 * rest itself, synchronously, right in the countdown-adjacent frames a
+	 * [GAMEPLAY!] line would flag as a hitch). LoadingState already logs
+	 * this exact information via Logger.log() -- but that writes to the
+	 * separate game.log (GameLogger), not sysmon.log, so a sysmon.log-only
+	 * investigation of a startup hitch had no way to tell "preload genuinely
+	 * finished" from "silently timed out and PlayState picked up the slack"
+	 * without cross-referencing a second file. Call once, right at the
+	 * switch point.
+	 */
+	public static function logLoadingResult(songName:String, shownMs:Int, progressPct:Int, done:Bool, timedOut:Bool, decoded:Int, finalized:Int, total:Int):Void
+	{
+		if (!enabled) return;
+		final mark = (timedOut && !done) ? '!' : ' ';
+		_write('[LOADING$mark] song=$songName shownMs=$shownMs progress=$progressPct% done=$done timedOut=$timedOut decoded=$decoded/$total finalized=$finalized/$total');
+	}
+
+	// ==================== AUTO DIAGNOSTICS ====================
+
+	// Wall-clock timestamp of the previous checkFrame() call, used to measure
+	// the true frame delta independent of Flixel's own elapsed clamp.
+	static var _lastCheckTime:Float = 0.0;
+
+	/**
+	 * Call every frame (from MusicBeatState.update).
+	 * Detects frame spikes and steady member-count growth within a state.
+	 * Skips detection right after file I/O to avoid self-reporting write latency.
+	 */
+	public static function checkFrame(elapsed:Float):Void
+	{
+		if (!enabled) return;
+
+		var now = haxe.Timer.stamp();
+
+		// `elapsed` here is FlxG.elapsed, which FlxGame.updateElapsed() hard-clamps
+		// to FlxG.maxElapsed (0.1s / 100ms) before any state ever sees it — so a
+		// real 300ms or 2000ms stall was being reported as an identical "100ms"
+		// spike, indistinguishable from a genuine 100ms hitch. Measuring the
+		// wall-clock gap between calls here bypasses that clamp entirely, since
+		// this function runs once per real frame regardless of what value
+		// Flixel hands to game logic.
+		var realElapsed = (_lastCheckTime > 0) ? (now - _lastCheckTime) : elapsed;
+		_lastCheckTime = now;
+
+		// A substate without persistentUpdate was almost certainly open for
+		// this whole gap (checkFrame only runs from MusicBeatState, never
+		// MusicBeatSubstate) — not a genuine hitch. Reset quietly.
+		//
+		// Also silently re-sync the GC usage baseline here before bailing --
+		// this early return used to skip that update entirely, so any GC
+		// that ran during a long gap (a state's create(), which routinely
+		// exceeds MAX_REASONABLE_GAP while loading dozens of textures) left
+		// _lastGcUsage stale. The very next real gcFreed computation would
+		// then compare a CURRENT reading against that stale, pre-gap
+		// baseline instead of what actually happened during the gap,
+		// misattributing (or hiding) whatever collection occurred inside it
+		// to/from a later, unrelated frame.
+		if (realElapsed > MAX_REASONABLE_GAP)
+		{
+			_smoothElapsed = 0.016;
+			#if cpp
+			_lastGcUsage = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			#end
+			return;
+		}
+
+		// Self-suppression window: file I/O in _write can take 20-100ms on
+		// Android flash storage. Still update the EMA but skip spike reporting.
+		if (now < _suppressUntil)
+		{
+			_smoothElapsed = _smoothElapsed * 0.95 + realElapsed * 0.05;
+			return;
+		}
+
+		_smoothElapsed = _smoothElapsed * 0.95 + realElapsed * 0.05;
+
+		// GC delta: a large drop in heap usage means GC ran during this frame
+		#if cpp
+		var gcNow = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+		var gcFreed = _lastGcUsage - gcNow;
+		_lastGcUsage = gcNow;
+		// Snapshot before any reset below, so a collision this exact frame can
+		// still report what accumulated leading up to it.
+		var growthBeforeThisGc = _heapGrowthSinceLastGc;
+		var growthSecBeforeThisGc = now - _lastGcGrowthResetTime;
+		if (gcFreed > FRAME_GC_THRESHOLD_BYTES)
+		{
+			_frameGcCollisions++;
+			_frameGcBytesFreed += Std.int(gcFreed);
+			_heapGrowthSinceLastGc = 0;
+			_lastGcGrowthResetTime = now;
+		}
+		else if (gcFreed < 0)
+		{
+			_heapGrowthSinceLastGc += -gcFreed;
+			_windowAllocBytes += -gcFreed;
+		}
+		#end
+
+		// Evidence for otherwise-"unknown" spikes: did the texture cache or the
+		// member list change size during this exact frame? Cheap to track every
+		// frame (just a count); only pay for the full key diff when a spike
+		// actually fires (rare, gated by SPIKE_COOLDOWN).
+		#if flixel
+		var curBitmapCount = _getRawBitmapCount();
+		var curFrameMemberCount = FlxG.state != null ? FlxG.state.members.length : -1;
+		var texDelta = (_lastBitmapCount >= 0) ? (curBitmapCount - _lastBitmapCount) : 0;
+		var memberDelta = (_lastFrameMemberCount >= 0 && curFrameMemberCount >= 0) ? (curFrameMemberCount - _lastFrameMemberCount) : 0;
+		#end
+
+		if (realElapsed > _smoothElapsed * SPIKE_FACTOR && now - _lastSpikeTime > SPIKE_COOLDOWN)
+		{
+			_lastSpikeTime = now;
+			var spikeMs = Std.int(realElapsed * 1000);
+			var normalMs = Std.int(_smoothElapsed * 1000);
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			// Attribute the cause: texture/sound load > GC > slow script > member churn > unknown (with mem delta as a last resort)
+			var cause:String;
+			if (texDelta > 0)
+			{
+				var newKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!_lastBitmapKeys.exists(k)) newKeys.push(k);
+				newKeys.sort((a, b) -> Reflect.compare(a, b));
+				var shown = newKeys.slice(0, 6).map(_keyTail);
+				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
+			}
+			#if cpp
+			// 100KB, not 1MB: matches profBegin/profEnd's own per-tag GC-collision
+			// threshold — smaller partial collections (e.g. NativeAlloc-triggered
+			// ones) still fully explain a frame hitch and shouldn't fall through
+			// to "cause unknown".
+			else if (gcFreed > 100 * 1024) cause = '  [GC freed ${Std.int(gcFreed / 1024)}KB${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}]';
+			#end
+			else if (_lastScriptNote.length > 0) cause = '  [script: $_lastScriptNote]';
+			else if (memberDelta > 5) cause = '  [+$memberDelta objects added to state]';
+			else
+			{
+				#if cpp
+				var memDeltaKB = Std.int(-gcFreed / 1024); // positive = heap grew, negative = freed (below the 1MB GC threshold above)
+				cause = '  [cause unknown, mem ${memDeltaKB >= 0 ? "+" : ""}${memDeltaKB}KB]';
+				#else
+				cause = '  [cause unknown]';
+				#end
+			}
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)  state=$state$cause${_systemMemContext()}');
+			#else
+			_write('[SPIKE] ${spikeMs}ms  (avg ~${normalMs}ms)${_systemMemContext()}');
+			#end
+			_lastScriptNote = '';
+		}
+		#if cpp
+		// Absolute-threshold check, separate from the relative [SPIKE] trigger above
+		// (see LARGE_GC_THRESHOLD_BYTES comment) — only fires if this exact frame
+		// didn't already get a [SPIKE] line, so a single event doesn't double-report.
+		else if (gcFreed > LARGE_GC_THRESHOLD_BYTES && now - _lastLargeGcTime > LARGE_GC_COOLDOWN)
+		{
+			_lastLargeGcTime = now;
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			var cause:String;
+			if (texDelta > 0)
+			{
+				var newKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!_lastBitmapKeys.exists(k)) newKeys.push(k);
+				newKeys.sort((a, b) -> Reflect.compare(a, b));
+				var shown = newKeys.slice(0, 6).map(_keyTail);
+				cause = '  [+$texDelta texture(s) loaded: ${shown.join(", ")}${newKeys.length > 6 ? "…" : ""}]';
+			}
+			else cause = '  [no texture/member change — plain heap garbage]';
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}  state=$state$cause${_systemMemContext()}');
+			#else
+			_write('[LARGE-GC] ${Std.int(gcFreed / 1024)}KB freed${_growthSuffix(growthBeforeThisGc, growthSecBeforeThisGc)}${_systemMemContext()}');
+			#end
+		}
+		#end
+
+		#if flixel
+		_lastBitmapCount = curBitmapCount;
+		_lastFrameMemberCount = curFrameMemberCount;
+		if (texDelta > 0 || _lastBitmapKeys.keys().hasNext() == false)
+		{
+			_lastBitmapKeys = new haxe.ds.StringMap();
+			@:privateAccess for (k in FlxG.bitmap._cache.keys()) _lastBitmapKeys.set(k, true);
+		}
+		#end
+
+		#if flixel
+		if (++_memberCheckTimer >= MEMBER_CHECK_INTERVAL)
+		{
+			_memberCheckTimer = 0;
+			_checkMemberGrowth();
+		}
+		#end
+	}
+
+	/**
+	 * Report how long a script event took. Call around scriptGroup.call() in
+	 * MusicBeatState. Fast events (<5ms) are silently discarded; slow ones
+	 * annotate the next spike; very slow ones (>33ms) are written immediately.
+	 */
+	public static function reportScriptTime(event:String, ms:Float):Void
+	{
+		if (!enabled) return;
+		if (ms < SCRIPT_NOTE_MS) return;
+		_lastScriptNote = '$event ${Std.int(ms)}ms';
+		if (ms > SCRIPT_LOG_MS)
+		{
+			#if flixel
+			var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+			_write('[SLOW SCRIPT] $event  ${Std.int(ms)}ms  state=$state');
+			#else
+			_write('[SLOW SCRIPT] $event  ${Std.int(ms)}ms');
+			#end
+		}
+	}
+
+	/**
+	 * Called by FunkinCache when a texture exceeds 4096 px on either axis.
+	 */
+	public static function notifyOversizedTexture(key:String, w:Int, h:Int):Void
+	{
+		if (!enabled) return;
+		_write('[OVERSIZED] $key  ${w}x${h}  — compress or convert to ASTC');
+	}
+
+	// ==================== GAMEPLAY PROFILING ====================
+
+	// checkFrame()'s spike detector compares each frame against a rolling
+	// average that adapts to whatever's currently happening — so a song
+	// section that settles into a sustained 35fps plateau (heavy note
+	// density, not a one-off hitch) just becomes the new "normal" and never
+	// fires a [SPIKE]. This instead samples on a fixed cadence regardless of
+	// whether the frame looked anomalous, with the gameplay context (song
+	// time, live note/sustain count) needed to tell which section of which
+	// song is actually the expensive one.
+	static var _gameplayLogTimer:Float = 0.0;
+	static inline final GAMEPLAY_LOG_INTERVAL:Float = 1.0; // seconds between samples
+	static inline final GAMEPLAY_FPS_WARN:Int = 50;        // below this, flag the line
+
+	// Wall-clock (not game-elapsed) start of the current reporting window, so
+	// we can compare "real time this window actually took" against "sum of
+	// everything we profiled inside it". A real device log showed the tagged
+	// phases (draw/script/superUpdate/notesLoop/...) adding up to a small
+	// fraction of the real time elapsed during the worst fps drops — this
+	// makes that gap a hard, logged number instead of something inferred by
+	// hand from fps + tag sums, to find out whether the missing time is CPU
+	// work we're just not tagging yet, or something outside our control
+	// entirely (GPU/vsync/compositor).
+	static var _gameplayWindowStartStamp:Float = 0.0;
+
+	/**
+	 * Call once per frame from PlayState.update() during an active song.
+	 * Writes a one-line FPS + note-density snapshot roughly once a second —
+	 * cheap enough to run unconditionally, frequent enough to correlate a
+	 * drop with a specific song section afterward.
+	 */
+	public static function reportGameplayFrame(elapsed:Float, songName:String, songTimeMs:Float, noteCount:Int, playFieldCount:Int):Void
+	{
+		if (!enabled) return;
+
+		_gameplayLogTimer += elapsed;
+		if (_gameplayLogTimer < GAMEPLAY_LOG_INTERVAL) return;
+		_gameplayLogTimer = 0.0;
+
+		#if flixel
+		var fps = DebugDisplay.instance != null ? DebugDisplay.instance.currentFPS : 0;
+		#else
+		var fps = 0;
+		#end
+		var mark = fps < GAMEPLAY_FPS_WARN ? '!' : ' ';
+		var t = songTimeMs / 1000;
+		var breakdown = _profBreakdown();
+		var taggedMs = _profTotal();
+
+		final nowStamp = haxe.Timer.stamp();
+		final realWindowMs = (nowStamp - _gameplayWindowStartStamp) * 1000;
+		_gameplayWindowStartStamp = nowStamp;
+		var gapSuffix = '';
+		if (realWindowMs > 0)
+		{
+			final unaccountedMs = realWindowMs - taggedMs;
+			final unaccountedPct = Std.int(unaccountedMs / realWindowMs * 100);
+			gapSuffix = '  unaccounted=${Std.int(unaccountedMs)}ms(${unaccountedPct}%)';
+		}
+
+		// One "[GC hit tag xN, ~XKB]" per tag that actually caught a collision
+		// this window (see profBegin/profEnd's own doc comment) -- generic
+		// over however many tags got checked, instead of one hand-written
+		// suffix variable per zone.
+		var gcHitSuffix = '';
+		for (t in _gcHitTagsList)
+		{
+			final n = _gcHitCollisions.get(t);
+			if (n > 0) gcHitSuffix += '  [GC hit $t x$n, ~${Std.int(_gcHitBytes.get(t) / 1024)}KB]';
+		}
+		#if cpp
+		var gcAnySuffix = _frameGcCollisions > 0 ? '  [GC(any frame) x$_frameGcCollisions, ~${Std.int(_frameGcBytesFreed / 1024)}KB]' : '';
+		var allocSuffix = realWindowMs > 0 ? '  alloc=${Std.int(_windowAllocBytes / 1024 / (realWindowMs / 1000))}KB/s' : '';
+		_windowAllocBytes = 0;
+		#else
+		var gcAnySuffix = '';
+		var allocSuffix = '';
+		#end
+		var suffix = breakdown.length > 0 ? '  [$breakdown]' : '';
+		// A slow, steady leak never spikes and never fires a [MEM EVENT] --
+		// nothing else in this log samples memory on a regular cadence
+		// during gameplay, so it would be invisible until a crash. Riding on
+		// this already-once-a-second line instead of a new timer: no new
+		// per-frame cost, and getAppMemoryUsage()/_systemMemContext() are
+		// just /proc reads, not allocations.
+		#if android
+		final memSuffix = '  mem=' + getAppMemoryUsage() + _systemMemContext();
+		#else
+		final memSuffix = '';
+		#end
+		// noteCount is PlayState.notes.length — the note *pool* size (a
+		// fixed-size, reused set of Note objects once note pooling actually
+		// works), not the count of notes currently in flight.
+		_write('[GAMEPLAY$mark] song=$songName t=${Std.int(t)}s pool=$noteCount fields=$playFieldCount fps=$fps$allocSuffix$suffix$gapSuffix$gcHitSuffix$gcAnySuffix$memSuffix');
+		profReset();
+	}
+
+	/**
+	 * Reset the sampling cadence — call when a song starts so the first
+	 * sample lands ~1s in, not mid-timer from the previous song.
+	 *
+	 * Also wipes any profBegin/profEnd accumulation via profReset(): tags
+	 * like 'stepBeatTracking'/'flxMemberLoop'/'charUpdate'/'script:...' fire
+	 * from MusicBeatState/Character/ScriptGroup, which run on EVERY state
+	 * (menus, editors, ...), not just PlayState -- but profReset() itself is
+	 * otherwise only called from reportGameplayFrame(), which only PlayState
+	 * calls. Without this, whatever accumulated during however long the
+	 * player spent in menus before starting this song would still be sitting
+	 * in _profMs/_profTopLevelMs, and the very first post-song-start
+	 * [GAMEPLAY] line would compare that stale total against only the ~1s
+	 * real window reportGameplayFrame() actually measures -- a nonsense
+	 * "unaccounted" figure (likely deeply negative) on that one line.
+	 */
+	public static function resetGameplayTimer():Void
+	{
+		_gameplayLogTimer = 0.0;
+		_gameplayWindowStartStamp = haxe.Timer.stamp();
+		_windowAllocBytes = 0;
+		profReset();
+	}
+
+	// ==================== AUDIO SYNC ====================
+
+	// PlayState.stepHit() already detects when audio.inst (or, for songs with
+	// voices, the vocal group) has drifted more than one frame's worth of
+	// time from Conductor.songPosition and silently fixes it via
+	// resyncVocals() — every one of those corrections is an audible glitch
+	// (a sudden jump/snap in what's playing), which is exactly the "voices
+	// sound distorted/laggy" symptom reported on device with nothing in this
+	// log ever explaining it. This turns each silent correction into a
+	// timestamped line so it can be lined up against whatever [SPIKE] or
+	// [GC hit] happened in the same window instead of being invisible.
+	static var _lastAudioResyncTime:Float = -999.0;
+	static inline final AUDIO_RESYNC_COOLDOWN:Float = 0.5; // collapse a burst of back-to-back corrections from the same sustained cause into one line
+
+	// Uncapped -- stepHit()'s actual resyncVocals() call isn't gated by
+	// AUDIO_RESYNC_COOLDOWN, only the log LINE below is. Without these, a
+	// track drifting every single step (several times a second) would look
+	// identical in sysmon.log to one that barely trips the threshold once
+	// every cooldown window -- these accumulate the true count/cost between
+	// writes so the log line can say how much got collapsed into it.
+	static var _audioResyncSuppressed:Int = 0;
+	static var _audioResyncTracksSinceWrite:Int = 0;
+	static var _audioResyncCostMsSinceWrite:Float = 0;
+
+	public static function reportAudioResync(cause:String, driftMs:Float, songTimeMs:Float, tracksRestarted:Int = 0, costMs:Float = 0):Void
+	{
+		if (!enabled) return;
+
+		_audioResyncTracksSinceWrite += tracksRestarted;
+		_audioResyncCostMsSinceWrite += costMs;
+
+		final now = haxe.Timer.stamp();
+		if (now - _lastAudioResyncTime < AUDIO_RESYNC_COOLDOWN)
+		{
+			_audioResyncSuppressed++;
+			return;
+		}
+		_lastAudioResyncTime = now;
+
+		final suppressedNote = _audioResyncSuppressed > 0 ? ' (+${_audioResyncSuppressed} more collapsed in last ${AUDIO_RESYNC_COOLDOWN}s)' : '';
+		_write('[AUDIO RESYNC] cause=$cause drift=${Std.int(driftMs)}ms songTime=${Std.int(songTimeMs / 1000)}s trackRestarts=${_audioResyncTracksSinceWrite} resyncCost=${_audioResyncCostMsSinceWrite}ms$suppressedNote${_systemMemContext()}');
+
+		_audioResyncSuppressed = 0;
+		_audioResyncTracksSinceWrite = 0;
+		_audioResyncCostMsSinceWrite = 0;
+	}
+
+	// ==================== PHASE PROFILING ====================
+
+	// Answers "what specifically is slow" instead of just "it's slow": wrap
+	// the handful of expensive phases in PlayState.update() (input/hit
+	// detection, the falling-notes loop, modchart, camera, scripts) with
+	// profBegin/profEnd, and the accumulated per-tag time since the last
+	// report gets folded straight into the next [GAMEPLAY] line — so a slow
+	// window shows e.g. "notesLoop=612ms keyShit=140ms script=88ms" instead
+	// of just "fps=36".
+	static var _profTags:Array<String> = [];
+	static var _profMs:Map<String, Float> = new Map();
+
+	// Sum of only the OUTERMOST (non-overlapping) spans since the last
+	// profReset() -- see profEnd()'s own comment on why this has to be
+	// tracked separately from _profMs (which intentionally keeps every tag,
+	// nested or not, for the human-readable breakdown).
+	static var _profTopLevelMs:Float = 0;
+
+	// A single note hit pushes/pops this stack ~10-12 times (noteHitDispatch, hitPreScript,
+	// hitStrum, hitsoundPlay/hitHealth, hitCharSing, hitSplash, hitNoteScript, hitDispose,
+	// hitFocus, hitAudioSfx, hitPopUp). It used to be Array<{tag:String, t:Float}> — an
+	// anonymous-object literal allocated fresh on every single profBegin() call, meaning the
+	// very act of measuring noteHitDispatch was itself feeding the GC pressure it was built to
+	// diagnose. Two parallel arrays (hxcpp keeps Array<String>/Array<Float> unboxed) give the
+	// same LIFO push/pop behavior with no per-call allocation.
+	static var _profStackTags:Array<String> = [];
+	static var _profStackTimes:Array<Float> = [];
+
+	// ==================== GC COLLISION DETECTION ====================
+
+	// A GC collection landing inside a wall-clock-timed span looks exactly
+	// like slow code: the paused thread's elapsed time balloons but no line
+	// of Haxe code actually took that long, so profEnd()'s own ms total
+	// can't tell "this span did real work" apart from "a collection fired
+	// while we were in here". profBegin/profEnd resolve that automatically
+	// for every TOP-LEVEL tag (draw, script, superUpdate, noteSpawn,
+	// notesLoop, modchart, camera, inputUpdate, keyShit, ...) by sampling
+	// heap usage right before and after -- a many-KB drop means a collection
+	// ran specifically during that span. This used to take a bespoke
+	// gcUsageSnapshot()/xGcCollision() function pair per zone (5 of them,
+	// hand-picked); now every top-level zone gets it for free.
+	//
+	// Nested sub-tags (the hit* tags inside noteHitDispatch, which fire
+	// 10-12x per note hit) are deliberately NOT checked individually -- that
+	// would multiply the extra cpp.vm.Gc.memInfo64() read by however many
+	// notes get hit per frame, on top of what top-level tags already pay.
+	// _gcWatchNested is the one documented exception: holdRelease sits
+	// nested inside keyShit but, like a top-level zone, only fires once per
+	// frame, so it's cheap to check on its own and worth pinpointing
+	// separately from keyShit's own (also-checked) outer span.
+	static var _gcWatchNested:Map<String, Bool> = ['holdRelease' => true];
+
+	// Parallel to _profStackTags/_profStackTimes: whether THIS particular
+	// push opened a GC-watched span, and (if so) the heap snapshot taken at
+	// that moment.
+	static var _gcCheckStack:Array<Bool> = [];
+	static var _gcBeforeStack:Array<Float> = [];
+
+	// Every tag that has caught a GC collision since the last profReset(),
+	// with how many times and how many bytes -- folded into the next
+	// [GAMEPLAY] line as one "[GC hit tag xN, ~XKB]" per tag (see
+	// reportGameplayFrame()).
+	static var _gcHitTagsList:Array<String> = [];
+	static var _gcHitCollisions:Map<String, Int> = new Map();
+	static var _gcHitBytes:Map<String, Int> = new Map();
+
+	/**
+	 * Marks the start of a named phase. Must be paired with profEnd(). Cheap
+	 * no-op when monitoring is off.
+	 */
+	public static inline function profBegin(tag:String):Void
+	{
+		if (enabled)
+		{
+			final watched = _profStackTags.length == 0 || _gcWatchNested.exists(tag);
+			_gcCheckStack.push(watched);
+			if (watched) _gcBeforeStack.push(cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE));
+			_profStackTags.push(tag);
+			_profStackTimes.push(haxe.Timer.stamp());
+		}
+	}
+
+	/**
+	 * Marks the end of the most recently opened phase, accumulating its
+	 * elapsed time under its tag and, for a GC-watched span (see
+	 * profBegin()/_gcWatchNested above), checking whether a collision ran
+	 * during it.
+	 */
+	public static function profEnd():Void
+	{
+		if (!enabled || _profStackTags.length == 0) return;
+		var tag = _profStackTags.pop();
+		var startT = _profStackTimes.pop();
+		var ms = (haxe.Timer.stamp() - startT) * 1000;
+		if (!_profMs.exists(tag))
+		{
+			_profMs.set(tag, 0);
+			_profTags.push(tag);
+		}
+		_profMs.set(tag, _profMs.get(tag) + ms);
+
+		// _profTotal() (used against real wall-clock time to compute
+		// "unaccounted") must only sum spans that don't overlap each other,
+		// or nesting more sub-tags inside an existing one (superUpdate now
+		// containing stepBeatTracking/charUpdate/hudUpdate/etc., see
+		// MusicBeatState.update()/Character.hx/PsychHUD.hx) would count that
+		// same wall-clock time twice -- once under the parent's tag, again
+		// under the child's -- shrinking "unaccounted" through double-
+		// counting arithmetic rather than genuine new attribution. A tag is
+		// only added to that total when the stack is EMPTY right after this
+		// pop, i.e. it was the outermost span running at the time (a plain
+		// top-level tag, or the single top-level call of a tag that also
+		// happens to run nested elsewhere) -- _profMs/_profTags above are
+		// untouched, so the per-tag breakdown line still shows every tag,
+		// nested or not, for context.
+		if (_profStackTags.length == 0) _profTopLevelMs += ms;
+
+		final watched = _gcCheckStack.pop();
+		if (watched)
+		{
+			final before = _gcBeforeStack.pop();
+			final after = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			final freed = before - after;
+			if (freed > 100 * 1024) // >100KB freed inside one call is not normal allocator bookkeeping
+			{
+				if (!_gcHitCollisions.exists(tag))
+				{
+					_gcHitCollisions.set(tag, 0);
+					_gcHitBytes.set(tag, 0);
+					_gcHitTagsList.push(tag);
+				}
+				_gcHitCollisions.set(tag, _gcHitCollisions.get(tag) + 1);
+				_gcHitBytes.set(tag, _gcHitBytes.get(tag) + Std.int(freed));
+			}
+		}
+	}
+
+	// The single biggest known gap behind every high "unaccounted%" line so
+	// far: FlxGame.draw() (flixel/FlxGame.hx) is
+	//   FlxG.cameras.lock();
+	//   _state.draw();        <- PlayState.draw()'s own 'draw' tag covers only this
+	//   FlxG.cameras.render(); <- the actual GPU tile-batch submission -- untimed
+	//   FlxG.cameras.unlock();
+	//   FlxG.signals.postDraw.dispatch();
+	// so everything from FlxG.cameras.render() onward — the part that
+	// actually blocks on the GPU/driver, as opposed to PlayState's own CPU-side
+	// sprite/draw-call batching already covered by 'draw' — fell straight
+	// into "unaccounted" with zero attribution. PlayState.draw() opens this
+	// span the instant its own 'draw' tag closes (right where FlxGame.draw()
+	// itself would go on to call FlxG.cameras.render()); postDraw (which only
+	// fires after that render() + unlock()) closes it here. A persistent
+	// signal listener, not a plain profBegin/profEnd pair, because nothing
+	// in PlayState runs again between "state draw finished" and "postDraw
+	// fires" to place a matching profEnd() call.
+	static var _gpuPresentOpen:Bool = false;
+
+	/**
+	 * Opens the 'gpuPresent' phase -- call once, immediately after PlayState's
+	 * own 'draw' tag closes (i.e. right after `super.draw()` returns in
+	 * PlayState.draw()). Closed automatically by the postDraw signal in
+	 * init() -- see this field's own doc comment above for why a plain
+	 * profEnd() call site doesn't exist for this one.
+	 */
+	public static inline function beginGpuPresent():Void
+	{
+		if (!enabled) return;
+		_gpuPresentOpen = true;
+		profBegin('gpuPresent');
+	}
+
+	#if flixel
+	static function _onPostDraw():Void
+	{
+		// Only PlayState ever opens this (from its own draw() override) --
+		// every other state's frame has postDraw fire with nothing open here,
+		// which must be a silent no-op rather than popping whatever else
+		// might be on the prof stack.
+		if (!_gpuPresentOpen) return;
+		_gpuPresentOpen = false;
+		profEnd();
+	}
+	#end
+
+	// Biggest-first "tag=Xms tag2=Yms" summary of everything accumulated
+	// since the last profReset(). Entries under half a millisecond are
+	// dropped as noise.
+	static function _profBreakdown():String
+	{
+		var entries = [for (t in _profTags) {tag: t, ms: _profMs.get(t)}];
+		entries.sort((a, b) -> a.ms < b.ms ? 1 : (a.ms > b.ms ? -1 : 0));
+		var parts = [for (e in entries) if (e.ms >= 0.5) '${e.tag}=${Std.int(e.ms)}ms'];
+		return parts.join(' ');
+	}
+
+	// Real (non-overlapping) time covered by profiling since the last
+	// profReset() — used to compare against real wall-clock time for a
+	// reporting window (see _gameplayWindowStartStamp) to find out how much
+	// of each window isn't covered by any profBegin/profEnd span at all.
+	// _profTopLevelMs (not a sum over _profMs/_profTags) is what keeps this
+	// correct as more nested sub-tags get added inside existing ones -- see
+	// profEnd()'s own comment.
+	static function _profTotal():Float
+	{
+		return _profTopLevelMs;
+	}
+
+	/** Clears accumulated phase timings — call after folding them into a report. */
+	public static function profReset():Void
+	{
+		_profTags = [];
+		_profMs.clear();
+		_profTopLevelMs = 0;
+		_profStackTags.resize(0);
+		_profStackTimes.resize(0);
+		_gcCheckStack.resize(0);
+		_gcBeforeStack.resize(0);
+		_gcHitTagsList = [];
+		_gcHitCollisions.clear();
+		_gcHitBytes.clear();
+		_frameGcCollisions = 0;
+		_frameGcBytesFreed = 0;
+	}
+
+	#if flixel
+	static function _onPreStateSwitch():Void
+	{
+		_prevStateName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
+		_texCountBefore = _getRawBitmapCount();
+
+		// Snapshot the full key set so we can diff exactly what loads next
+		_keysBefore = new haxe.ds.StringMap();
+		@:privateAccess for (k in FlxG.bitmap._cache.keys())
+			_keysBefore.set(k, true);
+
+		// Record how many textures this state had when it exited, and exactly
+		// which ones (see _stateKeysOnExit's own doc comment).
+		_stateTexOnExit.set(_prevStateName, _texCountBefore);
+		_stateKeysOnExit.set(_prevStateName, _keysBefore);
+	}
+
+	static function _onPostStateSwitch():Void
+	{
+		var after = _getRawBitmapCount();
+		var diff = after - _texCountBefore;
+		var newName = FlxG.state != null ? _shortName(Type.getClassName(Type.getClass(FlxG.state))) : 'Unknown';
+		var sign = diff >= 0 ? '+' : '';
+		// Count alone can hide a size leak -- a handful of huge textures
+		// barely moves the count but is exactly the case _getRawBitmapBytes()
+		// exists to catch. One extra full-cache pass, but this only runs on
+		// a state switch (a loading transition), not per frame.
+		var estMB = Std.int(_getRawBitmapBytes() / 1024 / 1024);
+		_write('[STATE] $_prevStateName → $newName  |  textures: $_texCountBefore → $after (${sign}${diff})  |  ~${estMB}MB (est., uncompressed upper bound)');
+
+		if (diff > 0)
+		{
+			// Collect the actual keys that are new (not in pre-switch snapshot)
+			var newKeys:Array<String> = [];
+			@:privateAccess for (k in FlxG.bitmap._cache.keys())
+				if (!_keysBefore.exists(k)) newKeys.push(k);
+
+			newKeys.sort((a, b) -> Reflect.compare(a, b));
+
+			// Show up to 15 — display only the filename portion to keep lines short
+			var shown = newKeys.slice(0, 15).map(_keyTail);
+			_write('  Loaded by $newName (${newKeys.length}): ' + shown.join(', ')
+				+ (newKeys.length > 15 ? '  … +${newKeys.length - 15} more' : ''));
+		}
+
+		// Re-entry leak detector: if we've visited this state before and it
+		// now has more textures than when we last left it, something accumulated.
+		var prevExitCount = _stateTexOnExit.get(newName);
+		if (prevExitCount != null && after > prevExitCount + 5)
+		{
+			_write('  [REVISIT LEAK] $newName had $prevExitCount textures last exit, now ${after} (+${after - prevExitCount}) — accumulating each visit');
+
+			// Name the actual stragglers: anything in the cache right now that
+			// WASN'T there the last time we left $newName. Diffing against
+			// $newName's own last exit (not this transition's immediate
+			// _keysBefore) catches textures that leaked from ANY state visited
+			// in between, not just the one we just came from -- which is the
+			// realistic case, since a slow leak like this compounds across
+			// several different screens before it's ever noticed here.
+			var prevExitKeys = _stateKeysOnExit.get(newName);
+			if (prevExitKeys != null)
+			{
+				var leakedKeys:Array<String> = [];
+				@:privateAccess for (k in FlxG.bitmap._cache.keys())
+					if (!prevExitKeys.exists(k)) leakedKeys.push(k);
+				leakedKeys.sort((a, b) -> Reflect.compare(a, b));
+
+				var shownLeaked = leakedKeys.slice(0, 15).map(_keyTail);
+				_write('    New since last exit (${leakedKeys.length}): ' + shownLeaked.join(', ')
+					+ (leakedKeys.length > 15 ? '  … +${leakedKeys.length - 15} more' : ''));
+			}
+		}
+
+		if (diff > 30)
+			_write('  [!] $newName loaded $diff textures — verify it releases them on exit');
+
+		_keysBefore = new haxe.ds.StringMap(); // free snapshot memory
+
+		// Reset member-growth tracking for the incoming state
+		_prevMemberCount = -1;
+		_memberGrowthStreak = 0;
+		_memberCheckTimer = 0;
+	}
+
+	static function _checkMemberGrowth():Void
+	{
+		if (FlxG.state == null) return;
+		var count = FlxG.state.members.length;
+		if (_prevMemberCount >= 0 && count > _prevMemberCount + MEMBER_GROWTH_THRESHOLD)
+		{
+			_memberGrowthStreak++;
+			if (_memberGrowthStreak >= MEMBER_GROWTH_STREAK)
+			{
+				_memberGrowthStreak = 0;
+				var state = _shortName(Type.getClassName(Type.getClass(FlxG.state)));
+				_write('[LEAK?] $state members: $_prevMemberCount → $count (+${count - _prevMemberCount}) across ${MEMBER_CHECK_INTERVAL * MEMBER_GROWTH_STREAK} frames — objects added but not removed');
+			}
+		}
+		else if (count <= _prevMemberCount)
+		{
+			_memberGrowthStreak = 0;
+		}
+		_prevMemberCount = count;
+	}
+
+	static function _getRawBitmapCount():Int
+	{
+		var n = 0;
+		@:privateAccess for (_ in FlxG.bitmap._cache.keys()) n++;
+		return n;
+	}
+
+	// Sum of width*height*4 (RGBA32-equivalent) across every cached
+	// FlxGraphic -- an upper-bound byte estimate, not exact (most of this
+	// game's real textures are ASTC-compressed on GPU, smaller than this),
+	// but unlike a flat per-texture average it actually reflects real
+	// dimensions. A handful of huge textures (a full-screen background, an
+	// uncompressed atlas) can leak while the texture COUNT barely moves --
+	// this is the only number in this file that would catch that; count
+	// alone can't. FlxGraphic caches width/height on the object itself at
+	// set_bitmap() time (see flixel/graphics/FlxGraphic.hx), so this reads
+	// them directly without touching any BitmapData pixel buffer -- safe
+	// even for GPU-cached graphics whose CPU-side image was already
+	// disposed via bitmap.disposeImage() (see FunkinCache.cacheBitmap()).
+	static function _getRawBitmapBytes():Float
+	{
+		var bytes:Float = 0;
+		@:privateAccess for (g in FlxG.bitmap._cache)
+			if (g != null) bytes += g.width * g.height * 4;
+		return bytes;
+	}
+	#end
+
+	// Returns the last path segment of a texture key, e.g.
+	// "assets/images/characters/bf/bf-idle" → "bf-idle"
+	static inline function _keyTail(key:String):String
+	{
+		var i = key.lastIndexOf('/');
+		return i >= 0 ? key.substring(i + 1) : key;
+	}
+
+	static inline function _shortName(cls:String):String
+	{
+		var i = cls.lastIndexOf('.');
+		return i >= 0 ? cls.substring(i + 1) : cls;
+	}
+
+	// ==================== HELPERS ====================
+
+	static function _write(line:String):Void
+	{
+		#if (android && sys)
+		if (logPath.length == 0) return;
+		_writeBuffer.add(timestamp() + ' ' + line + '\n');
+		_bufferedLines++;
+		var now = haxe.Timer.stamp();
+		if (_bufferedLines >= FLUSH_LINE_THRESHOLD || now - _lastFlushTime >= FLUSH_INTERVAL_S)
+			_flushBuffer();
+		#end
+	}
+
+	/**
+	 * Writes the buffered lines to disk and flushes. Cheap no-op if the
+	 * buffer is empty. Called periodically by _write(), and forced from
+	 * CrashHandler right before an uncaught error is reported so the last
+	 * buffered lines (often the most useful ones) aren't lost.
+	 */
+	public static function flush():Void
+	{
+		#if (android && sys)
+		if (_writeBuffer.length == 0) return;
+		try {
+			var chunk = _writeBuffer.toString();
+			if (_fileOut == null) _fileOut = File.append(logPath, false);
+			_fileOut.writeString(chunk);
+			_fileOut.flush();
+			_writeBuffer = new StringBuf();
+			_bufferedLines = 0;
+			_lastFlushTime = haxe.Timer.stamp();
+			_totalBytesWritten += chunk.length;
+			// Suppress spike detection after real file I/O so write latency
+			// doesn't appear as a fake frame spike in the log.
+			_suppressUntil = haxe.Timer.stamp() + WRITE_SUPPRESS_S;
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: flush failed: $e', WARN);
+			_fileOut = null; // force a reopen attempt next time
+		}
+		// init() only trims the log at startup, so a single very long session
+		// could otherwise grow it unbounded — rotate mid-session too, same as
+		// the startup check, once we've personally written past the cap.
+		if (_totalBytesWritten > RUNTIME_LOG_CAP_BYTES) _rotateLog();
+		#end
+	}
+
+	static inline function _flushBuffer():Void
+		flush();
+
+	#if (android && sys)
+	static function _rotateLog():Void
+	{
+		try {
+			if (_fileOut != null) { _fileOut.close(); _fileOut = null; }
+			if (FileSystem.exists(logPath)) FileSystem.deleteFile(logPath);
+			_totalBytesWritten = 0;
+			_fileOut = File.append(logPath, false);
+			var marker = timestamp() + ' ============================================================\n'
+				+ timestamp() + ' [LOG ROTATED — hit the ' + Std.int(RUNTIME_LOG_CAP_BYTES / 1024 / 1024) + 'MB runtime cap, earlier lines this session were discarded]\n'
+				+ timestamp() + ' ============================================================\n';
+			_fileOut.writeString(marker);
+			_fileOut.flush();
+			_totalBytesWritten += marker.length;
+		} catch (e:Dynamic) {
+			Logger.log('SystemMonitor: log rotation failed: $e', WARN);
+			_fileOut = null;
+		}
+	}
+	#end
+
+	static function formatBytes(bytes:Int):String
+	{
+		if (bytes < 1024) return bytes + ' B';
+		if (bytes < 1024 * 1024) return Std.int(bytes / 1024) + ' KB';
+		return Std.int(bytes / (1024 * 1024)) + ' MB';
+	}
+
+	// ==================== SYSTEM INFO ====================
+
+	static function getPlatform():String
+	{
+		#if android
+		return 'Android';
+		#elseif ios
+		return 'iOS';
+		#elseif mac
+		return 'macOS';
+		#elseif windows
+		return 'Windows';
+		#elseif linux
+		return 'Linux';
+		#elseif html5
+		return 'HTML5';
+		#else
+		return 'Unknown';
+		#end
+	}
+
+	static function getOSInfo():String
+	{
+		#if android
+		try {
+			#if openfl_v22_up
+			return 'Android API ' + openfl.utils.SystemResources.getAndroidSDKVersion();
+			#else
+			return 'Android (legacy)';
+			#end
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get Android SDK version: $e', WARN); }
+		return 'Android';
+		#elseif (lime && lime_legacy)
+		return lime.system.System.platformVersion;
+		#else
+		return 'N/A';
+		#end
+	}
+
+	static function getTotalRAM():String
+	{
+		#if (android && cpp)
+		try {
+			var bytes = Native.getSystemTotalMemory();
+			var memMB = Std.int(bytes.toInt() / 1024 / 1024);
+			if (memMB > 0) return memMB + ' MB';
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get total RAM: $e', WARN); }
+		#end
+		return '?';
+	}
+
+	// Formats the "how long did this take to accumulate" context for a GC
+	// collision — turns a one-off byte count into an allocation rate, so
+	// "42MB freed" reads as either "over 30s of light gameplay" (unremarkable)
+	// or "over 3s of dense notes" (something is allocating heavily per note).
+	#if cpp
+	static inline function _growthSuffix(growthBytes:Float, growthSec:Float):String
+	{
+		if (growthBytes <= 0 || growthSec <= 0) return '';
+		return ', grew ${Std.int(growthBytes / 1024)}KB over ${Std.int(growthSec * 10) / 10}s';
+	}
+	#end
+
+	// Android's low-memory killer watches this same figure (/proc/meminfo's
+	// MemAvailable). If it's low right when a [SPIKE] or [LARGE-GC] fires,
+	// the OS squeezing overall system memory is a much stronger, more
+	// actionable lead than anything we can infer from our own texture-cache
+	// diffing — this had zero visibility before, since lime's SDL backend
+	// receives Android's onTrimMemory callback but silently discards it
+	// (SDLApplication.cpp's SDL_EVENT_LOW_MEMORY case is a no-op).
+	static function _systemMemContext():String
+	{
+		#if (android && cpp)
+		try {
+			var availBytes = Native.getSystemAvailableMemory();
+			var totalBytes = Native.getSystemTotalMemory();
+			var availMB = Std.int(availBytes.toInt() / 1024 / 1024);
+			var totalMB = Std.int(totalBytes.toInt() / 1024 / 1024);
+			if (availMB > 0 && totalMB > 0)
+			{
+				var pct = Std.int(availMB / totalMB * 100);
+				return '  sysFree=${availMB}MB/${totalMB}MB(${pct}%)';
+			}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get system memory context: $e', WARN); }
+		#end
+		return '';
+	}
+
+	/**
+	 * How much RAM THIS APP's own process is currently resident in (RSS),
+	 * via Native.getTaskMemory() -- NOT free/available memory. Used to be
+	 * named getFreeRAM() and logged as "Free RAM"/"RAM Free", which is the
+	 * opposite of what it measures: a real device log with this reading at
+	 * "396 MB" during a [MEM EVENT] was misread as "the app is 396MB away
+	 * from running out" when it actually meant "the app itself is using
+	 * 396MB" -- a perfectly healthy figure, not a low-memory warning. Pair
+	 * with getSystemAvailableMemory() (see _systemMemContext()'s "sysFree="
+	 * suffix) for an actual free-memory reading.
+	 */
+	static function getAppMemoryUsage():String
+	{
+		#if (android && cpp)
+		try {
+			var bytes = Native.getTaskMemory();
+			var memMB = Std.int(bytes.toInt() / 1024 / 1024);
+			if (memMB > 0) {
+				return memMB + ' MB';
+			}
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get task memory: $e', WARN); }
+		#end
+		return '?';
+	}
+
+	static function getRendererInfo():String
+	{
+		#if (openfl && html5 == false)
+		try {
+			return openfl.display.Caps.renderer;
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get renderer info: $e', WARN); }
+		#end
+		return 'N/A';
+	}
+
+	static function getDriverInfo():String
+	{
+		#if (openfl && html5 == false)
+		try {
+			return openfl.display.Caps.driver;
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get driver info: $e', WARN); }
+		#end
+		return 'N/A';
+	}
+
+	// ==================== FLIXEL HELPERS ====================
+
+	#if flixel
+	static function getBitmapCacheCount():String
+	{
+		return Std.string(_getRawBitmapCount());
+	}
+
+	static function getEstimatedGPUMemory():String
+	{
+		// Was a flat "count * 0.5MB" guess -- a linear rescaling of the same
+		// count already shown right above this line, carrying no
+		// independent information. _getRawBitmapBytes() actually sums real
+		// per-texture dimensions instead.
+		return Std.string(Std.int(_getRawBitmapBytes() / 1024 / 1024)) + ' MB (est., uncompressed upper bound)';
+	}
+	#end
+
+	static function getLoadedGraphicsCount():String
+	{
+		#if (openfl && !html5)
+		try {
+			var list = openfl.Assets.list(openfl.utils.AssetType.IMAGE);
+			return Std.string(list.length);
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get loaded graphics count: $e', WARN); }
+		#end
+		return '?';
+	}
+
+	static function getLoadedSoundsCount():String
+	{
+		#if (openfl && !html5)
+		try {
+			var list = openfl.Assets.list(openfl.utils.AssetType.SOUND);
+			return Std.string(list.length);
+		} catch (e:Dynamic) { Logger.log('SystemMonitor: Failed to get loaded sounds count: $e', WARN); }
+		#end
+		return '?';
+	}
+}

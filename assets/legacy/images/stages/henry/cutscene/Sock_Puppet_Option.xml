@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="Sock_Puppet_Option.png" width="2298" height="902">
+	<SubTexture name="Sock Puppet Select0000" x="908" y="454" width="449" height="437" frameX="-0" frameY="-17" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0001" x="455" y="454" width="453" height="442" frameX="-0" frameY="-12" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0002" x="0" y="454" width="455" height="447" frameX="-0" frameY="-7" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0003" x="1839" y="452" width="457" height="450" frameX="-0" frameY="-4" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0004" x="1839" y="0" width="459" height="452" frameX="-0" frameY="-2" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0005" x="1380" y="0" width="459" height="453" frameX="-0" frameY="-1" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0006" x="0" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0007" x="460" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0008" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0009" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0010" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0011" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0012" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0013" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0014" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0015" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0016" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0017" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0018" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0019" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0020" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0021" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet Select0022" x="920" y="0" width="460" height="454" frameX="-0" frameY="-0" frameWidth="464" frameHeight="454"/>
+	<SubTexture name="Sock Puppet0000" x="1357" y="454" width="449" height="436" frameX="-0" frameY="-0" frameWidth="449" frameHeight="436"/>
+</TextureAtlas>

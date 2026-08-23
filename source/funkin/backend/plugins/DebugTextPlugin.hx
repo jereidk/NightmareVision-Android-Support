@@ -26,109 +26,120 @@ class DebugTextPlugin extends FlxTypedGroup<DebugText>
 	{
 		if (instance == null) return;
 		
-		var startY:Float = 25;
-		if (ClientPrefs.fpsDisplayType != 'Disabled' && DebugDisplay.instance != null) startY += DebugDisplay.instance.textUnderlay.height + 5;
+		var y:Float = 25;
 		
-		var count = 0;
-		instance.forEachAlive((temp:DebugText) -> {
-			temp.y = startY + (temp.height * count);
-			count++;
+		instance.forEachAlive((txt:DebugText) ->
+		{
+			txt.y = y;
+			y += txt.height;
 		});
 	}
 	
-	static function grabText(message:String, colour:FlxColor):DebugText
+	static function grabText(message:String):DebugText
 	{
-		final sanitized = message.substring(0, message.indexOf(']') + 1);
+		if (instance == null) return new DebugText(message);
 		
-		final exists = DebugText.map.exists(sanitized);
-		
-		if (!exists && instance != null && DebugText.map.get(sanitized) == null)
+		for (text in instance)
 		{
-			final ret = instance.recycle(DebugText, () -> new DebugText(message, colour));
-			return ret;
-		}
-		else
-		{
-			var ret = DebugText.map.get(sanitized);
-			ret?._reset();
+			if (text == null) continue;
 			
-			return ret ?? new DebugText(message, colour);
+			if (text.alive && text._trace == message) return text;
 		}
+		
+		return instance.recycle(DebugText, () -> new DebugText(message));
 	}
 	
+	#if android
+	// A device log showed a 702ms [SPIKE] from 48 new "textNNN" bitmap
+	// textures created inside a single frame during real gameplay -- FlxText
+	// re-rasterizes into a brand-new cached bitmap every time its .text
+	// changes (see DebugText.draw()'s `this.text = ...`), and addText() is
+	// the one thing that can fire many DISTINCT messages in the same frame
+	// (each unique message -> a new/recycled DebugText -> a fresh texture on
+	// its next draw()). Counts calls in a short rolling window and traces a
+	// burst with its actual messages, instead of just "+48 texture(s)" with
+	// no indication of who's responsible.
+	static var _burstCount:Int = 0;
+	static var _burstWindowStart:Float = 0;
+	static var _burstMessages:Array<String> = [];
+	static inline final _BURST_WINDOW_S:Float = 0.1;
+	static inline final _BURST_THRESHOLD:Int = 8;
+	#end
+
 	public static function addText(message:String, colour:FlxColor = FlxColor.WHITE)
 	{
 		if (instance == null) return;
+
+		#if android
+		final _now = haxe.Timer.stamp();
+		if (_now - _burstWindowStart > _BURST_WINDOW_S)
+		{
+			if (_burstCount >= _BURST_THRESHOLD)
+				trace('[DebugTextPlugin] burst: $_burstCount addText() call(s) within ${Std.int(_BURST_WINDOW_S * 1000)}ms -- sample: ${_burstMessages.join(" | ")}');
+			_burstWindowStart = _now;
+			_burstCount = 0;
+			_burstMessages = [];
+		}
+		_burstCount++;
+		if (_burstMessages.length < 5 && !_burstMessages.contains(message)) _burstMessages.push(message);
+		#end
+
+		final text = grabText(message);
 		
-		final text = grabText(message, colour);
+		text.traceCount++;
+		text.color = colour;
 		text.setText(message);
-		text.disableTime = 4;
-		text.alpha = 1;
+		text.resetValues();
+		text.revive();
 		
-		posText();
-		
+		instance.remove(text, true);
 		instance.insert(0, text);
 		
 		instance.camera = CameraUtil.lastCamera;
+		
+		posText();
 	}
 	
 	static function clearTxt()
 	{
 		if (instance == null) return;
 		
+		instance.forEach(text -> text?.destroy());
+		
 		instance.clear();
-		DebugText.clearMap();
 	}
 }
 
 class DebugText extends FlxText
 {
-	public static var map:Map<String, DebugText> = new Map<String, DebugText>();
-	
-	private final UNDERLAY_PADDING = 5;
-	
 	public var disableTime:Float = 4;
-	public var traceCount:Int = 1;
-	public var markupColor:FlxColor;
+	public var traceCount(default, set):Int = 0;
 	
-	private var _trace = 'No trace exists';
-	private var _underlay:FlxSprite;
+	@:allow(funkin.backend.plugins.DebugTextPlugin)
+	private var _trace = '';
+	
+	var _dirty:Bool = false;
 	
 	public function new(text:String, color:FlxColor = FlxColor.WHITE)
 	{
 		super(10, 10, FlxG.width, text, 16);
 		
-		// embedded font because fuuck you
-		setFormat(('assets/fonts/consolas.ttf'), 18, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		setFormat(Paths.DEFAULT_FONT, 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		scrollFactor.set();
-		borderSize = 1.25;
+		borderSize = 1;
 		this.color = color;
 		
-		this._trace = text;
-		
-		_underlay = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
-		_underlay.color = FlxColor.BLACK;
-		_underlay.alpha = 0;
-		_underlay.scrollFactor.set();
-		
-		final sanitized = text.substring(0, text.indexOf(']') + 1);
-		
-		if (!map.exists(sanitized)) map.set(sanitized, this);
+		setText(text);
 	}
 	
 	public function setText(input:String)
 	{
 		this._trace = input;
+		_dirty = true;
 	}
 	
-	public function _reset()
+	public function resetValues()
 	{
-		this.revive();
-		
-		this.exists = true;
-		this.alive = true;
-		
-		this.traceCount += 1;
 		this.disableTime = 4;
 		this.alpha = 1;
 	}
@@ -137,17 +148,12 @@ class DebugText extends FlxText
 	{
 		super.update(elapsed);
 		
-		if (this != null)
-		{
-			this.text = '${traceCount > 1 ? '[$traceCount] - ' : ''}$_trace';
-		}
-		
 		disableTime -= elapsed;
 		if (y >= FlxG.height) kill();
 		
 		if (disableTime <= 0)
 		{
-			map.remove(_trace);
+			traceCount = 0;
 			kill();
 		}
 		else if (disableTime < 1) alpha = disableTime;
@@ -155,32 +161,22 @@ class DebugText extends FlxText
 	
 	override function draw()
 	{
-		if (_underlay.exists)
+		if (_dirty)
 		{
-			_underlay.scale.set(this.textField.textWidth + (UNDERLAY_PADDING * 2), height);
-			_underlay.updateHitbox();
+			final traceCounter = traceCount > 1 ? '[' + '$traceCount' + ']' + ' - ' : '';
 			
-			_underlay.setPosition(x - (UNDERLAY_PADDING / 2), y);
-			_underlay.camera = this.camera;
-			_underlay.alpha = this.alpha * 0.4;
-			
-			_underlay.draw();
+			this.text = '$traceCounter$_trace';
+			_dirty = false;
 		}
-		
 		super.draw();
 	}
 	
-	override function destroy()
+	inline function set_traceCount(v:Int)
 	{
-		_underlay.destroy();
-		super.destroy();
-	}
-	
-	public static function clearMap()
-	{
-		for (i in map)
-			i?.destroy();
-			
-		map.clear();
+		if (v == traceCount) return v;
+		
+		_dirty = true;
+		
+		return traceCount = v;
 	}
 }

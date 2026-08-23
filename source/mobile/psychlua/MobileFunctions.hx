@@ -1,6 +1,5 @@
 package mobile.psychlua;
 
-import lime.ui.Haptic;
 import psychlua.FunkinLua;
 
 class MobileFunctions
@@ -11,21 +10,15 @@ class MobileFunctions
 		var lua:State = funk.lua;
 
 		#if mobile
-		Lua_helper.add_callback(lua, "vibrate", function(duration:Int, ?period:Int = 0)
-		{
-			if (duration <= 0)
-			{
-				FunkinLua.luaTrace("vibrate: Invalid duration! Use seconds (ex: 0.5)", false, false, 0xFFFF0000);
-				return;
-			}
-			Haptic.vibrate(period, Std.int(duration * 1000));
-		});
 		Lua_helper.add_callback(lua, "touchUtilJustPressed", TouchUtil.justPressed);
 		Lua_helper.add_callback(lua, "touchUtilPressed", TouchUtil.pressed);
 		Lua_helper.add_callback(lua, "touchUtilJustReleased", TouchUtil.justReleased);
 		Lua_helper.add_callback(lua, "setHitboxVisible", function(visible:Bool = false):Void
 		{
-			PlayState.instance.hitbox.visible = visible;
+			// hitbox is null when gameInputMode is 'Virtual Pad' or 'Note Tap'
+			// (neither uses a MobileHitbox at all) -- this call would already
+			// have crashed for the former; guard both now.
+			if (PlayState.instance?.hitbox != null) PlayState.instance.hitbox.visible = visible;
 		});
 		Lua_helper.add_callback(lua, "enableKeyboard", function()
 		{

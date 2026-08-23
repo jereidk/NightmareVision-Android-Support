@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="bars.png">
+	<!-- Created with Adobe Animate version 24.0.12.3 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="peter0000" x="0" y="0" width="1826" height="701"/>
+	<SubTexture name="peter0001" x="1831" y="0" width="1826" height="701"/>
+	<SubTexture name="peter0002" x="0" y="706" width="1826" height="701"/>
+	<SubTexture name="peter0003" x="1831" y="706" width="1826" height="701"/>
+</TextureAtlas>

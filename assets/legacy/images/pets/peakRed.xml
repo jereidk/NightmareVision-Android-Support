@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="peakRed.png">
+	<!-- Created with Adobe Animate version 21.0.0.35450 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="idle instance 10000" x="0" y="180" width="224" height="171" frameX="0" frameY="-7" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10001" x="0" y="180" width="224" height="171" frameX="0" frameY="-7" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10002" x="226" y="180" width="223" height="171" frameX="0" frameY="-7" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10003" x="226" y="180" width="223" height="171" frameX="0" frameY="-7" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10004" x="657" y="179" width="218" height="176" frameX="0" frameY="-2" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10005" x="657" y="179" width="218" height="176" frameX="0" frameY="-2" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10006" x="657" y="0" width="217" height="177" frameX="0" frameY="-1" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10007" x="657" y="0" width="217" height="177" frameX="0" frameY="-1" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10008" x="0" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10009" x="0" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10010" x="219" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10011" x="219" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10012" x="438" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+	<SubTexture name="idle instance 10013" x="438" y="0" width="217" height="178" frameX="0" frameY="0" frameWidth="224" frameHeight="178"/>
+</TextureAtlas>

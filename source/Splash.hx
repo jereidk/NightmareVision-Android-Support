@@ -15,8 +15,21 @@ class Splash extends FlxState
 {
 	var _cachedAutoPause:Bool;
 	
-	var spriteEvents:FlxTimer;
 	var logo:FlxSprite;
+	
+	var willSkip:Bool = false;
+	// Skipping is blocked for the first SKIP_LOCK_TIME seconds. The splash was
+	// skippable from frame 1, so a tap/keypress on boot dropped the player
+	// straight into the still-loading next state, where input sits dead for a
+	// couple seconds -- feeling like a frozen game. Holding the skip off until
+	// the splash has been up a moment keeps that early input on the splash
+	// (where it visibly does nothing) instead.
+	static inline final SKIP_LOCK_TIME:Float = 1.0;
+	var canSkip:Bool = false;
+
+	var initialTimer:Null<FlxTimer> = null;
+	
+	var spriteEvents:FlxTimer;
 	
 	#if VIDEOS_ALLOWED
 	var video:FunkinVideoSprite;
@@ -26,119 +39,99 @@ class Splash extends FlxState
 	{
 		_cachedAutoPause = FlxG.autoPause;
 		FlxG.autoPause = false;
-		
-		FlxTimer.wait(1, () -> {
-			#if VIDEOS_ALLOWED
-			video = new FunkinVideoSprite();
+
+		// Unlock skipping only after the splash has been visible a beat, so an
+		// on-boot tap can't blow past it into the input-dead loading window.
+		FlxTimer.wait(SKIP_LOCK_TIME, () -> canSkip = true);
+
+		#if VIDEOS_ALLOWED
+		var canPlayVid:Bool = false;
+		var video = new FunkinVideoSprite();
+		video.onFormat(() -> {
+			video.setGraphicSize(0, FlxG.height);
+			video.updateHitbox();
+			video.screenCenter();
 			add(video);
-			video.onFormat(() -> {
-				video.setGraphicSize(0, FlxG.height);
-				video.updateHitbox();
-				video.screenCenter();
-			});
-			video.onEnd(finish);
-			if (video.load(Paths.video('intro'))) video.delayAndStart();
-			else
-			#end
-			
-			logoFunc();
 		});
+		
+		canPlayVid = video.load(Paths.video('intro'));
+		#end
+		
+		initialTimer = FlxTimer.wait(1, () ->
+			{
+				#if VIDEOS_ALLOWED
+				video.onEnd(logoFunc);
+				
+				if (canPlayVid) video.play() else #end logoFunc();
+			});
 	}
 	
 	override function update(elapsed:Float)
 	{
+		super.update(elapsed);
+		
 		if (logo != null)
 		{
 			logo.updateHitbox();
 			logo.screenCenter();
-			
-			if (FlxG.keys.justPressed.SPACE || FlxG.keys.justPressed.ENTER)
-			{
-				finish();
-			}
 		}
-		#if VIDEOS_ALLOWED
-		if (video != null)
-		{
-			if (FlxG.keys.justPressed.SPACE || FlxG.keys.justPressed.ENTER)
-			{
-				finish();
-			}
-		}
-		#end
-		super.update(elapsed);
+		
+		if (canSkip && (FlxG.keys.justPressed.SPACE || FlxG.keys.justPressed.ENTER || FlxG.mouse.justPressed)) finish();
 	}
 	
 	function logoFunc()
 	{
 		var folder:Array<String> = [];
-		if (!FileSystem.isDirectory('assets/images/branding/watermarks') || (folder = FileSystem.readDirectory('assets/images/branding/watermarks')).length == 0)
-		{
-			finish();
-			return;
-		}
+		if (!FunkinAssets.isDirectory('assets/images/branding/watermarks') || (folder = FunkinAssets.readDirectory('assets/images/branding/watermarks')).length == 0) { finish(); return; }
 		
-		folder = folder.filter(str -> !FileSystem.isDirectory('assets/images/branding/watermarks/$str'));
+		folder = folder.filter(str -> !FunkinAssets.isDirectory('assets/images/branding/watermarks/$str'));
 		
 		var img = FlxG.random.getObject(folder);
-		trace(folder);
+                trace(folder);
 		
 		logo = new FlxSprite().loadGraphic(Paths.image('branding/watermarks/${Path.withoutExtension(img)}'));
 		logo.screenCenter();
 		logo.visible = false;
 		add(logo);
 		
-		spriteEvents = new FlxTimer().start(1, (stupidFuckingTimer:FlxTimer) -> {
-			var step = 0;
-			new FlxTimer().start(0.25, (t:FlxTimer) -> {
-				switch (step++)
-				{
-					case 0:
-						FlxG.sound.volume = 1;
-						FlxG.sound.play(Paths.sound('intro'));
-						logo.visible = true;
-						logo.scale.set(0.2, 1.25);
-						t.reset(0.06125);
-					case 1:
-						logo.scale.set(1.25, 0.5);
-						t.reset(0.06125);
-					case 2:
-						logo.scale.set(1.125, 1.125);
-						FlxTween.tween(logo.scale, {x: 1, y: 1}, 0.25, {ease: FlxEase.elasticOut});
-						t.reset(1.25);
-					case 3:
-						FlxTween.tween(logo.scale, {x: 0.2, y: 0.2}, 1.5, {ease: FlxEase.quadIn});
-						FlxTween.tween(logo, {alpha: 0}, 1.5,
-							{
-								ease: FlxEase.quadIn,
-								onComplete: (t:FlxTween) -> {
-									FlxTimer.wait(0.8, finish);
-								}
-							});
-				}
-			});
+		var step = 0;
+		new FlxTimer().start(0.25, (t:FlxTimer) -> {
+			switch (step++)
+			{
+				case 0:
+					FlxG.sound.volume = 1;
+					FlxG.sound.play(Paths.sound('intro'));
+					logo.visible = true;
+					logo.scale.set(0.2, 1.25);
+					t.reset(0.06125);
+				case 1:
+					logo.scale.set(1.25, 0.5);
+					t.reset(0.06125);
+				case 2:
+					logo.scale.set(1.125, 1.125);
+					FlxTween.tween(logo.scale, {x: 1, y: 1}, 0.25, {ease: FlxEase.elasticOut});
+					t.reset(1.25);
+				case 3:
+					FlxTween.tween(logo.scale, {x: 0.2, y: 0.2}, 1.5, {ease: FlxEase.quadIn});
+					FlxTween.tween(logo, {alpha: 0}, 1.5,
+						{
+							ease: FlxEase.quadIn,
+							onComplete: (t:FlxTween) -> {
+								FlxTimer.wait(0.8, finish);
+							}
+						});
+			}
 		});
 	}
 	
 	function finish()
 	{
-		if (spriteEvents != null)
-		{
-			spriteEvents.cancel();
-			spriteEvents.destroy();
-		}
-		#if VIDEOS_ALLOWED
-		video.stop();
-		video.destroy();
-		#end
+		initialTimer?.cancel();
 		complete();
 	}
 	
 	function complete()
 	{
-		FlxG.sound.muted = FlxG.save.data.mute;
-		FlxG.sound.volume = FlxG.save.data.volume;
-		
 		FlxG.autoPause = _cachedAutoPause;
 		FlxG.switchState(() -> Type.createInstance(Main.startMeta.initialState, []));
 	}

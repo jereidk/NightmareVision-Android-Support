@@ -54,6 +54,7 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "saveFile failed: " + e);
                 }
             }
         });
@@ -74,31 +75,33 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "browseFiles failed: " + e);
                 }
             }
         });
     }
 
     public static void browseForMultipleFiles(final String mimeType, final org.haxe.lime.HaxeObject callback) {
-    callbackObject = callback;
-    new Handler(Looper.getMainLooper()).post(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType(mimeType != null ? mimeType : "*/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        callbackObject = callback;
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType(mimeType != null ? mimeType : "*/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
 
-                if (Extension.mainActivity != null) {
-                    Extension.mainActivity.startActivityForResult(intent, PICK_MULTIPLE_FILES_CODE);
+                    if (Extension.mainActivity != null) {
+                        Extension.mainActivity.startActivityForResult(intent, PICK_MULTIPLE_FILES_CODE);
+                    }
+                } catch (Exception e) {
+                    Log.e("FileUtils", "Error opening selector: " + e.toString());
+                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "browseForMultipleFiles failed: " + e);
                 }
-            } catch (Exception e) {
-                Log.e("FileUtils", "Error opening selector: " + e.toString());
             }
-        }
-    });
-}
+        });
+    }
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CREATE_FILE_CODE) {
@@ -119,34 +122,48 @@ public class FileUtils extends Extension {
                 if (uri != null && callbackObject != null) {
                     readBytesFromUri(uri);
                 }
+            } else if (callbackObject != null) {
+                callbackObject.call("onCancel", new Object[0]);
             }
             return true;
         }
 
-     if (requestCode == PICK_MULTIPLE_FILES_CODE) {
+        if (requestCode == PICK_MULTIPLE_FILES_CODE) {
             if (resultCode == Activity.RESULT_OK && data != null) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         java.util.ArrayList<String> filePaths = new java.util.ArrayList<>();
-                        
+
                         if (data.getClipData() != null) {
                             int count = data.getClipData().getItemCount();
                             for (int i = 0; i < count; i++) {
                                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                                String realPath = copyFileToExternal(uri); 
+                                String realPath = copyFileToExternal(uri);
                                 if (realPath != null) filePaths.add(realPath);
                             }
                         } else if (data.getData() != null) {
                             String realPath = copyFileToExternal(data.getData());
                             if (realPath != null) filePaths.add(realPath);
                         }
-                        if (callbackObject != null && !filePaths.isEmpty()) {
-                            String[] report = filePaths.toArray(new String[0]);
-                            callbackObject.call("onFileSelected", new Object[] { null, report });
-                        }
+
+                        final java.util.ArrayList<String> finalPaths = filePaths;
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (callbackObject != null && !finalPaths.isEmpty()) {
+                                    String[] report = finalPaths.toArray(new String[0]);
+                                    callbackObject.call("onFileSelected", new Object[] { null, report });
+                                } else if (callbackObject != null) {
+                                    callbackObject.call("onCancel", new Object[0]);
+                                }
+                            }
+                        });
                     }
                 }).start();
+            } else if (callbackObject != null) {
+                // User dismissed the picker without selecting a file
+                callbackObject.call("onCancel", new Object[0]);
             }
             return true;
         }
@@ -170,9 +187,37 @@ public class FileUtils extends Extension {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "writeFileToUri failed: " + e);
                 }
             }
         }).start();
+    }
+
+    /**
+     * Resolves the same root folder mobile.backend.StorageSystem.hx resolves
+     * (Haxe side) -- reads the identical bootstrap flag file
+     * (getFilesDir()/storageMode.txt, real internal app storage both sides
+     * agree on without any IPC) so a manually-imported file via this picker
+     * lands in whichever folder (Shared .ImpostorLegacy, or Scoped
+     * Android/data/<package>/files/) the player actually has active,
+     * instead of a third, always-Shared, previously-misnamed
+     * ".NightmareVision" folder nothing else in the app ever used.
+     */
+    private static java.io.File resolveRootDir() {
+        String mode = "Shared";
+        try {
+            java.io.File flag = new java.io.File(Extension.mainActivity.getFilesDir(), "storageMode.txt");
+            if (flag.exists()) {
+                byte[] data = java.nio.file.Files.readAllBytes(flag.toPath());
+                mode = new String(data).trim();
+            }
+        } catch (Exception e) { /* default to Shared */ }
+
+        if ("Scoped".equals(mode)) {
+            java.io.File scoped = Extension.mainActivity.getExternalFilesDir(null);
+            if (scoped != null) return scoped;
+        }
+        return new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".ImpostorLegacy");
     }
 
   private static String copyFileToExternal(Uri uri) {
@@ -196,10 +241,10 @@ public class FileUtils extends Extension {
             }
            
             if (fileName == null || fileName.isEmpty()) {
-                fileName = "temp_" + System.currentTimeMillis() + ".json";
+                fileName = "temp_" + System.currentTimeMillis() + ".zip";
             }
 
-            java.io.File rootDir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), ".NightmareVision");
+            java.io.File rootDir = resolveRootDir();
             java.io.File tempDir = new java.io.File(rootDir, ".temp");
             if (!tempDir.exists()) tempDir.mkdirs();
 
@@ -222,6 +267,7 @@ public class FileUtils extends Extension {
             return tempFile.getAbsolutePath(); 
         } catch (Exception e) {
             Log.e("FileUtils", "Error on copying to root: " + e.toString());
+            JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "copyFileToExternal failed: " + e);
             return null;
         }
     }
@@ -257,6 +303,7 @@ public class FileUtils extends Extension {
                     byteBuffer.close();
                 } catch (Exception e) {
                     e.printStackTrace();
+                    JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "readBytesFromUri failed: " + e);
                 }
             }
         }).start();
@@ -289,6 +336,7 @@ public class FileUtils extends Extension {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            JavaCrashHandler.appendToGameLog("FileUtils", "ERROR", "downloadFile failed: " + e);
             return false;
         }
     }

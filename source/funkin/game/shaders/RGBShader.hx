@@ -1,13 +1,6 @@
 package funkin.game.shaders;
 
-import funkin.data.NoteSkin.ColorList;
-
-import flixel.system.FlxAssets.FlxShader;
 import flixel.graphics.tile.FlxDrawBaseItem;
-
-import funkin.objects.note.Note;
-
-using funkin.utils.tools.ArrayTools;
 
 @:access(flixel.FlxCamera._currentDrawItem)
 class RGBGraphics
@@ -23,6 +16,8 @@ class RGBGraphics
 	public var mult:Float;
 	public var alpha:Float;
 	public var flash:Float;
+	
+	public var alphaMult(get, set):Float;
 	
 	public function new(?r:FlxColor, ?g:FlxColor, ?b:FlxColor, mult:Float = 1.0)
 	{
@@ -48,7 +43,7 @@ class RGBGraphics
 	public function reset(?r:FlxColor, ?g:FlxColor, ?b:FlxColor, mult:Float = 1.0, alpha:Float = 1.0, flash:Float = 0.0)
 	{
 		this.r = r ?? FlxColor.RED;
-		this.g = g ?? FlxColor.GREEN;
+		this.g = g ?? FlxColor.LIME;
 		this.b = b ?? FlxColor.BLUE;
 		
 		this.mult = mult;
@@ -69,7 +64,7 @@ class RGBGraphics
 	function getDrawItem(camera:FlxCamera)
 	{
 		final item = camera._currentDrawItem;
-		item.graphics.rgbShader ??= new BackendRGB();
+		item.graphics.rgbShader ??= new RGBShader();
 		item.rgbShader = item.graphics.rgbShader;
 		return item;
 	}
@@ -85,21 +80,25 @@ class RGBGraphics
 	{
 		for (_ in 0...indicesLength)
 		{
-			pushColor(drawItem.rgbR, enabled ? r : 0xFFFF0000);
-			pushColor(drawItem.rgbG, enabled ? g : 0xFF00FF00);
-			pushColor(drawItem.rgbB, enabled ? b : 0xFF0000FF);
+			drawItem.rgbEnabled.push(enabled ? 1 : 0);
 			
-			drawItem.rgbMult.push(enabled ? mult : 0);
+			pushColor(drawItem.rgbR, r);
+			pushColor(drawItem.rgbG, g);
+			pushColor(drawItem.rgbB, b);
+			
+			drawItem.rgbMult.push(mult);
 			
 			drawItem.rgbAlpha.push(alpha);
 			drawItem.rgbFlash.push(flash);
 		}
 	}
+	
+	inline function get_alphaMult():Float return alpha;
+	
+	inline function set_alphaMult(a:Float):Float return alpha = a;
 }
 
-// modified version of the RGBShader that is only used by the backend
-// user friendly version is down below
-class BackendRGB extends FlxShader
+class RGBShader extends flixel.system.FlxAssets.FlxShader
 {
 	@:glVertexSource('
 		#pragma header
@@ -108,6 +107,7 @@ class BackendRGB extends FlxShader
 		attribute vec3 g;
 		attribute vec3 b;
 		attribute float mult;
+		attribute float enabled;
 
 		attribute float a_alpha;
 		attribute float a_flash;
@@ -115,10 +115,11 @@ class BackendRGB extends FlxShader
 		varying vec3 _r;
 		varying vec3 _g;
 		varying vec3 _b;
-        varying float _mult;
+		varying float _mult;
+		varying float _enabled;
 
-        varying float _a_alpha;
-        varying float _a_flash;
+		varying float _a_alpha;
+		varying float _a_flash;
 
 		void main()
 		{
@@ -126,56 +127,46 @@ class BackendRGB extends FlxShader
 			_r = r;
 			_g = g;
 			_b = b;
-            _mult = mult;
-            _a_alpha = a_alpha;
-            _a_flash = a_flash;
+			_mult = mult;
+			_enabled = enabled;
+			_a_alpha = a_alpha;
+			_a_flash = a_flash;
 		}
 	')
-	@:glFragmentHeader('
-		#pragma header
-
-        varying vec3 _r;
-		varying vec3 _g;
-		varying vec3 _b;
-        varying float _mult;
-
-        varying float _a_alpha;
-        varying float _a_flash;
-
-		vec4 flixel_texture2DCustom(sampler2D bitmap, vec2 coord) 
-		{
-			vec4 color = flixel_texture2D(bitmap, coord);
-			if (!hasTransform || color.a == 0.0 || _mult == 0.0) 
-			{
-				return color;
-			}
-
-			vec4 newColor = color;
-			newColor.rgb = min(color.r * _r + color.g * _g + color.b * _b, vec3(1.0));
-			newColor.a = color.a;
-			
-			color = mix(color, newColor, _mult);
-			
-			if(color.a > 0.0) 
-			{
-				return vec4(color.rgb, color.a);
-			}
-			return vec4(0.0, 0.0, 0.0, 0.0);
-		}
-            
-    ')
 	@:glFragmentSource('
 		#pragma header
+		
+		varying vec3 _r;
+		varying vec3 _g;
+		varying vec3 _b;
+		varying float _mult;
+		varying float _enabled;
+
+		varying float _a_alpha;
+		varying float _a_flash;
+
+		vec4 rgb(sampler2D bitmap, vec2 coord) 
+		{
+			vec4 color = flixel_texture2D(bitmap, coord);
+			
+			if (!hasTransform || color.a == 0. || _mult == 0. || _enabled == 0.) return color;
+
+			vec4 newColor = color;
+			newColor.rgb = min(color.r * _r + color.g * _g + color.b * _b, vec3(1.));
+			newColor.a = color.a;
+			
+			color = mix(color, newColor, _mult * _enabled);
+			
+			if (color.a > 0.) return vec4(color.rgb, color.a);
+			
+			return vec4(0.);
+		}
 
 		void main() 
 		{
-			vec4 texOutput = flixel_texture2DCustom(bitmap, openfl_TextureCoordv);
-
+			vec4 texOutput = rgb(bitmap, openfl_TextureCoordv);
 			
-			if (_a_flash != 0.0)
-			{
-				texOutput = mix(texOutput,vec4(1.0,1.0,1.0,1.0),_a_flash) * texOutput.a;
-			}
+			if (_a_flash != 0.0) texOutput = mix(texOutput, vec4(1.), _a_flash) * texOutput.a;
 
 			texOutput *= _a_alpha;
 
@@ -188,12 +179,10 @@ class BackendRGB extends FlxShader
 	}
 }
 
-// user friendly version woohoo!
-// same shader, just able to be easily used in modding
-
-class RGBShader
+// non batchewd version for compat purposes
+class RGBPalette
 {
-	public var shader:UserRGB;
+	public var shader:RGBShader;
 	
 	public var r(default, set):FlxColor;
 	public var g(default, set):FlxColor;
@@ -205,16 +194,7 @@ class RGBShader
 	
 	public function new(r:FlxColor = 0xFFFF0000, g:FlxColor = 0xFF00FF00, b:FlxColor = 0xFF0000FF, mult:Float = 1.0, alpha:Float = 1.0, flash:Float = 0.0)
 	{
-		shader = new UserRGB();
-		
-		// Initialize the uniform values explicitly so OpenFL creates the arrays
-		shader.data.r.value = [0.0, 0.0, 0.0];
-		shader.data.g.value = [0.0, 0.0, 0.0];
-		shader.data.b.value = [0.0, 0.0, 0.0];
-		shader.data.mult.value = [1.0];
-		shader.data.u_alpha.value = [1.0];
-		shader.data.u_flash.value = [0.0];
-		shader.data.u_enabled.value = [true];
+		shader = new RGBShader();
 		
 		this.r = r;
 		this.g = g;
@@ -230,122 +210,53 @@ class RGBShader
 		return [r, g, b];
 	}
 	
-	public function setColors(colors:Array<FlxColor>)
+	public function setColors(colors:Array<FlxColor>):Void
 	{
 		r = colors[0];
 		g = colors[1];
 		b = colors[2];
 	}
 	
-	private function set_r(value:FlxColor):FlxColor
+	function set_r(value:FlxColor):FlxColor
 	{
-		r = value;
 		// Extract components and normalize to 0.0 - 1.0 range
 		shader.data.r.value = [value.redFloat, value.greenFloat, value.blueFloat];
-		return value;
+		return r = value;
 	}
 	
-	private function set_g(value:FlxColor):FlxColor
+	function set_g(value:FlxColor):FlxColor
 	{
-		g = value;
 		shader.data.g.value = [value.redFloat, value.greenFloat, value.blueFloat];
-		return value;
+		return g = value;
 	}
 	
-	private function set_b(value:FlxColor):FlxColor
+	function set_b(value:FlxColor):FlxColor
 	{
-		b = value;
 		shader.data.b.value = [value.redFloat, value.greenFloat, value.blueFloat];
+		return b = value;
+	}
+	
+	function set_mult(value:Float):Float
+	{
+		shader.data.mult.value = [mult = value];
 		return value;
 	}
 	
-	private function set_mult(value:Float):Float
+	function set_alpha(value:Float):Float
 	{
-		mult = value;
-		shader.data.mult.value = [mult];
+		shader.data.a_alpha.value = [alpha = value];
 		return value;
 	}
 	
-	private function set_alpha(value:Float):Float
+	function set_flash(value:Float):Float
 	{
-		alpha = value;
-		shader.data.u_alpha.value = [alpha];
+		shader.data.a_flash.value = [flash = value];
 		return value;
 	}
 	
-	private function set_flash(value:Float):Float
+	function set_enabled(value:Bool):Bool
 	{
-		flash = value;
-		shader.data.u_flash.value = [flash];
-		return value;
-	}
-	
-	private function set_enabled(value:Bool):Bool
-	{
-		enabled = value;
-		shader.data.u_enabled.value = [enabled];
-		return value;
-	}
-}
-
-class UserRGB extends FlxShader
-{
-	@:glFragmentHeader('
-		#pragma header
-		
-		uniform vec3 r;
-		uniform vec3 g;
-		uniform vec3 b;
-		uniform float mult;
-
-		uniform float u_alpha;
-		uniform float u_flash;
-
-		uniform bool u_enabled;
-
-		vec4 flixel_texture2DCustom(sampler2D bitmap, vec2 coord) 
-		{
-			vec4 color = flixel_texture2D(bitmap, coord);
-			if (!u_enabled || !hasTransform || color.a == 0.0 || mult == 0.0) 
-			{
-				return color;
-			}
-
-			vec4 newColor = color;
-			newColor.rgb = min(color.r * r + color.g * g + color.b * b, vec3(1.0));
-			newColor.a = color.a;
-			
-			color = mix(color, newColor, mult);
-			
-			if(color.a > 0.0) 
-			{
-				return vec4(color.rgb, color.a);
-			}
-			return vec4(0.0, 0.0, 0.0, 0.0);
-		}
-            
-    ')
-	@:glFragmentSource('
-		#pragma header
-
-		void main() 
-		{
-			vec4 texOutput = flixel_texture2DCustom(bitmap, openfl_TextureCoordv);
-
-			
-			if (u_flash != 0.0)
-			{
-				texOutput = mix(texOutput,vec4(1.0,1.0,1.0,1.0),u_flash) * texOutput.a;
-			}
-
-			texOutput *= u_alpha;
-
-			gl_FragColor = texOutput;
-		}
-			
-	')
-	public function new()
-	{
-		super();
+		shader.data.enabled.value = [value ? 1 : 0];
+		return enabled = value;
 	}
 }

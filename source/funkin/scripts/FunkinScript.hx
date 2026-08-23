@@ -4,12 +4,17 @@ import extensions.hscript.Sharables;
 import extensions.hscript.IrisEx;
 
 import crowplexus.iris.Iris;
+import crowplexus.iris.ErrorSeverity;
 
 import extensions.hscript.InterpEx;
 
+import funkin.backend.Logger;
+import funkin.backend.Logger.Severity;
 import funkin.backend.plugins.DebugTextPlugin;
 import funkin.objects.*;
 import funkin.objects.note.*;
+
+using crowplexus.iris.utils.Ansi;
 
 @:access(crowplexus.iris.Iris)
 @:access(funkin.states.PlayState)
@@ -25,15 +30,14 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param path 
 	 * @return String
 	 */
-	public static function getPath(path:String):String
+	public static function getPath(path:String, mode:PathsTestMode = NORMAL):String
 	{
 		for (extension in H_EXTS)
 		{
 			final file = '$path.$extension';
 			
-			final targetPath = Paths.getPath(file, null, true);
+			final targetPath = Paths.getPath(file, mode);
 			if (FunkinAssets.exists(targetPath)) return targetPath;
-			if (FunkinAssets.exists(file)) return file;
 		}
 		return path;
 	}
@@ -49,45 +53,55 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		return false;
 	}
 	
+	static inline function formatPosInfos(fileName:String = 'hscript', lineNumber:Int = 0, x:String = '', prefix:String = '')
+	{
+		var prefix = '[$prefix$fileName:$lineNumber]';
+		
+		final modPath:String = Paths.mods(Mods.currentModDirectory + '/');
+		if (fileName.startsWith(modPath)) prefix = prefix.replace(modPath, '');
+		#if ASSET_REDIRECT else if (fileName.startsWith(Paths.trail)) prefix = prefix.replace(Paths.trail, ''); #end
+		
+		return '$prefix - $x';
+	}
+	
 	/**
 	 * Initiates the debugging backend of Iris
 	 */
 	public static function init()
 	{
-		inline function formatFileLoc(fileName:String, lineNumber:Int, x:String)
+		Iris.logLevel = (level, x, ?pos) -> {
+			pos ??= Iris.getDefaultPos();
+			
+			final prefix:String = ErrorSeverityTools.getPrefix(level);
+			final prefixEmpty:Bool = (prefix == '');
+			
+			var out = formatPosInfos(pos.fileName, pos.lineNumber, x, prefixEmpty ? '' : '$prefix:');
+			
+			if (!prefixEmpty)
+			{
+				out = out.fg(ErrorSeverityTools.getColor(level)).reset();
+				if (level == FATAL) out = out.attr(INTENSITY_BOLD);
+			}
+			
+			#if sys Sys.println #else trace #end (out.stripColor());
+		}
+		
+		function log(x:String, ?pos:haxe.PosInfos, level:ErrorSeverity)
 		{
-			var tempName = '[$fileName:$lineNumber]';
-			
-			if (fileName.contains(Mods.currentModDirectory)) tempName = tempName.replace('content/${Mods.currentModDirectory}/', '');
-			
-			tempName += ' - $x';
-			
-			return tempName;
+			final prefix:String = ErrorSeverityTools.getPrefix(level);
+			final formatted:String = formatPosInfos(pos.fileName, pos.lineNumber, x, prefix == '' ? '' : '$prefix:');
+
+			DebugTextPlugin.addText(formatted, Logger.getHexColourFromSeverity(Severity.fromIris(level)));
+			Logger.log(formatted, Severity.fromIris(level));
 		}
 		
-		Iris.warn = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(WARN));
-			
-			Iris.logLevel(ERROR, x, pos);
-		}
+		Iris.warn = log.bind(_, _, WARN);
 		
-		Iris.error = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(ERROR));
-			
-			Iris.logLevel(NONE, x, pos);
-		}
+		Iris.error = log.bind(_, _, ERROR);
 		
-		Iris.print = (x, ?pos) -> {
-			final output:String = formatFileLoc(pos.fileName, pos.lineNumber, x);
-			
-			DebugTextPlugin.addText(Std.string(output), Logger.getHexColourFromSeverity(PRINT));
-			
-			Iris.logLevel(NONE, x, pos);
-		}
+		Iris.fatal = log.bind(_, _, FATAL);
+		
+		Iris.print = log.bind(_, _, NONE);
 	}
 	
 	/**
@@ -96,9 +110,9 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+	public static function fromString(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
-		return new FunkinScript(script, name, additionalVars, shareables);
+		return new FunkinScript(script, name, additionalVars, shareables, modFolder);
 	}
 	
 	/**
@@ -108,31 +122,51 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	 * @param name 
 	 * @param additionalVars 
 	 */
-	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+	public static function fromFile(file:String, ?name:String, ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
 		name ??= file;
 		
-		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables);
+		modFolder ??= Paths.getModFolder(file, "scripts");
+		
+		return new FunkinScript(FunkinAssets.getContent(file), name, additionalVars, shareables, modFolder);
 	}
 	
 	/**
 	 * is true if parsing failed
 	 */
 	@:noCompletion public var __garbage:Bool = false;
-	
-	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables)
+
+	public var modFolder:Null<String>;
+
+	/**
+	 * Per-event opt-out a script can flip on itself (via the `script` var it's
+	 * given, e.g. `script.suppressedEvents.set('onUpdate', true);`) to stop
+	 * ScriptGroup.call() from invoking it for that event -- for scripts that
+	 * are auto-loaded into every song (assets/legacy/scripts/) but only need
+	 * a per-frame hook while some specific runtime state is active (e.g.
+	 * cutsceneSkip.hx's onUpdate, idle for every song that never registers a
+	 * skippable cutscene). Every hscript function call pays real tree-walking
+	 * interpreter overhead even for a trivial early-return body, so this
+	 * avoids entering the interpreter at all rather than relying on the
+	 * script's own first-line guard.
+	 */
+	public var suppressedEvents:Map<String, Bool> = new Map();
+
+	public function new(script:String, ?name:String = "Script", ?additionalVars:Map<String, Any>, ?shareables:Sharables, ?modFolder:String)
 	{
 		super(script, {name: name, autoRun: false, autoPreset: false}, shareables);
-		
+
 		(cast interp : InterpEx).parent = FlxG.state;
 		// interp = new InterpEx(FlxG.state);
+
+		this.modFolder = modFolder;
 		
 		preset();
 		
 		if (additionalVars != null)
 		{
 			for (key => obj in additionalVars)
-				set(key, additionalVars.get(obj));
+				set(key, obj);
 		}
 		
 		tryExecute();
@@ -151,7 +185,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		catch (e)
 		{
 			__garbage = true;
-			Logger.log('[${name}]: PARSING ERROR: $e', ERROR, true);
+			Iris.error('[${name}]: PARSING ERROR: $e');
 		}
 		return ret;
 	}
@@ -159,44 +193,77 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 	// kept for notescript stuff
 	public function executeFunc(func:String, ?parameters:Array<Dynamic>, ?theObject:Any, ?extraVars:Map<String, Dynamic>):Dynamic
 	{
-		extraVars ??= [];
-		
-		if (exists(func))
+		if (!exists(func)) return null;
+
+		var daFunc = get(func);
+		if (!Reflect.isFunction(daFunc)) return null;
+
+		var returnVal:Dynamic = null;
+
+		// Fast path: by far the common case across the codebase is "bind `this`,
+		// call, restore `this`" with no other extraVars — every per-frame hook
+		// (Note/ScriptedModifier/StoryNode/GameOverSubstate updates) goes through
+		// here. Save/restore via two locals instead of allocating two Maps
+		// (extraVars, defaultShit) on every single call; nesting/reentrancy is
+		// still safe since each call gets its own locals, same as the Map path.
+		if (extraVars == null)
 		{
-			var daFunc = get(func);
-			if (Reflect.isFunction(daFunc))
+			if (theObject != null)
 			{
-				var returnVal:Dynamic = null;
-				var defaultShit:Map<String, Dynamic> = [];
-				
-				if (theObject != null) extraVars.set("this", theObject);
-				
-				for (key in extraVars.keys())
-				{
-					defaultShit.set(key, get(key));
-					set(key, extraVars.get(key));
-				}
-				
+				var oldThis = get("this");
+				set("this", theObject);
+
 				try
 				{
 					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
 				}
 				catch (e:haxe.Exception)
 				{
-					#if sys
-					Sys.println(e.message);
-					#end
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
 				}
-				
-				for (key in defaultShit.keys())
-				{
-					set(key, defaultShit.get(key));
-				}
-				
-				return returnVal;
+
+				set("this", oldThis);
 			}
+			else
+			{
+				try
+				{
+					returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+				}
+				catch (e:haxe.Exception)
+				{
+					Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+				}
+			}
+
+			return returnVal;
 		}
-		return null;
+
+		var defaultShit:Map<String, Dynamic> = [];
+
+		if (theObject != null) extraVars.set("this", theObject);
+
+		for (key in extraVars.keys())
+		{
+			defaultShit.set(key, get(key));
+			set(key, extraVars.get(key));
+		}
+
+		try
+		{
+			returnVal = Reflect.callMethod(theObject, daFunc, parameters ?? []);
+		}
+		catch (e:haxe.Exception)
+		{
+			Iris.error('[${name}]: RUNTIME ERROR: ${e.message}');
+		}
+
+		for (key in defaultShit.keys())
+		{
+			set(key, defaultShit.get(key));
+		}
+
+		return returnVal;
 	}
 	
 	@:inheritDoc
@@ -208,17 +275,21 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set('Std', hl.HLFixes.HLStd);
 		set("trace", Reflect.makeVarArgs(function(x:Array<Dynamic>) {
 			var pos = this.interp != null ? this.interp.posInfos() : Iris.getDefaultPos(this.name);
-			var v = x.shift();
-			if (x.length > 0) pos.customParams = x;
-			Iris.print(Std.string(v), pos);
+			
+			Iris.print(formatPosInfos(pos.fileName, pos.lineNumber, x), pos);
 		}));
 		#end
-		
+
+		for (k => v in funkin.data.Defines.defines) parser.preprocesorValues.set(k, v);
+
 		set("StringTools", StringTools);
+		set("Date", Date);
+		set("Sys", Sys);
 		
 		set("Type", Type);
 		set("script", this);
 		set("Dynamic", Dynamic);
+		set('modFolder', modFolder);
 		
 		set('StringMap', haxe.ds.StringMap);
 		set('IntMap', haxe.ds.IntMap);
@@ -228,25 +299,23 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("Lib", openfl.Lib);
 		set("Assets", lime.utils.Assets);
 		set("OpenFlAssets", openfl.utils.Assets);
+		set("FunkinAssets", FunkinAssets);
 		
 		set('curBpm', Conductor.bpm);
-		set('crotchet', Conductor.crotchet);
-		set('stepCrotchet', Conductor.stepCrotchet);
+		set('Function_Cancel', funkin.scripting.ScriptConstants.CANCEL_FUNC);
 		set('Function_Halt', funkin.scripting.ScriptConstants.HALT_FUNC);
 		set('Function_Stop', funkin.scripting.ScriptConstants.STOP_FUNC);
 		set('Function_Continue', funkin.scripting.ScriptConstants.CONTINUE_FUNC);
-		set('curBeat', 0);
-		set('curStep', 0);
-		set('curSection', 0);
-		set('curDecBeat', 0);
-		set('curDecStep', 0);
 		set('version', Main.NMV_VERSION.trim());
 		set('Defines', funkin.data.Defines);
 		
 		// set flixel related stuff
 		set("FlxG", flixel.FlxG);
 		set("FlxSprite", flixel.FlxSprite);
-		set("FlxCamera", extensions.flixel.FlxCameraEx);
+		set("FunkinSprite", funkin.objects.FunkinSprite);
+		set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
+		set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
+		set("FlxCamera", flixel.FlxCamera);
 		set("FlxMath", flixel.math.FlxMath);
 		set("FlxTimer", flixel.util.FlxTimer);
 		set("FlxTween", flixel.tweens.FlxTween);
@@ -259,10 +328,8 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("FlxBackdrop", flixel.addons.display.FlxBackdrop);
 		set("FlxTiledSprite", flixel.addons.display.FlxTiledSprite);
 		set('FlxPoint', flixel.math.FlxPoint.FlxBasePoint);
-		
-		set("FlxTypedGroup", flixel.group.FlxGroup);
-		set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
-		set("FlxEmitter", flixel.effects.particles.FlxEmitter);
+		set('FlxParticle', flixel.effects.particles.FlxParticle);
+		set('FlxEmitter', flixel.effects.particles.FlxEmitter);
 		
 		set('FlxCameraFollowStyle', flixel.FlxCamera.FlxCameraFollowStyle);
 		set("FlxTextBorderStyle", flixel.text.FlxText.FlxTextBorderStyle);
@@ -273,6 +340,8 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("FlxSpriteElement", animate.internal.elements.FlxSpriteElement);
 		
 		set('Controls', funkin.input.Controls);
+		set('controls', funkin.input.Controls.instance);
+		set('IS_ANDROID', #if android true #else false #end);
 		
 		// abstracts
 		set("FlxTextAlign", funkin.utils.MacroUtil.buildAbstract(flixel.text.FlxText.FlxTextAlign));
@@ -302,9 +371,12 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		
 		// FNF-specific things
 		set("Paths", Paths);
+		set("PathsTestMode", PathsTestMode);
 		set("MusicBeatState", funkin.backend.MusicBeatState);
 		set("Conductor", funkin.backend.Conductor);
 		set("ClientPrefs", funkin.data.ClientPrefs);
+		set("Lang", funkin.data.Lang);
+		set("GameFlags", funkin.data.GameFlags);
 		set("CoolUtil", funkin.utils.CoolUtil);
 		set('WindowUtil', funkin.utils.WindowUtil);
 		
@@ -335,8 +407,6 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		#if VIDEOS_ALLOWED
 		set("FunkinVideoSprite", funkin.video.FunkinVideoSprite);
 		#end
-		set("BackgroundDancer", funkin.objects.stageobjects.BackgroundDancer);
-		set("BackgroundGirls", funkin.objects.stageobjects.BackgroundGirls);
 		set("HealthIcon", HealthIcon);
 		set("Character", funkin.objects.Character);
 		set("NoteSplash", NoteSplash);
@@ -347,23 +417,11 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 		set("AttachedAlphabet", AttachedAlphabet);
 		
 		set("CutsceneHandler", funkin.objects.CutsceneHandler);
-		set('DialogueBox', funkin.objects.DialogueBox);
-		
-		// modchart related
-		set("ModManager", funkin.game.modchart.ModManager);
-		set("SubModifier", funkin.game.modchart.SubModifier);
-		set("NoteModifier", funkin.game.modchart.NoteModifier);
-		set("EventTimeline", funkin.game.modchart.EventTimeline);
-		set("Modifier", funkin.game.modchart.Modifier);
-		set("StepCallbackEvent", funkin.game.modchart.events.StepCallbackEvent);
-		set("CallbackEvent", funkin.game.modchart.events.CallbackEvent);
-		set("ModEvent", funkin.game.modchart.events.ModEvent);
-		set("EaseEvent", funkin.game.modchart.events.EaseEvent);
-		set("SetEvent", funkin.game.modchart.events.SetEvent);
 		
 		set('inGameOver', false);
 		
 		set("game", FlxG.state);
+		set("state", FlxG.state);
 		
 		if ((FlxG.state is PlayState))
 		{
@@ -377,7 +435,7 @@ class FunkinScript extends IrisEx implements IFlxDestroyable
 			set('seenCutscene', PlayState.seenCutscene);
 			set('week', funkin.data.WeekData.weeksList[PlayState.storyMeta.curWeek]);
 			set('difficultyName', funkin.backend.Difficulty.difficulties[PlayState.storyMeta.difficulty]);
-			set('songLength', FlxG.sound.music.length);
+			set('songLength', FlxG.sound.music?.length ?? 0);
 			set('healthGainMult', PlayState.instance.healthGain);
 			set('healthLossMult', PlayState.instance.healthLoss);
 			set('instakillOnMiss', PlayState.instance.instakillOnMiss);

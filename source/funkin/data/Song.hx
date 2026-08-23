@@ -31,8 +31,11 @@ typedef Song =
 	var stage:String;
 	
 	var arrowSkins:Array<String>;
+	var ?flags:haxe.DynamicAccess<Dynamic>;
 	
-	// var arrowSkin:String;
-	// var splashSkin:String;
+	var allowBFskin:Bool;
+	var allowGFskin:Bool;
+	var allowPet:Bool;
+	
 	var ?format:String;
 }

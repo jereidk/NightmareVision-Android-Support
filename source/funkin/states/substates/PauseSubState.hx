@@ -1,488 +1,511 @@
 package funkin.states.substates;
 
-import funkin.data.SongMetaData;
+        #if mobile
+        import mobile.utils.MobileNavUtil;
+        import flixel.input.touch.FlxTouch;
+        import mobile.backend.flixel.input.FlxMobileInputID;
+        #end
 
-import flixel.FlxG;
-import flixel.FlxSprite;
-import flixel.FlxSubState;
+import funkin.input.TurboControl;
+
+import flixel.group.FlxSpriteGroup;
+
+import funkin.states.*;
+import funkin.states.options.OptionsState;
+import funkin.utils.CameraUtil;
+import funkin.states.substates.CosmeticsSubstate;
 import flixel.addons.transition.FlxTransitionableState;
-import flixel.group.FlxGroup.FlxTypedGroup;
-import flixel.sound.FlxSound;
-import flixel.text.FlxText;
-import flixel.tweens.FlxEase;
-import flixel.tweens.FlxTween;
-import flixel.util.FlxColor;
-import flixel.FlxCamera;
 import flixel.util.FlxStringUtil;
 
-import funkin.backend.Difficulty;
-import funkin.utils.CameraUtil;
-import funkin.states.options.OptionsState;
-import funkin.backend.MusicBeatSubstate;
-import funkin.data.*;
-import funkin.states.*;
-import funkin.objects.*;
-import funkin.scripts.*;
-
-class PauseSubState extends MusicBeatSubstate
+class PauseSubState extends funkin.backend.MusicBeatSubstate
 {
-	var grpMenuShit:FlxTypedGroup<Alphabet>;
-	var cornerTexts:Array<FlxText> = [];
-	
 	public static var instance:PauseSubState;
-	
-	var menuItems:Array<String> = [];
-	var menuItemsOG:Array<String> = ['Resume', 'Restart Song', 'Chart Editor', 'Change Difficulty', 'Options', 'Exit to menu'];
-	var difficultyChoices = [];
-	var curSelected:Int = 0;
-	
-	var pauseMusic:FlxSound;
-	var practiceText:FlxText;
-	var skipTimeText:FlxText;
-	var skipTimeTracker:Alphabet;
-	var curTime:Float = Math.max(0, Conductor.songPosition);
-	
-	// var botplayText:FlxText;
 	public static var songName:String = '';
 	
-	var debugBG:FlxSprite;
-	var debugTxt:FlxText;
+	var pauseMusic:FlxSound;
+	var pauseGroup:FlxSpriteGroup;
+	var options:Array<String> = ['resumesong', 'restartsong', 'options', 'backtomenu'];
+	
+	var pauseBG:FlxSprite;
+	var optionText:Array<FlxText> = [];
+	
+	var curSelect:Int = 0;
+	
+	var viewingMode:Bool = false;
+	var looksie:FlxSprite;
+	var infoTitle:FlxText;
+	var infoSubtext:FlxText;
+	
+	var turboGroup:TurboControlGroup;
+	var controlLEFT:TurboControl = TurboControl.fromControl('ui_left');
+	var controlRIGHT:TurboControl = TurboControl.fromControl('ui_right');
+
+	// Reused every frame in update() instead of letting FlxG.mouse.getScreenPosition() and the
+	// mobilePadJustReleased() array args allocate a fresh FlxPoint/Array each call.
+	var _mousePosPoint:FlxPoint = FlxPoint.get();
+	#if mobile
+	static final _upKey:Array<FlxMobileInputID> = [UP];
+	static final _downKey:Array<FlxMobileInputID> = [DOWN];
+	#end
+	
+	public var skipToTimeOption:Null<FlxText> = null;
+
+        #if mobile
+        var mobileControlsAdded:Bool = false;
+        #end
+	var skipToTime:Float;
 	
 	override function create()
 	{
+		add(turboGroup = new TurboControlGroup());
+		turboGroup.add(controlLEFT).rate = (1 / 45);
+		turboGroup.add(controlRIGHT).rate = (1 / 45);
+		
 		var cam:FlxCamera = CameraUtil.lastCamera;
-		
 		instance = this;
-		initStateScript();
-		
-		if (Difficulty.difficulties.length < 2) menuItemsOG.remove('Change Difficulty'); // No need to change difficulty if there is only one!
-		
-		if (PlayState.chartingMode #if debug || true #end)
-		{
-			var shit:Int = 2;
-			if (PlayState.chartingMode)
-			{
-				menuItemsOG.insert(shit, 'Leave Charting Mode');
-				shit++;
-			}
-			
-			var num:Int = 0;
-			if (!PlayState.instance.startingSong)
-			{
-				num = 1;
-				menuItemsOG.insert(shit, 'Skip Time');
-			}
-			menuItemsOG.insert(shit + num, 'End Song');
-			menuItemsOG.insert(shit + num, 'Toggle Practice Mode');
-			menuItemsOG.insert(shit + num, 'Toggle Botplay');
-			// menuItemsOG.insert(shit + num, 'Hawk Tuah Respect Button -->');
-		}
-		menuItems = menuItemsOG;
-		
-		for (i in 0...Difficulty.difficulties.length)
-		{
-			var diff:String = '' + Difficulty.difficulties[i];
-			difficultyChoices.push(diff);
-		}
-		difficultyChoices.push('BACK');
+
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(false);
+		#end
+
+		initStateScript('PauseSubState');
 		
 		pauseMusic = new FlxSound();
-		
-		if (songName != null) pauseMusic.loadEmbedded(Paths.music(songName), true, true);
-		else if (songName != 'None') pauseMusic.loadEmbedded(Paths.music(Paths.sanitize('breakfast')), true, true);
-		
+		pauseMusic.loadEmbedded(Paths.music(songName), true, true);
 		pauseMusic.volume = 0;
 		pauseMusic.play(false, FlxG.random.int(0, Std.int(pauseMusic.length / 2)));
-		
 		FlxG.sound.list.add(pauseMusic);
 		
-		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
-		bg.setGraphicSize(cam.width, cam.height);
-		bg.updateHitbox();
-		bg.scrollFactor.set();
-		add(bg);
-		bg.alpha = 0;
+		pauseGroup = new FlxSpriteGroup();
+		pauseGroup.cameras = [cam];
 		
-		function createCornerText(text:String, addtoo:Bool = false)
+		pauseBG = new flixel.system.FlxBGSprite();
+		pauseBG.color = FlxColor.BLACK;
+		pauseBG.alpha = 0;
+		pauseGroup.add(pauseBG);
+		
+		// glow/portrait are anchored toward the right side of the 1280 base
+		// canvas (same backGlow/portrait pair and same magic numbers as
+		// FreeplayState) — shift both by the full revealed width in 'expand'
+		// mode so they keep hugging the right edge instead of drifting toward
+		// the center as the canvas widens.
+		final portraitShiftX:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+			? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x
+			: 0;
+
+		var glow:FlxSprite = new FlxSprite(500 + portraitShiftX, -12.65).loadGraphic(Paths.image('menu/freeplay/backGlow'));
+		glow.flipX = false;
+		glow.color = PlayState.instance.dad.healthColorArray != null ? PlayState.instance.dad.healthColour : FlxColor.WHITE;
+		pauseGroup.add(glow);
+
+		var dwp:String = getDadPortrait();
+		var p:String = portraitExists(dwp) ? dwp : 'placeholder';
+		var portrait:FlxSprite = new FlxSprite(0, -125).loadGraphic(Paths.image('menu/freeplay/portraits/' + p));
+		portrait.offset.x += (portrait.frameWidth - 1215) * 0.5 * portrait.scale.x;
+		portrait.offset.y += (portrait.frameHeight - 1097) * 0.5 * portrait.scale.y;
+		portrait.x = FlxG.width;
+		pauseGroup.add(portrait);
+
+		FlxTween.tween(portrait, {x: 304.65 + portraitShiftX}, 0.3, {ease: FlxEase.circOut});
+		
+		var pad:Int = 15;
+		
+		infoTitle = new FlxText(0, pad, FlxG.width - pad, 'ME');
+		infoTitle.setFormat(Paths.font('liberbold.ttf', false), 24, FlxColor.WHITE, FlxTextAlign.RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		pauseGroup.add(infoTitle);
+		
+		infoSubtext = new FlxText(0, 30 + pad, FlxG.width - pad, 'I MADE THE SONG');
+		infoSubtext.setFormat(Paths.font('liber.ttf', false), 24, FlxColor.WHITE, FlxTextAlign.RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		pauseGroup.add(infoSubtext);
+		
+		assignValues(getSongInfo(PlayState.SONG.song));
+		
+		
+
+                if (ClientPrefs.inDevMode)
+                {
+                        options.push('[DEV] debug info');
+                        options.push(PlayState.instance.playbackRate >= 2 ? '[DEV] speed: back to 1x' : '[DEV] speed: 2x');
+                        // Mirrors keyboard-only debugKeysChart (PlayState.hx) -- the only
+                        // way to reach the editors mid-song on a touch-only device used
+                        // to be a keybind with no on-screen equivalent. Opens the full
+                        // MasterEditorMenu hub, not just the chart editor directly -- see
+                        // PlayState.openEditorsMenu().
+                        options.push('[DEV] editors');
+                }
+		if (PlayState.chartingMode)
 		{
-			var t = new FlxText(0, 15, cam.width - 15, text, 32);
-			t.alignment = RIGHT;
-			t.setFormat(Paths.DEFAULT_FONT, 32);
-			t.scrollFactor.set();
-			cornerTexts.push(t);
-			if (addtoo) add(t);
-			return t;
+			options.insert(2, 'skiptotime');
+			options.insert(3, 'leavechartingmode');
+		}
+
+		// Live-toggleable straight from the pause menu -- label reflects
+		// current state, selecting it flips ClientPrefs.gameplaySettings and
+		// closes; PlayState.closeSubState()'s paused-resume branch already
+		// calls refreshGameplaySettings() on every close, so this takes
+		// effect the instant gameplay resumes.
+		// Showcase (dev-only) already forces botplay on and keeps the HUD
+		// live -- exposing the botplay/practice toggles here would let the
+		// player fight that mode mid-song, so hide them entirely while it's
+		// active.
+		if (!PlayState.instance.showcaseActive)
+		{
+			final gameplayTogglesIndex = options.indexOf('options');
+			options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('practice', false) ? 'practice_off' : 'practice_on');
+			if (!PlayState.isStoryMode)
+				options.insert(gameplayTogglesIndex, ClientPrefs.getGameplaySetting('botplay', false) ? 'botplay_off' : 'botplay_on');
+		}
+
+		var scale:Float = Math.min(300 / (options.length * 60), 1);
+
+		// 'expand' mode: on the widened canvas the option column reads too
+		// small and too far into the corner. Grow it in proportion to the
+		// revealed width (font size and the 60px row pitch both derive from
+		// `scale`, so rows can't overlap) -- ~11% on a typical 20:9 cutout,
+		// exactly 1.0 when the cutout is 0.
+		final cutoutX:Float = funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x;
+		if (cutoutX > 0) scale *= 1 + Math.min(cutoutX / FlxG.width, 0.25) * 0.6;
+		
+		for (i in 0...options.length)
+		{
+			var opt = new FlxText(-640, 0, -1, Lang.str(options[i], options[i]));
+			
+			if (options[i] == 'skiptotime') skipToTimeOption = opt;
+			
+			opt.setFormat(Paths.font('liber.ttf'), Std.int(48 * scale), FlxColor.WHITE, FlxTextAlign.LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			opt.borderSize = 2;
+			opt.y = FlxG.height / 2 + (i * 60 * scale) - opt.height;
+			opt.ID = i;
+			pauseGroup.add(opt);
+			optionText.push(opt);
 		}
 		
-		var levelInfo = createCornerText(PlayState.SONG.song);
-		add(levelInfo);
-		
-		var levelDifficulty = createCornerText(Difficulty.getCurrentDifficultyString());
-		add(levelDifficulty);
-		
-		// temp just wanted to see this
-		var meta:SongMetaData = PlayState.meta;
-		if (meta != null)
-		{
-			if (meta.composers != null) createCornerText("Composers: " + meta.composers.join(', '), true);
-			if (meta.charters != null) createCornerText("Charters: " + meta.charters.join(', '), true);
-			if (meta.artists != null) createCornerText("Artists: " + meta.artists.join(', '), true);
-			if (meta.coders != null) createCornerText("Coders: " + meta.coders.join(', '), true);
-		}
-		
-		var blueballedTxt = createCornerText("Blueballed: " + PlayState.deathCounter);
-		add(blueballedTxt);
-		
-		practiceText = createCornerText("PRACTICE MODE");
-		practiceText.visible = PlayState.instance.practiceMode;
-		add(practiceText);
-		
-		var chartingText = createCornerText("CHARTING MODE");
-		add(chartingText);
-		chartingText.visible = PlayState.chartingMode;
-		
-		FlxTween.tween(bg, {alpha: 0.6}, 0.4);
-		
-		var yt:Float = 15;
-		for (k => i in cornerTexts)
-		{
-			i.y = yt - i.height;
-			i.alpha = 0;
-			FlxTween.tween(i, {alpha: 1, y: yt}, 0.2, {ease: FlxEase.circOut, startDelay: 0.1 * k});
-			yt += i.height;
-		}
-		
-		grpMenuShit = new FlxTypedGroup<Alphabet>();
-		add(grpMenuShit);
-		
-		debugBG = new FlxSprite().makeScaledGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		debugBG.alpha = 0;
-		add(debugBG);
-		
-		debugTxt = new FlxText(25, 0, FlxG.width - 50, '', 32);
-		debugTxt.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
-		debugTxt.borderSize = 2;
-		debugTxt.screenCenter(Y);
-		add(debugTxt);
-		
+		looksie = new FlxSprite(0, FlxG.height - 100).loadGraphic(Paths.image('menu/pause/looksie'));
+		looksie.origin.set(25, 75);
+		looksie.cameras = [cam];
+		looksie.flipX = true;
 		#if mobile
-		controls.isInSubstate = true;
-		addVirtualPad(PlayState.chartingMode ? LEFT_FULL : UP_DOWN, A_B);
-		addVirtualPadCamera();
+		looksie.x = FlxG.width - looksie.width;
+		looksie.flipX = false;
 		#end
 		
-		regenMenu();
+		add(pauseGroup);
+		add(looksie);
 		cameras = [cam];
 		
-		super.create();
+		skipToTime = Math.max(PlayState.instance.getSongTime(), 0);
+		updateSkipTimeOption();
+
+                #if mobile
+                controls.isInSubstate = true;
+                addVirtualPad(UP_DOWN, A_B);
+                addVirtualPadCamera();
+                #end
 		
-		scriptGroup.call('onCreatePost', []);
+		FlxG.sound.play(Paths.sound('panelAppear'), 0.5);
+		super.create();
 	}
 	
-	var holdTime:Float = 0;
+	function updateSkipTimeOption():Void
+	{
+		if (skipToTimeOption == null) return;
+		
+		final skipStr:String = Lang.str('skiptotime');
+		
+		if (skipToTimeOption.ID != curSelect)
+		{
+			skipToTimeOption.text = skipStr;
+			return;
+		}
+		
+		final timeStr:String = FlxStringUtil.formatTime(skipToTime / 1000, false);
+		final lengthStr:String = FlxStringUtil.formatTime((PlayState.instance.audio.inst?.length ?? PlayState.instance.songLength) / 1000, false);
+
+		skipToTimeOption.text = (Lang.hasSpecial('rightToLeft') ? '$timeStr / $lengthStr \t$skipStr' : '$skipStr \t$timeStr / $lengthStr');
+	}
+	
+	public function changeSkipTime(secs:Float /* wait thats funny */):Void
+	{
+		if (skipToTimeOption == null) return;
+		
+		skipToTime = FlxMath.mod(skipToTime + secs * 1000, PlayState.instance.audio.inst?.length ?? PlayState.instance.songLength);
+		updateSkipTimeOption();
+	}
 	
 	override function update(elapsed:Float)
 	{
-		if (pauseMusic.volume < 0.5) pauseMusic.volume += 0.01 * elapsed;
-		
+		if (pauseMusic != null && pauseMusic.volume < 0.5) pauseMusic.volume += 0.01 * elapsed;
 		super.update(elapsed);
 		
-		if (skipTimeText != null && skipTimeTracker != null) updateSkipTextStuff();
+		var cam = cameras != null && cameras.length > 0 ? cameras[0] : FlxG.camera;
+		var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(cam, _mousePosPoint);
 		
-		if (controls.UI_UP_P)
+		if (!viewingMode)
 		{
-			changeSelection(-1);
-		}
-		if (controls.UI_DOWN_P)
-		{
-			changeSelection(1);
-		}
-		
-		var daSelected:String = menuItems[curSelected];
-		switch (daSelected)
-		{
-			case 'Skip Time':
-				if (controls.UI_LEFT_P)
-				{
-					FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-					curTime -= 1000;
-					holdTime = 0;
-				}
-				if (controls.UI_RIGHT_P)
-				{
-					FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-					curTime += 1000;
-					holdTime = 0;
-				}
-				
-				if (controls.UI_LEFT || controls.UI_RIGHT)
-				{
-					holdTime += elapsed;
-					if (holdTime > 0.5)
-					{
-						curTime += 45000 * elapsed * (controls.UI_LEFT ? -1 : 1);
-					}
-					var maxLength = PlayState.instance?.audio.inst?.length ?? 0.0;
-					
-					if (curTime >= maxLength) curTime -= maxLength;
-					else if (curTime < 0) curTime += maxLength;
-					updateSkipTimeText();
-				}
+			if (controlLEFT.PRESSED) changeSkipTime(-1);
+			if (controlRIGHT.PRESSED) changeSkipTime(1);
+			
+			#if mobile
+			if (controls.mobilePadJustReleased(_upKey)) changeSelection(-1);
+			else if (controls.mobilePadJustReleased(_downKey)) changeSelection(1);
+			#else
+			if (controls.UI_UP_P || FlxG.mouse.wheel > 0) changeSelection(-1);
+			else if (controls.UI_DOWN_P || FlxG.mouse.wheel < 0) changeSelection(1);
+			#end
+			
+			if (ClientPrefs.inDevMode && (FlxG.keys.justPressed.TAB || FlxG.gamepads.anyJustPressed(X)))
+			{
+				// lockMovement = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+				openSubState(new CosmeticsSubstate());
+			}
+			
+			if (controls.ACCEPT) acceptChoice();
 		}
 		
-		if (controls.ACCEPT)
+		if (controls.BACK)
 		{
-			if (menuItems == difficultyChoices)
+			if (viewingMode)
 			{
-				if (menuItems.length - 1 != curSelected && difficultyChoices.contains(daSelected))
+				changeView(false);
+			}
+			else
+			{
+				FlxG.sound.play(Paths.sound('panelDisappear'), 0.5);
+				close();
+			}
+		}
+		
+		// quick bugfix
+		pauseBG.alpha = FlxMath.lerp(pauseBG.alpha, 0.8, FlxMath.bound(elapsed * 15.6, 0, 1)) * pauseGroup.alpha;
+		
+		var looksieHover = looksie.overlapsPoint(mousePos, true, cam);
+		var looksieScale:Float = FlxMath.lerp(looksie.scale.x, looksieHover ? 1.25 : 1, FlxMath.bound(elapsed * 15.6, 0, 1));
+		looksie.scale.set(looksieScale, looksieScale);
+		
+		// Unlike the optionText tap-handling right below, this wasn't gated at
+		// all -- 'looksie' sits in the bottom-right corner, the same area the
+		// Virtual Pad's A/B buttons occupy (see addVirtualPad(UP_DOWN, A_B)
+		// above), so a Virtual Pad user's button tap could also land on this
+		// and toggle viewingMode, which then hijacks BACK (see update() above:
+		// BACK exits viewingMode instead of resuming/closing the pause menu).
+		if (looksieHover && FlxG.mouse.justPressed #if mobile && MobileNavUtil.allowPointerNav() #end)
+		{
+			changeView(!viewingMode);
+		}
+		
+		pauseGroup.alpha = FlxMath.lerp(pauseGroup.alpha, viewingMode ? 0 : 1, FlxMath.bound(elapsed * 15.6, 0, 1));
+		looksie.alpha = FlxMath.lerp(looksie.alpha, viewingMode ? 0.3 : 1, FlxMath.bound(elapsed * 15.6, 0, 1));
+		
+		for (item in optionText)
+		{
+			if (item.overlapsPoint(mousePos, true, cam) && FlxG.mouse.justPressed && !viewingMode #if mobile && ClientPrefs.navInputMode != 'Virtual Pad' #end)
+			{
+				if (curSelect == item.ID)
 				{
-					debugBG.alpha = 0;
-					debugTxt.text = "";
-					
-					try
-					{
-						PlayState.SONG = Chart.fromSong(PlayState.SONG.song, curSelected);
-					}
-					catch (e)
-					{
-						FlxG.sound.play(Paths.sound('cancelMenu'), 0.7);
-						debugBG.alpha = 0.7;
-						debugTxt.text = Std.string(e);
-						return;
-					}
-					
-					PlayState.storyMeta.difficulty = curSelected;
-					FlxG.resetState();
-					FlxG.sound.music.volume = 0;
-					PlayState.changedDifficulty = true;
-					PlayState.chartingMode = false;
-					skipTimeTracker = null;
-					
-					deleteSkipTimeText();
-					
-					return;
+					acceptChoice();
 				}
-				
-				menuItems = menuItemsOG;
-				regenMenu();
-			}
-			
-			switch (daSelected)
-			{
-				case 'Options':
-					toOptions();
-				case "Resume":
-					close();
-				case 'Change Difficulty':
-					menuItems = difficultyChoices;
-					regenMenu();
-				case 'Toggle Practice Mode':
-					PlayState.instance.practiceMode = !PlayState.instance.practiceMode;
-					PlayState.changedDifficulty = true;
-					practiceText.visible = PlayState.instance.practiceMode;
-				case "Chart Editor":
-				    #if mobile controls.isInSubstate = false; #end
-					PlayState.instance.openChartEditor();
-				case "Restart Song":
-					restartSong();
-				case "Leave Charting Mode":
-					restartSong();
-					PlayState.chartingMode = false;
-				case 'Skip Time':
-					if (curTime < Conductor.songPosition)
-					{
-						PlayState.startOnTime = curTime;
-						restartSong(true);
-					}
-					else
-					{
-						if (curTime != Conductor.songPosition)
-						{
-							PlayState.instance.clearNotesBefore(curTime);
-							PlayState.instance.setSongTime(curTime);
-						}
-						close();
-					}
-				case "End Song":
-					close();
-					PlayState.instance.finishSong(true);
-				case 'Toggle Botplay':
-					PlayState.instance.cpuControlled = !PlayState.instance.cpuControlled;
-					PlayState.changedDifficulty = true;
-					PlayState.instance.botplayTxt.visible = PlayState.instance.cpuControlled;
-					PlayState.instance.botplayTxt.alpha = 1;
-				case 'Hawk Tuah Respect Button -->':
-					FlxG.sound.play(Paths.sound('untitled1'));
-				case "Exit to menu":
-					returnToMain();
-			}
-		}
-	}
-	
-	public function returnToMain()
-	{
-		if (scriptGroup.call('onExit', []) != ScriptConstants.STOP_FUNC)
-		{
-			PlayState.deathCounter = 0;
-			PlayState.seenCutscene = false;
-			#if mobile controls.isInSubstate = false; #end
-			FlxG.switchState(() -> PlayState.isStoryMode ? new StoryMenuState() : new FreeplayState());
-			CoolUtil.cancelMusicFadeTween();
-			FunkinSound.playMusic(Paths.music('freakyMenu'));
-			PlayState.changedDifficulty = false;
-			PlayState.chartingMode = false;
-		}
-	}
-	
-	public function toOptions()
-	{
-		if (scriptGroup.call('onOptions', []) != ScriptConstants.STOP_FUNC)
-		{
-			PlayState.instance.paused = true;
-			PlayState.instance.audio.volume = 0;
-			#if mobile controls.isInSubstate = false; #end
-			FlxG.switchState(() -> new OptionsState());
-			@:privateAccess
-			{
-				if (pauseMusic._sound != null)
+				else
 				{
-					FunkinSound.playMusic(pauseMusic._sound, 0);
-					FlxTween.tween(FlxG.sound.music, {volume: 0.5}, 0.7);
+					curSelect = item.ID;
+					changeSelection(0);
 				}
 			}
 			
-			OptionsState.onPlayState = true;
-		}
-	}
-	
-	public function restartSong(noTrans:Bool = false)
-	{
-		if (scriptGroup.call('onRestart', []) != ScriptConstants.STOP_FUNC)
-		{
-			PlayState.instance.paused = true;
-			FlxG.sound.music.volume = 0;
-			PlayState.instance.audio.volume = 0;
-			
-			if (noTrans)
-			{
-				FlxTransitionableState.skipNextTransOut = true;
-			}
-			
-			FlxG.resetState();
+			// Menu options hug the left edge by design — in 'expand' mode nudge
+			// them toward center by a fraction of the revealed width. 0.4 (was
+			// 0.25, FreeplayState's card-row factor) sits the now-larger texts
+			// (see the scale boost in create()) comfortably off the edge.
+			final menuCenterShift:Float = (funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x > 0)
+				? funkin.backend.FunkinRatioScaleMode.gameCutoutSize.x * 0.4
+				: 0;
+			item.x = FlxMath.lerp(item.x, (curSelect == item.ID ? 75 : 55) + menuCenterShift, FlxMath.bound(elapsed * 15.6, 0, 1));
+			item.alpha = FlxMath.lerp(item.alpha, curSelect == item.ID ? 1 : 0.3, FlxMath.bound(elapsed * 15.6, 0, 1)) * pauseGroup.alpha;
 		}
 	}
 	
 	override function destroy()
 	{
-		pauseMusic.destroy();
-		scriptGroup.call('onDestroy', []);
-		
+		#if android
+		mobile.backend.AndroidUtils.setGameplayState(true);
+		#end
+		if (pauseMusic != null) pauseMusic.destroy();
+		_mousePosPoint.put();
 		super.destroy();
 	}
 	
-	function changeSelection(change:Int = 0):Void
+	public static function getDadPortrait():String
 	{
-		curSelected = FlxMath.wrap(curSelected + change, 0, menuItems.length - 1);
+		// bruh
+		if (PlayState.instance.pauseOverride != '') return PlayState.instance.pauseOverride;
 		
-		var ret = scriptGroup.call('onChangeSelection', [curSelected]);
+		var character = PlayState.instance.dad?.curCharacter;
 		
-		if (ret != ScriptConstants.STOP_FUNC)
+		if (PlayState.instance.dad?.pausePortrait != '') return PlayState.instance.dad?.pausePortrait;
+		
+		return (portraitExists(character) ? character : PlayState.instance.dad?.healthIcon);
+	}
+	
+	static function portraitExists(id:String):Bool
+	{
+		return Paths.fileExists('images/menu/freeplay/portraits/$id.png');
+	}
+	
+	public static function getSongInfo(songID:String):Array<String>
+	{
+		var txt = Paths.getPath('songs/' + Paths.sanitize(songID) + '/info.txt', NORMAL);
+		var info:Array<String> = CoolUtil.coolTextFile(txt);
+		if (info != null && info.length > 0) return info;
+		return ['UNKNOWN', 'NO SONG INFO FOUND'];
+	}
+	
+	function assignValues(info:Array<String>):Void
+	{
+		infoTitle.text = info[0];
+		infoSubtext.text = info[1] + (info[2] != null ? '\n' + info[2] : '');
+	}
+	
+	function changeView(view:Bool):Void
+	{
+		FlxG.sound.play(Paths.sound('menu/looksie'));
+		scriptGroup.call('onLooksie', [view]);
+		viewingMode = view;
+	}
+	
+	function changeSelection(by:Int = 0):Void
+	{
+		FlxG.sound.play(Paths.sound('hover'), 0.5);
+		curSelect = FlxMath.wrap(curSelect + by, 0, options.length - 1);
+		updateSkipTimeOption();
+	}
+	
+	function acceptChoice():Void
+	{
+		switch (options[curSelect])
 		{
-			FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-			
-			for (k => item in grpMenuShit.members)
-			{
-				item.targetY = k - curSelected;
+			case 'resumesong':
+				close();
 				
-				item.alpha = 0.6;
-				if (item.targetY == 0)
+			case 'restartsong':
+				restartSong();
+				
+			case 'skiptotime':
+				final curTime:Float = PlayState.instance.getSongTime();
+				
+				if (curTime > skipToTime)
 				{
-					item.alpha = 1;
+					PlayState.startOnTime = skipToTime;
+
+					FlxTransitionableState.skipNextTransIn = FlxTransitionableState.skipNextTransOut = true;
+
+					fadeThenResetState();
+				}
+				else if (curTime < skipToTime)
+				{
+					PlayState.startOnTime = skipToTime;
 					
-					if (item == skipTimeTracker)
-					{
-						curTime = Math.max(0, Conductor.songPosition);
-						updateSkipTimeText();
-					}
-				}
-			}
-		}
-		
-		debugBG.alpha = 0;
-		debugTxt.text = "";
-	}
-	
-	function regenMenu():Void
-	{
-		for (i in 0...grpMenuShit.members.length)
-		{
-			var obj = grpMenuShit.members[0];
-			grpMenuShit.remove(obj, true);
-			
-			obj = FlxDestroyUtil.destroy(obj);
-		}
-		
-		for (i in 0...menuItems.length)
-		{
-			var item = new Alphabet(0, 70 * i + 30, menuItems[i], true, false);
-			item.isMenuItem = true;
-			item.targetY = i;
-			grpMenuShit.add(item);
-			
-			if (menuItems[i] == 'Skip Time')
-			{
-				skipTimeText = new FlxText(0, 0, 0, '', 64);
-				skipTimeText.setFormat(Paths.DEFAULT_FONT, 64, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-				skipTimeText.scrollFactor.set();
-				skipTimeText.borderSize = 2;
-				skipTimeTracker = item;
-				add(skipTimeText);
-				
-				updateSkipTextStuff();
-				updateSkipTimeText();
-			}
-			if (menuItems[i] == 'Hawk Tuah Respect Button -->')
-			{
-				var textScale:Float = 0.5;
-				item.scale.x = textScale;
-				for (letter in item.lettersArray)
-				{
-					letter.x *= textScale;
-					letter.offset.x *= textScale;
+					PlayState.instance.setSongTime(skipToTime);
+					PlayState.instance.clearNotesBefore(skipToTime);
+					
+					PlayState.startOnTime = 0; // die
+					
+					close();
 				}
 				
-				var eyes = new HealthIcon('hawk');
-				eyes.sprTracker = item;
-				eyes.animation.curAnim.curFrame = FlxG.random.bool(12.5) ? 1 : 0;
-				add(eyes);
-			}
+			case 'leavechartingmode':
+				PlayState.chartingMode = false;
+				close();
+				
+			case 'options':
+				PlayState.instance.paused = true;
+				if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
+				OptionsState.onPlayState = true;
+				FlxG.switchState(() -> new OptionsState());
+
+			case 'botplay_on' | 'botplay_off':
+				ClientPrefs.gameplaySettings.set('botplay', options[curSelect] == 'botplay_on');
+				ClientPrefs.flush();
+				close();
+
+			case 'practice_on' | 'practice_off':
+				ClientPrefs.gameplaySettings.set('practice', options[curSelect] == 'practice_on');
+				ClientPrefs.flush();
+				close();
+
+			case '[DEV] debug info':
+                                PlayState.instance.scriptGroup.call('onToggleDebugInfo');
+                                close();
+                        case '[DEV] speed: 2x':
+                                PlayState.instance.playbackRate = 2;
+                                close();
+                        case '[DEV] speed: back to 1x':
+                                PlayState.instance.playbackRate = 1;
+                                close();
+                        case '[DEV] editors':
+                                // Matches 'options'/'restartsong' above -- FlxG.switchState()
+                                // (inside openEditorsMenu()) replaces this substate along with
+                                // everything else, no separate close() needed first.
+                                PlayState.instance.openEditorsMenu();
+
+                        case 'backtomenu':
+				returnToMain();
 		}
-		curSelected = 0;
-		changeSelection();
-		scriptGroup.call('onRegenMenu', []);
 	}
 	
-	function updateSkipTextStuff()
+	public function returnToMain():Void
 	{
-		if (skipTimeText == null || skipTimeTracker == null) return;
-		
-		skipTimeText.x = skipTimeTracker.x + (skipTimeTracker?.width ?? 0) + 60;
-		skipTimeText.y = skipTimeTracker.y;
-		skipTimeText.visible = (skipTimeTracker.alpha == 1);
+		PlayState.deathCounter = 0;
+		PlayState.seenCutscene = false;
+		PlayState.instance.removeModifiers();
+		FlxG.switchState(() -> PlayState.isStoryMode ? new StoryMenuState() : PlayState.isChallenge ? new MarathonMenuState() : new FreeplayState());
+		CoolUtil.cancelMusicFadeTween();
+		FunkinSound.playMusic(Paths.music('freakyMenu'));
+		PlayState.changedDifficulty = false;
 	}
 	
-	function updateSkipTimeText()
+	public function restartSong(noTrans:Bool = false):Void
 	{
-		final audioLength = PlayState.instance?.audio.inst?.length ?? 0.0;
-		skipTimeText.text = FlxStringUtil.formatTime(Math.max(0, Math.floor(curTime / 1000)), false)
-			+ ' / '
-			+ FlxStringUtil.formatTime(Math.max(0, Math.floor(audioLength / 1000)), false);
+		PlayState.instance.paused = true;
+		if (PlayState.instance.audio != null) PlayState.instance.audio.stop();
+
+		// FlxG.resetState() re-runs PlayState.create() directly -- it never
+		// goes through LoadingState, so NotePoolPlan.computeAndStore() (only
+		// ever called from LoadingState's own preload paths) never reruns for
+		// a retry. Without this, PlayState.prewarmNotePool() finds nothing to
+		// consume and silently prewarms 0 buckets, so every note in the
+		// retried song pays a cold reloadNote() during real gameplay again --
+		// confirmed via sysmon.log showing "prewarmNotePool: START (0
+		// bucket(s))" on a same-session retry that had 8 buckets/38 notes on
+		// its first, LoadingState-routed play. Cheap enough (pure chart-array
+		// sweep, no asset I/O) to just call synchronously here instead.
+		funkin.objects.note.NotePoolPlan.computeAndStore(PlayState.SONG);
+
+		if (noTrans)
+		{
+			FlxG.resetState();
+			return;
+		}
+
+		fadeThenResetState();
 	}
-	
-	function deleteSkipTimeText()
+
+	/**
+	 * FlxG.resetState() re-runs PlayState.create()'s whole synchronous burst
+	 * (stage/character/script/note construction) -- none of that is skipped
+	 * just because it's a retry of the same song (character JSON, scripts and
+	 * notes are re-parsed/rebuilt every time, warm asset cache or not -- see
+	 * the create() phase timings). PlayState's own transition-in substate only
+	 * opens near the END of that burst (super.create(), close to the very
+	 * bottom), so without this fade the screen just sits frozen on whatever
+	 * was showing (this pause menu) for however long the burst takes. Mirrors
+	 * GameOverSubstate.endBullshit()'s fade for the same reason.
+	 */
+	function fadeThenResetState(duration:Float = 0.35):Void
 	{
-		skipTimeText = FlxDestroyUtil.destroy(skipTimeText);
-		
-		skipTimeTracker = null;
+		FlxG.camera.fade(FlxColor.BLACK, duration, false, function() {
+			FlxG.resetState();
+		});
+		if (cameras != null && cameras.length > 0 && cameras[0] != FlxG.camera)
+			cameras[0].fade(FlxColor.BLACK, duration, false);
 	}
 }

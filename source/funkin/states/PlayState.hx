@@ -1,7 +1,5 @@
 package funkin.states;
 
-import funkin.data.SongMetaData;
-
 import haxe.Timer;
 import haxe.ds.Vector;
 
@@ -18,6 +16,7 @@ import flixel.math.FlxPoint;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxColor;
 import flixel.util.FlxSort;
+import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
 import flixel.text.FlxText;
 import flixel.group.FlxSpriteGroup;
@@ -26,8 +25,11 @@ import flixel.util.helpers.FlxBounds;
 import flixel.group.FlxContainer.FlxTypedContainer;
 import flixel.util.FlxStringUtil;
 
+import funkin.input.InputSystem;
+import funkin.input.InputEvent;
 import funkin.objects.Character;
 import funkin.backend.Difficulty;
+import funkin.backend.SystemMonitor;
 import funkin.game.RatingInfo;
 import funkin.objects.note.*;
 import funkin.objects.note.Note;
@@ -44,63 +46,54 @@ import funkin.states.editors.*;
 import funkin.game.modchart.*;
 import funkin.game.StoryMeta;
 import funkin.game.Countdown;
-import funkin.input.InputSystem;
-import funkin.input.InputEvent;
+import funkin.game.marathon.*;
+import funkin.objects.menu.AwardPopup;
+import funkin.objects.menu.BeansPopup;
 import funkin.audio.SyncedFlxSoundGroup;
 #if VIDEOS_ALLOWED
 import funkin.video.FunkinVideoSprite;
 #end
 
+// Shared by every deferred tail segment queued from the same head note (see
+// PlayState._pendingTails). `headQueueNote` lets a deferred entry detect
+// that its head's pool slot has since been reused for a different note
+// (see spawnPendingTail()).
+private typedef PendingTailChain = {headQueueNote:QueueNote};
+
+private typedef PendingTail =
+{
+	qn:QueueNote,
+	parentNote:Note,
+	chain:PendingTailChain,
+	// Known upfront from this segment's position in its hold's tail array --
+	// stamped onto the spawned Note as isFirstTailSegment once it exists
+	// (see spawnPendingTail()).
+	isFirst:Bool
+};
+
 class PlayState extends MusicBeatState
 {
-	public static var meta:Null<SongMetaData> = null; // bad?
+	public static var STRUM_X:Float = 42; // redundant
+	public static var STRUM_X_MIDDLESCROLL:Float = -278; // redundant
+	
+	public static var meta:Null<Metadata> = null; // bad?
 	
 	public static var SONG:Null<Song> = null;
 	
 	public static var storyMeta:StoryMeta = new StoryMeta();
 	
 	public static var isStoryMode:Bool = false;
+	public static var isChallenge:Bool = false;
+	
+	// how big to stretch the pixel art assets
+	public static var daPixelZoom:Float = 6;
+	
+	public static var isPixelStage:Bool = false;
 	
 	/**
 	 * Static reference to the state. used for other classes to reference
 	 */
 	public static var instance:Null<PlayState> = null;
-	
-	public static var ratingStuff:Array<RatingInfo> = [
-		new RatingInfo('You Suck!', 0.2),
-		new RatingInfo('Shit', 0.4),
-		new RatingInfo('Bad', 0.5),
-		new RatingInfo('Bruh', 0.6),
-		new RatingInfo('Meh', 0.69),
-		new RatingInfo('Nice', 0.7),
-		new RatingInfo('Good', 0.8),
-		new RatingInfo('Great', 0.9),
-		new RatingInfo('Great', 0.9),
-		new RatingInfo('Sick!', 1),
-		new RatingInfo('Perfect!!', 1),
-	];
-	
-	/**
-	 * Helper function to ready PlayState for conveniently.
-	 * 
-	 * will return null if done successfully. Otherwise, the exception will be returned.
-	 */
-	public static function prepareForWeek(songs:Array<String>, difficulty:Int = 1, isStoryMode:Bool = false):Null<haxe.Exception>
-	{
-		try
-		{
-			PlayState.SONG = Chart.fromSong(songs[0], difficulty);
-			PlayState.storyMeta.playlist = songs;
-			PlayState.storyMeta.difficulty = difficulty;
-			PlayState.isStoryMode = isStoryMode;
-			return null;
-		}
-		catch (e)
-		{
-			// Logger.log('Failed to prepare for song.\nException $e', ERROR);
-			return e;
-		}
-	}
 	
 	/**
 	 * Helper function to ready PlayState for conveniently.
@@ -132,9 +125,9 @@ class PlayState extends MusicBeatState
 	function set_playbackRate(value:Float):Float
 	{
 		#if FLX_PITCH
-		if (generatedMusic) audio.pitch = playbackRate;
+		if (generatedMusic) audio.pitch = value;
 		
-		FlxG.animationTimeScale = value;
+		if (!paused) FlxG.timeScale = value;
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000 * value;
 		
 		playbackRate = value;
@@ -148,26 +141,25 @@ class PlayState extends MusicBeatState
 	
 	function set_volumeMult(value:Float):Float
 	{
-		volumeMult = value;
+		audio.volume *= (value / volumeMult);
 		
-		audio.volume *= volumeMult;
-		
-		return volumeMult;
+		return volumeMult = value;
 	}
-	
-	public var arrowSkins:Array<String> = [];
 	
 	public var modManager:ModManager;
 	public var modifiersRegistered:Bool = false;
 	public var generatedFields:Bool = false;
+	public var holdSubdivisions:Int = 1;
 	
 	var speedChanges:Array<SpeedEvent> = [{}];
 	
 	public var currentSV:SpeedEvent = {};
 	
-	public var noteRows:Array<Array<Array<Note>>> = [[], []];
+	public var modchartObjects:Map<String, FlxSprite> = new Map<String, FlxSprite>();
 	
 	public var variables:Map<String, Dynamic> = new Map();
+	
+	public static var marathonModifiers:Array<MaraModifier> = [];
 	
 	/**
 	 * Disables automatic camera movements if enabled.
@@ -177,21 +169,21 @@ class PlayState extends MusicBeatState
 	public var cameraLerping:Bool = true;
 	
 	/**
-	 * Container of all boyfriend's used in the state
+	 * Container of all boyfriend characters used in the state
 	 * 
 	 * Exists for the `Change Character` event.
 	 */
 	public var boyfriendGroup:CharacterGroup;
 	
 	/**
-	 * Container of all dad's used in the state
+	 * Container of all dad characters used in the state
 	 * 
 	 * Exists for the `Change Character` event.
 	 */
 	public var dadGroup:CharacterGroup;
 	
 	/**
-	 * Container of all gf's used in the state
+	 * Container of all gf characters used in the state
 	 * 
 	 * Exists for the `Change Character` event.
 	 */
@@ -208,9 +200,30 @@ class PlayState extends MusicBeatState
 	public var gf:Character;
 	
 	/**
-		Reference to the current boyfriend
+		Reference to the current girlfriend
 	**/
 	public var boyfriend:Character;
+
+	/**
+	 * Off-screen, never-added-to-any-group Character for `boyfriend`'s
+	 * gameover character, built right after `boyfriend` itself so its
+	 * atlas/animations are already warm in FunkinAssets.cache by the time
+	 * the player can actually die. Without this, GameOverSubstate.create()
+	 * calls `new Character(...)` for the FIRST time only at the moment of
+	 * death, and for any gameover character that isn't literally the same
+	 * model as `boyfriend` (the common case -- see resetVariables()'s
+	 * 'genericDeath' default) that's a cold synchronous atlas load/decode
+	 * landing exactly when the game is supposed to freeze-frame into the
+	 * death animation, not before. Consumed (and nulled) by
+	 * GameOverSubstate.new() if the player actually dies; disposed in
+	 * destroy() below otherwise.
+	 */
+	public var preloadedGameoverChar:Null<Character> = null;
+
+	/**
+		scary
+	**/
+	public var pet:Pet;
 	
 	/**
 		Reference to the player stage X position
@@ -242,16 +255,15 @@ class PlayState extends MusicBeatState
 	**/
 	public var GF_Y:Float = 130;
 	
-	public var gfSpeed(default, set):Int = 1;
+	/**
+		Reference to the pet stage X position
+	**/
+	public var PET_X:Float = 0;
 	
-	function set_gfSpeed(value:Int)
-	{
-		if (gfGroup == null || gf == null) return gfSpeed = value;
-		
-		gf.danceEveryNumBeats *= value;
-		
-		return gfSpeed = value;
-	}
+	/**
+		Reference to the pet stage Y position
+	**/
+	public var PET_Y:Float = 0;
 	
 	/**
 	 * A container of where all sprites placed
@@ -265,17 +277,128 @@ class PlayState extends MusicBeatState
 	
 	public var spawnTime:Float = 3000;
 	
-	public var holdSubdivisions:Int = 1;
-	
 	/**
 	 * Specialized container for song audio
 	 */
 	public var audio:PlayableSong;
 	
 	public var notes:FlxTypedGroup<Note>;
+	// Single-sprite hold trails (see SustainTrail.hx) -- deliberately a
+	// separate group from `notes`, never touched by keyShit()/scoring.
+	public var susTrails:FlxTypedGroup<funkin.objects.note.SustainTrail>;
 	public var queueNotes:Array<QueueNote> = [];
 	public var eventNotes:Array<EventNote> = [];
-	
+	// Index pointers so we advance by pointer rather than O(n) shift().
+	var _noteSpawnIdx:Int = 0;
+	var _eventSpawnIdx:Int = 0;
+
+	// A sustain note's tail segments used to all be recycled synchronously
+	// the instant their head spawned -- for a long hold that's dozens of
+	// Note constructions dumped into a single frame. recycleNote() now only
+	// builds the head immediately and queues the rest here, letting them
+	// drain a few at a time (see the second noteSpawn loop in update()) as
+	// each segment's OWN strumTime actually earns it. `chain` is shared by
+	// every entry queued from the same head and carries `headQueueNote`,
+	// the QueueNote the head was originally recycled against -- preRecycle()
+	// always re-stamps `note.queueNote` on every recycle, so comparing that
+	// back against this lets a deferred entry detect "my head's pool slot
+	// became a different note" instead of corrupting a stranger's state
+	// (see spawnPendingTail()).
+	static inline final MAX_NOTE_SPAWNS_PER_FRAME:Int = 12;
+	var _pendingTails:Array<PendingTail> = [];
+	var _pendingTailIdx:Int = 0;
+
+	/**
+	 * Dead (killed but still-pooled, see disposeNote()) notes bucketed by
+	 * the (skin, noteData) they last had loaded -- lets recycleCompatibleNote()
+	 * find an exact-match reuse candidate in O(1) instead of linearly
+	 * scanning the whole pool hoping to find one, which failed unpredictably
+	 * depending on the chart's own note pattern (a burst of one direction
+	 * with no matching dead notes currently sitting in the pool forced a
+	 * full reloadNote() -- fresh atlas + animation rebuild -- for every note
+	 * in that burst). A real device log on a script-heavy song showed
+	 * noteSpawn cost spiking 100-300ms+ in bursts that lined up exactly with
+	 * this cache-miss pattern, with the pool size itself staying constant
+	 * throughout (so it wasn't pool growth -- this was it).
+	 *
+	 * Entries can go stale if a note gets revived through a path that
+	 * doesn't know about this index (Flixel's own FlxTypedGroup.recycle(),
+	 * used when recycleNote() has no specific target field) --
+	 * recycleCompatibleNote() verifies `!exists` before trusting a popped
+	 * entry instead of assuming the bucket is always accurate, so a missed
+	 * untrack never causes an already-alive note to be handed out twice.
+	 */
+	var _deadNotesByType:Map<NoteSkin, Map<Int, Array<Note>>> = [];
+
+	/** Call from every place a note becomes available for reuse (kill()). */
+	inline function _trackDeadNote(note:Note):Void
+	{
+		if (note._lastLoadedSkin == null) return; // never actually loaded -- nothing to index yet
+
+		var bySkin = _deadNotesByType.get(note._lastLoadedSkin);
+		if (bySkin == null)
+		{
+			bySkin = new Map();
+			_deadNotesByType.set(note._lastLoadedSkin, bySkin);
+		}
+
+		var bucket = bySkin.get(note._lastLoadedNoteData);
+		if (bucket == null)
+		{
+			bucket = [];
+			bySkin.set(note._lastLoadedNoteData, bucket);
+		}
+
+		bucket.push(note);
+	}
+
+	/**
+	 * Dead (killed but still-pooled) SustainTrail instances bucketed by the
+	 * skin texture they last had loaded -- same idea and same reason as
+	 * _deadNotesByType above, applied to the one pool that never got that
+	 * fix. setupSustainTrail()'s susTrails.recycle() used to grab the first
+	 * dead trail in pool order regardless of what texture it last had
+	 * loaded; SustainTrail.setupTrail()'s own reload guard
+	 * (`_textureLoaded != skin.noteTexture`) then forced a full atlas +
+	 * addAnimByPrefix reload -- the exact cost noteReload was built to catch
+	 * on the Note side -- every time that guess was wrong. susTrails is a
+	 * SINGLE pool shared by every player/field, so any song with more than
+	 * one note skin in play (P1 vs P2, per-lane arrowSkins) was thrashing
+	 * this on nearly every hold, and because it's SustainTrail-specific code
+	 * (not Note.set_texture()), it never showed up as its own tag -- it just
+	 * silently inflated noteSpawn's total. See SustainTrail.hx's own
+	 * 'trailReload' profiling tag for direct confirmation.
+	 */
+	var _deadTrailsByTexture:Map<String, Array<funkin.objects.note.SustainTrail>> = [];
+
+	/** Call from every place a SustainTrail becomes available for reuse (kill()). */
+	inline function _trackDeadTrail(trail:funkin.objects.note.SustainTrail):Void
+	{
+		if (trail._textureLoaded == null) return; // never actually loaded -- nothing to index yet
+
+		var bucket = _deadTrailsByTexture.get(trail._textureLoaded);
+		if (bucket == null)
+		{
+			bucket = [];
+			_deadTrailsByTexture.set(trail._textureLoaded, bucket);
+		}
+
+		bucket.push(trail);
+	}
+
+	// Pre-allocated arg arrays to avoid per-frame heap allocation for script calls.
+	final _scriptUpdateArgs:Array<Dynamic> = [0.0];
+	final _scriptMoveCamArgs:Array<Dynamic> = [''];
+	final _scriptEmptyArgs:Array<Dynamic> = [];
+	final _scriptScoreArgs:Array<Dynamic> = [false];
+	final _scriptKeyArgs:Array<Dynamic> = [0];
+	final _scriptNoteArgs:Array<Dynamic> = [null];
+	final _scriptNoteTypeExcl:Array<String> = [''];
+	final _scriptRatingArgs:Array<Dynamic> = [null, null];
+	final _scriptEventArgs:Array<Dynamic> = ['', '', ''];
+	final _scriptEventTriggerArgs:Array<Dynamic> = ['', ''];
+	final _scriptCountdownArgs:Array<Dynamic> = [0];
+
 	/**
 	 * Target the game camera follows
 	 */
@@ -290,6 +413,11 @@ class PlayState extends MusicBeatState
 	 * List of FlxCameras that follow camFollow
 	**/
 	public var followingCams:Array<FlxCamera> = [];
+	
+	/**
+	 * Container of all strumline underlays
+	 */
+	public var underlays:Null<FlxTypedGroup<LaneUnderlay>> = null;
 	
 	/**
 	 * Container of all strumlines in use
@@ -344,6 +472,11 @@ class PlayState extends MusicBeatState
 		return notes;
 	}
 	
+	/**
+	 * The container that all notesplashes are held in
+	 */
+	public var grpNoteSplashes:FlxTypedContainer<NoteSplash>;
+	
 	public var camZooming:Bool = false;
 	public var camZoomingMult:Float = 1;
 	public var camZoomingDecay:Float = 1;
@@ -367,6 +500,7 @@ class PlayState extends MusicBeatState
 	var songPercent:Float = 0;
 	
 	public var combo:Int = 0;
+	public var missCombo:Int = 0;
 	public var ratingsData:Array<Rating> = [
 		new Rating('sick'),
 		new Rating('good'),
@@ -394,8 +528,24 @@ class PlayState extends MusicBeatState
 	// Gameplay settings
 	public var healthGain:Float = 1;
 	public var healthLoss:Float = 1;
+	public var pressMissDamage:Float = .05;
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled(default, set):Bool = false;
+
+	/** Dev-only Showcase mode is active this song (see refreshGameplaySettings()). */
+	public var showcaseActive(default, null):Bool = false;
+
+	#if mobile
+	/**
+	 * Whether the gameplay touch overlay (hitbox / virtual pad) is inside its
+	 * "should be shown" window (post-countdown, not in a cutscene, song not
+	 * over). The actual .visible is resolved every frame from this AND
+	 * camHUD.visible AND the botplay/showcase rules -- the pad lives on its
+	 * own camera, so a modchart hiding camHUD would otherwise leave it
+	 * floating alone on screen.
+	 */
+	var mobileControlsActive:Bool = false;
+	#end
 	public var practiceMode:Bool = false;
 	
 	public var botplayTxt:FlxText;
@@ -415,10 +565,16 @@ class PlayState extends MusicBeatState
 	public static var deathCounter:Int = 0;
 	
 	public var defaultCamZoomAdd:Float = 0;
-	
+
+	var _bitmapSnapshotAtCreate:Null<haxe.ds.StringMap<Bool>> = null;
+
+	/** In story mode, true when this is the last song of the week.
+	 *  Set by endSong() just before the score popup. */
+	var _isLastSongOfWeek:Bool = false;
+
 	/**
 	 * Default camera zoom the game will attempt to return to.
-	 * 
+	 *
 	 * set via the Stage json
 	 */
 	public var defaultCamZoom:Float = 1.05;
@@ -428,7 +584,16 @@ class PlayState extends MusicBeatState
 	 */
 	public var defaultHudZoom:Float = 1;
 	
-	public var beatsPerZoom:Int = 4;
+	public var beatsPerZoom:Int = 0;
+	
+	var totalBeat:Int = 0;
+	var totalShake:Int = 0;
+	var timeBeat:Float = 1;
+	var gameZ:Float = 0.015;
+	var hudZ:Float = 0.03;
+	var gameShake:Float = 0.003;
+	var hudShake:Float = 0.003;
+	var shakeTime:Bool = false;
 	
 	public var inCutscene:Bool = false;
 	public var ingameCutscene:Bool = false;
@@ -446,18 +611,11 @@ class PlayState extends MusicBeatState
 	 * 
 	 * Can be manually changed.
 	 */
-	var songLength:Float = 0;
+	public var songLength:Float = 0;
 	
 	public var boyfriendCameraOffset:Array<Float> = [0, 0];
 	public var opponentCameraOffset:Array<Float> = [0, 0];
 	public var girlfriendCameraOffset:Array<Float> = [0, 0];
-	
-	/**
-	 * The shown difficulty in the discord RPC.
-	 * 
-	 * Can be manually changed.
-	 */
-	var rpcDifficulty:String = '';
 	
 	/**
 	 * The shown description in the discord RPC.
@@ -481,12 +639,51 @@ class PlayState extends MusicBeatState
 	var rpcSongName:String = '';
 	
 	/**
+	 * Pause character portrait overwrite variable
+	**/
+	public var pauseOverwrite(get, set):String;
+	
+	public var pauseOverride:String = '';
+
+	#if mobile
+	private var mobilePauseBtn:FlxSprite;
+	#end
+
+	/**
 	 * Variable that determines whether PlayState will automatically handle Discord RPC.
 	 *
 	 * Useful for if you want custom Discord RPC messages and PlayState gets in the way.
 	**/
 	public var automatedDiscord:Bool = true;
-	
+
+	// Android's MediaSession-based RPC (see DiscordClient.hx's android branch)
+	// only advances Kizzy's progress bar when we periodically re-report a
+	// fresh elapsed position -- Kizzy recomputes its own start/end timestamps
+	// from whatever position we last set on its ~1s poll loop, it doesn't
+	// extrapolate on its own, so an unrefreshed position looks frozen rather
+	// than ticking. Resynced on this interval instead of every frame to avoid
+	// the JNI/notification-rebuild overhead that would come with that. Not
+	// worth #if android-gating the field/reset themselves (a harmless float
+	// everywhere else) -- only the actual resync call below is guarded.
+	var _discordSyncTimer:Float = 0;
+	static inline final DISCORD_SYNC_INTERVAL:Float = 5;
+
+	// stepHit()'s drift check below used to call resyncVocals() completely
+	// ungated -- only the sysmon LOG LINE was cooldown-throttled, the actual
+	// pause()/time=/play() correction wasn't. maxToleratedOffset is one
+	// 60fps frame (~16.67ms), which is inside the noise floor of Android's
+	// audio channel position readback: measured drift stayed flat at
+	// ~16-32ms regardless of whether fps was 250 or 64, instead of scaling
+	// with lag like a real desync would -- so this was firing on
+	// measurement noise, several times a second, every call doing a real
+	// native seek/restart (measured up to ~190ms each). That cost pushed
+	// the frame over budget, which produced more "drift" next step: a
+	// self-inflicted feedback loop. Gate the actual correction the same way
+	// the log line already is; severe drift still bypasses the cooldown so
+	// a genuine desync (e.g. after a hitch) still gets fixed immediately.
+	var _lastVocalResyncTime:Float = -999.0;
+	static inline final VOCAL_RESYNC_COOLDOWN:Float = 0.3;
+
 	/**
 	 * Group of general scripts.
 	 */
@@ -502,13 +699,19 @@ class PlayState extends MusicBeatState
 	 */
 	public var eventScripts:ScriptGroup;
 	
+	public var arrowSkins:Array<String> = [];
+	
+	// ????
+	public var script_NOTEOffsets:Vector<FlxPoint>;
+	public var script_STRUMOffsets:Vector<FlxPoint>;
+	public var script_SUSTAINOffsets:Vector<FlxPoint>;
+	public var script_SUSTAINENDOffsets:Vector<FlxPoint>;
+	
 	public var introSoundsSuffix:String = '';
 	
 	// Debug buttons
 	var debugKeysChart:Array<FlxKey>;
 	var debugKeysCharacter:Array<FlxKey>;
-	
-	// public var controlHoldArray:Array<Dynamic>;
 	
 	/**
 	 * once set to a target, the camera will only follow them.
@@ -516,8 +719,6 @@ class PlayState extends MusicBeatState
 	public var camCurTarget:Null<Character> = null;
 	
 	public var playHUD:Null<BaseHUD> = null;
-	
-	public var countdownPrefix:String = Paths.COUNTDOWN_PREFIX;
 	
 	/**
 	 * Called when the Song should start
@@ -535,6 +736,29 @@ class PlayState extends MusicBeatState
 	 */
 	public var songEndCallback:Null<Void->Void> = null;
 	
+	/*
+	 * Niche impostor song specific vars
+	 */
+	public static var attackCharacter:Int = 0; // who ur playing as in monotone attack
+	public static var totalMisses:Int = 0;
+	public static var missLimit:Bool = false;
+	
+	public var allowBFSkin:Bool;
+	public var allowGFSkin:Bool;
+	public var allowPet:Bool;
+	
+	public var input:InputSystem;
+
+	public var focusPlayer:Null<Character> = null;
+
+	var tauntCharacter(get, set):Null<Character>;
+	inline function get_tauntCharacter():Null<Character> return focusPlayer;
+	inline function set_tauntCharacter(v:Null<Character>):Null<Character> return focusPlayer = v;
+
+	inline function get_pauseOverwrite():String return pauseOverride;
+	
+	inline function set_pauseOverwrite(v:String):String return pauseOverride = v;
+	
 	@:noCompletion public function set_cpuControlled(val:Bool):Bool
 	{
 		if (playFields != null && playFields.members.length != 0)
@@ -546,22 +770,54 @@ class PlayState extends MusicBeatState
 		}
 		return (cpuControlled = val);
 	}
-	
+
+	/**
+	 * Re-reads healthGain/healthLoss/instakillOnMiss/practiceMode/cpuControlled
+	 * from ClientPrefs.gameplaySettings. Called once at create(), and again
+	 * from closeSubState() whenever resuming from a pause -- GameplayChangersSubstate
+	 * (reachable from the pause menu) writes straight into gameplaySettings, but
+	 * these fields are only ever cached copies, so a change made while paused
+	 * would otherwise silently do nothing until the song restarts. scrollspeed/
+	 * scrolltype don't need this: everywhere they're used already calls
+	 * ClientPrefs.getGameplaySetting() live instead of caching into a field.
+	 */
+	function refreshGameplaySettings():Void
+	{
+		healthGain = ClientPrefs.getGameplaySetting('healthgain', 1);
+		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
+		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
+		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
+		// Showcase (dev-only) rides botplay's autoplay but keeps the HUD live
+		// and the mobile controls visible/animated -- see ClientPrefs.showcaseMode.
+		showcaseActive = ClientPrefs.inDevMode && ClientPrefs.showcaseMode;
+		cpuControlled = (!isStoryMode && ClientPrefs.getGameplaySetting('botplay', false)) || showcaseActive;
+		// Repaint the score line so toggling botplay from the pause menu's
+		// gameplay options swaps the BOTPLAY label / live score immediately on
+		// resume, instead of only after the next scored note. Guarded because
+		// refreshGameplaySettings() also runs once during create(), before the
+		// HUD exists.
+		if (playHUD != null) updateScoreBar();
+	}
+
 	function applyStageData(file:Null<StageFile>):Void
 	{
 		if (file == null) return;
 		
 		defaultCamZoom = file.defaultZoom;
 		FlxG.camera.zoom = file.defaultZoom;
+		isPixelStage = file.isPixelStage;
 		
-		BF_X = file.boyfriend[0];
-		BF_Y = file.boyfriend[1];
+		BF_X = (file.boyfriend != null && file.boyfriend.length > 0) ? file.boyfriend[0] : 500;
+		BF_Y = (file.boyfriend != null && file.boyfriend.length > 1) ? file.boyfriend[1] : 100;
 		
-		GF_X = file.girlfriend[0];
-		GF_Y = file.girlfriend[1];
+		GF_X = (file.girlfriend != null && file.girlfriend.length > 0) ? file.girlfriend[0] : 0;
+		GF_Y = (file.girlfriend != null && file.girlfriend.length > 1) ? file.girlfriend[1] : 100;
 		
-		DAD_X = file.opponent[0];
-		DAD_Y = file.opponent[1];
+		DAD_X = (file.opponent != null && file.opponent.length > 0) ? file.opponent[0] : -500;
+		DAD_Y = (file.opponent != null && file.opponent.length > 1) ? file.opponent[1] : 100;
+		
+		PET_X = (file.pet != null && file.pet.length > 0) ? file.pet[0] : (BF_X + 370);
+		PET_Y = (file.pet != null && file.pet.length > 1) ? file.pet[1] : (BF_Y + 849);
 		
 		if (file.camera_speed != null) cameraSpeed = file.camera_speed;
 		
@@ -575,35 +831,71 @@ class PlayState extends MusicBeatState
 		dadGroup ??= new CharacterGroup(DAD_X, DAD_Y, DAD);
 		gfGroup ??= new CharacterGroup(GF_X, GF_Y, GF);
 		
-		boyfriendGroup.zIndex = file.bfZIndex ?? 0;
-		dadGroup.zIndex = file.dadZIndex ?? 0;
-		gfGroup.zIndex = file.gfZIndex ?? 0;
+		pet ??= new Pet('');
+		pet.setPosition(PET_X, PET_Y);
+		
+		boyfriendGroup.zIndex = (file.bfZIndex ?? 0);
+		dadGroup.zIndex = (file.dadZIndex ?? 0);
+		gfGroup.zIndex = (file.gfZIndex ?? 0);
+		pet.zIndex = (file.petZIndex ?? boyfriendGroup.zIndex);
 	}
 	
 	// null checking
 	function callHUDFunc(hud:BaseHUD->Void):Void if (playHUD != null) hud(playHUD);
 	
-	var input:InputSystem;
-	
-	private var traceCheck:Bool = false;
-	private var loadStart:Float = 0;
-	
 	override public function create():Void
 	{
+		trace('[PlayState] ===== CREATE START =====');
+
+		// Real device logs showed LoadingState -> PlayState taking upwards of
+		// 50 SECONDS for dense songs, entirely inside this one synchronous
+		// create() call (no frame renders during it, so it's a genuine
+		// frozen-screen wait for the player, not just a log curiosity).
+		// Phase-timing this is the only way to find out where that time
+		// actually goes instead of guessing -- logged as plain [CreatePhase]
+		// lines so they land in sysmon.log alongside everything else.
+		final _phaseStampStart:Float = haxe.Timer.stamp();
+		var _phaseStamp:Float = _phaseStampStart;
+		function _logPhase(name:String):Void
+		{
+			if (!ClientPrefs.inDevMode) return;
+			final now:Float = haxe.Timer.stamp();
+			Logger.log('[CreatePhase] $name: ${Std.int((now - _phaseStamp) * 1000)}ms (total so far: ${Std.int((now - _phaseStampStart) * 1000)}ms)');
+			_phaseStamp = now;
+		}
+
 		FlxG.sound.music?.stop();
-		
+
+		_bitmapSnapshotAtCreate = FunkinAssets.cache.snapshotBitmapKeys();
+
 		FunkinAssets.cache.clearStoredMemory();
-		
+
+		// AwardPopup's solid-color background (makeGraphic(410, 100, ...)) is
+		// generated on demand the first time an award/achievement popup is
+		// actually built, which can land right at song end -- a device log
+		// showed it as one of several textures created mid-spike then
+		// (alongside the award icon PNGs, warmed via LoadingState's preload
+		// thread instead -- see startPreload()'s own comment). makeGraphic()
+		// isn't a disk read, just a Flixel bitmap-cache fill keyed by
+		// "WxH:colorHash" -- touching FlxG.bitmap's cache off the main thread
+		// isn't safe the way plain file decodes are, so this warms it here
+		// instead, once, cheaply, rather than on the background Thread.
+		FlxDestroyUtil.destroy(new FlxSprite().makeGraphic(410, 100, 0xAA000000));
+
+		// This whole create() is one long synchronous allocation burst (stage,
+		// characters, notes...) -- letting the collector fire mid-burst risks
+		// landing its pause during the countdown that plays right after create()
+		// returns. Suppress it for the burst's duration; forceGcPass() (inside
+		// clearUnusedMemory() below) sweeps everything in one deliberate pass
+		// once the burst is over instead of leaving it to fire on its own.
+		#if cpp cpp.vm.Gc.enable(false); #end
+
 		funkin.backend.DebugDisplay.addPlugin(() -> 'curStep: $curStep • curBeat: $curBeat • curSection: $curSection');
 		
 		skipCountdown = false;
 		countdownSounds = true;
 		
 		instance = this;
-		
-		traceCheck = #if debug true #else false #end || #if VERBOSE_LOGS true #else false #end || ClientPrefs.inDevMode;
-		
-		if (traceCheck) loadStart = Sys.time();
 		
 		GameOverSubstate.resetVariables();
 		
@@ -613,7 +905,7 @@ class PlayState extends MusicBeatState
 		
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
-		PauseSubState.songName = null; // Reset to default
+		PauseSubState.songName = 'breakfast'; // Reset to default
 		
 		songStartCallback = startCountdown;
 		songEndCallback = endSong;
@@ -622,22 +914,19 @@ class PlayState extends MusicBeatState
 		if (ClientPrefs.useEpicRankings) ratingsData.unshift(new Rating('epic'));
 		
 		// Gameplay settings
-		healthGain = ClientPrefs.getGameplaySetting('healthgain', 1);
-		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
-		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
-		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
-		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
-		
-		camGame = new FlxCameraEx();
-		camHUD = new FlxCameraEx();
-		camOther = new FlxCameraEx();
-		
+		refreshGameplaySettings();
+
+		camGame = FlxG.camera;
+		camHUD = new FlxCamera();
+		camOther = new FlxCamera();
+
 		camHUD.bgColor = 0x0;
 		camOther.bgColor = 0x0;
-		
-		FlxG.cameras.reset(camGame);
+
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
+
+		grpNoteSplashes = new FlxTypedContainer<NoteSplash>();
 		
 		persistentUpdate = true;
 		persistentDraw = true;
@@ -650,41 +939,70 @@ class PlayState extends MusicBeatState
 		arrowSkins = SONG.arrowSkins;
 		
 		// set up rpc stuff
-		rpcDifficulty = '(' + Difficulty.getCurrentDifficultyString() + ')';
-		rpcDescription = isStoryMode == true ? 'Story Mode:' : 'Freeplay:';
+		rpcDescription = isStoryMode == true ? 'Story Mode' : 'Freeplay';
 		rpcPausedDescription = 'Paused - ' + rpcDescription;
 		rpcSongName = SONG.song;
 		
 		scripts.set('isStoryMode', isStoryMode);
+		scripts.set('attackCharacter', attackCharacter);
 		
 		if (SONG.stage == null || SONG.stage.length == 0) SONG.stage = 'stage';
 		
-		var vizLoadStart:Float = traceCheck ? Sys.time() : 0;
+		// Check for bf/gf skins
+		// SOMEONE GOT THE CODE WRONG IM GONNA FUCKING KILL YOUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU YOU'RE GOING TO DIE
+		// i think it was me... im so sorry.
+		allowBFSkin = (!isStoryMode && (SONG.allowBFskin ?? true));
+		allowGFSkin = (!isStoryMode && (SONG.allowGFskin ?? true));
+		allowPet = (!isStoryMode && (SONG.allowPet ?? true));
 		
+		trace('[PlayState] Creating stage (${SONG.stage})...');
 		stage = new Stage(SONG.stage);
-		scripts.set('stage', stage);
+		// See Stage.blockAdds's doc comment -- kept true for this stage's
+		// entire lifetime except the character-group adds just below, so
+		// script-driven background art (most stages) is suppressed the same
+		// as buildStage()'s stageObjects, without ever touching characters.
+		stage.blockAdds = ClientPrefs.noStages;
+		trace('[PlayState] Stage created, applying data...');
 		applyStageData(stage.stageData);
-		
+
+		trace('[PlayState] Building stage...');
 		stage.buildStage();
+		trace('[PlayState] Stage built OK');
 		
 		if (stage.runScript(scripts))
 		{
 			scripts.addScript(stage.script);
-			
+
 			Logger.log('script: ' + stage.script.name + ' intialized');
 		}
+
+		// Stage's own background layers all exist by now (added during
+		// buildStage()/the script's onLoad() above) — safe to sample one for
+		// the 'expand'-mode edge-of-camera fill color. No-op outside 'expand'.
+		stage.fillExpandModeBackdrop(camGame);
+
+		_logPhase('stage');
+
+		if (isPixelStage) introSoundsSuffix = '-pixel';
 		
-		if (scripts.call("onAddSpriteGroups", []) != ScriptConstants.STOP_FUNC)
+		if (!ScriptConstants.stopping(scripts.call("onAddSpriteGroups")))
 		{
 			add(stage);
+			// Characters/pet must never be blocked by "No Stages" -- briefly
+			// lift the gate for these specific adds, then restore it so any
+			// later script hooks (onCreatePost, per-beat effects, etc.) stay
+			// suppressed for the rest of the song.
+			stage.blockAdds = false;
 			stage.add(gfGroup);
 			stage.add(dadGroup);
 			stage.add(boyfriendGroup);
+			stage.add(pet);
+			stage.blockAdds = ClientPrefs.noStages;
 		}
 		
 		inline function addSongScripts(directory)
 		{
-			for (file in Paths.listAllFilesInDirectory(directory).filter(path -> FunkinScript.isHxFile(path)))
+			for (file in Paths.listAllFilesInDirectory(directory, LOOSE).filter(path -> FunkinScript.isHxFile(path)))
 			{
 				final scriptPath = FunkinScript.getPath(file);
 				
@@ -696,35 +1014,68 @@ class PlayState extends MusicBeatState
 		var gfVersion:String = SONG.gfVersion;
 		if (gfVersion == null || gfVersion.length < 1) SONG.gfVersion = gfVersion = 'gf';
 		
+		if (allowPet)
+		{
+			trace('[PlayState] Loading pet...');
+			pet.loadPet(ClientPrefs.equipment.get('pet'));
+			checkStageFlag(pet);
+			startPetScript(pet);
+			trace('[PlayState] Pet loaded OK');
+		}
+
+		_logPhase('pet');
+
 		if (!stage.stageData.hide_girlfriend)
 		{
-			gf = new Character(gfVersion);
-			gf.scrollFactor.set(0.95, 0.95);
-			
+			trace('[PlayState] Creating girlfriend...');
+			gf = new Character((allowGFSkin ? ClientPrefs.equipment.get('speakerSkin') : null) ?? gfVersion);
+			trace('[PlayState] GF created, loading animations...');
+			checkStageFlag(gf);
 			gfGroup.addChar(gf);
 			gfGroup.parent = gf;
 			startCharacterScript(gf.curCharacter, gf);
-			
-			scripts.set('gf', gf);
-			scripts.set('gfGroup', gfGroup);
+			trace('[DEBUG] GF Created: visible=${gf.visible}, alpha=${gf.alpha}, x=${gf.x}, y=${gf.y}');
 		}
-		
+
+		_logPhase('girlfriend');
+
+		trace('[PlayState] Creating dad (${SONG.player2})...');
 		dad = new Character(SONG.player2);
-		startCharacterScript(dad.curCharacter, dad);
+		trace('[PlayState] Dad created, loading animations...');
+		checkStageFlag(dad);
 		dadGroup.addChar(dad);
 		dadGroup.parent = dad;
-		
-		boyfriend = new Character(SONG.player1, true);
-		startCharacterScript(boyfriend.curCharacter, boyfriend);
+		startCharacterScript(dad.curCharacter, dad);
+		trace('[PlayState] Dad OK');
+
+		_logPhase('dad');
+
+		trace('[PlayState] Creating boyfriend...');
+		boyfriend = new Character((allowBFSkin ? ClientPrefs.equipment.get('playerSkin') : null) ?? SONG.player1, true);
+		trace('[PlayState] BF created, loading animations...');
+		checkStageFlag(boyfriend);
 		boyfriendGroup.addChar(boyfriend);
 		boyfriendGroup.parent = boyfriend;
-		
-		scripts.set('dad', dad);
-		scripts.set('dadGroup', dadGroup);
-		
-		scripts.set('boyfriend', boyfriend);
-		scripts.set('boyfriendGroup', boyfriendGroup);
-		
+		startCharacterScript(boyfriend.curCharacter, boyfriend);
+		trace('[PlayState] BF OK');
+
+		// See preloadedGameoverChar's own doc comment: warm the gameover
+		// character's atlas now instead of letting GameOverSubstate.create()
+		// load it cold at the moment of death. Matches the exact name
+		// resolution GameOverSubstate.new() itself does (gameoverCharacter,
+		// falling back to the 'genericDeath' default set by
+		// resetVariables() above) -- if that resolves to the same model as
+		// boyfriend, no separate preload is needed since GameOverSubstate
+		// already reuses `boyfriend` directly for that case.
+		final gameoverCharName = boyfriend.gameoverCharacter ?? GameOverSubstate.characterName;
+		if (gameoverCharName != null && gameoverCharName != boyfriend.curCharacter)
+		{
+			preloadedGameoverChar = new Character(0, 0, gameoverCharName, true);
+			preloadedGameoverChar.visible = false;
+		}
+
+		_logPhase('boyfriend');
+
 		var camPos:FlxPoint = FlxPoint.get(girlfriendCameraOffset[0], girlfriendCameraOffset[1]);
 		if (gf != null)
 		{
@@ -744,28 +1095,36 @@ class PlayState extends MusicBeatState
 			if (gf != null) gf.visible = false;
 		}
 		
-		if (traceCheck) trace('loading create took ${Sys.time() - vizLoadStart}');
-		
 		Conductor.songPosition = -5000;
 		
-		playFields = new FlxTypedGroup<PlayField>();
+		underlays = new FlxTypedGroup<LaneUnderlay>();
 		
-		notes = new FlxTypedGroup<Note>();
-		
-		if (ClientPrefs.underlayType == 'Screen Dim')
-		{
-			screenDim = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
-			screenDim.alpha = ClientPrefs.underlayOpacity;
-			screenDim.scrollFactor.set();
-			screenDim.camera = camHUD;
-			add(screenDim);
-		}
+		// TimedFlxGroup (funkin.backend) instead of a plain FlxTypedGroup for
+		// these three -- they're top-level state members, so their own share
+		// of the generic per-member update cascade ('flxMemberLoop', see
+		// MusicBeatState.update()) was otherwise invisible, same gap
+		// Stage.hx/TouchInputManager.hx's own update() overrides exist to
+		// close for what THEY wrap. Only times each group's own call, not
+		// every child individually -- doesn't multiply per-note overhead.
+		playFields = new funkin.backend.TimedFlxGroup<PlayField>('playFieldsGroupUpdate');
+		add(playFields);
+
+		// Added before `notes` so heads/holdend caps (real Note sprites) draw
+		// on top of the plain trail body, matching how the old segment chain
+		// visually stacked (later-spawned segments/caps over earlier ones).
+		susTrails = new funkin.backend.TimedFlxGroup<funkin.objects.note.SustainTrail>('susTrailsGroupUpdate');
+		add(susTrails);
+
+		notes = new funkin.backend.TimedFlxGroup<Note>('notesGroupUpdate');
+		add(notes);
 		
 		playHUD = new funkin.game.huds.PsychHUD(this);
-		add(playHUD);
+		insert(members.indexOf(playFields), playHUD); // Data told me to do this
 		playHUD.cameras = [camHUD];
 		
-		meta = SongMeta.getFromSong();
+		playHUD.insert(playHUD.underlayOrder, underlays);
+		
+		meta = Metadata.getSong();
 		
 		modManager = new ModManager(this);
 		
@@ -787,11 +1146,16 @@ class PlayState extends MusicBeatState
 		
 		FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
 		
+		// The standalone BOTPLAY banner is retired -- the PsychHUD score line
+		// shows the BOTPLAY label now, so this was a duplicate. Kept as an
+		// always-invisible object because a few song scripts still reference
+		// botplayTxt cosmetically (e.g. top-10/sigh.hx's setFormat) and would
+		// NPE if it were removed outright.
 		botplayTxt = new FlxText(400, 55, FlxG.width - 800, "BOTPLAY", 32);
 		botplayTxt.setFormat(Paths.DEFAULT_FONT, 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		botplayTxt.scrollFactor.set();
+
 		botplayTxt.borderSize = 1.25;
-		botplayTxt.visible = cpuControlled;
+		botplayTxt.visible = false;
 		if (ClientPrefs.downScroll) botplayTxt.y = FlxG.height - botplayTxt.height - 55;
 		add(botplayTxt);
 		
@@ -801,16 +1165,83 @@ class PlayState extends MusicBeatState
 		
 		addSongScripts('songs/${Paths.sanitize(SONG.song)}/');
 		addSongScripts('songs/${Paths.sanitize(SONG.song)}/scripts/');
-		
+
+		_logPhase('song scripts');
+
 		#if mobile
-		addMobileControls(false);
-	    hitbox.visible = false;
+		addMobileControls(false, true);
+		mobileControlsActive = false;
+		if (hitbox != null) hitbox.visible = false;
+		if (virtualPad != null) virtualPad.visible = false;
+
+		mobilePauseBtn = new FlxSprite();
+
+		// Bigger, anti-aliased translucent circle instead of the old plain
+		// flat-color square -- this is just the button's look, always on.
+		// ClientPrefs.hidePauseButton (Misc Options) controls whether the
+		// button shows up at all, separately, below.
+		final pauseBtnSize = 68;
+		mobilePauseBtn.makeGraphic(pauseBtnSize, pauseBtnSize, FlxColor.TRANSPARENT, true);
+		FlxSpriteUtil.drawCircle(mobilePauseBtn, -1, -1, -1, 0x66000000, {thickness: 2, color: 0x40FFFFFF});
+
+		mobilePauseBtn.x = FlxG.width - mobilePauseBtn.width - 5;
+		mobilePauseBtn.y = 5;
+		mobilePauseBtn.scrollFactor.set();
+		mobilePauseBtn.cameras = [camHUD];
+		mobilePauseBtn.visible = !ClientPrefs.hidePauseButton;
+		add(mobilePauseBtn);
+
+		final pauseLabelSize = Std.int(26 * pauseBtnSize / 55);
+		final pauseLabelYOffset = Std.int(9 * pauseBtnSize / 55);
+		var _pauseLabel = new FlxText(mobilePauseBtn.x, mobilePauseBtn.y + pauseLabelYOffset, Std.int(mobilePauseBtn.width), 'II', pauseLabelSize);
+		_pauseLabel.setFormat(null, pauseLabelSize, FlxColor.WHITE, FlxTextAlign.CENTER);
+		_pauseLabel.scrollFactor.set();
+		_pauseLabel.cameras = [camHUD];
+		_pauseLabel.visible = !ClientPrefs.hidePauseButton;
+		add(_pauseLabel);
 		#end
+
+		scripts.call('preNoteGeneration', _scriptEmptyArgs);
 		
-		scripts.call('preNoteGeneration', []);
-		
-		if (genNotesBeforeCountdown) generatePlayfields();
+		if (genNotesBeforeCountdown)
+		{
+			generatePlayfields();
+			_logPhase('playfields');
+		}
 		generateSong(SONG.song);
+		_logPhase('generateSong');
+		
+		// VSlice always shows both strumlines side by side (see getCenteredXPos()'s
+		// comment) -- middleScroll's "collapse the player's notes to the middle,
+		// hide the opponent" behaviour would fight that fixed dual-strumline
+		// layout, so it's ignored entirely while VSlice is active.
+		final effectiveMiddleScroll = ClientPrefs.middleScroll && ClientPrefs.noteLayout != 'VSlice';
+		if (!ClientPrefs.opponentStrums || effectiveMiddleScroll)
+		{
+			for (playField in playFields)
+			{
+				if (playField.isPlayer)
+				{
+					if (effectiveMiddleScroll) modManager.setValue('opponentSwap', .5, playField.ID);
+
+					continue;
+				}
+				
+				playField.visible = false;
+				
+				modManager.setValue('alpha', 1, playField.ID);
+			}
+		}
+		
+		if (!ClientPrefs.opponentLaneUnderlay)
+		{
+			for (i => playField in playFields)
+			{
+				if (playField.isPlayer) continue;
+				
+				playField.underlay.kill();
+			}
+		}
 		
 		#if FLX_DEBUG
 		FlxG.watch.addFunction('Conductor: ', () -> Conductor.songPosition);
@@ -847,9 +1278,7 @@ class PlayState extends MusicBeatState
 		Paths.sound('missnote1');
 		Paths.sound('missnote2');
 		Paths.sound('missnote3');
-		
-		if (PauseSubState.songName != null) Paths.music(PauseSubState.songName);
-		else Paths.music(Paths.sanitize('breakfast'));
+		Paths.music(Paths.sanitize('breakfast'));
 		
 		// Updating Discord Rich Presence.
 		resetDiscordRPC();
@@ -859,19 +1288,24 @@ class PlayState extends MusicBeatState
 		input.addEventListener(InputEvent.INPUT_RELEASED, onInputRelease);
 		
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000;
-		
-		scripts.call('onCreatePost', []);
-		
+
+		trace('[PlayState] Calling onCreatePost scripts (stage: ${stage != null ? stage.curStage : "null"})...');
+		scripts.call('onCreatePost', _scriptEmptyArgs);
+		trace('[PlayState] onCreatePost scripts OK');
+
 		callHUDFunc(hud -> hud.cachePopUpScore());
-		
+
+		trace('[PlayState] Calling super.create()...');
 		super.create();
-		
+		trace('[PlayState] super.create() OK');
+
+		#if cpp cpp.vm.Gc.enable(true); #end
 		FunkinAssets.cache.clearUnusedMemory();
-		
-		if (traceCheck) trace('FULL SONG [${Paths.sanitize(SONG.song)}] LOAD TIME: ${Sys.time() - loadStart}');
-		
+
 		refreshZ(stage);
+		trace('[PlayState] ===== CREATE END (success) =====');
 	}
+	
 	function set_songSpeed(value:Float):Float
 	{
 		songSpeed = value;
@@ -886,24 +1320,44 @@ class PlayState extends MusicBeatState
 			case 1:
 				dadGroup;
 			case 2:
-				(gf != null) ? gfGroup : dadGroup;
+				(gf != null ? gfGroup : dadGroup);
 			default:
 				boyfriendGroup;
 		}
+		
 		final newCharacter = group.addToList(newCharacter);
 		startCharacterScript(newCharacter.curCharacter, newCharacter);
 	}
 	
 	function startCharacterScript(name:String, char:Character):Void
 	{
-		var hscriptPath = FunkinScript.getPath('data/characters/$name');
-		if (!FunkinAssets.exists(hscriptPath, TEXT)) hscriptPath = FunkinScript.getPath('characters/$name');
+		var hscriptPath = FunkinScript.getPath('data/characters/$name', LOOSE);
+		if (!FunkinAssets.exists(hscriptPath, TEXT)) hscriptPath = FunkinScript.getPath('characters/$name', LOOSE);
 		
 		if (FunkinAssets.exists(hscriptPath, TEXT))
 		{
-			var script = initFunkinScript(hscriptPath);
+			var script = initFunkinScript(hscriptPath, null, false);
 			
-			script.set('parent', char);
+			script?.set('parent', char);
+			
+			if (script?.exists('onLoad')) script.call('onLoad');
+		}
+	}
+	
+	function startPetScript(pet:Pet):Void
+	{
+		final name:String = pet.curPet;
+		
+		var hscriptPath = FunkinScript.getPath('data/pets/$name', LOOSE);
+		if (!FunkinAssets.exists(hscriptPath, TEXT)) hscriptPath = FunkinScript.getPath('pets/$name', LOOSE);
+		
+		if (FunkinAssets.exists(hscriptPath, TEXT))
+		{
+			var script = initFunkinScript(hscriptPath, null, false);
+			
+			script?.set('parent', pet);
+			
+			if (script?.exists('onLoad')) script.call('onLoad');
 		}
 	}
 	
@@ -911,83 +1365,278 @@ class PlayState extends MusicBeatState
 	 * Creates a new `FunkinScript` from filepath and calls `onLoad`. Returns `null` if it couldnt be found
 	 * @param name sets a custom name to the script
 	 */
-	public function initFunkinScript(filePath:String, ?name:String):Null<FunkinScript>
+	public function initFunkinScript(filePath:String, ?name:String, autoOnLoad:Bool = true, unique:Bool = true):Null<FunkinScript>
 	{
-		if (scripts.exists(name ?? filePath)) return null;
+		var name:String = (name ?? filePath);
 		
-		var script:FunkinScript = FunkinScript.fromFile(filePath, name, scripts.scriptShareables);
+		if (scripts.exists(name))
+		{
+			if (!unique)
+			{
+				var c:Int = 1;
+				
+				while (scripts.exists('${name}_$c'))
+					c++;
+					
+				name += '_$c';
+			}
+			else
+			{
+				return null;
+			}
+		}
+		
+		var script:FunkinScript = FunkinScript.fromFile(filePath, name, null, scripts.scriptShareables);
 		if (script.__garbage)
 		{
 			script = FlxDestroyUtil.destroy(script);
 			return null;
 		}
 		Logger.log('script: ' + filePath + ' intialized');
-		if (script.exists('onLoad')) script.call('onLoad');
+		if (autoOnLoad && script.exists('onLoad')) script.call('onLoad');
 		scripts.addScript(script);
 		return script;
 	}
 	
-	public var skipArrowStartTween:Bool = false;
+	public function getModchartObject(tag:String):Dynamic
+	{
+		if (variables.exists(tag)) return variables.get(tag);
+		if (modchartObjects.exists(tag)) return modchartObjects.get(tag);
+		return null;
+	}
 	
-	var splashLayering:Array<Dynamic> = [];
+	function checkStageFlag(guy:IFlags):Void
+	{
+		var variants:Null<haxe.DynamicAccess<String>> = guy.getFlag('variants');
+		if (variants == null) return;
+		
+		for (flag => variant in variants)
+		{
+			if (!stage.getFlag(flag) && (SONG.flags == null || !SONG.flags.get(flag))) continue;
+			
+			if (guy is Character)
+			{
+				cast(guy, Character).loadCharacter(variant);
+			}
+			else if (guy is Pet)
+			{
+				cast(guy, Pet).loadPet(variant);
+			}
+			
+			return;
+		}
+	}
 	
-	public var screenDim:Null<FlxSprite>; // this doesnt need to be apart of playstate
+	function startCharacterPos(?char:Character, gfCheck:Bool = false):Void
+	{
+		if (char == null) return;
+		
+		if (gfCheck && char.curCharacter.startsWith('gf'))
+		{ // IF DAD IS GIRLFRIEND, HE GOES TO HER POSITION
+			char.setPosition(GF_X, GF_Y);
+			char.scrollFactor.set(0.95, 0.95);
+			char.danceEveryNumBeats = 2;
+		}
+		char.x += char.positionArray[0];
+		char.y += char.positionArray[1];
+	}
+	
+	public function startVideo(name:String):Void
+	{
+		#if VIDEOS_ALLOWED
+		final fileName = Paths.video(name);
+		
+		if (FunkinAssets.exists(fileName, BINARY))
+		{
+			inCutscene = true;
+			var bg = new flixel.system.FlxBGSprite();
+			bg.scrollFactor.set();
+			bg.cameras = [camHUD];
+			add(bg);
+			
+			var vid = new FlxVideo();
+			FlxG.addChildBelowMouse(vid);
+			vid.onEndReached.add(() -> {
+				remove(bg);
+				startAndEnd();
+				
+				FlxG.removeChild(vid);
+				vid.dispose();
+			});
+			vid.load(fileName);
+			vid.play();
+			return;
+		}
+		else
+		{
+			FlxG.log.warn('Couldnt find video file: ' + fileName);
+			startAndEnd();
+		}
+		#else
+		startAndEnd();
+		#end
+	}
+	
+	inline function startAndEnd():Void
+	{
+		endingSong ? endSong() : startCountdown();
+	}
 	
 	public function generatePlayfields()
 	{
 		if (generatedFields) return;
-		
+
+		trace('[PlayState] generatePlayfields: START (${SONG.lanes} lane(s))');
+
 		if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
-		
+
+		Note.swagWidth = 160 * 0.7;
+		// Plain, unscaled Funkin original VSlice values (STRUMLINE_SIZE=104, NOTE_SPACING=112,
+		// scale 1.0) — no separate "match the touch hitbox" scale-up. On mobile the touch
+		// hitbox instead tracks these exact receptor positions (see addMobileControls()),
+		// so there's no fixed-size zone for the visuals to match in the first place.
+		funkin.objects.note.StrumNote.spacingScale = 1.0;
+		final _isVSlice = (ClientPrefs.noteLayout == 'VSlice');
+		if (_isVSlice)
+		{
+			Note.swagWidth = funkin.objects.note.StrumNote.STRUMLINE_SIZE; // 104
+			// Shared with MobileHitbox's NOTE_TAP layout so the touch zones it
+			// builds (before these playfields even exist) land exactly here.
+			modManager.vsliceBaseY = funkin.objects.note.StrumNote.getVSliceBaseY();
+			// Real mobile VSlice pins the opponent's strumline near the top,
+			// small, regardless of downscroll -- see getVSliceOpponentBaseY().
+			modManager.vsliceOpponentBaseY = funkin.objects.note.StrumNote.getVSliceOpponentBaseY();
+		}
+
 		for (lane in 0...SONG.lanes)
 		{
+			trace('[PlayState] generatePlayfields: lane $lane...');
+
 			final character = (lane == 1 ? dad : boyfriend);
 			final isPlayer = (lane != 1);
-			
+
 			final auto = (lane != 0 || cpuControlled);
-			
-			var strums = new PlayField(0, 0, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
+
+			// Real VSlice shows BOTH strumlines at once, side by side (player on the
+			// right half, opponent flush left) -- see StrumNote.getCenteredXPos()'s
+			// comment. getCenteredXPos already applies spacingScale.
+			final isOpponentLane = (lane == 1);
+			// Spacing between the 4 lanes and the receptor/note art's own size are
+			// tuned independently for the player (spread out MORE, render SMALLER)
+			// -- the opponent's compact strumline shrinks both together instead.
+			final spacingMult = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : funkin.objects.note.StrumNote.VSLICE_PLAYER_SPACING_MULT;
+			final sizeScale = isOpponentLane ? funkin.objects.note.StrumNote.VSLICE_OPPONENT_SCALE : funkin.objects.note.StrumNote.VSLICE_PLAYER_SIZE_SCALE;
+			var baseX:Float = _isVSlice ? funkin.objects.note.StrumNote.getCenteredXPos(0, lane == 0, spacingMult) : 0;
+			var baseY:Float = _isVSlice ? (isOpponentLane ? modManager.vsliceOpponentBaseY : modManager.vsliceBaseY) : 0;
+
+			var strums = new PlayField(baseX, baseY, SONG.keys, character, isPlayer, auto, lane, arrowSkins[lane]);
 			// strums.scale = NoteUtil.getSkinFromID(lane).scale;
+			if (_isVSlice && lane <= 1)
+			{
+				// noteScale defaults to 0.7 (our engine-wide default), leaving falling notes
+				// visually smaller than the 104px VSlice receptor they're meant to match.
+				// Applies to both the player (lane 0) and opponent (lane 1) strumlines --
+				// both are real, visible VSlice receptors now, not just the player's. The
+				// opponent's strumline is additionally shrunk to match real mobile VSlice's
+				// small, always-top-anchored compact strumline (VSLICE_OPPONENT_SCALE); the
+				// player's is independently tuned via VSLICE_PLAYER_SIZE_SCALE.
+				// VSLICE_*_SCALE were pixel-measured against the DEFAULT skin's 0.7 native
+				// scale, so apply them RELATIVE to that -- not as an absolute assignment.
+				// Assigning absolutely clobbers skins whose art has a different native scale
+				// (the pixel skin renders at 6 because its source arrows are ~17px), which
+				// shrank e.g. Dank Bars' pixel notes to a fraction of their intended size.
+				// Scaling relative leaves the default skin identical (0.7 -> sizeScale) while
+				// keeping every other skin's proportions.
+				final vsliceScale = sizeScale / funkin.data.NoteSkin.DEFAULT_SCALE;
+				strums._skin.receptorScale *= vsliceScale;
+				strums._skin.noteScale *= vsliceScale;
+			}
 			scripts.call('preReceptorGeneration', [strums, lane]);
 			strums.generateReceptors();
-			strums.fadeIn(isStoryMode || skipArrowStartTween);
 			strums.ID = lane;
-			
+
+			// Real VSlice has exactly two strumlines (player + opponent), both
+			// visible at once. This engine's "lane" concept can go beyond that
+			// (extra characters/multiplayer) -- VSlice has no equivalent for
+			// those, so keep anything past the opponent lane hidden.
+			if (_isVSlice && lane > 1)
+			{
+				strums.visible = false;
+				strums.underlay.visible = false;
+			}
+
 			playFields.add(strums);
+			underlays.add(strums.underlay);
 			
 			strums.onNoteHit.add((note, field) -> {
+				#if android SystemMonitor.profBegin('hitFocus'); #end
+				setFocusPlayerFromNote(note);
+				#if android SystemMonitor.profEnd(); #end
+
 				if (field.ID == 1) camZooming = true;
-				
+
+				#if android SystemMonitor.profBegin('hitAudioSfx'); #end
 				if (field.playerControls || (!audio.splitVocals && !audio.trackSwap)) audio.hit();
-				
+				#if android SystemMonitor.profEnd(); #end
+
 				if (field.playerControls && field.showRatings && !note.isSustainNote)
 				{
-					combo += 1;
-					if (combo > 9999) combo = 9999;
+					combo++;
+					#if android SystemMonitor.profBegin('hitPopUp'); #end
 					popUpScore(note);
+					#if android SystemMonitor.profEnd(); #end
 				}
+
+				#if mobile
+				// Showcase: the bot plays, the controls perform -- pulse the
+				// button/hint mapped to the hit column so the overlay animates
+				// along. Sustain pieces retrigger with held=true so the light
+				// stays solid through the hold instead of strobing per step.
+				if (showcaseActive && field.playerControls)
+				{
+					final flashId = switch (note.noteData % 4)
+					{
+						case 0: mobile.backend.flixel.input.FlxMobileInputID.noteLEFT;
+						case 1: mobile.backend.flixel.input.FlxMobileInputID.noteDOWN;
+						case 2: mobile.backend.flixel.input.FlxMobileInputID.noteUP;
+						default: mobile.backend.flixel.input.FlxMobileInputID.noteRIGHT;
+					};
+					if (virtualPad != null) virtualPad.flashButton(flashId, note.isSustainNote);
+					if (hitbox != null) hitbox.flashButton(flashId, note.isSustainNote);
+				}
+				#end
 			});
-			
-			inline function actualMiss()
-			{
-				if (combo > 5 && gf != null && gf.animOffsets.exists('sad')) gf.playAnimForDuration('sad', 1, true);
-				combo = 0;
+			strums.onNoteMiss.add((note, field) -> {
+				setFocusPlayerFromNote(note);
+
+				if (note.canMiss || !field.playerControls) return;
+				
 				audio.miss();
-				
 				if (instakillOnMiss) doDeathCheck(true);
-				
-				songMisses++;
 				if (!practiceMode) songScore -= 10;
 				
 				totalPlayed++;
+				songMisses++;
+				breakCombo();
+				
+				if (songMisses > totalMisses && missLimit) doDeathCheck(true);
+				
 				RecalculateRating(true);
-			}
-			
-			strums.onNoteMiss.add((note, field) -> {
-				if (!note.canMiss && field.playerControls && !note.blockHit) actualMiss();
 			});
-			strums.onMissPress.add((key) -> {
-				actualMiss();
+			strums.onMissPress.add((key, field) -> {
+				if (!field.playerControls) return;
+				
+				audio.miss();
+				if (instakillOnMiss) doDeathCheck(true);
+				if (!practiceMode) songScore -= 10;
+				
+				if (!endingSong) songMisses++;
+				totalPlayed++;
+				breakCombo();
+				
+				if (songMisses > totalMisses && missLimit) doDeathCheck(true);
+				
+				RecalculateRating();
 			});
 			
 			strums.showRatings = true;
@@ -997,16 +1646,8 @@ class PlayState extends MusicBeatState
 			splashGrp.camera = camHUD;
 			splashLayering.push(splashGrp);
 			
-			if (lane == 1)
-			{
-				if (!ClientPrefs.opponentStrums) strums.baseAlpha = 0;
-				else if (ClientPrefs.middleScroll) strums.baseAlpha = 0.35;
-			}
+			for (strum in strums) strum.alpha = 0;
 		}
-		
-		// this broke a lot so im adding it back sorry data
-		scripts.set('playerStrums', playerStrums);
-		scripts.set('opponentStrums', opponentStrums);
 		
 		modManager.receptors = [for (i in playFields) i.members];
 		
@@ -1014,14 +1655,68 @@ class PlayState extends MusicBeatState
 		modManager.keys = SONG.keys;
 		
 		generatedFields = true;
+		trace('[PlayState] generatePlayfields: lanes built OK, calling postReceptorGeneration...');
 		scripts.call('postReceptorGeneration');
-		
+
 		modManager.registerEssentialModifiers();
 		modManager.registerDefaultModifiers();
 		modManager.registerScriptedModifiers();
 		modifiersRegistered = true;
-		
+
 		scripts.call('postModifierRegister');
+
+		trace('[PlayState] generatePlayfields: calling prewarmNotePool()...');
+		prewarmNotePool();
+		trace('[PlayState] generatePlayfields: END');
+	}
+
+	/**
+	 * Consumes whatever LoadingState's background thread precomputed (see
+	 * NotePoolPlan.hx) and builds exactly that many already-reloaded dead
+	 * Note instances per (field, direction) bucket, straight into
+	 * _deadNotesByType, using the SAME NoteSkin instance (playField._skin)
+	 * real gameplay notes will be matched against -- a different NoteSkin
+	 * object with identical data would still miss _deadNotesByType's
+	 * identity-keyed lookup, so this can only run here, after
+	 * generatePlayfields() has built the real PlayField instances, not any
+	 * earlier. Textures are already warm in FunkinCache by this point
+	 * (LoadingState's normal preload), so each reload here is a cache hit,
+	 * not a disk decode -- the only new cost is the object construction
+	 * itself, paid once now instead of scattered as reloadNote() calls
+	 * through the whole song.
+	 */
+	function prewarmNotePool():Void
+	{
+		final plan = NotePoolPlan.consume(SONG.song);
+		trace('[PlayState] prewarmNotePool: START (${plan.length} bucket(s))');
+		if (plan.length == 0) return;
+
+		final _t0 = haxe.Timer.stamp();
+		var built = 0;
+
+		for (bucket in plan)
+		{
+			final field = getFieldFromID(bucket.fieldID);
+			if (field == null || field._skin == null) continue;
+
+			for (_ in 0...bucket.count)
+			{
+				final note = new Note();
+				note.player = bucket.fieldID;
+				note.noteData = bucket.noteData;
+				note.skin = field._skin;
+				note.texture = field._skin.noteTexture; // triggers reloadNote() via set_texture, same path addNote() uses
+				note.baseScale.copyFrom(note.scale);
+				note.updateHitbox();
+
+				notes.add(note);
+				disposeNote(note); // kill() + garbage flag + _trackDeadNote(), same as any other note's real disposal
+				built++;
+			}
+		}
+
+		if (built > 0 && ClientPrefs.inDevMode)
+			Logger.log('[PlayState] prewarmNotePool: built $built dead note(s) across ${plan.length} bucket(s) in ${Std.int((haxe.Timer.stamp() - _t0) * 1000)}ms', NOTICE);
 	}
 	
 	var startTimer:FlxTimer = null;
@@ -1035,19 +1730,36 @@ class PlayState extends MusicBeatState
 	{
 		if (startedCountdown)
 		{
-			scripts.call('onStartCountdown', []);
+			scripts.call('onStartCountdown', _scriptEmptyArgs);
 			return;
 		}
+
+		// Debug: log GF state at countdown start
+		trace('[DEBUG] startCountdown: gf=${gf != null}, visible=${gf?.visible}, alpha=${gf?.alpha}, gfGroup.visible=${gfGroup.visible}, stage.zIndex=${stage.zIndex}, gfGroup.zIndex=${gfGroup.zIndex}');
+
+		// Log loaded scripts and enable per-call timing to track lag culprits
+		ScriptGroup.timingEnabled = true;
+		final scriptNames = scripts.members.map(s -> s.name);
+		final ntNames    = noteTypeScripts.members.map(s -> s.name);
+		final evNames    = eventScripts.members.map(s -> s.name);
+		trace('[ScriptPerf] LOADED scripts(${scriptNames.length}): ${scriptNames.join(", ")}');
+		trace('[ScriptPerf] LOADED noteTypeScripts(${ntNames.length}): ${ntNames.join(", ")}');
+		trace('[ScriptPerf] LOADED eventScripts(${evNames.length}): ${evNames.join(", ")}');
 		
 		inCutscene = false;
-		
+
 		#if mobile
-		hitbox.visible = true;
+		mobileControlsActive = true;
+		if (hitbox != null) hitbox.visible = true;
+		if (virtualPad != null) virtualPad.visible = true;
 		#end
-		
-		final ret:Dynamic = scripts.call('onStartCountdown', []);
-		
-		if (ret != ScriptConstants.STOP_FUNC)
+
+		#if android
+		mobile.backend.AndroidUtils.keepScreenOn(true);
+		mobile.backend.AndroidUtils.setGameplayState(true);
+		#end
+
+		if (!ScriptConstants.stopping(scripts.call('onStartCountdown')))
 		{
 			// if its not 0 we can assume this was manually triggered
 			if (!genNotesBeforeCountdown) generatePlayfields();
@@ -1056,7 +1768,9 @@ class PlayState extends MusicBeatState
 				startedCountdown = true;
 				Conductor.songPosition = 0;
 				Conductor.songPosition -= Conductor.crotchet * 5;
-				scripts.call('onCountdownStarted', []);
+				scripts.call('onCountdownStarted', _scriptEmptyArgs);
+				
+				for (playField in playFields) playField.fadeIn((isStoryMode && !seenCutscene) || skipArrowStartTween);
 				
 				var swagCounter:Int = 0;
 				
@@ -1074,11 +1788,20 @@ class PlayState extends MusicBeatState
 					return;
 				}
 				
-				startTimer = new FlxTimer().start((Conductor.crotchet / 1000) / playbackRate, function(tmr:FlxTimer) {
-					handleBoppers(tmr.loopsLeft);
+				startTimer = new FlxTimer().start(Conductor.crotchet / 1000, function(tmr:FlxTimer) {
+					if (swagCounter < 4) handleBoppers(tmr.loopsLeft);
 					
-					var introAlts:Array<String> = ['ready', 'set', 'go'];
+					var introAssets:Map<String, Array<String>> = new Map<String, Array<String>>();
+					introAssets.set('default', ['ready', 'set', 'go']);
+					introAssets.set('pixel', ['pixelUI/ready-pixel', 'pixelUI/set-pixel', 'pixelUI/date-pixel']);
+					
+					var introAlts:Array<String> = introAssets.get('default');
 					var antialias:Bool = ClientPrefs.globalAntialiasing;
+					if (isPixelStage)
+					{
+						introAlts = introAssets.get('pixel');
+						antialias = false;
+					}
 					
 					switch (swagCounter)
 					{
@@ -1104,7 +1827,8 @@ class PlayState extends MusicBeatState
 						case 4:
 					}
 					
-					scripts.call('onCountdownTick', [swagCounter]);
+					_scriptCountdownArgs[0] = swagCounter;
+					scripts.call('onCountdownTick', _scriptCountdownArgs);
 					
 					swagCounter += 1;
 				}, 5);
@@ -1114,50 +1838,120 @@ class PlayState extends MusicBeatState
 	
 	function makeCountdownSprite(path:String):FlxSprite
 	{
-		final pref = countdownPrefix != Paths.COUNTDOWN_PREFIX ? countdownPrefix : Paths.COUNTDOWN_PREFIX;
-		
-		final spr = new FlxSprite().loadGraphic(Paths.image(pref + path));
+		final spr = new FlxSprite().loadGraphic(Paths.image(path));
 		spr.scrollFactor.set();
 		spr.updateHitbox();
 		
+		if (PlayState.isPixelStage) spr.setGraphicSize(Std.int(spr.width * daPixelZoom));
 		spr.screenCenter();
-		spr.antialiasing = ClientPrefs.globalAntialiasing;
+		spr.antialiasing = isPixelStage ? false : ClientPrefs.globalAntialiasing;
 		
 		spr.cameras = [camHUD];
 		
-		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000 / playbackRate,
+		FlxTween.tween(spr, {alpha: 0}, Conductor.crotchet / 1000,
 			{
 				ease: FlxEase.cubeInOut,
 				onComplete: function(twn:FlxTween) {
-					remove(spr, true);
+					remove(spr);
 					spr.destroy();
 				}
 			});
 		return spr;
 	}
 	
-	inline function disposeNote(note:Note):Void
+	public function addBehindGF(obj:FlxObject):Void
 	{
-		if (note.exists)
-		{
-			note.garbage = true;
-			
-			notes.remove(note, true);
-			note.destroy();
-		}
+		insert(members.indexOf(gfGroup), obj);
 	}
 	
+	public function addBehindBF(obj:FlxObject):Void
+	{
+		insert(members.indexOf(boyfriendGroup), obj);
+	}
+	
+	public function addBehindDad(obj:FlxObject):Void
+	{
+		insert(members.indexOf(dadGroup), obj);
+	}
+	
+	inline function disposeNote(note:Note):Void
+	{
+		note.kill();
+		note.garbage = true;
+		_trackDeadNote(note);
+		// NOT removed from `notes` — a killed-but-still-a-member note is
+		// exactly what notes.recycle()'s getFirstAvailable() looks for
+		// (first member with exists == false). Splicing it out here used to
+		// permanently discard it from the pool, so every single note spawn
+		// fell through to `new Note()` instead of reusing one — the pool
+		// never actually pooled anything. Left in place, the group settles
+		// at roughly the song's peak concurrent note count and spawns after
+		// that point are real reuses.
+	}
+
+	#if android
+	/**
+	 * Dev-only measurement, no effect on real gameplay: times how long
+	 * constructing one `Note` for every note THE WHOLE CHART will ever
+	 * need (heads + every sustain segment, not just prewarmNotePool()'s
+	 * peak-concurrency count) actually takes on this device. That's the
+	 * number a full build-everything-upfront migration (matching Psych
+	 * Mobile's generateSong(), which builds a real Note per chart note
+	 * before the countdown starts) would have to pay during loading.
+	 * Built into a throwaway local array and destroyed right after, so
+	 * `notes`/`queueNotes`/the real pool are never touched.
+	 */
+	function benchmarkFullNoteConstruction():Void
+	{
+		var total:Int = 0;
+		for (qn in queueNotes)
+		{
+			total++;
+			if (qn.tail != null) total += qn.tail.length;
+		}
+
+		final built:Array<Note> = [];
+		final startStamp:Float = haxe.Timer.stamp();
+		for (i in 0...total) built.push(new Note());
+		final elapsedMs:Float = (haxe.Timer.stamp() - startStamp) * 1000;
+
+		for (n in built) n.destroy();
+
+		final perNoteMs:Float = (total > 0 ? elapsedMs / total : 0);
+		Logger.log('[NoteBuildBenchmark] song=$curSong totalNotes=$total (heads+sustain segments) elapsed=${Std.int(elapsedMs)}ms avg=${perNoteMs}ms/note -- cost of a full build-everything-upfront migration during loading, for reference only');
+	}
+	#end
+
 	public function clearNotesBefore(time:Float):Void
 	{
-		while (queueNotes.length > 0 && queueNotes[0].strumTime - 350 < time)
-			queueNotes.shift();
+		// Advance the index past notes that are before `time`; compact lazily.
+		while (_noteSpawnIdx < queueNotes.length && queueNotes[_noteSpawnIdx].strumTime - 350 < time)
+			_noteSpawnIdx++;
+		if (_noteSpawnIdx > 0) { queueNotes.splice(0, _noteSpawnIdx); _noteSpawnIdx = 0; }
 			
 		var i:Int = (notes.length - 1);
 		while (i >= 0)
 		{
 			var daNote:Note = notes.members[i];
-			if (daNote.strumTime - 350 < time) disposeNote(daNote);
-			
+			if (daNote.strumTime - 350 < time)
+			{
+				// A still-alive note is also tracked in its PlayField's own
+				// `notes` array (used for hit-detection scans, see
+				// PlayField.addNote/forEachAliveNote) -- disposing it here
+				// via the pool-only disposeNote() kills it but never calls
+				// PlayField.removeNote(), leaving a stale reference behind.
+				// If that same Note object later gets recycled back into the
+				// same field, addNote() pushes it again with no dedupe check,
+				// so the field ends up with two entries for one physical
+				// note -- forEachAliveNote() would then run its callback on
+				// it twice. Route through the field's own disposeNote() (which
+				// also removes it from that array) whenever the note is
+				// actually attached to one; already-dead pool fodder has no
+				// playField, so the plain kill is enough for those.
+				if (daNote.playField != null) daNote.playField.disposeNote(daNote);
+				else disposeNote(daNote);
+			}
+
 			--i;
 		}
 	}
@@ -1174,15 +1968,16 @@ class PlayState extends MusicBeatState
 		audio.hit();
 		
 		Conductor.songPosition = time;
-		songTime = time;
 	}
-	
-	var songTime:Float = 0;
 	
 	function startSong():Void
 	{
 		startingSong = false;
-		
+
+		#if android
+		SystemMonitor.resetGameplayTimer();
+		#end
+
 		audio.inst.onComplete = finishSong.bind(false);
 		
 		#if FLX_PITCH
@@ -1192,18 +1987,18 @@ class PlayState extends MusicBeatState
 		if (startOnTime > 0) setSongTime(startOnTime - 500);
 		startOnTime = 0;
 		
-		if (paused) audio.pause();
-		
 		songLength = audio.songLength;
 		
 		audio.volume = 1 * volumeMult;
 		audio.play();
 		
-		// Updating Discord Rich Presence (with Time Left)
-		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName + ' ' + rpcDifficulty, null, true, songLength);
+		if (paused) audio.pause();
 		
-		scripts.set('songLength', songLength);
-		scripts.call('onSongStart', []);
+		// Updating Discord Rich Presence (with Time Left)
+		if (automatedDiscord) DiscordClient.changePresence(rpcDescription, rpcSongName, null, true, songLength, 'icon', songLength);
+		_discordSyncTimer = 0;
+		
+		scripts.call('onSongStart', _scriptEmptyArgs);
 		callHUDFunc(hud -> hud.onSongStart());
 	}
 	
@@ -1212,6 +2007,21 @@ class PlayState extends MusicBeatState
 	var noteTypesPushed:Array<String> = [];
 	
 	var _parsedEvents:Null<Array<EventNote>> = null;
+	
+	/**
+	 * makes an event note (internal)
+	 */
+	inline function makeEv(time:Float, ev:String, v1:String, v2:String)
+	{
+		final ev:EventNote =
+			{
+				strumTime: time + ClientPrefs.noteOffset,
+				event: ev,
+				value1: v1,
+				value2: v2
+			};
+		return ev;
+	}
 	
 	/**
 	 * returns all events from both the loaded chart and events json
@@ -1226,33 +2036,7 @@ class PlayState extends MusicBeatState
 		
 		final songName:String = Paths.sanitize(SONG.song);
 		
-		var file:String = Paths.json('$songName/charts/events');
-		if (!FunkinAssets.exists(file)) file = Paths.json('$songName/data/events');
-		
-		inline function makeEv(time:Float, ev:String, v1:String, v2:String)
-		{
-			final ev:EventNote =
-				{
-					strumTime: time + ClientPrefs.noteOffset,
-					event: ev,
-					value1: v1,
-					value2: v2
-				};
-				
-			var isCopy:Bool = false;
-			
-			for (event in events)
-			{
-				if (FlxMath.equal(event.strumTime, ev.strumTime) && event.event == ev.event && event.value1 == ev.value1 && event.value2 == ev.value2)
-				{
-					isCopy = true;
-					
-					break;
-				}
-			}
-			
-			if (!isCopy) events.push(ev);
-		}
+		var file:String = Paths.json('$songName/data/events');
 		
 		if (FunkinAssets.exists(file))
 		{
@@ -1262,7 +2046,7 @@ class PlayState extends MusicBeatState
 			{
 				for (i in 0...event[1].length)
 				{
-					makeEv(event[0], event[1][i][0], event[1][i][1], event[1][i][2]);
+					events.push(makeEv(event[0], event[1][i][0], event[1][i][1], event[1][i][2]));
 				}
 			}
 		}
@@ -1270,7 +2054,7 @@ class PlayState extends MusicBeatState
 		for (event in SONG.events) // Event Notes
 		{
 			for (i in 0...event[1].length)
-				makeEv(event[0], event[1][i][0], event[1][i][1], event[1][i][2]);
+				events.push(makeEv(event[0], event[1][i][0], event[1][i][1], event[1][i][2]));
 		}
 		
 		return (_parsedEvents = events);
@@ -1278,6 +2062,8 @@ class PlayState extends MusicBeatState
 	
 	function generateSong(dataPath:String):Void
 	{
+		trace('[PlayState] generateSong: START ($dataPath)');
+
 		songSpeedType = ClientPrefs.getGameplaySetting('scrolltype', 'multiplicative');
 		
 		songSpeed = SONG.speed;
@@ -1296,11 +2082,7 @@ class PlayState extends MusicBeatState
 		curSong = songData.song;
 		
 		audio = new PlayableSong();
-		
-		var start = traceCheck ? Sys.time() : 0;
 		audio.populate(SONG);
-		if (traceCheck) trace('loading song took ${Sys.time() - start} seconds');
-		
 		audio.hit();
 		add(audio);
 		
@@ -1313,14 +2095,12 @@ class PlayState extends MusicBeatState
 		scripts.set('vocals', audio);
 		scripts.set('inst', audio.inst);
 		
-		add(playFields);
-		add(notes);
-		
+		// layering for notesplash stuff
 		for (i in splashLayering)
 			add(i);
 			
 		final noteData:Array<SongSection> = songData.notes;
-		
+
 		// loads note types
 		for (section in noteData)
 		{
@@ -1328,29 +2108,33 @@ class PlayState extends MusicBeatState
 			{
 				var type:Dynamic = songNotes[3];
 				if (!Std.isOfType(type, String)) type = ChartEditorState.noteTypeList[type];
-				
+
 				if (!noteTypeMap.exists(type)) noteTypeMap.set(type, true);
 			}
 		}
-		
+
+		trace('[PlayState] generateSong: loading ${Lambda.count(noteTypeMap)} note type script(s)...');
 		for (type in noteTypeMap.keys())
 		{
 			if (!noteTypesPushed.contains(type))
 			{
 				var baseScriptFile = 'data/notetypes/$type';
 				if (!FunkinAssets.exists(FunkinScript.getPath(baseScriptFile), TEXT)) baseScriptFile = 'notetypes/$type';
-				
+
 				final scriptFile = FunkinScript.getPath(baseScriptFile);
-				
+
 				if (FunkinAssets.exists(scriptFile, TEXT)) noteTypeScripts.addScript(initFunkinScript(scriptFile, type));
-				
+
 				noteTypesPushed.push(type);
 			}
 		}
-		
+		trace('[PlayState] generateSong: note type scripts OK, decoding chart notes...');
+
 		var events = getEventsDirect();
 		
-		var cpuTime = traceCheck ? Sys.time() : 0;
+		#if debug
+		var cpuTime = Sys.time();
+		#end
 		
 		if (ClientPrefs.inDevMode)
 		{
@@ -1412,12 +2196,8 @@ class PlayState extends MusicBeatState
 			if (fixed > 0 || dupes > 0) trace('corrected $fixed notes / removed $dupes duplicates');
 		}
 		
-		var holdCrotchet:Float = Math.max(Conductor.stepCrotchet / holdSubdivisions, 10);
-		
 		for (section in noteData)
 		{
-			if (section.changeBPM) holdCrotchet = (15000 / section.bpm / holdSubdivisions);
-			
 			for (songNotes in section.sectionNotes)
 			{
 				var daStrumTime:Float = songNotes[0];
@@ -1454,54 +2234,119 @@ class PlayState extends MusicBeatState
 				
 				queueNotes.push(swagNote);
 				
-				// floored but rounded????
-				final flooredSusLength = Math.round(susLength / holdCrotchet);
-				
-				if (flooredSusLength <= 0) continue;
-				
-				swagNote.tail = [for (susNote in 0...flooredSusLength + 1)
+				if (susLength > 0)
 				{
-					var sustainNote = new QueueNote(daStrumTime + (holdCrotchet * susNote), holdCrotchet, daNoteData, swagNote.noteType, true, playfield);
-					sustainNote.isSustainEnd = (susNote == flooredSusLength);
-					sustainNote.gfNote = swagNote.gfNote;
+					swagNote.tail = [];
 					
-					sustainNote;
-				}];
+					var susStep:Int = Std.int(Conductor.getStep(daStrumTime + 3)),
+						endStep:Float = Conductor.getStep(daStrumTime + susLength);
+						
+					while (susStep < endStep)
+					{
+						var time:Float = Math.max(Conductor.stepToSeconds(susStep), daStrumTime);
+						var length:Float = (Conductor.stepToSeconds(Math.min(susStep + 1, endStep)) - time);
+						
+						var sustainNote = new QueueNote(time, length, daNoteData, swagNote.noteType, true, playfield);
+						sustainNote.gfNote = swagNote.gfNote;
+						
+						swagNote.tail.push(sustainNote);
+						susStep++;
+					}
+					
+					var time:Float = (daStrumTime + susLength);
+					
+					var sustainNote = new QueueNote(time, Conductor.getCrotchetAtTime(time) / 4, daNoteData, swagNote.noteType, true, playfield);
+					sustainNote.gfNote = swagNote.gfNote;
+					sustainNote.isSustainEnd = true;
+					
+					swagNote.tail.push(sustainNote);
+				}
 			}
 		}
 		
+		trace('[PlayState] generateSong: chart notes decoded OK (${queueNotes.length}), loading ${events.length} event(s)...');
 		for (event in events)
 		{
 			final eventName = event.event;
-			
+
 			if (!eventsPushed.contains(eventName))
 			{
 				var baseScriptFile:String = 'data/events/$eventName';
 				if (!FunkinAssets.exists(FunkinScript.getPath(baseScriptFile), TEXT)) baseScriptFile = 'events/$eventName';
-				
+
 				final scriptFile = FunkinScript.getPath(baseScriptFile);
-				
+
 				if (FunkinAssets.exists(scriptFile, TEXT)) eventScripts.addScript(initFunkinScript(scriptFile, eventName));
-				
+
 				firstEventPush(event);
-				
+
 				eventsPushed.push(eventName);
 			}
-			
+
 			event.strumTime -= eventNoteEarlyTrigger(event);
 			eventNotes.push(event);
 			eventPushed(event);
 		}
-		
+		trace('[PlayState] generateSong: events OK');
+
 		eventNotes.sort(function(a:EventNote, b:EventNote) return (a.strumTime > b.strumTime ? 1 : -1));
 		queueNotes.sort(function(a:QueueNote, b:QueueNote) return (a.strumTime > b.strumTime ? 1 : -1));
-		
+		_noteSpawnIdx = 0;
+		_eventSpawnIdx = 0;
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
+		susTrails?.forEachAlive(t -> t.kill());
+
+		// prewarmNotePool() used to also be called here, but that's before
+		// generatePlayfields() has built any PlayField -- the surviving
+		// implementation (see its own doc comment) needs playField._skin to
+		// exist, and NotePoolPlan.consume() clears the precomputed plan the
+		// first time it's read, so calling it this early would silently
+		// throw the plan away before generatePlayfields()'s own call ever
+		// got a chance to use it. Only that later call remains.
+
+		// benchmarkFullNoteConstruction() used to run here automatically
+		// whenever ClientPrefs.inDevMode was on. It already did its job (the
+		// numbers it produced are why we stuck with pooling instead of
+		// migrating to a build-everything-upfront model) and is real,
+		// uncounted cost from then on -- constructing a live Note per chart
+		// note (3928 of them for "Finale", not just the pool's peak-concurrency
+		// count) inside the exact PlayState.create() freeze we're trying to
+		// measure/shrink, on the one device (dev mode) we actually test load
+		// times on. Left callable for future one-off use, just not wired to
+		// fire on every single load anymore.
+
 		speedChanges.sort(SortUtil.svSort);
 		
-		if (traceCheck) trace('loading chart took: ' + (Sys.time() - cpuTime));
+		#if debug
+		trace('loading chart took: ' + (Sys.time() - cpuTime));
+		#end
 		
 		checkEventNote();
 		generatedMusic = true;
+
+		// reportGameplayFrame() (PlayState.update()) starts firing the instant
+		// generatedMusic is true -- i.e. immediately, covering the whole
+		// countdown before a note is ever hit -- but resetGameplayTimer() used
+		// to only be called from startSong(), once the countdown reaches 0.
+		// That left every [GAMEPLAY] line during the countdown comparing
+		// against whatever _gameplayWindowStartStamp was last set to: stale
+		// from a previous song, or (the first song of a session) its field
+		// default, timestamped against nothing this song did at all. Confirmed
+		// on a real device log: the very first post-load line read
+		// "unaccounted=170217ms(97%)" with a single tag ("flxMemberLoop")
+		// alone summing to 2612ms -- both impossible for a real ~1s window,
+		// and both making that line, the ONE most likely to show a genuine
+		// stage-load/onCreatePost hitch, useless for actually diagnosing it.
+		// Resetting here as well (in addition to startSong()'s own reset, kept
+		// as-is for the moment real gameplay begins) means the countdown's
+		// own first report window starts from "chart generation just
+		// finished" instead of some unrelated earlier point in time.
+		#if android
+		SystemMonitor.resetGameplayTimer();
+		#end
+
+		trace('[PlayState] generateSong: END');
 	}
 	
 	public function getNoteInitialTime(time:Float):Float
@@ -1514,8 +2359,11 @@ class PlayState extends MusicBeatState
 		
 	public function getSV(time:Float):SpeedEvent
 	{
-		var event:SpeedEvent = {};
-		
+		// Reuse speedChanges[0] as the initial "best" instead of allocating a new SpeedEvent
+		// on every frame.  speedChanges always starts with a default {} entry (startTime=0,
+		// speed=1) so this is equivalent to the original logic for all valid song positions.
+		var event:SpeedEvent = speedChanges[0];
+
 		for (shit in speedChanges)
 		{
 			if (shit.startTime <= time && shit.startTime >= event.startTime)
@@ -1524,7 +2372,7 @@ class PlayState extends MusicBeatState
 				event = shit;
 			}
 		}
-		
+
 		return event;
 	}
 	
@@ -1555,6 +2403,7 @@ class PlayState extends MusicBeatState
 						startTime: event.strumTime,
 						speed: speed
 					});
+					
 			case 'Change Noteskin':
 				var fieldID:Int = 0;
 				switch (event.value2.toLowerCase())
@@ -1565,15 +2414,16 @@ class PlayState extends MusicBeatState
 						fieldID = Std.parseInt(event.value1);
 						if (Math.isNaN(fieldID)) fieldID = 0;
 				}
-				
+
 				var skin = new NoteSkin(event.value1, SONG.keys, fieldID);
-				
+
 				// load the skin so game no lag when change le skin
 				Paths.getAtlasFrames(skin.noteTexture);
 				Paths.getAtlasFrames(skin.splashTexture);
 				Paths.getAtlasFrames(skin.sustainSplashTexture);
-				
+
 				skin = FlxDestroyUtil.destroy(skin);
+
 			case 'Change Character':
 				var charType:Int = 0;
 				switch (event.value1.toLowerCase())
@@ -1601,6 +2451,7 @@ class PlayState extends MusicBeatState
 			default:
 				callEventScript(event.event, 'onFirstPush', [event]);
 		}
+		scripts.call('onFirstEventPush', [event]);
 	}
 	
 	function eventNoteEarlyTrigger(event:EventNote):Float
@@ -1620,6 +2471,10 @@ class PlayState extends MusicBeatState
 		return 0;
 	}
 	
+	public var skipArrowStartTween:Bool = false;
+	
+	var splashLayering:Array<Dynamic> = [];
+	
 	override function openSubState(SubState:FlxSubState):Void
 	{
 		if (paused)
@@ -1631,6 +2486,7 @@ class PlayState extends MusicBeatState
 			
 			#if VIDEOS_ALLOWED
 			FunkinVideoSprite.forEachAlive((video) -> if (video.tiedToGame) video.pause());
+			FlxG.timeScale = 1;
 			#end
 			
 			for (field in playFields?.members)
@@ -1648,7 +2504,7 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		scripts.call('onSubstateOpen', []);
+		scripts.call('onSubstateOpen', _scriptEmptyArgs);
 		super.openSubState(SubState);
 	}
 	
@@ -1656,35 +2512,49 @@ class PlayState extends MusicBeatState
 	{
 		if (paused)
 		{
-			if (audio.inst != null && !startingSong) resyncVocals();
-			
+			if (!startingSong)
+			{
+				audio.time = Conductor.songPosition;
+				audio.play();
+			}
+
 			FlxTimer.globalManager.forEach((i:FlxTimer) -> if (!i.finished) i.active = true);
 			FlxTween.globalManager.forEach((i:FlxTween) -> if (!i.finished) i.active = true);
-			
+
 			#if VIDEOS_ALLOWED
 			FunkinVideoSprite.forEachAlive((video) -> if (video.tiedToGame) video.resume());
 			#end
-			
+
 			paused = false;
-			scripts.call('onResume', []);
-			
+					playbackRate = playbackRate;
+			scripts.call('onResume', _scriptEmptyArgs);
+
 			resetDiscordRPC(startTimer != null && startTimer.finished);
+
+			// Picks up any Botplay/Practice/Instakill/health-multiplier change
+			// made via the pause menu's Gameplay Options screen -- those write
+			// straight into ClientPrefs.gameplaySettings, but the fields above
+			// are only cached copies (see refreshGameplaySettings()'s own doc).
+			refreshGameplaySettings();
 		}
 		#if mobile controls.isInSubstate = false; #end
-		scripts.call('onSubstateClose', []);
+		scripts.call('onSubstateClose', _scriptEmptyArgs);
 		super.closeSubState();
 	}
-	
+
 	override public function onFocus():Void
 	{
-		if (!isDead && !paused) resetDiscordRPC(Conductor.songPosition > 0.0);
+		if (health > 0 && !paused)
+		{
+			resetDiscordRPC(Conductor.songPosition > 0.0);
+		}
 		
 		super.onFocus();
 	}
 	
 	override public function onFocusLost():Void
 	{
-		if (!isDead && !paused) resetDiscordRPC(false);
+		if (health > 0 && !paused) resetDiscordRPC(false);
 		
 		super.onFocusLost();
 	}
@@ -1695,23 +2565,19 @@ class PlayState extends MusicBeatState
 	 */
 	inline function resetDiscordRPC(showTime:Bool = false)
 	{
-		if (!automatedDiscord) return;
-		
-		if (!showTime) DiscordClient.changePresence(rpcDescription, rpcSongName + ' ' + rpcDifficulty);
-		else DiscordClient.changePresence(rpcDescription, rpcSongName + ' ' + rpcDifficulty, null, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset);
+		if (!showTime) DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon);
+		else DiscordClient.changePresence(rpcDescription, rpcSongName, dad.healthIcon, true, songLength - Conductor.songPosition - ClientPrefs.noteOffset, 'icon', songLength);
+		_discordSyncTimer = 0;
 	}
 	
-	function resyncVocals():Void
+	function resyncVocals():Int
 	{
-		if (finishTimer != null) return;
-		
+		if (finishTimer != null) return 0;
+
 		audio.pitch = playbackRate;
-		audio.volume = 1 * volumeMult;
-		audio.pause();
-		audio.time = audio.inst.time;
+		final restarted = audio.resync(audio.inst.time);
 		Conductor.songPosition = audio.inst.time;
-		#if FLX_PITCH audio.pitch = playbackRate; #end
-		audio.play();
+		return restarted;
 	}
 	
 	public var canAccessEditors:Bool = true;
@@ -1721,27 +2587,126 @@ class PlayState extends MusicBeatState
 	
 	var startedCountdown:Bool = false;
 	var canPause:Bool = true;
-	
+
+	// Falling notes, receptors, splashes and the score/health HUD all render
+	// through camHUD (see notes.cameras/playFields.cameras/playHUD.cameras
+	// assignments in create()) — so if the actual bottleneck is draw-side
+	// (sprite/shader draw calls) rather than update-side game logic, it'll
+	// show up here and scale with exactly what's on screen, independent of
+	// everything profiled inside update().
+	override public function draw():Void
+	{
+		#if android SystemMonitor.profBegin('draw'); #end
+		super.draw();
+		#if android
+		SystemMonitor.profEnd();
+		// 'draw' above only covers the CPU-side sprite/draw-call batching
+		// this call actually does. FlxGame.draw() (the caller of this
+		// override, via _state.draw()) still has FlxG.cameras.render() --
+		// the real GPU tile-batch submission -- and unlock()/postDraw left to
+		// run after this function returns, which used to be pure
+		// "unaccounted" time with zero attribution. See
+		// SystemMonitor.beginGpuPresent()'s own doc comment for exactly what
+		// this covers and why it's closed via a signal instead of a plain
+		// profEnd() call.
+		SystemMonitor.beginGpuPresent();
+		#end
+	}
+
 	override public function update(elapsed:Float):Void
 	{
+		canPlayAwardSound = true;
+
+		// Everything from here through the spawnOffset calc right before
+		// noteSpawn used to be entirely untagged -- mobile overlay visibility,
+		// camera lerp setup, pause-input polling (keyboard/BACK/touch),
+		// editor hotkeys, conductor songPosition tracking. None of it is
+		// individually expensive, but summed it was a real, previously
+		// invisible slice of "unaccounted". 'camera'/'eventNotes'/
+		// 'modifierTimeline' nest inside as their own sub-tags.
+		#if android SystemMonitor.profBegin('preUpdate'); #end
+
+		#if mobile
+		// Resolve the touch overlay's real visibility every frame from three
+		// independent conditions (see mobileControlsActive's doc):
+		//   - the show-window (post-countdown, no cutscene, song not over);
+		//   - camHUD.visible, so a modchart hiding the HUD takes the overlay
+		//     with it instead of leaving the pad floating on its own camera;
+		//   - botplay hides the controls outright (nothing to touch), while
+		//     Showcase keeps them up so the bot can animate them.
+		final overlayShown = mobileControlsActive && camHUD.visible && (!cpuControlled || showcaseActive);
+		if (hitbox != null && hitbox.visible != overlayShown) hitbox.visible = overlayShown;
+		if (virtualPad != null && virtualPad.visible != overlayShown) virtualPad.visible = overlayShown;
+		#end
+
 		if (cameraLerping && !inCutscene)
 		{
-			final lerpRate = 0.04 * cameraSpeed * playbackRate;
+			final lerpRate = 0.04 * cameraSpeed;
 			FlxG.camera.followLerp = lerpRate;
 		}
 		
-		if (generatedMusic && !endingSong && !isCameraOnForcedPos) moveCameraSection();
-		
-		scripts.call('onUpdate', [elapsed]);
-		
-		super.update(elapsed);
-		input.update();
-		
-		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
+		if (generatedMusic && !endingSong && !isCameraOnForcedPos)
 		{
-			if (scripts.call('onPause', []) != ScriptConstants.STOP_FUNC) openPauseMenu();
+			#if android SystemMonitor.profBegin('camera'); #end
+			moveCameraSection();
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
+		#if android
+		// See DISCORD_SYNC_INTERVAL's doc comment -- keeps Kizzy's progress bar
+		// actually advancing during gameplay instead of freezing at whichever
+		// elapsed position was last reported (song start, or the last pause/
+		// resume). Paused is deliberately excluded: Kizzy only draws a
+		// progress bar at all while PlaybackState.STATE_PLAYING, so there's
+		// nothing to keep fresh while paused.
+		if (automatedDiscord && startedCountdown && !paused && !endingSong)
+		{
+			_discordSyncTimer += elapsed;
+			if (_discordSyncTimer >= DISCORD_SYNC_INTERVAL)
+			{
+				_discordSyncTimer = 0;
+				resetDiscordRPC(true);
+			}
+		}
+		#end
+
+		if (controls.PAUSE && startedCountdown && canPause)
+		{
+			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
+		}
+
+		#if android
+		if (startedCountdown && canPause && FlxG.android.justReleased.BACK)
+		{
+			if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
+		}
+		#end
+
+		#if mobile
+		if (startedCountdown && canPause)
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.justPressed)
+				{
+					var _tp = touch.getScreenPosition(camHUD);
+					if (mobilePauseBtn.visible && mobilePauseBtn.overlapsPoint(_tp, true, camHUD))
+					{
+						_tp.put();
+						if (!ScriptConstants.stopping(scripts.call('onPause'))) openPauseMenu();
+						break;
+					}
+					_tp.put();
+				}
+			}
+		}
+		#end
+
+		#if mobile
+		if (virtualPadCam != null) virtualPadCam.alpha = camHUD.alpha;
+		if (hitboxCam != null) hitboxCam.alpha = camHUD.alpha;
+		#end
+
 		if (canAccessEditors && !endingSong && !inCutscene)
 		{
 			if (FlxG.keys.anyJustPressed(debugKeysChart)) openChartEditor();
@@ -1749,56 +2714,92 @@ class PlayState extends MusicBeatState
 			if (FlxG.keys.anyJustPressed(debugKeysCharacter)) openCharacterEditor();
 		}
 		
-		if (healthBounds.max > healthBounds.min && health > healthBounds.max) health = healthBounds.max;
-		else if (healthBounds.min > healthBounds.max && healthBounds.max > health) health = healthBounds.max;
+		if (health > healthBounds.max) health = healthBounds.max;
 		
 		if (startingSong)
 		{
 			if (startedCountdown)
 			{
-				Conductor.songPosition += FlxG.elapsed * 1000 * playbackRate;
+				Conductor.songPosition += (elapsed * 1000);
+				
 				if (Conductor.songPosition >= 0) startSong();
 			}
 		}
 		else
 		{
-			var deltaTime:Float = elapsed * 1000 * playbackRate;
-			if (audio.time == Conductor.lastSongPos) Conductor.songPosition += deltaTime;
-			else
-			{
-				if (Math.abs(audio.time - Conductor.songPosition) >= deltaTime) Conductor.songPosition = audio.time;
-				else Conductor.songPosition += deltaTime;
-				
-				Conductor.lastSongPos = audio.time;
-			}
+			Conductor.songPosition += (elapsed * 1000);
+			
+			if (Math.abs(getSongTime() - Conductor.songPosition) > 1000 / 60 / playbackRate) Conductor.songPosition = getSongTime();
+			
+			Conductor.lastSongPos = Conductor.songPosition;
 		}
 		
 		currentSV = getSV(Conductor.songPosition);
 		Conductor.visualPosition = getVisualPosition();
 		
-		checkEventNote();
-		
-		if (camZooming)
-		{
-			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
-			camHUD.zoom = MathUtil.decayLerp(camHUD.zoom, defaultHudZoom, 6.25 * camZoomingDecay, elapsed);
-		}
-		
 		if (!ClientPrefs.noReset && controls.RESET && canReset && !inCutscene && startedCountdown && !endingSong) health = 0;
-		
-		doDeathCheck();
-		
+
+		#if android SystemMonitor.profBegin('eventNotes'); #end
+		checkEventNote();
+		#if android SystemMonitor.profEnd(); #end
+
 		if (modifiersRegistered)
 		{
+			#if android SystemMonitor.profBegin('modifierTimeline'); #end
 			modManager.updateTimeline(curDecStep);
 			modManager.update(elapsed);
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
-		final spawnOffset:Float = (spawnTime * playbackRate / songSpeed);
-		
-		while (queueNotes.length > 0 && (queueNotes[0].strumTime - Conductor.songPosition) < spawnOffset)
-			recycleNote(queueNotes.shift());
-			
+
+		final spawnOffset:Float = (spawnTime / songSpeed);
+
+		#if android SystemMonitor.profEnd(); #end // preUpdate
+
+		// Profiling this (previously untagged, hiding inside "unaccounted")
+		// showed noteSpawn cost scaling hard with burst size (~800ms for a
+		// 26-note burst). Root cause: disposeNote()/notesLoop used to splice
+		// dead notes out of `notes` entirely, so notes.recycle() could never
+		// find a reusable dead member — every single spawn fell through to
+		// `new Note()` (full FlxSprite construction + a duplicate
+		// _resetTexture() on top of the one preRecycle() already does) plus
+		// a fresh RGBGraphics allocation, none of which "pooling" was
+		// actually avoiding. Both are fixed now (see disposeNote()'s
+		// comment, and NoteUtil.getCurColors()'s `into` param).
+		//
+		// A second, separate burst source remains: a sustain used to recycle
+		// EVERY tail segment synchronously alongside its head, so one long
+		// hold could dump dozens of Note constructions into a single frame.
+		// recycleNote() now only builds the head here and queues its tails
+		// into _pendingTails (see enqueuePendingTails()); the second loop
+		// below drains them on their OWN schedule instead. Both loops cap
+		// how many notes they'll spawn in a single frame (MAX_NOTE_SPAWNS_PER_FRAME)
+		// -- Conductor.songPosition tracks real audio time, not render frame
+		// count, so an uncapped loop lets one slow frame hand the NEXT frame
+		// an even bigger backlog crossed at once, a self-feeding spiral.
+		// Notes that miss a frame's cap simply spawn next frame, a few ms
+		// later than their ideal threshold at worst.
+		#if android SystemMonitor.profBegin('noteSpawn'); #end
+		var _headsSpawnedThisFrame:Int = 0;
+		while (_headsSpawnedThisFrame < MAX_NOTE_SPAWNS_PER_FRAME && _noteSpawnIdx < queueNotes.length
+			&& (queueNotes[_noteSpawnIdx].strumTime - Conductor.songPosition) < spawnOffset)
+		{
+			#if android SystemMonitor.profBegin('noteSpawn.recycleHead'); #end
+			recycleNote(queueNotes[_noteSpawnIdx++]);
+			#if android SystemMonitor.profEnd(); #end
+			_headsSpawnedThisFrame++;
+		}
+
+		var _pendingTailsDrained:Int = 0;
+		while (_pendingTailsDrained < MAX_NOTE_SPAWNS_PER_FRAME && _pendingTailIdx < _pendingTails.length
+			&& (_pendingTails[_pendingTailIdx].qn.strumTime - Conductor.songPosition) < spawnOffset)
+		{
+			#if android SystemMonitor.profBegin('noteSpawn.spawnTail'); #end
+			spawnPendingTail(_pendingTails[_pendingTailIdx++]);
+			#if android SystemMonitor.profEnd(); #end
+			_pendingTailsDrained++;
+		}
+		#if android SystemMonitor.profEnd(); #end
+
 		var tempVector = funkin.backend.math.Vector3.get();
 		
 		final canUpdateModchart:Bool = (modifiersRegistered && playFields != null);
@@ -1817,27 +2818,66 @@ class PlayState extends MusicBeatState
 		
 		if (canUpdateModchart)
 		{
+			#if android SystemMonitor.profBegin('modchart'); #end
 			for (playField in playFields)
 			{
 				final id = playField.ID, skin = playField._skin;
-				
-				playField.forEachAlive(function(strum) modchart(strum, id, skin.receptorOffsets));
+
+				// Plain loop instead of forEachAlive(function(strum) ...) — that
+				// allocated a fresh closure (capturing id/skin) every frame, per
+				// playField.
+				for (strum in playField.members)
+					if (strum != null && strum.exists && strum.alive)
+						modchart(strum, id, skin.receptorOffsets);
 			}
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		if (generatedMusic)
 		{
-			if (!inCutscene) keyShit();
-			
-			var i:Int = notes.length;
-			while (--i >= 0)
+			#if android
+			SystemMonitor.profBegin('gameplayReport');
+			SystemMonitor.reportGameplayFrame(elapsed, SONG.song, Conductor.songPosition, notes.length, playFields != null ? playFields.length : 0);
+			SystemMonitor.profEnd();
+			#end
+
+			if (!inCutscene)
 			{
-				var daNote = notes.members[i];
-				
+				if (!cpuControlled)
+				{
+					#if android SystemMonitor.profBegin('keyShit'); #end
+					keyShit();
+					#if android SystemMonitor.profEnd(); #end
+				}
+				else
+				{
+					final _bfAnim = boyfriend.getAnimName();
+					if (boyfriend.holdTimer > Conductor.stepCrotchet * 0.0011 * boyfriend.singDuration
+						&& _bfAnim.startsWith('sing') && !_bfAnim.endsWith('miss'))
+						boyfriend.dance(boyfriend.forceDance);
+				}
+			}
+			
+			#if android SystemMonitor.profBegin('notesLoop'); #end
+			var i:Int = 0;
+			while (i < notes.length)
+			{
+				var daNote = notes.members[i ++];
+
+				// Dead notes are left in the group as pool fodder for
+				// notes.recycle() (see disposeNote()'s comment) instead of
+				// being spliced out — just skip them here.
 				if (!daNote.alive) continue;
 				
 				final field = daNote.playField;
-				
+
+				// Hiding a PlayField (opponentStrums off, middleScroll, or VSlice's
+				// always-hide-opponent) only ever hid the receptor group — the actual
+				// falling notes live in their own `notes` group and kept rendering
+				// regardless, which is why VSlice still showed the opponent's arrows
+				// falling. Keep the notes in sync with their own field's visibility.
+				daNote.visible = field.visible;
+
 				if (field.inControl && field.autoPlayed)
 				{
 					if (!daNote.wasGoodHit && !daNote.ignoreNote && daNote.strumTime <= Conductor.songPosition) field.onNoteHit.dispatch(daNote, field);
@@ -1848,13 +2888,36 @@ class PlayState extends MusicBeatState
 				{
 					daNote.tooLate = true;
 					
-					if (!daNote.ignoreNote && !daNote.canMiss && !daNote.tailState.missed && (!daNote.isSustainNote) && !endingSong) field.onNoteMiss.dispatch(daNote, field);
+					if (!daNote.ignoreNote && !daNote.canMiss && !daNote.tailState.missed && (!daNote.isSustainNote || daNote.strum.coyoteTime <= 0) && !endingSong) field.onNoteMiss.dispatch(daNote,
+						field);
 				}
 				
 				if ((daNote.tooLate && Conductor.songPosition >= noteKillOffset + daNote.strumTime + daNote.sustainLength)
-					|| (daNote.wasGoodHit && Conductor.songPosition >= daNote.strumTime + daNote.sustainLength)) field.disposeNote(daNote);
-					
-				if (!canUpdateModchart || !daNote.alive || !daNote.exists) continue; // ok modchart stuff
+					|| (daNote.wasGoodHit && (Conductor.songPosition >= daNote.strumTime + daNote.sustainLength
+						|| (daNote.isSustainEnd && daNote.clipRect != null && daNote.clipRect.height <= 0)))) field.disposeNote(daNote);
+
+				if (!canUpdateModchart || !daNote.alive || !daNote.exists) {
+					i --;
+					continue;
+				}
+
+				// Intermediate segments of a hold currently being rendered by its
+				// SustainTrail (updated separately, once per hold, right after
+				// this loop) are pure bookkeeping -- skip the position/modchart/
+				// clip work entirely: keyShit()'s hit/hold logic and scoring
+				// never read position (verified against the current code, not
+				// assumed), and the only position-derived thing that fed
+				// disposal timing (isSustainEnd's clipRect check above) only
+				// applies to the one segment this deliberately leaves untouched.
+				// Re-checked every frame, not cached -- see isModchartActive()'s
+				// comment for why this can flip mid-hold.
+				if (daNote.isSustainNote && !daNote.isSustainEnd && !isModchartActive(daNote.player))
+				{
+					daNote.visible = false;
+					continue;
+				}
+				
+				// ok modchart stuff
 				
 				final skin = daNote.skin;
 				
@@ -1887,7 +2950,6 @@ class PlayState extends MusicBeatState
 					
 					daNote.spriteOffset.x += skin.sustainOffsets[daNote.noteData].x;
 					daNote.spriteOffset.y += skin.sustainOffsets[daNote.noteData].y;
-					
 					if (daNote.isSustainEnd)
 					{
 						daNote.spriteOffset.x += skin.susEndOffsets[daNote.noteData].x;
@@ -1905,28 +2967,182 @@ class PlayState extends MusicBeatState
 					nextPos.put();
 				}
 			}
+			#if android SystemMonitor.profEnd(); #end
+
+			// One position update per ACTIVE HOLD instead of per intermediate
+			// segment (was 2x modManager.getPos() + atan2/sqrt/pow PER SEGMENT
+			// PER FRAME above) -- see SustainTrail.hx's class doc for the full
+			// reasoning. Every hold has a trail (see setupSustainTrail()), but
+			// it only actually renders while isModchartActive() is false for
+			// that player -- otherwise it hides and the segment chain above
+			// (which just resumed normal per-frame positioning this same
+			// frame) takes over instead.
+			#if android SystemMonitor.profBegin('susTrails'); #end
+			for (trail in susTrails.members)
+			{
+				if (trail == null || !trail.alive) continue;
+
+				final headNote = trail.headNote;
+				// headNote.alive alone can't tell "this is still my hold's
+				// head" -- once the real head is disposed, its pool slot can
+				// be handed straight back out to a totally unrelated note
+				// before this loop's next pass ever sees it dead, at which
+				// point .alive reads true again for someone else's hold.
+				// queueNote is re-stamped on every single preRecycle() call,
+				// so comparing it against what was captured when this trail
+				// was set up (see setupSustainTrail()) catches that reuse
+				// reliably -- same mechanism spawnPendingTail()'s Guards 1/2
+				// already use for the same reason.
+				if (headNote == null || !headNote.alive || headNote.queueNote != trail.headQueueNote)
+				{
+					trail.kill();
+					_trackDeadTrail(trail);
+					continue;
+				}
+
+				// A modifier can activate mid-hold (see isModchartActive()'s
+				// comment) -- when that happens, the intermediate segments
+				// above resume normal per-segment rendering on their own on
+				// this same frame (their skip-check re-checks live too), so
+				// just get out of their way instead of drawing a straight
+				// trail on top of/behind a now-curved chain. Don't kill it,
+				// though -- the mod could clear again before this hold ends,
+				// and killing+respawning every toggle is wasteful for
+				// something like an oscillating EaseEvent.
+				if (isModchartActive(headNote.player))
+				{
+					trail.visible = false;
+					continue;
+				}
+
+				trail.visible = (trail.field?.visible ?? true);
+
+				if (!canUpdateModchart) continue;
+
+				// Before being hit: the whole hold (head included) scrolls as
+				// one unbroken piece toward the strum. Once hit and held: the
+				// part already past the strum is being "consumed" (mirrors how
+				// intermediate segments individually dispose themselves via the
+				// tooLate/wasGoodHit conditions above as songPosition passes
+				// each one's own tiny strumTime window) -- so the trail's front
+				// edge sticks at Conductor.songPosition instead of continuing
+				// to scroll past the receptor.
+				final frontTime:Float = headNote.wasGoodHit ? Math.max(headNote.strumTime, Conductor.songPosition) : headNote.strumTime;
+				final backTime:Float = (headNote.strumTime + headNote.sustainLength);
+
+				if (frontTime >= backTime)
+				{
+					trail.kill();
+					_trackDeadTrail(trail);
+					continue;
+				}
+
+				final frontBeat = Conductor.getBeat(frontTime);
+				final frontVisPos = ((getNoteInitialTime(frontTime) - Conductor.visualPosition) * songSpeed);
+				final frontDiff = (frontTime - Conductor.songPosition);
+				final frontPos = modManager.getPos(frontTime, frontVisPos, frontDiff, frontBeat, headNote.noteData, headNote.lane, headNote, tempVector);
+
+				final backBeat = Conductor.getBeat(backTime);
+				final backVisPos = ((getNoteInitialTime(backTime) - Conductor.visualPosition) * songSpeed);
+				final backDiff = (backTime - Conductor.songPosition);
+				final backPos = modManager.getPos(backTime, backVisPos, backDiff, backBeat, headNote.noteData, headNote.lane, headNote);
+
+				final skin = trail.skin;
+
+				// Mirrors modManager.updateObject()'s isSustainNote-specific
+				// convention (note.y = pos.y directly, not pos.y - height*.5)
+				// -- calling updateObject() itself here would take the WRONG,
+				// non-sustain branch since `trail` isn't a Note.
+				trail.x = (frontPos.x - trail.width * .5);
+				trail.y = frontPos.y;
+
+				trail.spriteOffset.x = (skin.noteOffsets[headNote.noteData].x + headNote.typeOffsetX + skin.sustainOffsets[headNote.noteData].x);
+				trail.spriteOffset.y = (skin.noteOffsets[headNote.noteData].y + headNote.typeOffsetY + skin.sustainOffsets[headNote.noteData].y);
+
+				final rad = Math.atan2(backPos.y - frontPos.y, backPos.x - frontPos.x);
+				trail.angle = (rad * 180 / Math.PI) - 90;
+
+				final dist:Float = Math.sqrt(Math.pow(frontPos.y - backPos.y, 2) + Math.pow(frontPos.x - backPos.x, 2));
+				trail.scale.y = trail.baseScale.y = (dist / (trail.frameHeight - (trail.antialiasing ? 1 : 0)));
+
+				trail.alpha = headNote.tailState.missed ? 0.3 : 1;
+
+				backPos.put();
+			}
+			#if android SystemMonitor.profEnd(); #end
 		}
-		
+
 		if (canUpdateModchart)
 		{
+			#if android SystemMonitor.profBegin('modchart'); #end
 			for (playField in playFields)
 			{
 				final id = playField.ID, skin = playField._skin;
-				
-				playField.grpSusSplashes.forEachAlive(function(splash) modchart(splash, id, skin.sustainSplashOffsets));
-				
-				if (playField.trackNoteSplashes) playField.grpNoteSplashes.forEachAlive(function(splash) modchart(splash, id, skin.splashOffsets));
+
+				// Plain loops instead of forEachAlive(function(splash) ...) — same
+				// per-frame closure-allocation reasoning as the receptor loop above.
+				for (splash in playField.grpSusSplashes.members)
+					if (splash != null && splash.exists && splash.alive)
+						modchart(splash, id, skin.sustainSplashOffsets);
+
+				if (playField.trackNoteSplashes)
+					for (splash in playField.grpNoteSplashes.members)
+						if (splash != null && splash.exists && splash.alive)
+							modchart(splash, id, skin.splashOffsets);
+			}
+			#if android SystemMonitor.profEnd(); #end
+		}
+
+		tempVector.put();
+
+		_scriptUpdateArgs[0] = elapsed;
+		#if android SystemMonitor.profBegin('script'); #end
+		scripts.call('onUpdate', _scriptUpdateArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		// super.update() ticks every member of this state (characters, notes,
+		// receptors, HUD, particles) via their own FlxBasic.update() — none of
+		// the phases profiled above cover this, and it's the single biggest
+		// unaccounted chunk in every sample so far (profiled phases summed to
+		// a small fraction of the real per-second frame budget).
+		#if android SystemMonitor.profBegin('superUpdate'); #end
+		super.update(elapsed);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('inputUpdate'); #end
+		input.update();
+		#if android SystemMonitor.profEnd(); #end
+
+		// Tail of the function was entirely untagged too -- taunt input, cam
+		// zoom decay, the death check, following-cam sync, debug hotkeys.
+		#if android SystemMonitor.profBegin('postUpdate'); #end
+
+		if (controls.NOTE_TAUNT_P && !inCutscene && !cpuControlled)
+		{
+			var focusPlayer:Character = (focusPlayer ?? boyfriend);
+			if (focusPlayer.canTaunt && focusPlayer.hasAnim('hey'))
+			{
+				focusPlayer.playAnim('hey');
+				focusPlayer.specialAnim = focusPlayer.holding = true;
 			}
 		}
-		
-		tempVector.put();
-		
+
+		if (camZooming)
+		{
+			FlxG.camera.zoom = MathUtil.decayLerp(FlxG.camera.zoom, defaultCamZoom + defaultCamZoomAdd, 6.25 * camZoomingDecay, elapsed);
+			camHUD.zoom = MathUtil.decayLerp(camHUD.zoom, defaultHudZoom, 6.25 * camZoomingDecay, elapsed);
+		}
+
+		#if android SystemMonitor.profBegin('doDeathCheck'); #end
+		doDeathCheck();
+		#if android SystemMonitor.profEnd(); #end
+
 		for (i in followingCams)
 		{
 			i.zoom = FlxG.camera.zoom;
 			i.scroll.copyFrom(FlxG.camera.scroll);
 		}
-		
+
 		if (#if debug true || #end chartingMode || ClientPrefs.inDevMode)
 		{
 			if (!endingSong && !startingSong)
@@ -1942,103 +3158,314 @@ class PlayState extends MusicBeatState
 					clearNotesBefore(Conductor.songPosition);
 				}
 			}
-			if (FlxG.keys.justPressed.SIX)
+			if (!isStoryMode && FlxG.keys.justPressed.SIX)
 			{
 				cpuControlled = !cpuControlled;
-				botplayTxt.visible = !botplayTxt.visible;
+				// Repaint the score line so the BOTPLAY label appears/clears
+				// immediately instead of waiting for the next scored note.
+				updateScoreBar();
 			}
 		}
-		
-		if (ClientPrefs.underlayType == 'Screen Dim' && screenDim != null)
-		{
-			screenDim.scale.set(screenDim.camera.width / screenDim.camera.zoom, screenDim.camera.height / screenDim.camera.zoom);
-			screenDim.updateHitbox();
-			screenDim.screenCenter();
-		}
-		
-		scripts.call('onUpdatePost', [elapsed]);
+
+		#if android SystemMonitor.profEnd(); #end // postUpdate
+
+		#if android SystemMonitor.profBegin('scriptPost'); #end
+		scripts.call('onUpdatePost', _scriptUpdateArgs);
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
-	public function recycleNote(queueNote:QueueNote, ?parent:Note, ?prevNote:Note):Note
+	public function recycleNote(queueNote:QueueNote, ?parent:Note):Note
 	{
-		var note:Note = notes.recycle(Note, () -> new Note());
-		
-		note.preRecycle(queueNote, parent, prevNote);
-		
+		final targetField:Null<PlayField> = getFieldFromID(queueNote.playField);
+
+		#if android SystemMonitor.profBegin('noteSpawn.findCompatible'); #end
+		var note:Note = (targetField != null)
+			? recycleCompatibleNote(targetField._skin, queueNote.noteData)
+			: notes.recycle(Note, () -> new Note());
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('noteSpawn.preRecycle'); #end
+		note.preRecycle(queueNote, parent);
+		#if android SystemMonitor.profEnd(); #end
+
 		if (parent != null) return note;
-		
+
 		if (queueNote.tail != null)
 		{
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNoteCall'); #end
 			final note:Note = spawnNote(note);
-			
+			#if android SystemMonitor.profEnd(); #end
+
 			if (note != null)
 			{
-				var prevNote:Note = note;
-				
-				for (tail in queueNote.tail)
-				{
-					final tail:Note = recycleNote(tail, note, prevNote);
-					
-					note.tail.push(tail);
-					
-					prevNote = tail;
-				}
-				
-				for (tail in note.tail)
-					spawnNote(tail);
+				#if android SystemMonitor.profBegin('noteSpawn.enqueueTails'); #end
+				enqueuePendingTails(note, queueNote, queueNote.tail);
+				#if android SystemMonitor.profEnd(); #end
+
+				#if android SystemMonitor.profBegin('noteSpawn.sustainTrailSetup'); #end
+				setupSustainTrail(note, targetField);
+				#if android SystemMonitor.profEnd(); #end
 			}
-			
+
 			return note;
 		}
 		else
 		{
-			return spawnNote(note);
+			#if android SystemMonitor.profBegin('noteSpawn.spawnNoteCall'); #end
+			final _spawned = spawnNote(note);
+			#if android SystemMonitor.profEnd(); #end
+			return _spawned;
 		}
 	}
-	
+
+	function enqueuePendingTails(headNote:Note, headQueueNote:QueueNote, tails:Array<QueueNote>):Void
+	{
+		final chain:PendingTailChain = {headQueueNote: headQueueNote};
+		for (i in 0...tails.length)
+			_pendingTails.push({qn: tails[i], parentNote: headNote, chain: chain, isFirst: i == 0});
+	}
+
+	// Always spawns a trail alongside the head. Whether it actually RENDERS
+	// (vs. the hold falling back to the old per-segment chain) is decided
+	// fresh every frame in notesLoop()/the trail-update pass below, not
+	// here -- ModManager.activeMods can change mid-hold (DLC/scripts push
+	// modifiers via EaseEvents and scripted setValue/setPercent calls at
+	// arbitrary chart timing), so a hold that starts with no mods active
+	// still needs to be able to fall back correctly if one activates
+	// partway through, and vice versa.
+	inline function isModchartActive(player:Int):Bool return (modManager.activeMods[player]?.length ?? 0) > 0;
+
+	function setupSustainTrail(headNote:Note, field:Null<PlayField>):Void
+	{
+		if (field == null) return;
+
+		final trail:SustainTrail = recycleCompatibleTrail(field._skin.noteTexture);
+		trail.setupTrail(headNote, field);
+		trail.headQueueNote = headNote.queueNote;
+		headNote.sustainTrail = trail;
+	}
+
+	// Mirrors recycleCompatibleNote() (see its own doc comment for the full
+	// reasoning) -- prefers a dead trail from _deadTrailsByTexture that
+	// already has the texture this spawn needs, so SustainTrail.setupTrail()'s
+	// own reload guard skips addAnims() instead of paying a full atlas +
+	// addAnimByPrefix rebuild. Plain susTrails.recycle() (FlxGroup.
+	// getFirstAvailable()) just grabs the first dead member regardless of
+	// what it last had loaded -- with susTrails shared across every player/
+	// field, that's a near-guaranteed reload on any song mixing more than
+	// one note skin.
+	function recycleCompatibleTrail(targetTexture:String):SustainTrail
+	{
+		final bucket = _deadTrailsByTexture.get(targetTexture);
+		if (bucket != null)
+		{
+			while (bucket.length > 0)
+			{
+				final candidate = bucket.pop();
+				// Can be stale if something revived this trail through a path
+				// that doesn't know about this index -- verify before trusting it.
+				if (candidate != null && !candidate.exists)
+				{
+					candidate.revive();
+					return candidate;
+				}
+			}
+		}
+
+		// No exact match available -- any dead member will do (a reload is
+		// unavoidable here either way).
+		for (member in susTrails.members)
+		{
+			if (member == null || member.exists) continue;
+
+			member.revive();
+			return member;
+		}
+
+		return susTrails.add(new SustainTrail());
+	}
+
+	// Builds one deferred tail segment. Mirrors what the old inline loop in
+	// recycleNote() used to do (recycle against the shared parent chain,
+	// append to the parent's tail array, spawn it), with two guards verified
+	// against the CURRENT code (not assumed from history):
+	function spawnPendingTail(entry:PendingTail):Void
+	{
+		// Guard 1: the head's pool slot has been reused for a totally
+		// different note since this entry was queued (preRecycle() always
+		// re-stamps `note.queueNote` on every recycle).
+		if (entry.parentNote.queueNote != entry.chain.headQueueNote) return;
+
+		// Guard 2: the head is dead but hasn't been reused YET -- the
+		// identity check above can't catch this case (nothing re-stamps
+		// queueNote until the next preRecycle()). Building onto a dead head
+		// is useless (its hold is already fully over) and risks
+		// notes.recycle()/recycleCompatibleNote() handing it right back out
+		// as THIS very segment's own Note object.
+		if (!entry.parentNote.exists) return;
+
+		// Guard 3: this segment's own natural despawn window (the same
+		// threshold notesLoop() uses to dispose a missed/expired note) has
+		// already elapsed -- either a severe lag backlog, or
+		// Conductor.songPosition jumped forward from a practice-mode time
+		// skip (clearNotesBefore()). Building it now would show something
+		// that should already be gone; drop it silently instead, visually
+		// identical to it never having lagged.
+		if (entry.qn.strumTime + entry.qn.sustainLength + noteKillOffset < Conductor.songPosition) return;
+
+		final tailNote:Note = recycleNote(entry.qn, entry.parentNote);
+		tailNote.isFirstTailSegment = entry.isFirst;
+
+		entry.parentNote.tail.push(tailNote);
+
+		// Replay whatever state the parent is CURRENTLY in onto a segment
+		// that didn't exist yet when that state was decided -- mirrors
+		// PlayField.noteHit()'s existing-tail loop (only touches
+		// sustain.blockHit) and noteMiss()'s (tooLate/blockHit/ignoreNote/
+		// copyAlpha/alpha), which only ever reach segments that already
+		// existed at that moment.
+		if (tailNote.tailState.missed)
+		{
+			tailNote.tooLate = true;
+			tailNote.blockHit = true;
+			tailNote.ignoreNote = true;
+			tailNote.copyAlpha = false;
+			tailNote.alpha = 0.3;
+		}
+		else if (entry.parentNote.wasGoodHit) tailNote.blockHit = false;
+
+		spawnNote(tailNote);
+	}
+
+	// Prefers reusing a pooled Note whose PREVIOUS life already had the exact
+	// skin+direction this spawn needs, so Note.set_texture()'s fast path (skin
+	// == _lastLoadedSkin && noteData == _lastLoadedNoteData, in Note.hx) can
+	// skip reloadNote() entirely instead of paying loadNoteAnims()'s
+	// per-instance animation registration. Plain notes.recycle()
+	// (FlxGroup.getFirstAvailable()) just grabs the FIRST dead member in
+	// array order regardless of what it was last loaded as -- with only a
+	// handful of distinct (skin, noteData) combinations possible all song
+	// (one per lane per player), and the pool having almost certainly cycled
+	// through every one of them within the first few seconds, that's usually
+	// a wasted reload during a sustain-tail burst (this function building
+	// many segments of the SAME hold, all wanting the SAME skin+noteData, in
+	// one frame).
+	// This can only ever pick a DIFFERENT dead member to reuse -- it never
+	// changes WHETHER a reload happens, that correctness-critical decision
+	// still lives entirely in Note.set_texture()'s own guard (which also
+	// checks `texture == resolved`, one condition this doesn't replicate), so
+	// a miss here just falls through to a real reload exactly like before,
+	// never a wrong render.
+	// Exact-match lookup is O(1) via _deadNotesByType (see its own doc
+	// comment for why the old linear scan here used to spike noteSpawn cost
+	// unpredictably). Only the "no exact match" fallback still scans --
+	// that path always pays for a real reloadNote() regardless of which
+	// dead member it picks, so the scan itself was never the expensive part
+	// there; the pool is small (settles at the song's peak concurrent note
+	// count), so it stays cheap.
+	// Not `inline`: this has multiple return points (an early return inside
+	// the loop), and Haxe's inliner can't flatten that into the ternary
+	// expression at the call site above ("Cannot inline a not final return").
+	function recycleCompatibleNote(targetSkin:NoteSkin, targetNoteData:Int):Note
+	{
+		final bySkin = _deadNotesByType.get(targetSkin);
+		if (bySkin != null)
+		{
+			final bucket = bySkin.get(targetNoteData);
+			if (bucket != null)
+			{
+				while (bucket.length > 0)
+				{
+					final candidate = bucket.pop();
+					// Can be stale if something revived this note through a
+					// path that doesn't know about this index (Flixel's own
+					// FlxTypedGroup.recycle(), used by the caller when there's
+					// no specific target field) -- verify before trusting it.
+					if (candidate != null && !candidate.exists)
+					{
+						candidate.revive();
+						return candidate;
+					}
+				}
+			}
+		}
+
+		// No exact match available -- any dead member will do (a reload is
+		// unavoidable here either way).
+		for (member in notes.members)
+		{
+			if (member == null || member.exists) continue;
+
+			member.revive();
+			return member;
+		}
+
+		return notes.add(new Note());
+	}
+
 	inline function spawnNote(note:Note):Null<Note>
 	{
 		note.postRecycle();
-		
-		if (callNoteTypeScript(note.noteType, 'spawnNote', [note]) == ScriptConstants.STOP_FUNC
-			|| scripts.call('onSpawnNote', [note], false, [note.noteType]) == ScriptConstants.STOP_FUNC)
+
+		_scriptNoteArgs[0] = note;
+		_scriptNoteTypeExcl[0] = note.noteType;
+		if (ScriptConstants.stopping(callNoteTypeScript(note.noteType, 'spawnNote', _scriptNoteArgs))
+			|| ScriptConstants.stopping(scripts.call('onSpawnNote', _scriptNoteArgs, false, _scriptNoteTypeExcl)))
 		{
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
-		
+
 		final expectedPlayfield:Null<PlayField> = getFieldFromID(note.lane);
-		
+
 		if (expectedPlayfield == null)
 		{
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else if (expectedPlayfield.autoPlayed && note.strumTime <= Conductor.songPosition && !note.ignoreNote /* && !note.blockHit */)
 		{
 			expectedPlayfield.onNoteHit.dispatch(note, expectedPlayfield);
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else if (!expectedPlayfield.autoPlayed && note.isLate() && !note.ignoreNote && !note.canMiss && !endingSong) // dont Even bother
 		{
 			expectedPlayfield.onNoteMiss.dispatch(note, expectedPlayfield);
 			note.kill();
-			
+			_trackDeadNote(note);
+
 			return null;
 		}
 		else
 		{
 			expectedPlayfield.addNote(note);
-			notes.remove(note, true);
-			notes.insert(0, note);
+
+			// This used to be `notes.remove(note, true); notes.insert(0, note);`,
+			// carried over unchanged from the pre-pooling code where `notes`
+			// only ever held currently-alive notes (so re-inserting a brand
+			// new member at the front was cheap). Under pooling `notes` holds
+			// the WHOLE pool (dead members kept as fodder, see disposeNote()),
+			// so `length` is now the pool size, not the alive count -- and
+			// FlxGroup.remove()/insert() are indexOf+splice/indexOf+array.insert,
+			// all O(n) on that array. That's 4 full O(n) passes per note JUST
+			// to move it to index 0, on every single spawn -- a real device
+			// log on a dense song ("Finale") showed noteSpawn costs of
+			// 300-1600ms/frame from exactly this, independent of and on top
+			// of the disposeNote()/notesLoop pooling fix. Dead pool members
+			// are already skipped by both draw() and notesLoop() via
+			// `exists`/`alive`, so there's no correctness need to keep alive
+			// notes clustered at the front -- leave the note wherever
+			// notes.recycle() found it.
 			note.spawned = true;
 			
-			var ret:Dynamic = callNoteTypeScript(note.noteType, 'postSpawnNote', [note]);
-			if (ret != ScriptConstants.STOP_FUNC) scripts.call('onSpawnNotePost', [note], false, [note.noteType]);
+			if (!ScriptConstants.stopping(callNoteTypeScript(note.noteType, 'postSpawnNote', _scriptNoteArgs))) scripts.call('onSpawnNotePost', _scriptNoteArgs, false, _scriptNoteTypeExcl);
 			
 			return note;
 		}
@@ -2051,31 +3478,47 @@ class PlayState extends MusicBeatState
 		persistentDraw = true;
 		paused = true;
 		
-		if (audio.inst != null) audio.pause();
+		audio?.pause();
 		openSubState(new PauseSubState());
 		
-		if (automatedDiscord) DiscordClient.changePresence(rpcPausedDescription, 'Paused');
+		if (automatedDiscord) DiscordClient.changePresence(rpcPausedDescription, rpcSongName);
 	}
 	
 	public function openChartEditor():Void
 	{
+		ChartEditorState._song = SONG;
 		FlxG.camera.followLerp = 0;
-		
+
 		persistentUpdate = false;
 		paused = true;
 		CoolUtil.cancelMusicFadeTween();
-		
-		ChartEditorState.song = SONG;
-		#if mobile
+
 		FlxG.switchState(ChartEditorState.new);
-		#else
-		FlxG.switchState(FlxG.keys.pressed.SHIFT ? ChartEditorState.new : OLDChartEditorState.new);
-		#end
 		chartingMode = true;
-		
-		if (automatedDiscord) DiscordClient.changePresence('Chart Editor');
+
+		DiscordClient.changePresence('Chart Editor');
 	}
-	
+
+	// Same song-context setup as openChartEditor() above (ChartEditorState._song
+	// keeps working if 'Chart Editor' is picked from the hub, since it's a static
+	// field that survives the switch), but lands on MasterEditorMenu instead of
+	// jumping straight into the chart editor -- this is the only mid-song path to
+	// every other editor (Character Editor, Chart Converter), not just charting.
+	// chartingMode isn't set here: ChartEditorState.hx sets it itself once it
+	// actually has a song loaded, and leaving it false is correct if the hub is
+	// used to reach a different editor instead.
+	public function openEditorsMenu():Void
+	{
+		ChartEditorState._song = SONG;
+		FlxG.camera.followLerp = 0;
+
+		persistentUpdate = false;
+		paused = true;
+		CoolUtil.cancelMusicFadeTween();
+
+		FlxG.switchState(() -> new MasterEditorMenu());
+	}
+
 	function openCharacterEditor():Void
 	{
 		FlxG.camera.followLerp = 0;
@@ -2084,25 +3527,32 @@ class PlayState extends MusicBeatState
 		paused = true;
 		CoolUtil.cancelMusicFadeTween();
 		
+		disableModifiers();
 		FlxG.switchState(() -> new CharacterEditorState(SONG.player2, true));
 		
-		if (automatedDiscord) DiscordClient.changePresence("Character Editor", null, null, true);
+		DiscordClient.changePresence("Character Editor", null, null, true);
 	}
 	
 	public function updateScoreBar(miss:Bool = false):Void
 	{
-		if (scripts.call('onUpdateScore',
-			[miss]) != ScriptConstants.STOP_FUNC) callHUDFunc(hud -> hud.onUpdateScore(songScore, funkin.utils.MathUtil.floorDecimal(ratingPercent * 100, 2), songMisses, miss));
+		_scriptScoreArgs[0] = miss;
+		if (!ScriptConstants.stopping(scripts.call('onUpdateScore', _scriptScoreArgs)))
+		{
+			callHUDFunc(hud -> hud.onUpdateScore(songScore, funkin.utils.MathUtil.floorDecimal(ratingPercent * 100, 2), songMisses, miss));
+
+			ScriptConstants.stopping(scripts.call('onUpdateScorePost', _scriptScoreArgs));
+		}
 	}
 	
 	public var isDead:Bool = false;
 	
-	function doDeathCheck(?skipHealthCheck:Bool = false):Bool
+	function doDeathCheck(instakill:Bool = false):Bool
 	{
-		if ((skipHealthCheck && instakillOnMiss) || ((healthBounds.max > healthBounds.min && health <= healthBounds.min) || (healthBounds.min > healthBounds.max && health >= healthBounds.min)) && !practiceMode && !isDead)
+		final healthDeath:Bool = ((healthBounds.max > healthBounds.min && health <= healthBounds.min) || (healthBounds.min > healthBounds.max && health >= healthBounds.min));
+		
+		if ((instakill || healthDeath) && !practiceMode && !isDead)
 		{
-			final ret:Dynamic = scripts.call('onGameOver', []);
-			if (ret != ScriptConstants.STOP_FUNC)
+			if (!ScriptConstants.stopping(scripts.call('onGameOver')))
 			{
 				final char = playerStrums.owner;
 				
@@ -2125,7 +3575,7 @@ class PlayState extends MusicBeatState
 				if (automatedDiscord) DiscordClient.changePresence("Game Over - " + rpcDescription, rpcSongName);
 				
 				isDead = true;
-				
+				totalBeat = 0;
 				return true;
 			}
 		}
@@ -2134,41 +3584,47 @@ class PlayState extends MusicBeatState
 	
 	public function checkEventNote():Void
 	{
-		while (eventNotes.length > 0)
+		while (_eventSpawnIdx < eventNotes.length)
 		{
-			final leStrumTime:Float = eventNotes[0].strumTime;
-			
+			final leStrumTime:Float = eventNotes[_eventSpawnIdx].strumTime;
+
 			if (Conductor.songPosition < leStrumTime) break;
-			
-			final value1:String = eventNotes[0].value1 ?? '';
-			final value2:String = eventNotes[0].value2 ?? '';
-			
-			triggerEventNote(eventNotes[0].event, value1, value2);
-			eventNotes.shift();
+
+			final value1:String = eventNotes[_eventSpawnIdx].value1 ?? '';
+			final value2:String = eventNotes[_eventSpawnIdx].value2 ?? '';
+
+			triggerEventNote(eventNotes[_eventSpawnIdx].event, value1, value2);
+			_eventSpawnIdx++;
 		}
 	}
 	
 	function changeCharacter(name:String, charType:Int):Void
 	{
-		switch (charType)
+		var prevChar:Null<Character> = null;
+		
+		var newChar:Character = switch (charType)
 		{
 			case 0:
+				prevChar = boyfriend;
 				boyfriend = boyfriendGroup.change(name);
+				
 			case 1:
+				prevChar = dad;
 				dad = dadGroup.change(name);
+				
 			case 2:
-				gf = gfGroup.change(name);
-				gf.danceEveryNumBeats *= gfSpeed;
+				prevChar = gf;
+				(gf = gfGroup.change(name)).danceSpeed = prevChar.danceSpeed;
+				gf;
+			
+			default:
+				null;
 		}
 		
-		scripts.set('boyfriend', boyfriend);
-		scripts.set('boyfriendGroup', boyfriendGroup);
-		
-		scripts.set('dad', dad);
-		scripts.set('dadGroup', dadGroup);
-		
-		scripts.set('gf', gf);
-		scripts.set('gfGroup', gfGroup);
+		for (field in playFields)
+		{
+			if (field.owner == prevChar) field.owner = newChar;
+		}
 		
 		callHUDFunc(hud -> hud.onCharacterChange());
 	}
@@ -2212,7 +3668,7 @@ class PlayState extends MusicBeatState
 			case 'Set GF Speed':
 				var value:Int = Std.parseInt(value1);
 				if (Math.isNaN(value) || value < 1) value = 1;
-				gfSpeed = value;
+				if (gf != null) gf.danceSpeed = value;
 			case 'Add Camera Zoom':
 				if (ClientPrefs.camZooms && FlxG.camera.zoom < 1.35)
 				{
@@ -2245,7 +3701,6 @@ class PlayState extends MusicBeatState
 					else FlxG.camera.zoom = targetZoom;
 				}
 				defaultCamZoom = targetZoom;
-				scripts.set('defaultCamZoom', defaultCamZoom);
 				
 			case 'HUD Fade':
 				FlxTween.cancelTweensOf(camHUD, ['alpha']);
@@ -2258,18 +3713,6 @@ class PlayState extends MusicBeatState
 				
 				if (duration > 0) FlxTween.tween(camHUD, {alpha: leAlpha}, duration);
 				else camHUD.alpha = leAlpha;
-			case 'Camera Fade':
-				FlxTween.cancelTweensOf(camGame, ['alpha']);
-				
-				var leAlpha:Float = Std.parseFloat(value1);
-				if (Math.isNaN(leAlpha)) leAlpha = 1;
-				
-				var duration:Float = Std.parseFloat(value2);
-				if (Math.isNaN(duration)) duration = 1;
-				
-				if (duration > 0) FlxTween.tween(camGame, {alpha: leAlpha}, duration);
-				else camGame.alpha = leAlpha;
-				
 			case 'Play Animation':
 				var char:Character = dad;
 				switch (value2.toLowerCase().trim())
@@ -2349,26 +3792,10 @@ class PlayState extends MusicBeatState
 					
 					if (duration > 0 && intensity != 0) targetsArray[i].shake(intensity, duration);
 				}
-			case 'Change Noteskin':
-				var fieldID:Int = 0;
-				switch (value2.toLowerCase())
-				{
-					case 'dad' | 'opponent' | '1':
-						fieldID = 1;
-					default:
-						fieldID = Std.parseInt(value2);
-						if (Math.isNaN(fieldID)) fieldID = 0;
-				}
 				
-				var skin = new NoteSkin(value1, SONG.keys, fieldID);
-				skin.ID = fieldID;
-				
-				getFieldFromID(fieldID).changeSkin(skin);
-			// final field = getFieldFromID(ID)
-			
 			case 'Change Character':
 				var charType:Int = 0;
-				switch (value1)
+				switch (value1.toLowerCase())
 				{
 					case 'gf' | 'girlfriend':
 						charType = 2;
@@ -2434,7 +3861,7 @@ class PlayState extends MusicBeatState
 				if (val2 <= 0) songSpeed = newValue;
 				else
 				{
-					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2 / playbackRate,
+					songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, val2,
 						{
 							ease: FlxEase.linear,
 							onComplete: function(twn:FlxTween) {
@@ -2442,6 +3869,48 @@ class PlayState extends MusicBeatState
 							}
 						});
 				}
+				
+			case 'Camera Zoom Chain':
+				var split1:Array<String> = value1.split(',');
+				var gameZoom:Float = Std.parseFloat(split1[0].trim());
+				var hudZoom:Float = Std.parseFloat(split1[1].trim());
+				
+				if (!Math.isNaN(gameZoom)) gameZ = 0.015;
+				if (!Math.isNaN(hudZoom)) hudZ = 0.03;
+				
+				if (split1.length == 4)
+				{
+					var shGame:Float = Std.parseFloat(split1[2].trim());
+					var shHUD:Float = Std.parseFloat(split1[3].trim());
+					
+					if (!Math.isNaN(shGame)) gameShake = shGame;
+					if (!Math.isNaN(shHUD)) hudShake = shHUD;
+					shakeTime = true;
+				}
+				else shakeTime = false;
+				
+				var split2:Array<String> = value2.split(',');
+				var toBeat:Int = Std.parseInt(split2[0].trim());
+				var tiBeat:Float = Std.parseFloat(split2[1].trim());
+				
+				if (Math.isNaN(toBeat)) toBeat = 4;
+				if (Math.isNaN(tiBeat)) tiBeat = 1;
+				
+				totalBeat = toBeat;
+				timeBeat = tiBeat;
+				
+			case 'Screen Shake Chain':
+				var split1:Array<String> = value1.split(',');
+				var gmShake:Float = Std.parseFloat(split1[0].trim());
+				var hdShake:Float = Std.parseFloat(split1[1].trim());
+				
+				if (!Math.isNaN(gmShake)) gameShake = gmShake;
+				if (!Math.isNaN(hdShake)) hudShake = hdShake;
+				
+				var toBeat:Int = Std.parseInt(value2);
+				if (!Math.isNaN(toBeat)) totalShake = 4;
+				
+				totalShake = toBeat;
 				
 			case 'Set Cam Zoom':
 				defaultCamZoom = Std.parseFloat(value1);
@@ -2478,9 +3947,11 @@ class PlayState extends MusicBeatState
 				}
 		}
 		
-		scripts.call('onEvent', [eventName, value1, value2]);
-		
-		callEventScript(eventName, 'onTrigger', [value1, value2]);
+		_scriptEventArgs[0] = eventName; _scriptEventArgs[1] = value1; _scriptEventArgs[2] = value2;
+		scripts.call('onEvent', _scriptEventArgs);
+
+		_scriptEventTriggerArgs[0] = value1; _scriptEventTriggerArgs[1] = value2;
+		callEventScript(eventName, 'onTrigger', _scriptEventTriggerArgs);
 	}
 	
 	function moveCameraSection():Void
@@ -2489,7 +3960,9 @@ class PlayState extends MusicBeatState
 		
 		if (gf != null && SONG.notes[curSection].gfSection)
 		{
-			camFollow.setPosition(gf.getMidpoint().x, gf.getMidpoint().y);
+			final gfMid = gf.getMidpoint();
+			camFollow.setPosition(gfMid.x, gfMid.y);
+			gfMid.put();
 			camFollow.x += gf.cameraPosition[0] + girlfriendCameraOffset[0];
 			camFollow.y += gf.cameraPosition[1] + girlfriendCameraOffset[1];
 			
@@ -2503,14 +3976,16 @@ class PlayState extends MusicBeatState
 				displacement.putWeak();
 			}
 			
-			scripts.call('onMoveCamera', ['gf']);
+			_scriptMoveCamArgs[0] = 'gf';
+			scripts.call('onMoveCamera', _scriptMoveCamArgs);
 			scripts.set('whosTurn', 'gf');
 			return;
 		}
-		
+
 		var isDad = !SONG.notes[curSection].mustHitSection;
 		moveCamera(isDad);
-		scripts.call('onMoveCamera', [isDad ? 'dad' : 'boyfriend']);
+		_scriptMoveCamArgs[0] = isDad ? 'dad' : 'boyfriend';
+		scripts.call('onMoveCamera', _scriptMoveCamArgs);
 	}
 	
 	public function getCharacterCameraPos(char:Null<Character>):FlxPoint
@@ -2606,6 +4081,10 @@ class PlayState extends MusicBeatState
 	
 	public var transitioning = false;
 	
+	public var popUpQueued:Int = 0;
+	public var canPlayAwardSound:Bool = true;
+	public var popUpEndCallback:Void->Void = null;
+	
 	public function endSong():Void
 	{
 		// Should kill you if you tried to cheat
@@ -2615,9 +4094,15 @@ class PlayState extends MusicBeatState
 				if (daNote.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
 			});
 			
-			for (daNote in queueNotes)
-				if (daNote.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
-				
+			for (i in _noteSpawnIdx...queueNotes.length)
+				if (queueNotes[i].strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
+
+			// Tails queued but not yet spawned (see _pendingTails) aren't
+			// covered by either check above -- their heads already left
+			// queueNotes, but they're not "alive" in `notes` yet either.
+			for (i in _pendingTailIdx..._pendingTails.length)
+				if (_pendingTails[i].qn.strumTime < songLength - Conductor.safeZoneOffset) health -= 0.05 * healthLoss;
+
 			if (doDeathCheck()) return;
 		}
 		
@@ -2626,22 +4111,25 @@ class PlayState extends MusicBeatState
 		camZooming = false;
 		inCutscene = false;
 		updateTime = false;
-		
+
 		#if mobile
-		hitbox.visible = false;
+		mobileControlsActive = false;
+		if (hitbox != null) hitbox.visible = false;
+		if (virtualPad != null) virtualPad.visible = false;
 		#end
-		
+
 		deathCounter = 0;
 		seenCutscene = false;
 		
-		final ret:Dynamic = scripts.call('onEndSong', []);
+		disableModifiers();
 		
-		if (ret != ScriptConstants.STOP_FUNC && !transitioning)
+		if (!ScriptConstants.stopping(scripts.call('onEndSong')) && !transitioning)
 		{
 			playbackRate = 1;
 			var percent:Float = ratingPercent;
 			if (Math.isNaN(percent)) percent = 0;
-			Highscore.saveScore(SONG.song, songScore, storyMeta.difficulty, percent);
+			Highscore.saveScore(SONG.song, songScore, storyMeta.difficulty, percent, songMisses);
+			unlockJsonAwards(curSong);
 			
 			if (chartingMode)
 			{
@@ -2649,7 +4137,7 @@ class PlayState extends MusicBeatState
 				return;
 			}
 			
-			if (isStoryMode)
+			if (isStoryMode || isChallenge)
 			{
 				storyMeta.score += songScore;
 				storyMeta.misses += songMisses;
@@ -2658,31 +4146,47 @@ class PlayState extends MusicBeatState
 				
 				if (storyMeta.playlist.length <= 0)
 				{
-					FlxG.sound.playMusic(Paths.music('freakyMenu'));
-					FlxG.sound.music.volume = 1;
-					
-					CoolUtil.cancelMusicFadeTween();
-					FlxG.switchState(() -> new StoryMenuState());
-					
-					if (!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false))
+					_isLastSongOfWeek = true;
+					if (WeekData.weeksList[storyMeta.curWeek] != null)
 					{
+						unlockJsonAwards(curSong, [WeekData.weeksList[storyMeta.curWeek]]);
+					}
+					
+					var popup:BeansPopup = new BeansPopup(Std.int(storyMeta.score / 600), storyMeta.currency);
+					popup.camera = camOther;
+					add(popup);
+					
+					popUpQueued++;
+					popup.onFinish = dequeuePopup;
+					
+					popUpEndCallback = function() {
+						removeModifiers();
+						
 						if (WeekData.weeksList[storyMeta.curWeek] != null)
 						{
-							StoryMenuState.weekCompleted.set(WeekData.weeksList[storyMeta.curWeek], true);
+							if (!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false))
+							{
+								StoryMenuState.weekCompleted.set(WeekData.weeksList[storyMeta.curWeek], true);
+								
+								FlxG.save.data.weekCompleted = StoryMenuState.weekCompleted;
+								
+								Highscore.saveWeekScore(WeekData.getWeekFileName(), storyMeta.score, storyMeta.difficulty);
+							}
+						}
+						
+						changedDifficulty = false;
+						
+						if (!ScriptConstants.stopping(scripts.call('postEndSong')))
+						{
+							FlxG.sound.playMusic(Paths.music('freakyMenu'));
+							CoolUtil.cancelMusicFadeTween();
 							
-							Highscore.saveWeekScore(WeekData.getWeekFileName(), storyMeta.score, storyMeta.difficulty);
-							
-							FlxG.save.data.weekCompleted = StoryMenuState.weekCompleted;
-							FlxG.save.flush();
+							FlxG.switchState(StoryMenuState.new);
 						}
 					}
-					changedDifficulty = false;
 				}
 				else
 				{
-					FlxTransitionableState.skipNextTransIn = true;
-					FlxTransitionableState.skipNextTransOut = true;
-					
 					prevCamFollow = camFollow;
 					
 					final difficulty:String = Difficulty.getDifficultyFilePath();
@@ -2692,36 +4196,158 @@ class PlayState extends MusicBeatState
 					
 					PlayState.SONG = Chart.fromSong(songLowercase, PlayState.storyMeta.difficulty);
 					
-					FlxG.sound.music.stop();
+					// Prefetch next song's assets in background while the player
+					// watches the score popup.  LoadingState will pick up the
+					// work on the next switch and show real progress.
+					#if (android && sys)
+					funkin.states.LoadingState.prefetchSong(PlayState.SONG);
+					#end
 					
-					CoolUtil.cancelMusicFadeTween();
-					FlxG.switchState(PlayState.new);
+					popUpEndCallback = function() {
+						if (!ScriptConstants.stopping(scripts.call('postEndSong')))
+						{
+							CoolUtil.cancelMusicFadeTween();
+							FlxG.sound.music.stop();
+							
+							// Hybrid: if prefetch already finished FOR THIS EXACT
+							// song, go straight to PlayState (assets are
+							// cache-warm). Otherwise show LoadingState with
+							// real progress.
+							#if (android && sys)
+							if (PlayState.SONG != null && funkin.states.LoadingState.isPrefetchedFor(PlayState.SONG.song))
+								FlxG.switchState(PlayState.new);
+							else
+								funkin.states.LoadingState.loadAndSwitchState(() -> new PlayState());
+							#else
+							FlxG.switchState(PlayState.new);
+							#end
+						}
+					}
 				}
 			}
 			else
 			{
-				CoolUtil.cancelMusicFadeTween();
-				FlxG.switchState(() -> new FreeplayState());
+				trace('WENT BACK TO FREEPLAY??');
 				
-				FlxG.sound.playMusic(Paths.music('freakyMenu'));
-				FlxG.sound.music.volume = 1;
+				var popup:BeansPopup = new BeansPopup(Std.int(songScore / 600), funkin.data.CosmicubeData.currentCurrency);
+				popup.camera = camOther;
+				add(popup);
 				
-				changedDifficulty = false;
+				popUpQueued++;
+				popup.onFinish = dequeuePopup;
+				
+				popUpEndCallback = function() {
+					CoolUtil.cancelMusicFadeTween();
+					removeModifiers();
+					
+					if (!ScriptConstants.stopping(scripts.call('postEndSong')))
+					{
+						FlxG.sound.playMusic(Paths.music('freakyMenu'));
+						changedDifficulty = false;
+						
+						FlxG.switchState(FreeplayState.new);
+					}
+				}
 			}
 			transitioning = true;
+			
+			if (popUpQueued == 0 && popUpEndCallback != null) popUpEndCallback();
 		}
 		
 		audio.stop();
 		audio.stopInst();
 	}
 	
+	function dequeuePopup():Void
+	{
+		popUpQueued--;
+		
+		if (#if debug true || #end ClientPrefs.inDevMode) trace('$popUpQueued left');
+		
+		if (popUpQueued == 0 && popUpEndCallback != null) popUpEndCallback();
+	}
+	
+	public function unlockAchievementPopup(id:String):Bool
+	{
+		if (ClientPrefs.getGameplaySetting('practice', false) || ClientPrefs.getGameplaySetting('botplay', false)) return false;
+		if (!GameFlags.giveAchievement(id)) return false;
+		
+		popUpAchievement(id);
+		
+		return true;
+	}
+	
+	public function unlockJsonAwards(?currentSong:String = null, ?extraCompletedWeeks:Array<String> = null):Int
+	{
+		if (ClientPrefs.getGameplaySetting('practice', false) || ClientPrefs.getGameplaySetting('botplay', false)) return 0;
+		
+		var unlockedCount:Int = 0;
+		for (id in GameFlags.unlockAwardsFromJson(currentSong, extraCompletedWeeks))
+		{
+			popUpAchievement(id);
+			unlockedCount++;
+		}
+		
+		if (ProgressionUtil.checkSRanksAchievement())
+		{
+			unlockAchievementPopup('five_s_ranks');
+			unlockedCount++;
+		}
+		if (ProgressionUtil.checkPAchievement())
+		{
+			unlockAchievementPopup('first_p');
+			unlockedCount++;
+		}
+		if (ProgressionUtil.checkHundredAchievement())
+		{
+			unlockAchievementPopup('the_hundred');
+			unlockedCount++;
+		}
+		
+		return unlockedCount;
+	}
+	
+	public inline function popUpAchievement(id:String):AwardPopup
+	{
+		var popUp:AwardPopup = new AwardPopup(id, canPlayAwardSound);
+		popUp.camera = camOther;
+		add(popUp);
+		
+		canPlayAwardSound = false;
+		
+		popUpQueued++;
+		popUp.onFinish = dequeuePopup;
+		
+		return popUp;
+	}
+	
 	public function KillNotes():Void
 	{
-		while (notes.length > 0)
-			disposeNote(notes.members[0]);
-			
+		// disposeNote() no longer removes members from `notes` (see its
+		// comment) so it can't be used to drain this to empty anymore —
+		// this is a full teardown (song end/retry), so just kill everything
+		// and wipe the group outright instead.
+		for (note in notes.members)
+			if (note != null) note.kill();
+		notes.clear();
+		// notes.clear() throws away every member this index could still be
+		// pointing at -- drop it too instead of leaving stale references to
+		// notes that are no longer part of the pool.
+		_deadNotesByType = [];
+
+		for (trail in susTrails.members)
+			if (trail != null) trail.kill();
+		susTrails.clear();
+		// susTrails.clear() throws away every member this index could still
+		// be pointing at -- drop it too, same reasoning as _deadNotesByType above.
+		_deadTrailsByTexture = [];
+
 		queueNotes.resize(0);
+		_noteSpawnIdx = 0;
+		_eventSpawnIdx = 0;
 		eventNotes.resize(0);
+		_pendingTails.resize(0);
+		_pendingTailIdx = 0;
 	}
 	
 	public var totalPlayed:Int = 0;
@@ -2733,45 +4359,75 @@ class PlayState extends MusicBeatState
 	function popUpScore(note:Note = null):Void
 	{
 		if (note.hitCausesMiss || note.canMiss) return;
-		
-		var noteDiff:Float = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset);
-		
+
 		audio.playerVolume = 1 * volumeMult;
-		
-		// tryna do MS based judgment due to popular demand
-		var daRating:Rating = Rating.judgeNote(note, noteDiff / playbackRate);
-		var judgeScore:Int = daRating.score;
-		
-		totalNotesHit += daRating.ratingMod;
-		note.ratingMod = daRating.ratingMod;
-		if (!note.ratingDisabled) daRating.increase();
-		note.rating = daRating.name;
-		
+
+		final rating:Rating = note.ratingData;
+
 		var field:PlayField = note.playField;
-		
-		if (!practiceMode && !cpuControlled && !(field?.autoPlayed ?? false))
+
+		#if android SystemMonitor.profBegin('popUpRating'); #end
+		// Showcase rides botplay's autoplay but is meant to look like a real
+		// playthrough for footage, so it DOES accumulate score/accuracy here
+		// (the numbers just never get saved -- cpuControlled still guards
+		// Highscore). Plain botplay stays excluded. popUpScore is only ever
+		// called for the player-controls field (see the onNoteHit handler),
+		// so the autoPlayed check is purely the botplay exclusion, which
+		// showcase deliberately bypasses.
+		final scoreThisHit = showcaseActive || (!practiceMode && !cpuControlled && !(field?.autoPlayed ?? false));
+		if (scoreThisHit)
 		{
-			if (defaultScoreAddition) songScore += judgeScore;
+			if (defaultScoreAddition) songScore += rating.score;
 			if (!note.ratingDisabled)
 			{
 				songHits++;
 				totalPlayed++;
+				totalNotesHit += (note.ratingMod = rating.ratingMod);
 				RecalculateRating(false);
+				rating.increase();
 			}
 		}
-		callHUDFunc(hud -> hud.popUpScore(daRating, combo, note)); // only pushing the image bc is anyone ever gonna need anything else???
+		#if android SystemMonitor.profEnd(); #end
+
+		_scriptRatingArgs[0] = note; _scriptRatingArgs[1] = rating;
+
+		// Split so we can see which of these three is actually slow — onPopUpScorePost
+		// in particular runs interpreted hscript (utils.hx defines it) on every hit.
+		#if android SystemMonitor.profBegin('popUpScriptPre'); #end
+		scripts.call('onPopUpScore', _scriptRatingArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('popUpHud'); #end
+		callHUDFunc(hud -> hud.popUpScore(rating.image, combo)); // only pushing the image bc is anyone ever gonna need anything else???
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profBegin('popUpScriptPost'); #end
+		scripts.call('onPopUpScorePost', _scriptRatingArgs);
+		#if android SystemMonitor.profEnd(); #end
+	}
+	
+	public inline function getSongTime():Float
+	{
+		if (audio.inst?.playing)
+		{
+			return Math.max(@:privateAccess audio.inst._channel.position, audio.inst.time);
+		}
+		else
+		{
+			return Conductor.songPosition;
+		}
 	}
 	
 	function onInputPress(event:InputEvent):Void
 	{
 		if (cpuControlled || paused || !startedCountdown) return;
-		
-		var key:Int = event.noteData;
-		
-		var prevTime:Float = Conductor.songPosition;
-		if (audio.inst?.playing) Conductor.songPosition = @:privateAccess audio.inst._channel.position;
-		// subtract latency
-		Conductor.songPosition -= lime.system.System.getTimer() - event.timer;
+
+		#if android SystemMonitor.profBegin('hitProcess'); #end
+
+		final key:Int = event.noteData;
+
+		var prevTime:Float = getSongTime();
+		Conductor.songPosition -= (lime.system.System.getTimer() - event.timer);
 		
 		if (generatedMusic && !endingSong)
 		{
@@ -2784,18 +4440,23 @@ class PlayState extends MusicBeatState
 				
 				anyInput = true;
 				
-				var topNote:Note = null; // we only need the top most note !
-				
-				for (note in field.getTapNotes(key))
+				final topNote:Null<Note> = field.getBestTapNote(key);
+				// If no tap note but a sustain note is present, suppress ghost tap penalty.
+				if (topNote == null)
 				{
-					final higherPriority:Bool = (topNote == null || note.hitPriority > topNote.hitPriority);
-					if (higherPriority || (!higherPriority && note.strumTime < topNote.strumTime)) topNote = note;
+					for (note in field.notes)
+					{
+						if (note.alive && note.isSustainNote && note.noteData == key && note.canBeHit && !note.tooLate)
+						{ ghostTapped = false; break; }
+					}
 				}
 				
 				if (topNote != null)
 				{
+					#if android SystemMonitor.profBegin('noteHitDispatch'); #end
 					field.onNoteHit.dispatch(topNote, field);
-					
+					#if android SystemMonitor.profEnd(); #end
+
 					ghostTapped = false;
 				}
 				else if (field.playAnims)
@@ -2812,126 +4473,171 @@ class PlayState extends MusicBeatState
 			
 			if (ghostTapped && anyInput)
 			{
-				scripts.call('onGhostTap', [key]);
-				
+				_scriptKeyArgs[0] = key;
+				scripts.call('onGhostTap', _scriptKeyArgs);
+
 				if (!ClientPrefs.ghostTapping)
 				{
 					for (field in playFields.members)
 					{
-						if (field.canInput()) field.onMissPress.dispatch(key);
+						if (field.canInput()) field.onMissPress.dispatch(key, field);
 					}
-					
-					scripts.call('noteMissPress', [key]);
+					if (!ScriptConstants.stopping(scripts.call('noteMissPress', _scriptKeyArgs)))
+					{
+						health -= (healthLoss * pressMissDamage * (++missCombo + 1) / 2);
+
+						FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(.1, .2));
+					}
 				}
 			}
 		}
-		
+
 		Conductor.songPosition = prevTime;
-		
-		scripts.call('onKeyPress', [key]);
-		scripts.call('onInputPress', [key]);
+
+		_scriptKeyArgs[0] = key;
+		#if android SystemMonitor.profBegin('inputScripts'); #end
+		scripts.call('onKeyPress', _scriptKeyArgs);
+		scripts.call('onInputPress', _scriptKeyArgs);
+		#if android SystemMonitor.profEnd(); #end
+
+		#if android SystemMonitor.profEnd(); #end
 	}
-	
+
 	function onInputRelease(event:InputEvent):Void
 	{
-		var key:Int = event.noteData;
-		
-		if (startedCountdown && !paused)
+		final key:Int = event.noteData;
+
+		if (!startedCountdown || paused) return;
+
+		#if android SystemMonitor.profBegin('releaseProcess'); #end
+
+		for (field in playFields.members)
 		{
-			for (field in playFields.members)
+			if (field.inControl && !field.autoPlayed && field.playerControls)
 			{
-				if (!field.canInput()) continue;
-				
 				var spr:StrumNote = field.members[key];
 				if (spr != null)
 				{
 					spr.playAnim('static');
 					spr.resetAnim = 0;
 				}
+
+				for (splash in field.grpSusSplashes)
+				{
+					if (splash.alive && splash.noteData == key && !splash.completed) splash.kill();
+				}
 			}
-			scripts.call('onKeyRelease', [key]);
-			scripts.call('onInputRelease', [key]);
 		}
+		_scriptKeyArgs[0] = key;
+		scripts.call('onKeyRelease', _scriptKeyArgs);
+		scripts.call('onInputRelease', _scriptKeyArgs);
+
+		#if android SystemMonitor.profEnd(); #end
 	}
 	
+	public function setFocusPlayerFromNote(note:Note)
+	{
+		final playField = note.playField;
+
+		if (playField?.isPlayer)
+		{
+			focusPlayer = (note.owner ?? (note.gfNote ? gf : null));
+			focusPlayer ??= (note.singers == null ? playField.owner : note.singers[0]);
+
+			if (focusPlayer == boyfriend) focusPlayer = null;
+		}
+	}
+
 	// Hold notes
 	var holders:Array<Character> = [];
-	
+
 	function keyShit():Void
 	{
 		// HOLDING
-		var up = controls.NOTE_UP;
-		var right = controls.NOTE_RIGHT;
-		var down = controls.NOTE_DOWN;
-		var left = controls.NOTE_LEFT;
+		final up:Bool = controls.NOTE_UP;
+		final right:Bool = controls.NOTE_RIGHT;
+		final down:Bool = controls.NOTE_DOWN;
+		final left:Bool = controls.NOTE_LEFT;
+		final taunting:Bool = (controls.NOTE_TAUNT && (focusPlayer ?? boyfriend)?.canTaunt);
+		
 		if (startedCountdown && !boyfriend.stunned && generatedMusic)
 		{
-			// rewritten inputs???
-			
-			notes.forEachAlive(function(daNote:Note) {
-				// hold note functions
-				if (!daNote.playField.autoPlayed && daNote.playField.inControl && daNote.playField.playerControls)
+			var i:Int = notes.length;
+			while (--i >= 0)
+			{
+				var daNote = notes.members[i];
+				
+				if (!daNote.alive) continue;
+				
+				if (daNote.isSustainNote && !daNote.blockHit && !daNote.tooLate && !daNote.playField.autoPlayed
+					&& daNote.playField.inControl && daNote.playField.playerControls)
 				{
-					if (daNote.isSustainNote
-						&& !daNote.blockHit
-						&& (input.inputPressed(daNote.noteData) || (daNote.wasGoodHit && daNote.parent.coyoteProgress < 1))
-						&& Conductor.songPosition >= daNote.strumTime
-						&& !daNote.tooLate
-						&& !daNote.wasGoodHit)
+					final holding:Bool = input.inputPressed(daNote.noteData);
+					
+					if (daNote.wasGoodHit)
 					{
-						daNote.parent.coyoteProgress = 0;
+						final splash = daNote.tailState.splash;
+						
+						if (holding && splash != null && !splash.alive)
+						{
+							splash.playAnim('start${splash.noteData}');
+							splash.revive();
+						}
+					}
+					else if (holding && Conductor.songPosition >= daNote.strumTime)
+					{
 						daNote.playField.onNoteHit.dispatch(daNote, daNote.playField);
 					}
-				}
-				
-				// hold note drop
-				if (!daNote.playField.autoPlayed && daNote.playField.inControl && daNote.playField.playerControls)
-				{
-					if (daNote.isSustainNote
-						&& !daNote.blockHit
-						&& !daNote.ignoreNote
-						&& !input.inputPressed(daNote.noteData)
-						&& !endingSong
-						&& !daNote.wasGoodHit)
+					else if (!holding && !daNote.ignoreNote && !endingSong && daNote.strum.coyoteTime <= 0 && !daNote.tailState.missed)
 					{
-						if (daNote.tooLate)
-						{
-							daNote.playField.onNoteMiss.dispatch(daNote, daNote.playField);
-							
-							combo = 0; // Repeat the miss code unconditionally because the actualMiss signal callback comes after the function that makes notes unable to miss
-							audio.miss();
-							
-							if (instakillOnMiss) doDeathCheck(true);
-							
-							songMisses++;
-							if (!practiceMode) songScore -= 10;
-							
-							totalPlayed++;
-							RecalculateRating(true);
-						};
-						else daNote.parent.coyoteProgress += FlxG.elapsed / 0.5;
+						daNote.playField.onNoteMiss.dispatch(daNote, daNote.playField);
 					}
 				}
-			});
+			}
 			
-			if (!left && !down && !up && !right)
+			if (!left && !down && !up && !right && !taunting)
 			{
+				// holding=false triggers Character.set_holding() -> dance(), i.e. a
+				// full playAnim() switch back to idle — suspected (per user report)
+				// to be exactly where the sustain-note-end freeze happens, outside
+				// every tag noteHit() already profiles. dance() itself was found to
+				// rebuild its anim name strings on every call and has since been
+				// fixed (Bopper.hx); this tag is on SystemMonitor's _gcWatchNested
+				// list (nested inside keyShit, but fires once per frame like a
+				// top-level tag would) so profBegin/profEnd still confirm whether a
+				// GC collision lands in this specific span.
+				#if android SystemMonitor.profBegin('holdRelease'); #end
 				for (field in playFields)
 				{
 					if (field.playerControls && field.owner?.holding) field.owner.holding = false;
 				}
-				
+
 				if (holders.length > 0)
 				{
 					for (holder in holders)
 						holder.holding = false;
-						
+
 					holders.resize(0);
 				}
+				#if android SystemMonitor.profEnd(); #end
 			}
 		}
+	}
+	
+	inline function breakCombo():Void
+	{
+		if (combo > 5 && gf?.animOffsets.exists('sad'))
+		{
+			gf.playAnim('sad');
+			gf.specialAnim = true;
+		}
 		
-		// TO DO: Find a better way to handle controller inputs, this should work for now
+		combo = 0;
+	}
+	
+	public function characterSing(char:Character, note:Note, hold:Bool = false):Void // this is really dirty but i dont care aauaaaaauauauugaauauau
+	{
+		PlayField.characterSing(char, note, hold);
 	}
 	
 	@:inheritDoc
@@ -2944,40 +4650,86 @@ class PlayState extends MusicBeatState
 	override function destroy()
 	{
 		instance = null;
-		
-		scripts.call('onDestroy', [], true);
+
+		// Only reached if the player never died (GameOverSubstate.new()
+		// would have nulled this on its way to taking ownership otherwise).
+		preloadedGameoverChar = FlxDestroyUtil.destroy(preloadedGameoverChar);
+
+		#if android
+		mobile.backend.AndroidUtils.keepScreenOn(false);
+		mobile.backend.AndroidUtils.setGameplayState(false);
+		#end
+
+		scripts.call('onDestroy', _scriptEmptyArgs, true);
 		
 		scripts = FlxDestroyUtil.destroy(scripts);
 		eventScripts = FlxDestroyUtil.destroy(eventScripts);
 		noteTypeScripts = FlxDestroyUtil.destroy(noteTypeScripts);
 		
-		input.destroy();
 		input = FlxDestroyUtil.destroy(input);
 		
 		modManager = FlxDestroyUtil.destroy(modManager);
 		
 		FlxDestroyUtil.destroyArray(NoteUtil.noteskins);
 		NoteUtil.noteskins.resize(0);
-		
+
+		Conductor.bpmChangeMap.resize(0);
+
 		super.destroy();
+
+	// In Story Mode, keep assets warm between songs of the same week
+	// so the next LoadingState → PlayState transition is instant.
+	// Only flush the cache when leaving the week entirely or on Freeplay.
+	if (_bitmapSnapshotAtCreate != null)
+	{
+		if (!isStoryMode || _isLastSongOfWeek)
+		{
+			FunkinAssets.cache.disposeNewSinceIfDestructive(_bitmapSnapshotAtCreate);
+		}
+		_bitmapSnapshotAtCreate = null;
+	}
 	}
 	
 	override function stepHit()
 	{
 		super.stepHit();
 		
-		final maxToleratedOffset:Float = 20 * playbackRate;
+		final maxToleratedOffset:Float = (1000 / 60 * playbackRate);
 		
-		if (audio.inst != null)
+		if (audio.inst?.playing)
 		{
-			if (Math.abs(audio.inst.time - (Conductor.songPosition - Conductor.offset)) > maxToleratedOffset
-				|| (SONG.needsVoices && audio.getDesyncDifference(Math.abs(Conductor.songPosition - Conductor.offset)) > maxToleratedOffset)) resyncVocals();
+			final instDrift = Math.abs(audio.inst.time - (Conductor.songPosition - Conductor.offset));
+			final vocalDrift = SONG.needsVoices ? audio.getDesyncDifference(Math.abs(Conductor.songPosition - Conductor.offset)) : 0.0;
+			if (instDrift > maxToleratedOffset || vocalDrift > maxToleratedOffset)
+			{
+				// resyncVocals() -> SyncedFlxSoundGroup.resync() does a real
+				// pause()/time=/play() per drifted track, not a cheap seek --
+				// timed here (not just logged) to find out whether the
+				// correction itself is a meaningful CPU cost on top of being
+				// an audible glitch. stepHit() runs once per STEP (several
+				// times a second), so the correction itself is cooldown-gated
+				// below (see _lastVocalResyncTime) to stop it firing on every
+				// single step while a track sits right at the threshold --
+				// only the log line used to be throttled, not this call.
+				final _worstDrift = Math.max(instDrift, vocalDrift);
+				final _now = haxe.Timer.stamp();
+				final _severeDrift = _worstDrift > maxToleratedOffset * 4;
+				if (_severeDrift || _now - _lastVocalResyncTime >= VOCAL_RESYNC_COOLDOWN)
+				{
+					_lastVocalResyncTime = _now;
+					#if android final _resyncT0 = haxe.Timer.stamp(); #end
+					final _tracksRestarted = resyncVocals();
+					#if android
+					final _resyncMs = (haxe.Timer.stamp() - _resyncT0) * 1000;
+					SystemMonitor.reportAudioResync(vocalDrift > instDrift ? 'vocals' : 'inst', _worstDrift, Conductor.songPosition, _tracksRestarted, _resyncMs);
+					#end
+				}
+			}
 		}
 		
-		if (curStep == lastStepHit) return;
+		if (lastStepHit >= curStep) return;
 		
 		lastStepHit = curStep;
-		scripts.set('curStep', curStep);
 		
 		scripts.call('onStepHit');
 		
@@ -2996,17 +4748,25 @@ class PlayState extends MusicBeatState
 		
 		handleBoppers(curBeat);
 		
-		if (beatsPerZoom == 0) beatsPerZoom = 4;
-		
-		if (camZooming && ClientPrefs.camZooms && curBeat % beatsPerZoom == 0)
-		{
-			FlxG.camera.zoom += 0.015 * camZoomingMult;
-			camHUD.zoom += 0.03 * camZoomingMult;
-		}
+		if (camZooming && ClientPrefs.camZooms && (curBeat == 0 || (beatsPerZoom > 0 && curBeat % beatsPerZoom == 0))) camZoom();
 		
 		lastBeatHit = curBeat;
 		
-		scripts.set('curBeat', curBeat);
+		if (totalBeat > 0)
+		{
+			if (curBeat % timeBeat == 0)
+			{
+				triggerEventNote('Add Camera Zoom', '' + gameZ, '' + hudZ);
+				totalBeat -= 1;
+				
+				if (shakeTime) triggerEventNote('Screen Shake', (((1 / (Conductor.bpm / 60)) / 2) * timeBeat)
+					+ ', '
+					+ gameShake, (((1 / (Conductor.bpm / 60)) / 2) * timeBeat)
+					+ ', '
+					+ hudShake);
+			}
+		}
+		
 		scripts.call('onBeatHit');
 		callHUDFunc(hud -> hud.beatHit());
 	}
@@ -3017,6 +4777,7 @@ class PlayState extends MusicBeatState
 		gf?.onBeatHit(beat);
 		boyfriend?.onBeatHit(beat);
 		dad?.onBeatHit(beat);
+		pet?.onBeatHit(beat);
 	}
 	
 	override function sectionHit():Void
@@ -3026,20 +4787,25 @@ class PlayState extends MusicBeatState
 			if (SONG.notes[curSection].changeBPM)
 			{
 				Conductor.bpm = SONG.notes[curSection].bpm;
-				scripts.set('curBpm', Conductor.bpm);
-				scripts.set('crotchet', Conductor.crotchet);
-				scripts.set('stepCrotchet', Conductor.stepCrotchet);
+				scripts.set('bpm', Conductor.bpm);
 			}
 			scripts.set('mustHitSection', SONG.notes[curSection].mustHitSection);
 			scripts.set('altAnim', SONG.notes[curSection].altAnim);
 			scripts.set('gfSection', SONG.notes[curSection].gfSection);
 		}
 		
+		if (camZooming && ClientPrefs.camZooms && beatsPerZoom <= 0) camZoom();
+		
 		super.sectionHit();
 		
-		scripts.set('curSection', curSection);
 		scripts.call('onSectionHit');
 		callHUDFunc(hud -> hud.sectionHit());
+	}
+	
+	inline function camZoom():Void
+	{
+		FlxG.camera.zoom += 0.015 * camZoomingMult;
+		camHUD.zoom += 0.03 * camZoomingMult;
 	}
 	
 	/**
@@ -3072,60 +4838,77 @@ class PlayState extends MusicBeatState
 	public function callScript(script:FunkinScript, event:String, args:Array<Dynamic>):Dynamic
 	{
 		if (!script.exists(event)) return ScriptConstants.CONTINUE_FUNC;
-		
+
+		final _t = ScriptGroup.timingEnabled ? haxe.Timer.stamp() : 0.0;
+
 		var ret:Dynamic = script.call(event, args)?.returnValue;
-		
+
+		if (ScriptGroup.timingEnabled)
+		{
+			final _ms = (haxe.Timer.stamp() - _t) * 1000.0;
+			if (_ms >= ScriptGroup.slowThresholdMs)
+				trace('[ScriptPerf] ${script.name}::$event ${Math.round(_ms * 10) / 10}ms');
+		}
+
 		return ret ?? ScriptConstants.CONTINUE_FUNC;
 	}
 	
-	public var ratingName:String = '?';
 	public var ratingPercent:Float = 0.0;
 	public var ratingFC:String = '';
 	
 	public function RecalculateRating(badHit:Bool = false)
 	{
-		final ret:Dynamic = scripts.call('onRecalculateRating', []);
-		if (ret != ScriptConstants.STOP_FUNC)
+		if (!ScriptConstants.stopping(scripts.call('onRecalculateRating', _scriptEmptyArgs)))
 		{
-			if (totalPlayed < 1) // Prevent divide by 0
-				ratingName = '?';
-			else
-			{
-				// Rating Percent
-				ratingPercent = Math.min(1, Math.max(0, totalNotesHit / totalPlayed));
-				
-				// Rating Name
-				if (ratingPercent >= 1) ratingName = ratingStuff[ratingStuff.length - 1].name; // Uses last string
-				else
-				{
-					for (i in 0...ratingStuff.length - 1)
-					{
-						if (ratingPercent < ratingStuff[i].percent)
-						{
-							ratingName = ratingStuff[i].name;
-							break;
-						}
-					}
-				}
-			}
+			if (totalPlayed > 0) ratingPercent = (totalNotesHit / totalPlayed);
 			
-			updateRatingFC();
+			ratingFC = getRatingFC();
 		}
 		
 		updateScoreBar(badHit);
 	}
 	
-	// so you can override this in HScript
-	// e.g: PlayState.instance.updateRatingFC = function() { ... }
-	public dynamic function updateRatingFC()
+	public dynamic function getRatingFC():String
 	{
-		// Rating FC
-		ratingFC = "";
-		if (epics > 0) ratingFC = "KFC"; // kentucky fried chiken
-		if (sicks > 0) ratingFC = "SFC";
-		if (goods > 0) ratingFC = "GFC";
-		if (bads > 0 || shits > 0) ratingFC = "FC";
-		if (songMisses > 0 && songMisses < 10) ratingFC = "SDCB";
-		else if (songMisses >= 10) ratingFC = "Clear";
+		if (songMisses >= 10) return 'Clear';
+		if (songMisses > 0) return 'SDCB';
+		if (bads + shits > 0) return 'FC';
+		if (goods > 0) return 'GFC';
+		if (sicks > 0) return 'SFC';
+		if (epics > 0) return 'KFC';
+		return '';
+	}
+	
+	override public function startOutro(onOutroComplete:() -> Void)
+	{
+		if (stage != null && isPixelStage != stage.stageData.isPixelStage) isPixelStage = stage.stageData.isPixelStage;
+		super.startOutro(onOutroComplete);
+	}
+	
+	public function updateModifiers()
+	{
+		for (mod in marathonModifiers)
+		{
+			trace(mod);
+			mod.onActive();
+		}
+	}
+	
+	public function disableModifiers()
+	{
+		for (mod in marathonModifiers)
+		{
+			mod.onRemove();
+		}
+	}
+	
+	public function removeModifiers()
+	{
+		for (mod in marathonModifiers)
+		{
+			mod.onRemove();
+		}
+		
+		marathonModifiers.resize(0);
 	}
 }

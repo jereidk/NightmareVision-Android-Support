@@ -1,0 +1,184 @@
+{
+	"pausePortrait": "",
+	"animations": [
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				65
+			],
+			"anim": "hey",
+			"fps": 24,
+			"name": "Hey",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-3,
+				64
+			],
+			"anim": "singLEFT",
+			"fps": 24,
+			"name": "Left",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-14,
+				63
+			],
+			"anim": "singDOWN",
+			"fps": 24,
+			"name": "Down",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				64
+			],
+			"anim": "singUP",
+			"fps": 24,
+			"name": "Up",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				64
+			],
+			"anim": "singRIGHT",
+			"fps": 24,
+			"name": "Right",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"loop": false,
+			"flipY": false,
+			"offsets": [
+				-2,
+				65
+			],
+			"anim": "idle",
+			"fps": 24,
+			"name": "Idle",
+			"indices": [],
+			"flipX": false
+		},
+		{
+			"offsets": [
+				-2,
+				65
+			],
+			"indices": [
+				10,
+				11,
+				12,
+				13
+			],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "idle-loop",
+			"loop": true,
+			"name": "Idle"
+		},
+		{
+			"offsets": [
+				-21,
+				63
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singUPmiss",
+			"loop": false,
+			"name": "BF NOTE UP MISS"
+		},
+		{
+			"offsets": [
+				-46,
+				7
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singRIGHTmiss",
+			"loop": false,
+			"name": "BF NOTE RIGHT MISS"
+		},
+		{
+			"offsets": [
+				-14,
+				63
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singDOWNmiss",
+			"loop": false,
+			"name": "Down Miss"
+		},
+		{
+			"offsets": [
+				-3,
+				64
+			],
+			"indices": [],
+			"fps": 24,
+			"flipX": false,
+			"flipY": false,
+			"anim": "singLEFTmiss",
+			"loop": false,
+			"name": "Left Miss"
+		}
+	],
+	"no_antialiasing": false,
+	"image": "characters/bf/bfpolus",
+	"position": [
+		-12,
+		332
+	],
+	"dance_every": 2,
+	"gameover_intial_sound": null,
+	"flags": {
+		"variants":{
+			"windy": "bfpolusblow",
+			"falling": "bfpolusblow",
+			"boiling": "bf-lava"
+		}
+	},
+	"scalableOffsets": false,
+	"gameover_confirm_sound": null,
+	"healthicon": "bf",
+	"afterimages": true,
+	"gameover_character": "bf-polus-dead",
+	"vslice_sustains": false,
+	"flip_x": true,
+	"healthbar_colour": -13520687,
+	"camera_position": [
+		682,
+		-702
+	],
+	"gameover_loop_sound": null,
+	"sing_duration": 6,
+	"scale": 1,
+	"_editor_isPlayer": true
+}

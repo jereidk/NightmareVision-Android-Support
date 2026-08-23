@@ -1,11 +1,12 @@
 package funkin.backend;
 
-import flixel.system.frontEnds.SoundFrontEnd;
-
 import openfl.events.Event;
 
+import funkin.input.Controls;
 import funkin.scripting.ScriptedState;
 import funkin.scripts.FunkinScript;
+
+import flixel.system.frontEnds.SoundFrontEnd;
 
 /**
  * Modified FlxGame to support switching to mod states and to load our custom sound tray.
@@ -40,7 +41,32 @@ class FunkinGame extends flixel.FlxGame
 		
 		// Destroy the old state (if there is an old state)
 		if (_state != null) _state.destroy();
-		
+
+		// Several substates (PauseSubState -> "Back to Menu"/"Options", among
+		// others) switch straight to a brand-new top-level state via
+		// FlxG.switchState() while still open, instead of close()-ing back to
+		// their parent first -- the only place that flag normally gets reset
+		// is PlayState.closeSubState(), which never runs on that path. Left
+		// stuck true, Controls.get_requested() keeps resolving the (now
+		// destroyed) MusicBeatSubstate.instance instead of the new state's
+		// own MusicBeatState.instance, so mobilePadJustReleased() (virtual
+		// pad D-pad navigation) silently returns false everywhere in the
+		// destination state -- button press animation still works fine since
+		// that's tracked locally on the FlxButton itself, unrelated to this.
+		// A full state switch is by definition never "still in a substate"
+		// of whatever was just destroyed, so this is always correct here.
+		#if mobile
+		if (Controls.instance != null) Controls.instance.isInSubstate = false;
+		// Also drop the stale substate pointer. A full state switch leaves no
+		// substate active, but MusicBeatSubstate.instance keeps pointing at the
+		// just-destroyed one. The next substate opened in the new state captures
+		// that corpse as its _previousInstance and can "restore" it on close,
+		// which routes Controls.get_requested() back at a dead pad (visible pad
+		// animates but never triggers). Clearing it here makes the new state's
+		// substate chain start clean.
+		MusicBeatSubstate.instance = null;
+		#end
+
 		// we need to clear bitmap cache only after previous state is destroyed, which will reset useCount for FlxGraphic objects
 		FlxG.bitmap.clearCache();
 		

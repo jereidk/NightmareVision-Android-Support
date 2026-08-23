@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with FunkyPacker v1.0.0 https://jereidk.github.io/FunkyPacker/
+-->
+<TextureAtlas imagePath="overlay.png" width="1769" height="2478">
+	<SubTexture name="Reactor Overlay Top0000" x="0" y="0" width="955" height="854.5" frameX="-34.5" frameY="-20.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0001" x="0" y="0" width="955" height="854.5" frameX="-34.5" frameY="-20.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0002" x="0" y="854.5" width="919" height="825.5" frameX="-52.5" frameY="-30.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0003" x="0" y="854.5" width="919" height="825.5" frameX="-52.5" frameY="-30.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0004" x="955" y="0" width="814" height="902.5" rotated="true" frameX="-60.5" frameY="-35" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0005" x="955" y="0" width="814" height="902.5" rotated="true" frameX="-60.5" frameY="-35" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0006" x="0" y="1680" width="885.5" height="798" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0007" x="0" y="1680" width="885.5" height="798" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0008" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0009" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0010" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0011" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0012" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0013" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+	<SubTexture name="Reactor Overlay Top0014" x="919" y="902.5" width="798" height="885.5" rotated="true" frameX="-69" frameY="-40.5" frameWidth="1026.5" frameHeight="899.5"/>
+</TextureAtlas>

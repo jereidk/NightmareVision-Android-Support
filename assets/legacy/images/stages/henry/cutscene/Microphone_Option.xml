@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="Microphone_Option.png" width="401" height="1338">
+	<SubTexture name="Microphone0000" x="1" y="1" width="399" height="336" frameX="-0" frameY="-0" frameWidth="399" frameHeight="336"/>
+	<SubTexture name="Microphone Select0000" x="1" y="1013" width="399" height="324" frameX="-0" frameY="-7" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0001" x="1" y="1013" width="399" height="324" frameX="-0" frameY="-7" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0002" x="1" y="342" width="399" height="331" frameX="-0" frameY="-0" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0003" x="1" y="342" width="399" height="331" frameX="-0" frameY="-0" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0004" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0005" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0006" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0007" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0008" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0009" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0010" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0011" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0012" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0013" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0014" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0015" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0016" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0017" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0018" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+	<SubTexture name="Microphone Select0019" x="1" y="678" width="399" height="330" frameX="-0" frameY="-1" frameWidth="399" frameHeight="331"/>
+</TextureAtlas>

@@ -6,12 +6,23 @@ import extensions.hscript.InterpEx;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
+import funkin.backend.SystemMonitor;
+
 /**
  * Container of `FunkinScript` instances
+ *
+ * idea from friens static fyr thanks
  */
 @:nullSafety(Strict)
 class ScriptGroup implements IFlxDestroyable
 {
+	/** Set true to log script calls slower than slowThresholdMs to trace/logcat */
+	public static var timingEnabled:Bool = false;
+	/** Minimum milliseconds before a script call is logged (when timingEnabled) */
+	public static var slowThresholdMs:Float = 1.0;
+
+	static final _emptyExclusions:Array<String> = [];
+
 	public var scriptShareables:Sharables = new Sharables();
 	
 	/**
@@ -40,7 +51,16 @@ class ScriptGroup implements IFlxDestroyable
 	 * array of all `FunkinScript` instances
 	 */
 	public var members:Array<FunkinScript> = [];
-	
+
+	// Memoizes "does any current member implement this event" so repeated,
+	// per-frame calls (e.g. onMoveCamera, called every frame regardless of
+	// whether any mod actually hooks it) can skip the full members loop —
+	// and the per-script FunkinScript.exists() lookup inside it — once the
+	// answer is known. exists() reads a script's own interp.variables map,
+	// which is fixed once the script is parsed, so the answer only changes
+	// when the member list itself changes (see addScript()/clear() below).
+	final _hasHookCache:Map<String, Bool> = new Map();
+
 	public function new(?parent:Dynamic)
 	{
 		@:privateAccess
@@ -59,49 +79,98 @@ class ScriptGroup implements IFlxDestroyable
 	public function addScript(script:Null<FunkinScript>, allowDupeNames:Bool = false):Bool
 	{
 		if (script == null || (!allowDupeNames && exists(script.name))) return false;
-		
+
 		@:privateAccess
 		final interp:InterpEx = cast script.interp;
 		if (interp.parent != parent) interp.parent = parent;
 		interp.sharedFields = scriptShareables;
 		members.push(script);
+		_hasHookCache.clear(); // the new script may implement events previously cached as unheard
 		return true;
 	}
 	
 	@:inheritDoc(funkin.scripts.FunkinScript.set)
 	public function set(varName:String, arg:Dynamic)
 	{
+		if (members.length == 0) return;
 		for (i in members)
 		{
 			i.set(varName, arg);
 		}
 	}
-	
+
 	@:inheritDoc(funkin.scripts.FunkinScript.call)
 	public function call(event:String, ?args:Array<Dynamic>, ignoreStops:Bool = false, ?exclusions:Array<String>):Dynamic
 	{
-		exclusions ??= [];
+		// Fast path: skip all allocations when no scripts are loaded (common during vanilla gameplay).
+		if (members.length == 0) return ScriptConstants.CONTINUE_FUNC;
+
+		// Fast path: nothing currently loaded implements this event at all — skip the
+		// members loop (and every per-script exists() lookup in it) entirely. Matters
+		// most for hooks fired unconditionally every frame (e.g. onMoveCamera) when no
+		// mod actually listens to them.
+		if (_hasHookCache.get(event) == false) return ScriptConstants.CONTINUE_FUNC;
+
+		exclusions ??= _emptyExclusions;
+
 		var returnVal:Dynamic = ScriptConstants.CONTINUE_FUNC;
+		var anyListener = false;
+
 		for (i in members)
 		{
-			if (i == null || !i.exists(event) || exclusions.contains(i.name))
-			{
-				continue;
-			}
-			
+			if (i == null || !i.exists(event) || exclusions.contains(i.name)) continue;
+			if (i.suppressedEvents.get(event) == true) continue;
+
+			// Set as soon as we know the answer, not after the loop — a halting
+			// return below exits early, and the cache should still capture
+			// "yes, something listens" even on that path.
+			anyListener = true;
+			_hasHookCache.set(event, true);
+
+			final _t = timingEnabled ? haxe.Timer.stamp() : 0.0;
+
+			// PlayState's own 'script' tag (wrapping this whole call()) only
+			// ever showed the COMBINED cost of every loaded song/stage
+			// script -- one slow mod/script script among several was
+			// invisible, folded into everyone else's time. Tagged per
+			// (script name, event) instead of just accumulating a single
+			// 'script' number; nested inside whatever tag the caller already
+			// has open (PlayState's 'script', MusicBeatState's
+			// 'baseScripts'), so this doesn't inflate "unaccounted" -- see
+			// SystemMonitor.profEnd()'s own doc comment on why only the
+			// outermost span in a nest counts toward that total.
+			// The enabled check has to guard the STRING BUILD too, not just
+			// live inside profBegin() -- Haxe evaluates a call's arguments
+			// before the call runs, so '${i.name}:$event' was getting
+			// interpolated (and thrown away) on every single dispatch
+			// regardless of whether monitoring was on, defeating profBegin's
+			// own internal enabled check. This fires per (script, event) at
+			// step/beat/frame frequency across every loaded script for the
+			// whole song -- a real, sustained allocation source, not a
+			// one-off.
+			#if android if (SystemMonitor.enabled) SystemMonitor.profBegin('script:${i.name}:$event'); #end
+
 			var ret:Dynamic = i.call(event, args)?.returnValue;
+
+			#if android if (SystemMonitor.enabled) SystemMonitor.profEnd(); #end
+
+			if (timingEnabled)
+			{
+				final _ms = (haxe.Timer.stamp() - _t) * 1000.0;
+				if (_ms >= slowThresholdMs)
+					trace('[ScriptPerf] ${i.name}::$event ${Math.round(_ms * 10) / 10}ms');
+			}
+
 			if (ret != null)
 			{
-				if (ret == ScriptConstants.HALT_FUNC)
-				{
-					ret = returnVal;
-					if (!ignoreStops) return returnVal;
-				};
-				
+				if (ScriptConstants.halting(ret) && !ignoreStops) return ret;
+
 				if (ret != ScriptConstants.CONTINUE_FUNC) returnVal = ret;
 			}
 		}
-		
+
+		_hasHookCache.set(event, anyListener);
+
 		return returnVal;
 	}
 	
@@ -141,11 +210,10 @@ class ScriptGroup implements IFlxDestroyable
 	public function clear(callOnDestroy:Bool = true)
 	{
 		if (callOnDestroy) call('onDestroy', null, true);
-		for (i in 0...members.length)
-		{
-			var script = members[0];
-			members.remove(script);
+		var toDestroy = members.copy();
+		members = [];
+		_hasHookCache.clear();
+		for (script in toDestroy)
 			script.destroy();
-		}
 	}
 }

@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="medbay.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="medbay0000" x="3" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0001" x="3" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0002" x="105" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0003" x="105" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0004" x="207" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0005" x="207" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0006" x="309" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0007" x="309" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0008" x="411" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0009" x="411" y="3" width="97" height="84"/>
+	<SubTexture name="medbay0010" x="3" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0011" x="3" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0012" x="105" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0013" x="105" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0014" x="207" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0015" x="207" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0016" x="309" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0017" x="309" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0018" x="411" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0019" x="411" y="92" width="97" height="84"/>
+	<SubTexture name="medbay0020" x="3" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0021" x="3" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0022" x="105" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0023" x="105" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0024" x="207" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0025" x="207" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0026" x="309" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0027" x="309" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0028" x="411" y="181" width="97" height="84"/>
+	<SubTexture name="medbay0029" x="411" y="181" width="97" height="84"/>
+</TextureAtlas>

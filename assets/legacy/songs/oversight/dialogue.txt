@@ -1,0 +1,8 @@
+:wi:happy:dialogue_white0
+:bf:angry:dialogue_white1
+:wi:pissed:dialogue_white2
+:gf:neutral:dialogue_white3
+:bf:happy:dialogue_white4
+:wi:insane:dialogue_white5
+:bf:happy:dialogue_white6
+:wi:disap:dialogue_white7

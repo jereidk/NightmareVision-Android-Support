@@ -182,10 +182,31 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	 */
 	var _spriteLabel:FlxSprite;
 
-	/** 
+	/**
 	 * We don't need an ID here, so let's just use `Int` as the type.
 	 */
 	var input:FlxInput<Int>;
+
+	/**
+	 * Millisecond timestamp (haxe.Timer.stamp() × 1000) captured at the moment
+	 * this button was last pressed, independent of frame boundaries.
+	 * Use via TouchInputManager.getPressTimestampMs() for sub-frame input timing.
+	 */
+	public var pressTimestampMs:Float = 0.0;
+
+	/** Millisecond timestamp of the last release (onUp or onOut). */
+	public var releaseTimestampMs:Float = 0.0;
+
+	/**
+	 * The active alpha-flash tween on this button (see MobileVirtualPad/
+	 * MobileHitbox's flashButton()), if any. Tracked per-button so a new
+	 * flash can cancel just this one tween directly instead of every caller
+	 * doing FlxTween.cancelTweensOf(btn) -- a scan of every active tween in
+	 * the whole game, called once per note hit during Showcase mode (which
+	 * flashes the hit column's button on EVERY autoplayed note), which added
+	 * up fast on dense charts.
+	 */
+	public var flashTween:Null<flixel.tweens.FlxTween> = null;
 
 	/**
 	 * The input currently pressing this button, if none, it's `null`. Needed to check for its release.
@@ -437,6 +458,7 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	function onUpHandler():Void
 	{
 		status = FlxButton.NORMAL;
+		releaseTimestampMs = haxe.Timer.stamp() * 1000.0;
 		input.release();
 		currentInput = null;
 		onUp.fire(); // Order matters here, because onUp.fire() could cause a state change and destroy this object.
@@ -448,8 +470,27 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	function onDownHandler():Void
 	{
 		status = FlxButton.PRESSED;
+		pressTimestampMs = getRawPressTimestampMs();
 		input.press();
 		onDown.fire(); // Order matters here, because onDown.fire() could cause a state change and destroy this object.
+	}
+
+	/**
+	 * Looks up the true OS-event timestamp of the touch that triggered this
+	 * press (captured by `RawTouchClock` at the moment the OS delivered
+	 * `TOUCH_BEGIN`, not when this frame happened to poll for it). Falls back
+	 * to the old frame-poll-time read for mouse input or if no raw timestamp
+	 * was recorded, so behaviour is unchanged outside real touch presses.
+	 */
+	function getRawPressTimestampMs():Float
+	{
+		var touch = Std.downcast(currentInput, flixel.input.touch.FlxTouch);
+		if (touch != null)
+		{
+			var raw = mobile.backend.flixel.input.RawTouchClock.getPressTime(touch.touchPointID);
+			if (raw >= 0) return raw;
+		}
+		return haxe.Timer.stamp() * 1000.0;
 	}
 
 	/**
@@ -467,6 +508,7 @@ class FlxTypedButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	function onOutHandler():Void
 	{
 		status = FlxButton.NORMAL;
+		releaseTimestampMs = haxe.Timer.stamp() * 1000.0;
 		input.release();
 		onOut.fire(); // Order matters here, because onOut.fire() could cause a state change and destroy this object.
 	}

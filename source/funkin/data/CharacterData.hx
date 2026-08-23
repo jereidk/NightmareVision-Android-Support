@@ -14,21 +14,20 @@ class CharacterParser
 	 * 
 	 * supported formats are `psych`, `cne`, and `vslice`
 	 */
-	public static function fetchInfo(id:String):CharacterInfo
+	public static function fetchInfo(id:String, folder:String = 'characters'):CharacterInfo
 	{
-		var charPath = Paths.findFileWithExts('data/characters/$id', ['json', 'xml']);
+		return (fetchInfoUnsafe(id, folder) ?? getTemplateCharInfo());
+	}
+	
+	public static function fetchInfoUnsafe(id:String, folder:String = 'characters'):Null<CharacterInfo>
+	{
+		var charPath = Paths.findFileWithExts('data/$folder/$id', ['json', 'xml'], LOOSE);
 		
-		if (!FunkinAssets.exists(charPath)) charPath = Paths.findFileWithExts('characters/$id', ['json', 'xml']);
+		if (!FunkinAssets.exists(charPath)) charPath = Paths.findFileWithExts('$folder/$id', ['json', 'xml'], LOOSE);
 		
-		if (!FunkinAssets.exists(charPath)) charPath = Paths.getCorePath('data/characters/${Character.DEFAULT_CHARACTER}.json');
+		if (!FunkinAssets.exists(charPath)) return null;
 		
-		var raw:String = '';
-		
-		try
-		{
-			raw = FunkinAssets.getContent(charPath);
-		}
-		catch (e) {}
+		var raw:String = FunkinAssets.getContent(charPath);
 		
 		if (raw.trim().length != 0 && charPath.endsWith('.xml')) return fromCNE(raw); // if it was a xml its cne
 		
@@ -60,12 +59,15 @@ class CharacterParser
 		data.healthicon ??= baseInfo.healthicon;
 		data.healthbar_colour ??= baseInfo.healthbar_colour;
 		data.vslice_sustains ??= baseInfo.vslice_sustains;
-		data.image ??= baseInfo.image;
 		data.dance_every ??= baseInfo.dance_every;
 		data.position ??= baseInfo.position;
 		data.camera_position ??= baseInfo.camera_position;
 		data.animations ??= baseInfo.animations;
 		data.scale ??= baseInfo.scale;
+		data.afterimages ??= baseInfo.afterimages;
+		data.scalableOffsets ??= baseInfo.scalableOffsets;
+		data.flags ??= baseInfo.flags;
+		data.pausePortrait ??= baseInfo.pausePortrait;
 		
 		return cast data;
 	}
@@ -339,7 +341,11 @@ class CharacterParser
 			dance_every: 2,
 			position: [0, 0],
 			camera_position: [0, 0],
+			scalableOffsets: false,
+			afterimages: true,
 			animations: [],
+			flags: {},
+			pausePortrait: '',
 			scale: 1
 		};
 	}
@@ -420,7 +426,7 @@ typedef CharacterInfo =
 	/**
 	 * The path to the image of the character.
 	 */
-	var image:String;
+	var ?image:String;
 	
 	/**
 	 * The scale of the character
@@ -483,6 +489,11 @@ typedef CharacterInfo =
 	var ?scalableOffsets:Bool;
 	
 	/**
+	 * Enables afterimage effects on double notes
+	 */
+	var ?afterimages:Bool;
+	
+	/**
 	 * Used for the character editor
 	 */
 	var ?_editor_isPlayer:Bool;
@@ -497,6 +508,10 @@ typedef CharacterInfo =
 	var ?gameover_loop_sound:String;
 	
 	var ?gameover_confirm_sound:String;
+	
+	var ?flags:haxe.DynamicAccess<Dynamic>;
+	
+	var ?pausePortrait:String;
 }
 
 /**

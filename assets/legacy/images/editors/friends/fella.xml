@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="fella.png">
+	<!-- Created with Adobe Flash CS6 12.0.0.481 -->
+	<SubTexture name="boi0000" x="1" y="1" width="160" height="209" frameX="0" frameY="-3" frameWidth="160" frameHeight="213"/>
+	<SubTexture name="d0000" x="1" y="1" width="205" height="209" frameX="0" frameY="-3" frameWidth="205" frameHeight="213"/>
+	<SubTexture name="d0001" x="1" y="1" width="205" height="209" frameX="0" frameY="-3" frameWidth="205" frameHeight="213"/>
+	<SubTexture name="d0002" x="1" y="584" width="196" height="213" frameX="-3" frameY="0" frameWidth="205" frameHeight="213"/>
+	<SubTexture name="d0003" x="1" y="584" width="196" height="213" frameX="-3" frameY="0" frameWidth="205" frameHeight="213"/>
+	<SubTexture name="i0000" x="200" y="780" width="177" height="165"/>
+	<SubTexture name="i0001" x="200" y="780" width="177" height="165"/>
+	<SubTexture name="i0002" x="1" y="800" width="177" height="165"/>
+	<SubTexture name="i0003" x="1" y="800" width="177" height="165"/>
+	<SubTexture name="l0000" x="209" y="1" width="260" height="164" frameX="0" frameY="-3" frameWidth="260" frameHeight="167"/>
+	<SubTexture name="l0001" x="209" y="1" width="260" height="164" frameX="0" frameY="-3" frameWidth="260" frameHeight="167"/>
+	<SubTexture name="l0002" x="1" y="213" width="256" height="167" frameX="-4" frameY="0" frameWidth="260" frameHeight="167"/>
+	<SubTexture name="l0003" x="1" y="213" width="256" height="167" frameX="-4" frameY="0" frameWidth="260" frameHeight="167"/>
+	<SubTexture name="r0000" x="260" y="168" width="192" height="172" frameX="-3" frameY="0" frameWidth="195" frameHeight="172"/>
+	<SubTexture name="r0001" x="260" y="168" width="192" height="172" frameX="-3" frameY="0" frameWidth="195" frameHeight="172"/>
+	<SubTexture name="r0002" x="215" y="383" width="195" height="171" frameX="0" frameY="-1" frameWidth="195" frameHeight="172"/>
+	<SubTexture name="r0003" x="215" y="383" width="195" height="171" frameX="0" frameY="-1" frameWidth="195" frameHeight="172"/>
+	<SubTexture name="u0000" x="1" y="383" width="211" height="198" frameX="0" frameY="0" frameWidth="215" frameHeight="198"/>
+	<SubTexture name="u0001" x="1" y="383" width="211" height="198" frameX="0" frameY="0" frameWidth="215" frameHeight="198"/>
+	<SubTexture name="u0002" x="200" y="584" width="215" height="193" frameX="0" frameY="-5" frameWidth="215" frameHeight="198"/>
+	<SubTexture name="u0003" x="200" y="584" width="215" height="193" frameX="0" frameY="-5" frameWidth="215" frameHeight="198"/>
+</TextureAtlas>

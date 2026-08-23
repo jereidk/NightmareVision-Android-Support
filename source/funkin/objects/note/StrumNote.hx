@@ -3,6 +3,7 @@ package funkin.objects.note;
 import funkin.backend.math.Vector3;
 
 import flixel.FlxSprite;
+import flixel.FlxG;
 import flixel.math.FlxPoint;
 
 import funkin.objects.*;
@@ -10,10 +11,206 @@ import funkin.game.shaders.RGBShader;
 import funkin.states.*;
 import funkin.data.*;
 
-class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
+class StrumNote extends RGBSprite implements funkin.game.modchart.IModNote
 {
+	// Funkin original constants for VSlice fidelity
+	public static final STRUMLINE_SIZE:Int = 104;
+	public static final NOTE_SPACING:Int = STRUMLINE_SIZE + 8; // 112
+	static final INITIAL_OFFSET:Float = -0.275 * STRUMLINE_SIZE; // -28.6
+	static final NUDGE:Float = 2.0;
+
+	// FunkinCrew/Funkin's real Constants.STRUMLINE_X_OFFSET/STRUMLINE_Y_OFFSET
+	// (source/funkin/util/Constants.hx) -- desktop VSlice's own formula, kept
+	// here for reference/comparison. Mobile VSlice follows neither: X_OFFSET
+	// is unused now (see VSLICE_OPPONENT_X_OFFSET/VSLICE_PLAYER_X_OFFSET,
+	// both fixed, measured values instead of FlxG.width-relative math);
+	// Y_OFFSET is still used below -- anchors near the TOP for upscroll (the
+	// default) and near the bottom only for downscroll.
+	public static final STRUMLINE_X_OFFSET:Float = 48;
+	public static final STRUMLINE_Y_OFFSET:Float = 24;
+
+	/**
+	 * Player strumline sat 11px too high in downscroll (the mode actually
+	 * confirmed by testing/screenshots) -- found by overlaying a real device
+	 * screenshot directly on the reference and reading off the offset (Ibis
+	 * Paint layer alignment). Added only to the downscroll branch of
+	 * getVSliceBaseY(): upscroll was never separately confirmed, so it's left
+	 * alone rather than guessing the same nudge applies there too.
+	 */
+	public static final VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL:Float = 11;
+
+	/**
+	 * Upscroll (the default) rendered the strumline flush at
+	 * safeTop + STRUMLINE_Y_OFFSET (24px) -- directly under/overlapping
+	 * PsychHUD's timeTxt/timeBar cluster, which itself sits at y=19 and
+	 * extends to roughly y=60 (timeTxt: 32pt font + 2px border; timeBar:
+	 * anchored at timeTxt.y + timeTxt.height/4, own height on top of that).
+	 * Reported via a device screenshot showing the strumline arrows
+	 * overlapping the FPS/GC debug overlay and the time HUD. Pushed below
+	 * that cluster with a safety margin; not pixel-measured against a
+	 * reference the way VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL was, so may need
+	 * another calibration pass once confirmed on-device.
+	 */
+	public static final VSLICE_UPSCROLL_Y_OFFSET:Float = 90;
+
+	/**
+	 * getVSliceOpponentBaseY() used to stay flush near the top
+	 * (safeTop + VSLICE_OPPONENT_Y_OFFSET) regardless of downScroll --
+	 * documented as matching real mobile VSlice's always-top-anchored
+	 * opponent strumline, but that was only ever confirmed against
+	 * downscroll reference screenshots. Reported on upscroll: the opponent
+	 * strumline/notes should sit further down, not hardcoded to the
+	 * downscroll position. Same not-yet-pixel-measured caveat as
+	 * VSLICE_UPSCROLL_Y_OFFSET above.
+	 */
+	public static final VSLICE_OPPONENT_UPSCROLL_Y_OFFSET:Float = 130;
+
+	/**
+	 * Real mobile VSlice (FunkinDroid) doesn't actually reuse desktop
+	 * Strumline.hx's positioning for the opponent -- it renders a small,
+	 * always-top-anchored strumline for the opponent instead of a full-size
+	 * one sharing the player's downscroll-aware Y (confirmed against
+	 * reference screenshots; nothing in the desktop source does this, so
+	 * there's no formula to port here, only the observed proportions).
+	 *
+	 * Size re-measured via connected-component bounding boxes (exact
+	 * arrow-gray fill color, not by eye) across a range of color tolerances
+	 * to rule out measurement noise: ours averaged ~53x53.5px vs the
+	 * reference's ~45.75x46.25px at the same 1600x720 resolution, i.e. ours
+	 * renders ~15.8% too big on both axes (uniform, not distorted). Rescaled
+	 * from 0.5 by that factor: 0.5 / 1.158 = 0.43.
+	 *
+	 * Still ~20% too big after that fix, confirmed by directly overlaying a
+	 * real device screenshot on the reference (Ibis Paint layer alignment,
+	 * not pixel-measured this time, but a direct visual overlay comparison).
+	 * Rescaled again: 0.43 * 0.8 = 0.344.
+	 */
+	public static final VSLICE_OPPONENT_SCALE:Float = 0.34;
+
+	/**
+	 * Player-lane tuning -- unlike VSLICE_OPPONENT_SCALE these two are
+	 * independent: the 4 lanes spread out MORE (spacing > 1) while the
+	 * receptor/note art itself renders slightly SMALLER (size < 1).
+	 *
+	 * Re-derived by pixel-measuring a reference screenshot's arrow centers
+	 * (connected-component analysis, not by eye) -- the previous 1.3 assumed
+	 * uniform spacing across all 4 lanes, but the reference's actual
+	 * consecutive-arrow gaps measured 198px/334px/198px: LEFT-DOWN and
+	 * UP-RIGHT are each other's normal step (198px), with an extra gap only
+	 * between DOWN and UP. 198/112 = 1.7679, rounded here.
+	 */
+	public static final VSLICE_PLAYER_SPACING_MULT:Float = 1.77;
+
+	/**
+	 * Size re-measured the same way as VSLICE_OPPONENT_SCALE (connected-component
+	 * bounding boxes on the arrow-gray fill, checked across several color
+	 * tolerances). Excludes the reference screenshot's RIGHT arrow (clipped by
+	 * the screen edge in that capture) from the average: ours came out to
+	 * ~107.7x109.7px vs the reference's ~101.25x101.5px, i.e. ours renders
+	 * ~7.2% too big on both axes (uniform, not distorted). Rescaled from 0.85
+	 * by that factor: 0.85 / 1.072 = 0.79.
+	 *
+	 * FunkinCrew/Funkin's own mobile formula (PlayState.initNoteHitbox()) gives
+	 * a strumlineScale around 1.10 here instead -- bigger, not smaller -- but
+	 * that depends on noteStyle.getStrumlineScale(), a per-notestyle baseline
+	 * that isn't confirmed to match this project's own note assets, so it
+	 * can't be trusted over a direct pixel measurement.
+	 */
+	public static final VSLICE_PLAYER_SIZE_SCALE:Float = 0.79;
+
+	/**
+	 * Real mobile VSlice's player strumline visually splits into two pairs
+	 * (LEFT+DOWN, UP+RIGHT) with an extra gap between them -- matches its
+	 * Hitbox input mode's left-hand/right-hand touch zone split. Originally
+	 * measured as a fixed 136px from the reference screenshot's DOWN-UP gap
+	 * (334px) minus its own normal per-lane step (198px, see
+	 * VSLICE_PLAYER_SPACING_MULT).
+	 *
+	 * Confirmed against FunkinCrew/Funkin's actual source
+	 * (source/funkin/play/notes/Strumline.hx, getXPos()): this gap is NOT a
+	 * fixed pixel value there, it's `3 * pos` where
+	 * `pos = 35 * amplification` and
+	 * `amplification = (FlxG.width/FlxG.height) / (FlxG.initialWidth/FlxG.initialHeight)`
+	 * -- i.e. it scales with the device's aspect ratio, pinned to 1.0 at the
+	 * 1280x720 design resolution. At our reference screenshot's 1600x720
+	 * (amplification 1.25), that formula gives 3*35*1.25 = 131.25px, within
+	 * ~3.5% of the 136px pixel measurement above. Reimplemented here as a
+	 * coefficient times vsliceAmplification() so it reproduces the exact
+	 * already-confirmed 136px at that resolution while now actually scaling
+	 * correctly (like the real formula) at other aspect ratios instead of
+	 * staying frozen at 136px everywhere.
+	 */
+	public static final VSLICE_PLAYER_SPLIT_GAP_COEFF:Float = 108.8; // 136 / 1.25
+
+	/**
+	 * Aspect-ratio multiplier from FunkinCrew/Funkin's own mobile formula
+	 * (PlayState.initNoteHitbox()): `(FlxG.width/FlxG.height) / (FlxG.initialWidth/FlxG.initialHeight)`.
+	 * Evaluates to 1.0 at the 1280x720 design resolution (FlxG.initialWidth/
+	 * Height); grows on wider-than-1280:720 devices, since VSlice's scale mode
+	 * keeps FlxG.height pinned at 720 while FlxG.width grows to fill the
+	 * screen (e.g. 1600 wide -> amplification 1.25, our reference screenshot).
+	 */
+	public static function vsliceAmplification():Float
+	{
+		return (FlxG.width / FlxG.height) / (FlxG.initialWidth / FlxG.initialHeight);
+	}
+
+	/**
+	 * Center-relative offset for the player's LEFT receptor -- like
+	 * VSLICE_OPPONENT_X_OFFSET, this replaces (FlxG.width / 2 + STRUMLINE_X_OFFSET),
+	 * which put the whole player strumline much too far right (LEFT-arrow
+	 * center measured at 846 on a 1600-wide screenshot, vs. 416 in the
+	 * reference at the same resolution).
+	 *
+	 * Originally landed as a fixed 416 (see git history), measured/confirmed
+	 * ONLY at that one 1600x720 'expand'-mode screenshot -- correct there, but
+	 * a single (width, position) data point can't tell a genuinely fixed
+	 * value apart from a width-proportional one that just happens to equal
+	 * 416 at width=1600. Turned out to be the latter: 'fit' mode pins
+	 * FlxG.width back to the design resolution (1280, not 1600 -- see
+	 * FunkinRatioScaleMode.updateGameSize()'s non-expand branch), and reusing
+	 * the same flat 416 there visibly shifted the whole player strumline too
+	 * far right (screenshots, 'fit' mode, both up- and downscroll).
+	 *
+	 * Reintroduced as a center-relative term instead -- `FlxG.width * 0.5 +
+	 * this` -- which exactly reproduces the already-validated 416 at
+	 * width=1600 (416 - 1600/2 = -384, so 'expand' mode is completely
+	 * unchanged) while now scaling proportionally for any other FlxG.width,
+	 * including 'fit' mode's 1280 (-> 256). Matches this same file's own
+	 * vsliceAmplification()-based terms (e.g. VSLICE_PLAYER_SPLIT_GAP_COEFF
+	 * below), which already scale with FlxG.width for exactly this reason --
+	 * and matches desktop VSlice's own FlxG.width/2-shaped formula, which is
+	 * what this constant's doc comment already said it was replacing.
+	 */
+	public static final VSLICE_PLAYER_X_OFFSET_FROM_CENTER:Float = 416 - 800;
+
+	/**
+	 * Extra inset for the opponent's compact corner strumline, separate from
+	 * STRUMLINE_X_OFFSET/STRUMLINE_Y_OFFSET (shared with the player's
+	 * strumline) -- the FPS/GC debug overlay (funkin.backend.DebugDisplay) is
+	 * visible BY DEFAULT (ClientPrefs.fpsDisplayType defaults to 'Simple', not
+	 * a hidden dev-only toggle) and sits flush in that same top-left corner,
+	 * so the shared 48/24 offset put the opponent's receptors directly under
+	 * it. Also nudges the strumline closer to the reference's own placement,
+	 * which sits noticeably inset from the literal corner rather than flush
+	 * against it.
+	 */
+	public static final VSLICE_OPPONENT_X_OFFSET:Float = 140;
+	public static final VSLICE_OPPONENT_Y_OFFSET:Float = 56;
+
+	/**
+	 * Runtime multiplier applied to NOTE_SPACING/STRUMLINE_SIZE in getCenteredXPos().
+	 * FunkinCrew/Funkin's own mobile touch mode (PlayState.initNoteHitbox()) spreads
+	 * VSlice notes out much further than the 112px desktop spacing so they line up
+	 * with its (fixed-size, much wider) invisible touch hitbox zones. Set from
+	 * PlayState.generatePlayfields() using that same aspect-ratio-based formula;
+	 * stays 1.0 (desktop-identical) everywhere else.
+	 */
+	public static var spacingScale:Float = 1.0;
+
 	public var intThing:Int = 0;
-	
+	public var lastNote:Dynamic = null;
+
 	public var resetAnim:Float = 0;
 	public var noteData:Int = 0;
 	public var direction:Float = 90;
@@ -26,6 +223,8 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 	public var parent:PlayField;
 	@:isVar
 	public var swagWidth(get, null):Float;
+	
+	public var coyoteTime:Float = 0;
 	
 	public function get_swagWidth()
 	{
@@ -53,7 +252,6 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		return value;
 	}
 	
-	public var rgbGraphics:RGBGraphics = new RGBGraphics();
 	public var useRGBShader:Bool = true;
 	
 	public var skin:NoteSkin;
@@ -65,7 +263,11 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		this.parent = parent;
 		this.player = player;
 		super(x, y);
-		
+
+		// Receptor position is fully driven by modManager.getPos()/updateObject() every frame —
+		// same reasoning as Note.hx's moves=false: nothing here ever sets velocity/acceleration/drag.
+		moves = false;
+
 		skin = NoteUtil.getSkinFromID(parent?.player ?? 0);
 		
 		texture = skin.noteTexture; // Load texture and anims
@@ -73,36 +275,24 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		scrollFactor.set();
 		
 		useRGBShader = skin.inEngineColoring;
-		rgbGraphics.enabled = useRGBShader;
 		
 		isQuant = parent?.quants ?? ClientPrefs.quants;
-		
-		handleColors();
 	}
 	
-	public var lastNote:Null<Note> = null;
-	
-	public function handleColors(anim:String = '', ?note:Note)
+	public function copyNoteColor(?note:Note)
 	{
-		if (!useRGBShader) return;
+		if (!useRGBShader || rgbShader == null) return;
 		
-		note ??= lastNote;
-		lastNote = note;
+		var arr:Array<FlxColor> = note?.rgbShader?.getColors();
 		
-		final fallback = skin.colors != null ? NoteUtil.colorToArray(skin.colors[noteData]) : NoteUtil.getCurColors(noteData, (isQuant && note != null) ? note.quant : 4, player)
-			.getColors();
-			
-		var arr:Array<FlxColor> = note?.rgbGraphics?.getColors();
-		if (arr == null) arr = fallback;
+		// The no-note (idle receptor) case bypassed getCurColors() entirely for
+		// non-quant notes, so it never picked up the arrowHSV shift NotesSubState
+		// lets you preview -- apply it here too so the receptor's own idle color
+		// matches what actually falls once a note passes through it.
+		var idleHSV:Array<Int> = (noteData >= 0 && noteData < ClientPrefs.arrowHSV.length) ? ClientPrefs.arrowHSV[noteData] : null;
+		arr ??= (!isQuant && skin.colors != null ? NoteUtil.colorToArray(NoteUtil.applyHSVShift(skin.colors[noteData], idleHSV)) : NoteUtil.getCurColors(noteData, note?.quant ?? 4, player).getColors());
 		
-		if (isQuant && anim == 'pressed') arr = ClientPrefs.arrowRGBquant[0];
-		
-		if (rgbGraphics != null)
-		{
-			rgbGraphics.setColors(arr);
-			
-			rgbGraphics.enabled = (anim != 'static');
-		}
+		rgbShader.setColors(arr);
 	}
 	
 	public function reloadNote()
@@ -110,6 +300,10 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		var lastAnim:String = null;
 		if (animation.curAnim != null) lastAnim = animation.curAnim.name;
 		var br:String = texture;
+		
+		// Defensively clear stale frame cache to prevent Haxe logo on song restart.
+		// The frame cache key is derived from the texture path without .png extension.
+		Paths.tempAtlasFramesCache.remove(Paths.getPath('images/$br.png', NORMAL).withoutExtension());
 		
 		frames = Paths.getAtlasFrames(br);
 		
@@ -120,11 +314,11 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		baseScale.copyFrom(scale);
 		updateHitbox();
 		
-		antialiasing = skin.antialiasing;
+		antialiasing = skin.antialiasing && ClientPrefs.globalAntialiasing;
 		
 		if (lastAnim != null) playAnim(lastAnim, true);
 		
-		handleColors();
+		copyNoteColor();
 	}
 	
 	function loadAnimations()
@@ -150,14 +344,102 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 	public function postAddedToGroup()
 	{
 		playAnim('static');
-		x -= swagWidth / 2;
-		x = x - (swagWidth * 2) + (swagWidth * noteData) + 54;
+		
+		// Funkin original VSlice positioning formula
+		// This replicates the exact receptor positions from FunkinCrew/Funkin
+		if (ClientPrefs.noteLayout == 'VSlice')
+		{
+			final isPlayerLane = parent?.isPlayer ?? true;
+			x = getCenteredXPos(noteData, isPlayerLane, isPlayerLane ? VSLICE_PLAYER_SPACING_MULT : VSLICE_OPPONENT_SCALE);
+		}
+		else
+		{
+			x = (parent != null ? parent.baseX : 0) + getXPos(noteData);
+		}
 		
 		ID = noteData;
 	}
 	
+	/**
+	 * Get the relative X position for a receptor based on its direction.
+	 * Used for non-VSlice layouts only.
+	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
+	 * @return The relative X position within the strumline
+	 */
+	public static function getXPos(direction:Int):Float
+	{
+		return direction * NOTE_SPACING;
+	}
+
+	/**
+	 * Get the X position for a VSlice receptor. Desktop VSlice shows both
+	 * strumlines side by side, opponent flush left and player starting at the
+	 * screen's horizontal midpoint -- but real mobile VSlice follows neither
+	 * strumline's desktop formula (see VSLICE_OPPONENT_X_OFFSET/
+	 * VSLICE_PLAYER_X_OFFSET), so both use their own fixed, measured offset
+	 * instead of FlxG.width-relative math.
+	 * @param direction The note direction (0=LEFT, 1=DOWN, 2=UP, 3=RIGHT)
+	 * @param isPlayerLane Whether this receptor belongs to the player's own strumline (right half) or the opponent's (left edge)
+	 * @param spacingMult Extra multiplier on top of spacingScale -- VSLICE_PLAYER_SPACING_MULT
+	 * spreads the player's 4 lanes out further, VSLICE_OPPONENT_SCALE shrinks the opponent's together.
+	 * @return The X position
+	 */
+	public static function getCenteredXPos(direction:Int, isPlayerLane:Bool = true, spacingMult:Float = 1.0):Float
+	{
+		final baseX:Float = isPlayerLane ? (FlxG.width * 0.5 + VSLICE_PLAYER_X_OFFSET_FROM_CENTER) : VSLICE_OPPONENT_X_OFFSET;
+		var x = baseX + direction * NOTE_SPACING * spacingScale * spacingMult;
+		// Player-only LEFT+DOWN / UP+RIGHT split -- see VSLICE_PLAYER_SPLIT_GAP_COEFF/vsliceAmplification().
+		if (isPlayerLane && direction >= 2) x += VSLICE_PLAYER_SPLIT_GAP_COEFF * vsliceAmplification() * spacingScale;
+		return x;
+	}
+
+	/**
+	 * Y position (top edge) of the VSlice receptor row, used by
+	 * PlayState.generatePlayfields() to position the real receptors.
+	 */
+	public static function getVSliceBaseY():Float
+	{
+		// Real VSlice: playerStrumline.y = downscroll
+		//   ? FlxG.height - strumline.height - STRUMLINE_Y_OFFSET
+		//   : STRUMLINE_Y_OFFSET
+		// i.e. flush near the TOP by default, and only near the bottom in
+		// downscroll -- same Y for both strumlines, only X differs between them.
+		var safeTop:Float = 0;
+		var safeBottom:Float = 0;
+		#if mobile
+		final safe = mobile.backend.ScreenUtil.safeArea();
+		safeTop = safe.top;
+		safeBottom = safe.bottom;
+		#end
+
+		final result = ClientPrefs.downScroll
+			? (FlxG.height - safeBottom - STRUMLINE_SIZE * VSLICE_PLAYER_SIZE_SCALE - STRUMLINE_Y_OFFSET + VSLICE_PLAYER_Y_NUDGE_DOWNSCROLL)
+			: (safeTop + VSLICE_UPSCROLL_Y_OFFSET);
+
+		return result;
+	}
+
+	/**
+	 * Y position for the opponent's compact strumline on mobile. Downscroll
+	 * stays flush near the top (VSLICE_OPPONENT_Y_OFFSET, confirmed against
+	 * reference screenshots); upscroll uses a separate, lower offset -- see
+	 * VSLICE_OPPONENT_UPSCROLL_Y_OFFSET's doc comment.
+	 */
+	public static function getVSliceOpponentBaseY():Float
+	{
+		var safeTop:Float = 0;
+		#if mobile
+		safeTop = mobile.backend.ScreenUtil.safeArea().top;
+		#end
+
+		return safeTop + (ClientPrefs.downScroll ? VSLICE_OPPONENT_Y_OFFSET : VSLICE_OPPONENT_UPSCROLL_Y_OFFSET);
+	}
+
 	override function update(elapsed:Float)
 	{
+		if (coyoteTime > 0 && getAnimName() != 'confirm') // improve
+			coyoteTime = Math.max(coyoteTime - elapsed, 0);
+		
 		if (resetAnim > 0)
 		{
 			resetAnim -= elapsed;
@@ -167,6 +449,7 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 				resetAnim = 0;
 			}
 		}
+		
 		@:bypassAccessor
 		super.set_alpha(targetAlpha * alphaMult);
 		
@@ -180,18 +463,11 @@ class StrumNote extends FunkinSprite implements funkin.game.modchart.IModNote
 		centerOffsets();
 		centerOrigin();
 		
-		handleColors(anim);
-	}
-	
-	override function drawSimple(camera:FlxCamera)
-	{
-		super.drawSimple(camera);
-		rgbGraphics.pushQuad(camera);
-	}
-	
-	override function drawComplex(camera:FlxCamera)
-	{
-		super.drawComplex(camera);
-		rgbGraphics.pushQuad(camera);
+		if (rgbShader != null)
+		{
+			if (anim == 'pressed') copyNoteColor();
+			
+			rgbShader.enabled = (useRGBShader && anim != 'static');
+		}
 	}
 }

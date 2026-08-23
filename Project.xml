@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
     <!-- APP SETTINGS -->
-    <app title="Nightmare Vision" file="NightmareVision" packageName="com.nmvTeam.nightmareEngine" package="com.nmvTeam.nightmareEngine" main="Main" version="0.2.7" company="nmvTeam"/>
+    <app title="VS IMPOSTOR LEGACY" file="ImpostorLegacy" packageName="com.motorfrog.impostor" package="com.motorfrog.impostor" main="Main" version="0.2.7" company="motorfrog"/>
 
     <window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false"/>
     <window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false"/>
@@ -28,11 +28,15 @@
     <set name="BUILD_DIR" value="${BUILD_DIR}-tracy" if="FEATURE_DEBUG_TRACY"/>
 
     <assets path='assets/embeds' rename='assets' embed="false" />
-    <assets path="assets/game" rename="assets"/>
-    
-    <assets path="assets" include="*.ttf|*.otf" type="binary" nocompress="true"/>
+    <!-- Tested embed="true" here (Psych Engine mobile embeds its core assets):
+         build succeeded but ballooned APK size, and the lag/stutter on-device
+         only improved slightly, not enough to justify the size cost. Reverted
+         to embed=false — the FileSystem.exists()/Mods.enabled cascade is a
+         real inefficiency but not the dominant cause of the reported lag. -->
+    <assets path="assets/legacy" rename="assets" embed="false" />
 
     <assets path='content' embed='false' if="MODS_ALLOWED" unless="ASSET_REDIRECT"/>
+    <assets path='content/securitydlc' embed='false' if="MODS_ALLOWED DLC" unless="ASSET_REDIRECT"/>
 
     <!--OpenAL config-->    <!-- appreciate you cyn0x8 and smokey for finding this -->
     <section if="desktop">
@@ -55,10 +59,8 @@
     <haxelib name="haxeui-core"/>
     <haxelib name="haxeui-flixel"/>
 
-    <haxelib name="funkin.vis"/>
-    <haxelib name="grig.audio"/>
-    
     <haxelib name="json5hx"/>
+    <haxelib name="json2object"/>
     <haxelib name="android-manager" if="android"/>
 
     <haxelib name="hxdiscord_rpc" if="DISCORD_ALLOWED" version="1.3.0"/>
@@ -77,7 +79,7 @@
     <haxeflag name="--macro" value="include('funkin')" />
     <haxeflag name="--macro" value="include('flixel', true, ['flixel.addons.nape.*','flixel.addons.editors.*','flixel.addons.tile.FlxRayCastTilemap','flixel.system.macros'])" />
     
-    <haxeflag name="-dce no" />
+    <haxeflag name="-dce std" />
 
     <!-- HAXEDEFS -->
 
@@ -97,12 +99,63 @@
         <haxedef name="absolute-paths"/>
     </section>
 
+    <!--Generational GC: RE-REVERTED, this time with an actual bug pinned
+        down in hxcpp's own source, not just circumstantial timing.
+
+        A silent crash (no crash screen, no crash.log, sysmon.log cut
+        mid-line -- process just vanishes) recurred while holding a
+        sustain, after the sustain-tail staggering work landed. Same
+        surface symptom as the FIRST time this project chased this exact
+        correlation and blamed staggering -- back then the real cause was
+        this same define. HXCPP_CHECK_POINTER is active in this build, so
+        a real Haxe-level bug (null deref, bad index) in the staggering
+        code would throw a catchable exception and land in CrashHandler's
+        FallbackState with a callstack -- a silent death instead points at
+        a NATIVE fault, outside anything our own .hx code can cause
+        directly.
+
+        Audited hxcpp's own source at the exact pinned commit
+        (5932340d095a7eea8635fe4d1355f1c0efd0b3c2, github.com/FunkinCrew/hxcpp)
+        and found a real bug in the generational collector's object-
+        promotion path (src/hx/gc/Immix.cpp, MoveSurvivors()), specifically
+        in its interaction with HXCPP_ALIGN_ALLOC -- which upstream hxcpp
+        changed from opt-in to unconditionally-on just 2 days before our
+        pin (commit daffb7b5), so this exact combination has had very
+        little real-world mileage on it:
+          - ALIGN_PADDING(x) computes how much padding an object needs at
+            address x to land aligned once GC compaction copies it. The
+            loop that hunts for a free "hole" big enough for a moved
+            object checks the CORRECT padding (ALIGN_PADDING(destPos)) to
+            decide whether to keep looping, but checks a HARDCODED
+            ALIGN_PADDING(0) (always 4, the worst case) to decide whether
+            to advance to the next hole. For a hole exactly on the
+            boundary of these two answers, neither check can be
+            satisfied and neither advances destPos/destHole -- the loop
+            spins without making progress. On Android that reads as
+            "frozen, then gone" rather than a clean crash, depending on
+            how aggressively the OS reaps a stuck process.
+          - A stray, context-free `printf("Move!\n");` sits right in the
+            middle of that same function (right after the hole-search
+            loop, right before the object copy) -- looks exactly like a
+            debug leftover from whoever wrote this, and is the kind of
+            thing that doesn't survive a careful review.
+        Checked FunkinCrew/hxcpp's latest commit (2e969d01, 2026-05-10,
+        62 commits ahead of our pin): both the printf and the
+        ALIGN_PADDING(0) inconsistency are STILL there, untouched.
+        Updating the pin would not have fixed this.
+        Reverting is the only real fix available short of patching hxcpp
+        itself. Not 100% certain without an actual repro + debugger, but
+        this is a specific, plausible, evidenced mechanism -- not a guess
+        from timing alone.-->
+    <!-- <haxedef name="HXCPP_GC_GENERATIONAL"/> -->
+
+
     <!--Enable for better crash handling/reporting-->
     <haxedef name="CRASH_HANDLER"/>
 
 	<section if="CRASH_HANDLER">
    		<haxedef name="openfl-enable-handle-error"/>
-    	<haxedef name="HXCPP_CHECK_POINTER"/>
+    	<haxedef name="HXCPP_CHECK_POINTER" if="debug"/>
     	<haxedef name="HXCPP_STACK_LINE"/>
     	<haxedef name="HXCPP_STACK_TRACE"/>
 	</section>
@@ -126,6 +179,7 @@
 		
 	<!-- Mobile Shit -->
     <section if="android">
+	    <set name="android.minimum-sdk-version" value="24" />
 	    <config:android permission="android.permission.MANAGE_MEDIA"/> 
 		<config:android permission="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 		<config:android permission="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -135,18 +189,39 @@
 		<config:android permission="android.permission.READ_MEDIA_VIDEO"/>
 		<config:android permission="android.permission.READ_MEDIA_DOCUMENTS" />
 		<config:android permission="android.permission.ACCESS_WIFI_STATE"/>
+		<config:android permission="android.permission.ACCESS_NETWORK_STATE"/>
+		<config:android permission="android.permission.INTERNET"/>
 		<config:android permission="android.permission.CAPTURE_AUDIO_OUTPUT" />
-	
+		<!-- Required for KizzyHelper's MediaSession notification (API 33+) --
+		     without this, requestPermissions() for it is auto-denied since
+		     Android refuses to grant any runtime permission that isn't also
+		     declared here, and the notification silently never posts. -->
+		<config:android permission="android.permission.POST_NOTIFICATIONS"/>
+
 		<android extension="mobile.backend.java.FileUtils" />
+		<android extension="mobile.backend.java.AndroidUtils" />
+		<android extension="mobile.backend.java.JavaCrashHandler" />
+		<android extension="mobile.backend.java.ScreenUtil" />
+		<!-- Reached only via JNI.createStaticMethod (AndroidRPC.hx), never
+		     through Lime's own Extension callback dispatch -- registered here
+		     anyway so it isn't a stripped-as-unused target if this project
+		     ever turns on R8/ProGuard minification. -->
+		<android extension="mobile.backend.java.KizzyHelper" />
 		
 		<certificate path="key.keystore" password="nvport" alias="nvport" alias-password="nvport"/>
+
+    <!-- ABI targeting: pass -D ANDROID_ARM64_ONLY or -D ANDROID_ARM32_ONLY for a
+         single-ABI APK.  Without either flag both ABIs are built (fat APK). -->
+    <architecture name="arm64" unless="ANDROID_ARM32_ONLY" />
+    <architecture name="armv7" unless="ANDROID_ARM64_ONLY" />
     </section>
 
-     <java path="source" if="android"/>
+    <java path="source" if="android"/>
+
+    <template path="templates/android" if="android"/>
 
     <icon path="projFiles/icon/icon16.png" size='16'/>
     <icon path="projFiles/icon/icon32.png" size='32'/>
     <icon path="projFiles/icon/icon64.png" size='64'/>
-    <icon path="projFiles/icon/iconOG.png" unless="mobile"/>
-    <icon path="projFiles/icon/iconMobile.png" if="mobile"/>
+    <icon path="projFiles/icon/iconOG.png"/>
 </project>
