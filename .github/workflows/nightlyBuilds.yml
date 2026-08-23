@@ -365,8 +365,23 @@ jobs:
             "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-strip
           printf '#!/bin/bash\nexec "%s/bin/llvm-strip" "$@"\n' \
             "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-strip
+          # Same ar/ranlib wrappers the fat and ARM32 jobs already install:
+          # hxcpp resolves its archiver to the GCC-era arm-linux-androideabi-ar,
+          # which NDK r23+ does not ship. Only reached on a cold hxcpp cache
+          # (a warm one restores the runtime .a and skips the archive step), so
+          # its absence here stayed invisible until a fully cold run.
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ar" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ar
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/aarch64-linux-android-ranlib
+          printf '#!/bin/bash\nexec "%s/bin/llvm-ranlib" "$@"\n' \
+            "$NDK_PREBUILT" > /tmp/ndk-wrap/arm-linux-androideabi-ranlib
           chmod +x /tmp/ndk-wrap/clang++ /tmp/ndk-wrap/clang \
-            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip
+            /tmp/ndk-wrap/aarch64-linux-android-strip /tmp/ndk-wrap/arm-linux-androideabi-strip \
+            /tmp/ndk-wrap/arm-linux-androideabi-ar /tmp/ndk-wrap/aarch64-linux-android-ar \
+            /tmp/ndk-wrap/aarch64-linux-android-ranlib /tmp/ndk-wrap/arm-linux-androideabi-ranlib
           echo "/tmp/ndk-wrap" >> $GITHUB_PATH
 
           # ld.lld wrapper is needed even for the ARM64 job: lime rebuild android
