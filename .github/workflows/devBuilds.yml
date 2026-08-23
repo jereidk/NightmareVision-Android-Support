@@ -74,9 +74,9 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: Cache Haxe libraries
+      - name: Restore Haxe libraries cache
         id: haxelibs-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/haxelib
@@ -91,9 +91,9 @@ jobs:
       # copy -- kept as-is, rather than renamed, so this matches the cache
       # entry that already exists under that exact key instead of missing
       # once more just to populate a differently-named one.
-      - name: Cache Lime (source + built artifacts)
+      - name: Restore Lime cache (source + built artifacts)
         id: lime-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
@@ -120,6 +120,7 @@ jobs:
         run: haxelib setup ~/haxelib
 
       - name: Install Haxe libraries
+        id: install-haxelibs
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
           haxelib install hxcpp > /dev/null --quiet
@@ -178,6 +179,7 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
         timeout-minutes: 15
         env:
           CC: gcc-13
@@ -434,6 +436,7 @@ jobs:
       # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
       # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
+        id: rebuild-lime-android
         run: |
           if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
             echo "Android liblime .so files already present, skipping rebuild."
@@ -462,8 +465,9 @@ jobs:
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
 
-      - name: Cache hxcpp compile cache
-        uses: actions/cache@v4
+      - name: Restore hxcpp compile cache
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.hxcpp_cache
           key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
@@ -517,6 +521,46 @@ jobs:
             haxelib run lime build android $BUILD_MODE_FLAG -D HXCPP_DEBUG_LINK
           fi
 
+      # Saved HERE rather than in actions/cache's post step. The combined
+      # action only saves when the whole JOB succeeds, so run #439 -- which
+      # reached the very last archive step of Compile -- discarded a complete
+      # haxelib tree, a complete Lime tree and ~23 minutes of compiled
+      # objects, and the next run had to start cold all over again.
+      #
+      # Each save is gated on the step that actually POPULATES it, never on
+      # the job as a whole. Saving unconditionally would be worse than not
+      # saving at all: "Install Haxe libraries" and "Prepare Lime source" are
+      # both gated on a cache hit, so a half-installed tree written to the
+      # cache gets restored on the next run and then skipped over rather than
+      # repaired -- the same cache poisoning that forced the v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): a cancelled job can be killed
+      # mid-write, and a truncated .o carrying a fresh mtime looks up-to-date
+      # to hxcpp's dependency check and fails at link time instead of being
+      # rebuilt. A failed job has stopped cleanly; a cancelled one has not.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.hxcpp_cache
+          key: hxcpp-cache-android-fat-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -569,18 +613,18 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: Cache Haxe libraries
+      - name: Restore Haxe libraries cache
         id: haxelibs-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/haxelib
             .haxelib
           key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
 
-      - name: Cache Lime (source + built artifacts)
+      - name: Restore Lime cache (source + built artifacts)
         id: lime-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
@@ -607,6 +651,7 @@ jobs:
         run: haxelib setup ~/haxelib
 
       - name: Install Haxe libraries
+        id: install-haxelibs
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
           haxelib install hxcpp > /dev/null --quiet
@@ -665,6 +710,7 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
         timeout-minutes: 15
         env:
           CC: gcc-13
@@ -930,6 +976,7 @@ jobs:
       # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
       # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
+        id: rebuild-lime-android
         run: |
           if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
             echo "Android liblime .so files already present, skipping rebuild."
@@ -952,8 +999,9 @@ jobs:
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
 
-      - name: Cache hxcpp build artifacts (ARM64)
-        uses: actions/cache@v4
+      - name: Restore hxcpp build artifacts (ARM64)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
@@ -1020,6 +1068,50 @@ jobs:
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM64_ONLY -D HXCPP_DEBUG_LINK
           fi
 
+      # Saved HERE rather than in actions/cache's post step. The combined
+      # action only saves when the whole JOB succeeds, so run #439 -- which
+      # reached the very last archive step of Compile -- discarded a complete
+      # haxelib tree, a complete Lime tree and ~23 minutes of compiled
+      # objects, and the next run had to start cold all over again.
+      #
+      # Each save is gated on the step that actually POPULATES it, never on
+      # the job as a whole. Saving unconditionally would be worse than not
+      # saving at all: "Install Haxe libraries" and "Prepare Lime source" are
+      # both gated on a cache hit, so a half-installed tree written to the
+      # cache gets restored on the next run and then skipped over rather than
+      # repaired -- the same cache poisoning that forced the v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): a cancelled job can be killed
+      # mid-write, and a truncated .o carrying a fresh mtime looks up-to-date
+      # to hxcpp's dependency check and fails at link time instead of being
+      # rebuilt. A failed job has stopped cleanly; a cancelled one has not.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -1073,9 +1165,9 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: Cache Haxe libraries
+      - name: Restore Haxe libraries cache
         id: haxelibs-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/haxelib
@@ -1084,9 +1176,9 @@ jobs:
 
       # Shared across all three jobs on purpose -- see the fat job's
       # identical comment above this same step.
-      - name: Cache Lime (source + built artifacts)
+      - name: Restore Lime cache (source + built artifacts)
         id: lime-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
@@ -1113,6 +1205,7 @@ jobs:
         run: haxelib setup ~/haxelib
 
       - name: Install Haxe libraries
+        id: install-haxelibs
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
           haxelib install hxcpp > /dev/null --quiet
@@ -1171,6 +1264,7 @@ jobs:
       # instead of trying to prevent it: only pay for the real rebuild when
       # the file's actually missing, so the fast path stays fast.
       - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
         timeout-minutes: 15
         env:
           CC: gcc-13
@@ -1440,6 +1534,7 @@ jobs:
       # .so while cache-hit still reads 'true' -- exactly how all 3 jobs of
       # run 29054433387 failed at Compile with "liblime-64.so does not exist".
       - name: Rebuild Android Lime so
+        id: rebuild-lime-android
         run: |
           if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
             echo "Android liblime .so files already present, skipping rebuild."
@@ -1461,8 +1556,9 @@ jobs:
       - name: Enable native debug symbols output for release
         run: bash .github/scripts/patch-lime-gradle-native-symbols.sh
 
-      - name: Cache hxcpp build artifacts (ARM32)
-        uses: actions/cache@v4
+      - name: Restore hxcpp build artifacts (ARM32)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
@@ -1500,6 +1596,50 @@ jobs:
           else
             haxelib run lime build android $BUILD_MODE_FLAG -D ANDROID_ARM32_ONLY
           fi
+
+      # Saved HERE rather than in actions/cache's post step. The combined
+      # action only saves when the whole JOB succeeds, so run #439 -- which
+      # reached the very last archive step of Compile -- discarded a complete
+      # haxelib tree, a complete Lime tree and ~23 minutes of compiled
+      # objects, and the next run had to start cold all over again.
+      #
+      # Each save is gated on the step that actually POPULATES it, never on
+      # the job as a whole. Saving unconditionally would be worse than not
+      # saving at all: "Install Haxe libraries" and "Prepare Lime source" are
+      # both gated on a cache hit, so a half-installed tree written to the
+      # cache gets restored on the next run and then skipped over rather than
+      # repaired -- the same cache poisoning that forced the v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): a cancelled job can be killed
+      # mid-write, and a truncated .o carrying a fresh mtime looks up-to-date
+      # to hxcpp's dependency check and fails at link time instead of being
+      # rebuilt. A failed job has stopped cleanly; a cancelled one has not.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/obj
+            export/${{ (inputs.buildMode == 'debug') && 'debug' || 'release' }}/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm32-v3-${{ runner.os }}-${{ (inputs.buildMode == 'debug') && 'debug-' || '' }}${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7.0.1
@@ -1600,9 +1740,9 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: Cache Haxe libraries
+      - name: Restore Haxe libraries cache
         id: haxelibs-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/haxelib
@@ -1612,9 +1752,9 @@ jobs:
       # Shared with the other jobs on purpose -- this is Lime's source + its
       # own built liblime.so, unaffected by HXCPP_DEBUG_LINK (that define
       # only changes how OUR app library gets linked/stripped).
-      - name: Cache Lime (source + built artifacts)
+      - name: Restore Lime cache (source + built artifacts)
         id: lime-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .haxelib/lime
           key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
@@ -1636,6 +1776,7 @@ jobs:
         run: haxelib setup ~/haxelib
 
       - name: Install Haxe libraries
+        id: install-haxelibs
         if: steps.haxelibs-cache.outputs.cache-hit != 'true'
         run: |
           haxelib install hxcpp > /dev/null --quiet
@@ -1686,6 +1827,7 @@ jobs:
           echo "/tmp/cxx-wrap" >> $GITHUB_PATH
 
       - name: Rebuild Linux Lime ndll
+        id: rebuild-lime-linux
         timeout-minutes: 15
         env:
           CC: gcc-13
@@ -1943,6 +2085,7 @@ jobs:
           done < <(find .haxelib -path "*haxe/ui/containers/ListView.hx" -type f 2>/dev/null)
 
       - name: Rebuild Android Lime so
+        id: rebuild-lime-android
         run: |
           if [ -f .haxelib/lime/git/ndll/Android/liblime-64.so ] && [ -f .haxelib/lime/git/ndll/Android/liblime-v7.so ]; then
             echo "Android liblime .so files already present, skipping rebuild."
@@ -1964,8 +2107,9 @@ jobs:
 
       # Separate cache lineage from the Android-ARM64 job's release build on
       # purpose -- see the top-of-job comment on HXCPP_DEBUG_LINK.
-      - name: Cache hxcpp build artifacts (ARM64, debug symbols)
-        uses: actions/cache@v4
+      - name: Restore hxcpp build artifacts (ARM64, debug symbols)
+        id: hxcpp-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             export/release/android/obj
@@ -2010,6 +2154,50 @@ jobs:
       # stripping our library before Gradle ever saw it, and later that
       # Gradle's own packaging step was silently re-stripping it even after
       # that first bug was fixed.
+      # Saved HERE rather than in actions/cache's post step. The combined
+      # action only saves when the whole JOB succeeds, so run #439 -- which
+      # reached the very last archive step of Compile -- discarded a complete
+      # haxelib tree, a complete Lime tree and ~23 minutes of compiled
+      # objects, and the next run had to start cold all over again.
+      #
+      # Each save is gated on the step that actually POPULATES it, never on
+      # the job as a whole. Saving unconditionally would be worse than not
+      # saving at all: "Install Haxe libraries" and "Prepare Lime source" are
+      # both gated on a cache hit, so a half-installed tree written to the
+      # cache gets restored on the next run and then skipped over rather than
+      # repaired -- the same cache poisoning that forced the v2/v3 key bumps.
+      #
+      # !cancelled() rather than always(): a cancelled job can be killed
+      # mid-write, and a truncated .o carrying a fresh mtime looks up-to-date
+      # to hxcpp's dependency check and fails at link time instead of being
+      # rebuilt. A failed job has stopped cleanly; a cancelled one has not.
+      - name: Save Haxe libraries cache
+        if: ${{ !cancelled() && steps.haxelibs-cache.outputs.cache-hit != 'true' && steps.install-haxelibs.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/haxelib
+            .haxelib
+          key: haxelibs-ubuntu-v3-${{ hashFiles('.hxpkg') }}
+
+      - name: Save Lime cache
+        if: ${{ !cancelled() && steps.lime-cache.outputs.cache-hit != 'true' && steps.rebuild-lime-linux.outcome == 'success' && steps.rebuild-lime-android.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .haxelib/lime
+          key: lime-android-v5-${{ hashFiles('.hxpkg') }}-${{ runner.os }}-arm64
+
+      - name: Save hxcpp build artifacts
+        if: ${{ !cancelled() && steps.hxcpp-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            export/release/android/obj
+            export/release/android/haxe
+            obj
+            ~/.hxcpp_cache
+          key: hxcpp-android-arm64-debugsyms-v1-${{ runner.os }}-${{ hashFiles('source/**/*.hx', 'source/**/**/*.hx', 'source/**/**/**/*.hx', 'Project.xml', '.hxpkg', 'include.xml') }}
+
       - name: Diagnostic - inspect .so files after build
         run: |
           echo "=== All .so files under export/release/android/ ==="
